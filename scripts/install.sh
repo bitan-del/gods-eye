@@ -1377,6 +1377,12 @@ check_node() {
     if command -v node &> /dev/null; then
         NODE_VERSION="$(node_major_version || true)"
         if node_is_at_least_required; then
+            # Validate that npm actually works (catches broken installs like .klint/node)
+            if ! npm -v &> /dev/null; then
+                ui_warn "Node.js v$(node -v | cut -d'v' -f2) found but npm is broken ($(command -v npm 2>/dev/null || echo 'not found'))"
+                ui_info "Installing a working Node.js + npm"
+                return 1
+            fi
             ui_success "Node.js v$(node -v | cut -d'v' -f2) found"
             print_active_node_paths || true
             return 0
