@@ -1,0 +1,91 @@
+{
+  "id": "gods-eye-studio",
+  "kind": "studio",
+  "providers": ["fal", "google", "openai"],
+  "providerAuthEnvVars": {
+    "fal": ["FAL_KEY"],
+    "google": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    "openai": ["OPENAI_API_KEY"]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "fal",
+      "method": "api-key",
+      "choiceId": "studio-fal-api-key",
+      "choiceLabel": "fal API key (image/video generation)",
+      "groupId": "gods-eye-studio",
+      "groupLabel": "Gods Eye Studio",
+      "groupHint": "Creative tools (image gen, video gen, brand intelligence)",
+      "onboardingScopes": ["image-generation"],
+      "optionKey": "studioFalApiKey",
+      "cliFlag": "--studio-fal-api-key",
+      "cliOption": "--studio-fal-api-key <key>",
+      "cliDescription": "fal API key for image and video generation"
+    },
+    {
+      "provider": "google",
+      "method": "api-key",
+      "choiceId": "studio-gemini-api-key",
+      "choiceLabel": "Google Gemini API key (creative intelligence)",
+      "groupId": "gods-eye-studio",
+      "groupLabel": "Gods Eye Studio",
+      "groupHint": "Creative tools (image gen, video gen, brand intelligence)",
+      "onboardingScopes": ["image-generation"],
+      "optionKey": "studioGeminiApiKey",
+      "cliFlag": "--studio-gemini-api-key",
+      "cliOption": "--studio-gemini-api-key <key>",
+      "cliDescription": "Gemini API key for creative intelligence and brand analysis"
+    }
+  ],
+  "uiHints": {
+    "brain.autoContext": {
+      "label": "Auto-Context",
+      "help": "Automatically inject brand, generation history, and calendar context into every agent call"
+    },
+    "brain.memoryDbPath": {
+      "label": "Brain Database Path",
+      "placeholder": "~/.godseye/brain/index.db",
+      "advanced": true
+    },
+    "defaults.imageModel": {
+      "label": "Default Image Model",
+      "placeholder": "fal-ai/flux/dev",
+      "help": "Default model for image generation"
+    },
+    "defaults.videoModel": {
+      "label": "Default Video Model",
+      "placeholder": "fal-ai/minimax/video-01-live",
+      "help": "Default model for video generation"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "brain": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "autoContext": {
+            "type": "boolean"
+          },
+          "memoryDbPath": {
+            "type": "string"
+          }
+        }
+      },
+      "defaults": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "imageModel": {
+            "type": "string"
+          },
+          "videoModel": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

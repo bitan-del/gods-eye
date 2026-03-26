@@ -134,6 +134,7 @@ export function registerOnboardCommand(program: Command) {
     .option("--skip-channels", "Skip channel setup")
     .option("--skip-skills", "Skip skills setup")
     .option("--skip-search", "Skip search provider setup")
+    .option("--skip-creative", "Skip Gods Eye Studio creative tools setup")
     .option("--skip-health", "Skip health check")
     .option("--skip-ui", "Skip Control UI/TUI prompts")
     .option("--node-manager <name>", "Node manager for skills: npm|pnpm|bun")
@@ -190,6 +191,7 @@ export function registerOnboardCommand(program: Command) {
           skipChannels: Boolean(opts.skipChannels),
           skipSkills: Boolean(opts.skipSkills),
           skipSearch: Boolean(opts.skipSearch),
+          skipCreative: Boolean(opts.skipCreative),
           skipHealth: Boolean(opts.skipHealth),
           skipUi: Boolean(opts.skipUi),
           nodeManager: opts.nodeManager as NodeManagerChoice | undefined,

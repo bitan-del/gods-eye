@@ -1,0 +1,23 @@
+{
+  "name": "@godseye/gods-eye-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "description": "Gods Eye Studio — unified creative brain with image gen, video gen, brand intelligence, and persistent creative memory",
+  "keywords": [
+    "godseye",
+    "studio",
+    "image-generation",
+    "video-generation",
+    "brand-intelligence",
+    "creative-memory"
+  ],
+  "dependencies": {
+    "better-sqlite3": "^11.7.0"
+  },
+  "devDependencies": {
+    "godseye": "workspace:*",
+    "@types/better-sqlite3": "^7.6.12"
+  }
+}

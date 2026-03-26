@@ -561,6 +561,17 @@ export async function runSetupWizard(
     });
   }
 
+  // Creative tools (Gods Eye Studio) — image gen, video gen, brand intelligence
+  if (opts.skipCreative) {
+    await prompter.note("Skipping creative tools setup.", "Studio");
+  } else {
+    const { setupCreativeTools } = await import("../commands/onboard-creative.js");
+    nextConfig = await setupCreativeTools(nextConfig, runtime, prompter, {
+      quickstartDefaults: flow === "quickstart",
+      secretInputMode: opts.secretInputMode,
+    });
+  }
+
   if (opts.skipSkills) {
     await prompter.note("Skipping skills setup.", "Skills");
   } else {
