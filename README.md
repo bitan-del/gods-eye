@@ -68,6 +68,29 @@ godseye agent --message "Ship checklist" --thinking high
 
 Upgrading? [Updating guide](https://docs.godseye.ai/install/updating) (and run `godseye doctor`).
 
+## Gods Eye Studio
+
+Gods Eye Studio is the unified creative brain for your assistant. It handles image generation, video generation, brand intelligence, and content calendar management — all wired into the same agent you already talk to.
+
+**BYOK (bring your own keys):** Studio uses your own API keys for fal.ai, Google Gemini, and OpenAI. Set them up during `godseye onboard` or manually via `godseye config set`.
+
+```bash
+# Generate an image
+godseye agent --message "generate a hero image for my landing page"
+
+# Scan your brand from a website
+godseye agent --message "scan my brand from https://example.com"
+
+# View your content calendar
+godseye agent --message "show my content calendar for this week"
+```
+
+Studio saves everything to creative memory (`~/.godseye/brain/`): brand profiles, generation history, characters, calendar slots, and style preferences. This context is automatically injected into every agent call so your assistant always knows your brand.
+
+Manage Studio visually from the **Studio** tabs in the [web control panel](https://docs.godseye.ai).
+
+Docs: [Getting started](https://docs.godseye.ai/studio/getting-started) · [Brain architecture](https://docs.godseye.ai/studio/brain) · [Creative providers](https://docs.godseye.ai/studio/providers)
+
 ## Development channels
 
 - **stable**: tagged releases (`vYYYY.M.D` or `vYYYY.M.D-<patch>`), npm dist-tag `latest`.

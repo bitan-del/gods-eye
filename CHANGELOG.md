@@ -18,6 +18,16 @@ Docs: https://docs.godseye.ai
 - Plugins/runtime: expose `runHeartbeatOnce` in the plugin runtime `system` namespace so plugins can trigger a single heartbeat cycle with an explicit delivery target override (e.g. `heartbeat: { target: "last" }`). (#40299) Thanks @loveyana.
 - Agents/compaction: preserve the post-compaction AGENTS refresh on stale-usage preflight compaction for both immediate replies and queued followups. (#49479) Thanks @jared596.
 - Agents/compaction: surface safeguard-specific cancel reasons and relabel benign manual `/compact` no-op cases as skipped instead of failed. (#51072) Thanks @afurm.
+- Studio: add Gods Eye Studio plugin with unified creative brain for image generation, video generation, brand intelligence, and content calendar management.
+- Studio/image generation: add `studio_image_generate` tool with brand-aware prompt enrichment, supporting fal.ai (Flux), Google Gemini (Imagen), and OpenAI (GPT Image, DALL-E 3) as creative providers.
+- Studio/video generation: add `studio_video_generate` tool with brand-aware video creation via fal.ai Minimax Video-01-Live, with configurable duration and aspect ratio.
+- Studio/brand scan: add `studio_brand_scan` tool to extract brand DNA (colors, fonts, tone, visual style) from URLs or text descriptions and save the profile to creative memory.
+- Studio/content calendar: add `studio_calendar` tool to create, update, and list content slots with status tracking (ideated, generated, approved, published) and generation linking.
+- Studio/brain: add persistent creative memory layer storing brands, generations, characters, calendar slots, and preferences as JSON files under `~/.godseye/brain/`.
+- Studio/context injection: auto-inject active brand profile, recent generations, upcoming calendar, and character references into every agent system prompt via the brain context builder.
+- Studio/recall: add `studio_recall` tool for keyword-based search across all creative memory (generations, brands, characters, calendar).
+- Studio/model routing: auto-detect creative provider from model name (OpenAI for `dall-e`/`gpt-image`, Gemini for `gemini`/`imagen`, fal.ai as default).
+- CLI/onboarding: add creative tools setup step to `godseye onboard` for configuring fal.ai, Gemini, and OpenAI creative provider API keys.
 
 ### Fixes
 
