@@ -91,7 +91,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     the hackable (git) install:
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --install-method git
     ```
 
     This installs Gods Eye **from a git checkout**, so the agent can read the code + docs and
@@ -131,7 +131,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     The repo recommends running from source and using onboarding:
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash
+    curl -fsSL https://gods-eye.org/install.sh | bash
     godseye onboard --install-daemon
     ```
 
@@ -264,9 +264,9 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
 
   </Accordion>
 
-  <Accordion title="Cannot access docs.godseye.ai (SSL error)">
-    Some Comcast/Xfinity connections incorrectly block `docs.godseye.ai` via Xfinity
-    Advanced Security. Disable it or allowlist `docs.godseye.ai`, then retry. More
+  <Accordion title="Cannot access docs.gods-eye.org (SSL error)">
+    Some Comcast/Xfinity connections incorrectly block `docs.gods-eye.org` via Xfinity
+    Advanced Security. Disable it or allowlist `docs.gods-eye.org`, then retry. More
     detail: [Troubleshooting](/help/faq#cannot-access-docsgodseye-ai-ssl-error).
     Please help us unblock it by reporting here: [https://spa.xfinity.com/check_url_status](https://spa.xfinity.com/check_url_status).
 
@@ -297,15 +297,15 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     One-liners (macOS/Linux):
 
     ```bash
-    curl -fsSL --proto '=https' --tlsv1.2 https://godseye.ai/install.sh | bash -s -- --beta
+    curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash -s -- --beta
     ```
 
     ```bash
-    curl -fsSL --proto '=https' --tlsv1.2 https://godseye.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash -s -- --install-method git
     ```
 
     Windows installer (PowerShell):
-    [https://godseye.ai/install.ps1](https://godseye.ai/install.ps1)
+    [https://gods-eye.org/install.ps1](https://gods-eye.org/install.ps1)
 
     More detail: [Development channels](/install/development-channels) and [Installer flags](/install/installer).
 
@@ -325,7 +325,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     2. **Hackable install (from the installer site):**
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --install-method git
     ```
 
     That gives you a local repo you can edit, then update via git.
@@ -359,19 +359,19 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     Re-run the installer with **verbose output**:
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --verbose
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --verbose
     ```
 
     Beta install with verbose:
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --beta --verbose
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --beta --verbose
     ```
 
     For a hackable (git) install:
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --install-method git --verbose
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --install-method git --verbose
     ```
 
     Windows (PowerShell) equivalent:
@@ -379,7 +379,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     ```powershell
     # install.ps1 has no dedicated -Verbose flag yet.
     Set-PSDebug -Trace 1
-    & ([scriptblock]::Create((iwr -useb https://godseye.ai/install.ps1))) -NoOnboard
+    & ([scriptblock]::Create((iwr -useb https://gods-eye.org/install.ps1))) -NoOnboard
     Set-PSDebug -Trace 0
     ```
 
@@ -446,7 +446,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     your bot (or Claude/Codex) _from that folder_ so it can read the repo and answer precisely.
 
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --install-method git
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --install-method git
     ```
 
     More detail: [Install](/install) and [Installer flags](/install/installer).
@@ -908,7 +908,7 @@ Quick answers plus deeper troubleshooting for real-world setups (local dev, VPS,
     - **Always-on Gateway** (run on a VPS, interact from anywhere)
     - **Nodes** for local browser/screen/camera/exec
 
-    Showcase: [https://godseye.ai/showcase](https://godseye.ai/showcase)
+    Showcase: [https://gods-eye.org/showcase](https://gods-eye.org/showcase)
 
   </Accordion>
 </AccordionGroup>

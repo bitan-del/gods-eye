@@ -200,8 +200,7 @@ function parseArgs(): Args {
         : normalizedDriverMode === "token"
           ? "token"
           : "token";
-  const driverToken =
-    resolveArg("--token") || process.env.GODSEYE_DISCORD_SMOKE_DRIVER_TOKEN || "";
+  const driverToken = resolveArg("--token") || process.env.GODSEYE_DISCORD_SMOKE_DRIVER_TOKEN || "";
   const driverTokenPrefix =
     resolveArg("--token-prefix") || process.env.GODSEYE_DISCORD_SMOKE_DRIVER_TOKEN_PREFIX || "Bot";
   const botToken =
@@ -210,9 +209,7 @@ function parseArgs(): Args {
     process.env.DISCORD_BOT_TOKEN ||
     "";
   const botTokenPrefix =
-    resolveArg("--bot-token-prefix") ||
-    process.env.GODSEYE_DISCORD_SMOKE_BOT_TOKEN_PREFIX ||
-    "Bot";
+    resolveArg("--bot-token-prefix") || process.env.GODSEYE_DISCORD_SMOKE_BOT_TOKEN_PREFIX || "Bot";
   const targetAgent = resolveArg("--agent") || process.env.GODSEYE_DISCORD_SMOKE_AGENT || "codex";
   const mentionUserId =
     resolveArg("--mention") || process.env.GODSEYE_DISCORD_SMOKE_MENTION_USER_ID || undefined;

@@ -50,7 +50,8 @@ export function registerAcpCli(program: Command) {
     .option("-v, --verbose", "Verbose logging to stderr", false)
     .addHelpText(
       "after",
-      () => `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/acp", "docs.godseye.ai/cli/acp")}\n`,
+      () =>
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/acp", "docs.gods-eye.org/cli/acp")}\n`,
     )
     .action(async (opts) => {
       try {

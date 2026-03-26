@@ -524,15 +524,15 @@ This provides the interactive terminal experience similar to pi's native mode.
 
 ## Key Differences from Pi CLI
 
-| Aspect          | Pi CLI                  | Gods Eye Embedded                                                                              |
-| --------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
-| Invocation      | `pi` command / RPC      | SDK via `createAgentSession()`                                                                 |
-| Tools           | Default coding tools    | Custom Gods Eye tool suite                                                                     |
-| System prompt   | AGENTS.md + prompts     | Dynamic per-channel/context                                                                    |
+| Aspect          | Pi CLI                  | Gods Eye Embedded                                                                            |
+| --------------- | ----------------------- | -------------------------------------------------------------------------------------------- |
+| Invocation      | `pi` command / RPC      | SDK via `createAgentSession()`                                                               |
+| Tools           | Default coding tools    | Custom Gods Eye tool suite                                                                   |
+| System prompt   | AGENTS.md + prompts     | Dynamic per-channel/context                                                                  |
 | Session storage | `~/.pi/agent/sessions/` | `~/.godseye/agents/<agentId>/sessions/` (or `$GODSEYE_STATE_DIR/agents/<agentId>/sessions/`) |
-| Auth            | Single credential       | Multi-profile with rotation                                                                    |
-| Extensions      | Loaded from disk        | Programmatic + disk paths                                                                      |
-| Event handling  | TUI rendering           | Callback-based (onBlockReply, etc.)                                                            |
+| Auth            | Single credential       | Multi-profile with rotation                                                                  |
+| Extensions      | Loaded from disk        | Programmatic + disk paths                                                                    |
+| Event handling  | TUI rendering           | Callback-based (onBlockReply, etc.)                                                          |
 
 ## Future Considerations
 

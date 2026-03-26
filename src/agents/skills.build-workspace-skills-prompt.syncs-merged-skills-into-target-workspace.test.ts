@@ -205,8 +205,7 @@ describe("buildWorkspaceSkillsPrompt", () => {
       dir: skillDir,
       name: "image-lab",
       description: "Generates images",
-      metadata:
-        '{"godseye":{"requires":{"env":["GEMINI_API_KEY"]},"primaryEnv":"GEMINI_API_KEY"}}',
+      metadata: '{"godseye":{"requires":{"env":["GEMINI_API_KEY"]},"primaryEnv":"GEMINI_API_KEY"}}',
       body: "# Image Lab\n",
     });
 

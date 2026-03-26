@@ -9,11 +9,11 @@ Gods Eye Studio supports three creative providers. Each covers different capabil
 
 ## Provider overview
 
-| Provider | Image generation | Video generation | Brand analysis | Default model |
-| --- | --- | --- | --- | --- |
-| **fal.ai** | Flux (multiple variants) | Minimax Video-01-Live | -- | `fal-ai/flux/dev` |
-| **Google Gemini** | Imagen (preview) | -- | Gemini 2.5 Flash | `gemini-3.1-flash-image-preview` |
-| **OpenAI** | GPT Image, DALL-E 3 | -- | -- | `gpt-image-1` |
+| Provider          | Image generation         | Video generation      | Brand analysis   | Default model                    |
+| ----------------- | ------------------------ | --------------------- | ---------------- | -------------------------------- |
+| **fal.ai**        | Flux (multiple variants) | Minimax Video-01-Live | --               | `fal-ai/flux/dev`                |
+| **Google Gemini** | Imagen (preview)         | --                    | Gemini 2.5 Flash | `gemini-3.1-flash-image-preview` |
+| **OpenAI**        | GPT Image, DALL-E 3      | --                    | --               | `gpt-image-1`                    |
 
 ## fal.ai
 
@@ -106,11 +106,11 @@ Or set the `OPENAI_API_KEY` environment variable. If you already use OpenAI as y
 
 Studio automatically routes generation requests to the correct provider based on the model name:
 
-| Model pattern | Routed to |
-| --- | --- |
-| Starts with `dall-e` or `gpt-image`, or contains `openai` | **OpenAI** |
-| Contains `gemini` or `imagen` | **Google Gemini** |
-| Everything else (default) | **fal.ai** |
+| Model pattern                                             | Routed to         |
+| --------------------------------------------------------- | ----------------- |
+| Starts with `dall-e` or `gpt-image`, or contains `openai` | **OpenAI**        |
+| Contains `gemini` or `imagen`                             | **Google Gemini** |
+| Everything else (default)                                 | **fal.ai**        |
 
 This means you can request any model by name and Studio handles the rest:
 

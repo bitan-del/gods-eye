@@ -1,7 +1,7 @@
 ---
 name: boot-md
 description: "Run BOOT.md on gateway startup"
-homepage: https://docs.godseye.ai/automation/hooks#boot-md
+homepage: https://docs.gods-eye.org/automation/hooks#boot-md
 metadata:
   {
     "godseye":

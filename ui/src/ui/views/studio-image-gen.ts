@@ -92,7 +92,8 @@ export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult
             <label class="field-label">Model</label>
             <select class="field-input" .value=${props.model} @change=${(e: Event) => props.onModelChange((e.target as HTMLSelectElement).value)}>
               ${IMAGE_MODELS.map(
-                (m) => html`<option value=${m.value} ?selected=${m.value === props.model}>${m.label}</option>`,
+                (m) =>
+                  html`<option value=${m.value} ?selected=${m.value === props.model}>${m.label}</option>`,
               )}
             </select>
           </div>
@@ -133,24 +134,33 @@ export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult
         ${props.error ? html`<div class="error-message">${props.error}</div>` : nothing}
 
         <!-- Last result -->
-        ${props.lastResult
-          ? html`
+        ${
+          props.lastResult
+            ? html`
               <div class="studio-result" style="margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--surface-2);">
                 <div style="font-weight: 600; margin-bottom: 8px;">Generated</div>
                 <div style="font-size: 0.9em; opacity: 0.8;">
                   Model: ${props.lastResult.model} | Images: ${props.lastResult.imageCount}
-                  ${props.lastResult.savedTo ? html` | Saved to brain memory` : nothing}
+                  ${
+                    props.lastResult.savedTo
+                      ? html`
+                          | Saved to brain memory
+                        `
+                      : nothing
+                  }
                 </div>
                 <div style="font-size: 0.85em; opacity: 0.6; margin-top: 4px;">
                   Prompt: "${props.lastResult.prompt}"
                 </div>
               </div>
             `
-          : nothing}
+            : nothing
+        }
 
         <!-- Recent generations -->
-        ${props.recentGenerations.length > 0
-          ? html`
+        ${
+          props.recentGenerations.length > 0
+            ? html`
               <div style="margin-top: 24px;">
                 <div style="font-weight: 600; margin-bottom: 12px;">Recent Generations</div>
                 ${props.recentGenerations.map(
@@ -163,7 +173,8 @@ export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult
                 )}
               </div>
             `
-          : nothing}
+            : nothing
+        }
       </div>
     </section>
   `;

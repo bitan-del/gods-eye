@@ -79,9 +79,7 @@ function cloneStatWithDev<T extends { dev: number | bigint }>(stat: T, dev: numb
 beforeAll(async () => {
   ({ LocalMediaAccessError, loadWebMedia, loadWebMediaRaw, optimizeImageToJpeg } =
     await import("./media.js"));
-  fixtureRoot = await fs.mkdtemp(
-    path.join(resolvePreferredGodsEyeTmpDir(), "godseye-media-test-"),
-  );
+  fixtureRoot = await fs.mkdtemp(path.join(resolvePreferredGodsEyeTmpDir(), "godseye-media-test-"));
   largeJpegBuffer = await sharp({
     create: {
       width: 400,

@@ -53,8 +53,9 @@ export async function resolveGeminiApiKey(params?: {
 }
 
 function resolveGeminiBaseUrl(cfg?: Record<string, unknown>): string {
-  const providers = (cfg as { models?: { providers?: { google?: { baseUrl?: string } } } })?.models
-    ?.providers?.google?.baseUrl?.trim();
+  const providers = (
+    cfg as { models?: { providers?: { google?: { baseUrl?: string } } } }
+  )?.models?.providers?.google?.baseUrl?.trim();
   return (providers || DEFAULT_GEMINI_BASE_URL).replace(/\/+$/u, "");
 }
 

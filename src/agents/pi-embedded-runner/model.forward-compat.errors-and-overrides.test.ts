@@ -247,7 +247,7 @@ describe("resolveModel forward-compat errors and overrides", () => {
     expect(result.model).toBeUndefined();
     expect(result.error).toContain("Unknown model: ollama/gemma3:4b");
     expect(result.error).toContain("OLLAMA_API_KEY");
-    expect(result.error).toContain("docs.godseye.ai/providers/ollama");
+    expect(result.error).toContain("docs.gods-eye.org/providers/ollama");
   });
 
   it("includes auth hint for unknown vllm models", () => {

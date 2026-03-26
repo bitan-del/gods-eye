@@ -125,7 +125,7 @@ function invalidContentsPayload(message: string) {
   return {
     error: "invalid_contents",
     message,
-    docs: "https://docs.godseye.ai/tools/web",
+    docs: "https://docs.gods-eye.org/tools/web",
   };
 }
 
@@ -445,7 +445,7 @@ function missingExaKeyPayload() {
     error: "missing_exa_api_key",
     message:
       "web_search (exa) needs an Exa API key. Set EXA_API_KEY in the Gateway environment, or configure tools.web.search.exa.apiKey.",
-    docs: "https://docs.godseye.ai/tools/web",
+    docs: "https://docs.gods-eye.org/tools/web",
   };
 }
 
@@ -479,7 +479,7 @@ function createExaToolDefinition(
         return {
           error: "invalid_freshness",
           message: 'freshness must be one of "day", "week", "month", or "year".',
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
 
@@ -490,7 +490,7 @@ function createExaToolDefinition(
           error: "conflicting_time_filters",
           message:
             "freshness cannot be combined with date_after or date_before. Use one time-filter mode.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       const parsedDateRange = parseIsoDateRange({
@@ -596,7 +596,7 @@ export function createExaWebSearchProvider(): WebSearchProviderPlugin {
     envVars: ["EXA_API_KEY"],
     placeholder: "exa-...",
     signupUrl: "https://exa.ai/",
-    docsUrl: "https://docs.godseye.ai/tools/web",
+    docsUrl: "https://docs.gods-eye.org/tools/web",
     autoDetectOrder: 65,
     credentialPath: "plugins.entries.exa.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.exa.config.webSearch.apiKey"],

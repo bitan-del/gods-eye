@@ -138,9 +138,7 @@ export function scanExecSafeBinCoverage(cfg: GodsEyeConfig): ExecSafeBinCoverage
   return hits;
 }
 
-export function scanExecSafeBinTrustedDirHints(
-  cfg: GodsEyeConfig,
-): ExecSafeBinTrustedDirHintHit[] {
+export function scanExecSafeBinTrustedDirHints(cfg: GodsEyeConfig): ExecSafeBinTrustedDirHintHit[] {
   const hits: ExecSafeBinTrustedDirHintHit[] = [];
   for (const scope of collectExecSafeBinScopes(cfg)) {
     for (const bin of scope.safeBins) {

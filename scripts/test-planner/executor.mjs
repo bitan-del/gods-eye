@@ -160,10 +160,7 @@ export async function executePlan(plan, options = {}) {
     250,
     parseEnvNumber("GODSEYE_TEST_MEMORY_TRACE_POLL_MS", 1000),
   );
-  const memoryTraceTopCount = Math.max(
-    1,
-    parseEnvNumber("GODSEYE_TEST_MEMORY_TRACE_TOP_COUNT", 6),
-  );
+  const memoryTraceTopCount = Math.max(1, parseEnvNumber("GODSEYE_TEST_MEMORY_TRACE_TOP_COUNT", 6));
   const requestedHeapSnapshotIntervalMs = Math.max(
     0,
     parseEnvNumber("GODSEYE_TEST_HEAPSNAPSHOT_INTERVAL_MS", 0),

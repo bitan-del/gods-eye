@@ -74,8 +74,9 @@ export async function resolveFalApiKey(params: {
 }
 
 function resolveFalBaseUrl(cfg?: Record<string, unknown>): string {
-  const providers = (cfg as { models?: { providers?: { fal?: { baseUrl?: string } } } })?.models
-    ?.providers?.fal?.baseUrl?.trim();
+  const providers = (
+    cfg as { models?: { providers?: { fal?: { baseUrl?: string } } } }
+  )?.models?.providers?.fal?.baseUrl?.trim();
   return (providers || DEFAULT_FAL_BASE_URL).replace(/\/+$/u, "");
 }
 
@@ -87,7 +88,9 @@ async function fetchImageBuffer(url: string): Promise<{ buffer: Buffer; mimeType
   const response = await fetch(url);
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`fal image download failed (${response.status}): ${text || response.statusText}`);
+    throw new Error(
+      `fal image download failed (${response.status}): ${text || response.statusText}`,
+    );
   }
   const mimeType = response.headers.get("content-type")?.trim() || "image/png";
   const arrayBuffer = await response.arrayBuffer();
@@ -122,7 +125,9 @@ export async function generateImageWithFal(
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`fal image generation failed (${response.status}): ${text || response.statusText}`);
+    throw new Error(
+      `fal image generation failed (${response.status}): ${text || response.statusText}`,
+    );
   }
 
   const payload = (await response.json()) as FalGenerateResponse;

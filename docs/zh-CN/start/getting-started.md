@@ -40,7 +40,7 @@ x-i18n:
     <Tabs>
       <Tab title="macOS/Linux">
         ```bash
-        curl -fsSL https://godseye.ai/install.sh | bash
+        curl -fsSL https://gods-eye.org/install.sh | bash
         ```
         <img
   src="/assets/install-script.svg"
@@ -50,7 +50,7 @@ x-i18n:
       </Tab>
       <Tab title="Windows（PowerShell）">
         ```powershell
-        iwr -useb https://godseye.ai/install.ps1 | iex
+        iwr -useb https://gods-eye.org/install.ps1 | iex
         ```
       </Tab>
     </Tabs>

@@ -4,10 +4,7 @@ import {
   createAttachedChannelResultAdapter,
 } from "godseye/plugin-sdk/channel-send-result";
 import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundIdentity,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundIdentity } from "godseye/plugin-sdk/outbound-runtime";
 import {
   resolvePayloadMediaUrls,
   sendPayloadMediaSequenceOrFallback,

@@ -451,7 +451,7 @@ describe("launchd install", () => {
     }
     expect(message).toContain("logged-in macOS GUI session");
     expect(message).toContain("wrong user (including sudo)");
-    expect(message).toContain("https://docs.godseye.ai/gateway");
+    expect(message).toContain("https://docs.gods-eye.org/gateway");
   });
 
   it("surfaces generic bootstrap failures without GUI-specific guidance", async () => {

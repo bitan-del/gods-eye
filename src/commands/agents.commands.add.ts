@@ -335,7 +335,7 @@ export async function agentsAddCommand(
         await prompter.note(
           [
             "Routing unchanged. Add bindings when you're ready.",
-            "Docs: https://docs.godseye.ai/concepts/multi-agent",
+            "Docs: https://docs.gods-eye.org/concepts/multi-agent",
           ].join("\n"),
           "Routing",
         );

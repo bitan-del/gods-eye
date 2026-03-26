@@ -1,6 +1,7 @@
 // Polyfill IndexedDB for WASM crypto in Node.js
 import "fake-indexeddb/auto";
 import { EventEmitter } from "node:events";
+import { KeyedAsyncQueue } from "godseye/plugin-sdk/core";
 import {
   ClientEvent,
   MatrixEventEvent,
@@ -10,7 +11,6 @@ import {
   type MatrixEvent,
 } from "matrix-js-sdk";
 import { VerificationMethod } from "matrix-js-sdk/lib/types.js";
-import { KeyedAsyncQueue } from "godseye/plugin-sdk/core";
 import type { SsrFPolicy } from "../runtime-api.js";
 import { resolveMatrixRoomKeyBackupReadinessError } from "./backup-health.js";
 import { FileBackedMatrixSyncStore } from "./client/file-sync-store.js";

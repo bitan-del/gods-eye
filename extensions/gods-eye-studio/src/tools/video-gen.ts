@@ -34,7 +34,8 @@ export function buildVideoGenToolDef(brain: BrainMemory) {
         },
         model: {
           type: "string" as const,
-          description: "Model to use (e.g. fal-ai/minimax/video-01-live). Defaults to user preference.",
+          description:
+            "Model to use (e.g. fal-ai/minimax/video-01-live). Defaults to user preference.",
         },
         duration: {
           type: "number" as const,

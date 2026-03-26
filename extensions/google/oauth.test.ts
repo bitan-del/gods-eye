@@ -354,7 +354,7 @@ describe("loginGeminiCliOAuth", () => {
         });
       }
       if (url === USERINFO_URL) {
-        return responseJson({ email: "lobster@godseye.ai" });
+        return responseJson({ email: "lobster@gods-eye.org" });
       }
       if (url === LOAD_PROD) {
         return responseJson({ error: { message: "temporary failure" } }, 503);
@@ -415,7 +415,7 @@ describe("loginGeminiCliOAuth", () => {
         });
       }
       if (url === USERINFO_URL) {
-        return responseJson({ email: "lobster@godseye.ai" });
+        return responseJson({ email: "lobster@gods-eye.org" });
       }
       if ([LOAD_PROD, LOAD_DAILY, LOAD_AUTOPUSH].includes(url)) {
         return responseJson({ error: { message: "unavailable" } }, 503);

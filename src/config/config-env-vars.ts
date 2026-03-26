@@ -76,10 +76,7 @@ export function createConfigRuntimeEnv(
   return env;
 }
 
-export function applyConfigEnvVars(
-  cfg: GodsEyeConfig,
-  env: NodeJS.ProcessEnv = process.env,
-): void {
+export function applyConfigEnvVars(cfg: GodsEyeConfig, env: NodeJS.ProcessEnv = process.env): void {
   const entries = collectConfigRuntimeEnvVars(cfg);
   for (const [key, value] of Object.entries(entries)) {
     if (env[key]?.trim()) {

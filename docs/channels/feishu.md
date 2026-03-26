@@ -441,8 +441,8 @@ godseye pairing list feishu
 
 ## Gateway management commands
 
-| Command                    | Description                   |
-| -------------------------- | ----------------------------- |
+| Command                   | Description                   |
+| ------------------------- | ----------------------------- |
 | `godseye gateway status`  | Show gateway status           |
 | `godseye gateway install` | Install/start gateway service |
 | `godseye gateway stop`    | Stop gateway service          |

@@ -35,11 +35,13 @@ export function renderStudioVideoGen(props: StudioVideoGenProps): TemplateResult
       <div class="card-title">Video Generation</div>
       <div class="card-subtitle">Create brand-aware videos. Uses fal.ai queue for async generation.</div>
 
-      ${props.activeBrand
-        ? html`<div style="padding: 8px 12px; margin-bottom: 16px; border-radius: 4px; background: var(--surface-2); font-size: 0.9em;">
+      ${
+        props.activeBrand
+          ? html`<div style="padding: 8px 12px; margin-bottom: 16px; border-radius: 4px; background: var(--surface-2); font-size: 0.9em;">
             Active brand: <strong>${props.activeBrand.name}</strong> (auto-applied)
           </div>`
-        : nothing}
+          : nothing
+      }
 
       <div style="display: grid; gap: 16px; margin-top: 16px;">
         <div>
@@ -55,7 +57,8 @@ export function renderStudioVideoGen(props: StudioVideoGenProps): TemplateResult
             <label class="field-label">Model</label>
             <select class="field-input" .value=${props.model} @change=${(e: Event) => props.onModelChange((e.target as HTMLSelectElement).value)}>
               ${VIDEO_MODELS.map(
-                (m) => html`<option value=${m.value} ?selected=${m.value === props.model}>${m.label}</option>`,
+                (m) =>
+                  html`<option value=${m.value} ?selected=${m.value === props.model}>${m.label}</option>`,
               )}
             </select>
           </div>
@@ -68,7 +71,8 @@ export function renderStudioVideoGen(props: StudioVideoGenProps): TemplateResult
             <label class="field-label">Aspect Ratio</label>
             <select class="field-input" .value=${props.aspectRatio} @change=${(e: Event) => props.onAspectRatioChange((e.target as HTMLSelectElement).value)}>
               ${ASPECT_RATIOS.map(
-                (ar) => html`<option value=${ar} ?selected=${ar === props.aspectRatio}>${ar}</option>`,
+                (ar) =>
+                  html`<option value=${ar} ?selected=${ar === props.aspectRatio}>${ar}</option>`,
               )}
             </select>
           </div>
@@ -80,8 +84,9 @@ export function renderStudioVideoGen(props: StudioVideoGenProps): TemplateResult
 
         ${props.error ? html`<div class="error-message">${props.error}</div>` : nothing}
 
-        ${props.lastResult
-          ? html`
+        ${
+          props.lastResult
+            ? html`
               <div style="margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--surface-2);">
                 <div style="font-weight: 600;">Video Generated</div>
                 <div style="font-size: 0.9em; opacity: 0.8; margin-top: 4px;">
@@ -94,7 +99,8 @@ export function renderStudioVideoGen(props: StudioVideoGenProps): TemplateResult
                 </div>
               </div>
             `
-          : nothing}
+            : nothing
+        }
       </div>
     </section>
   `;

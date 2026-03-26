@@ -13,9 +13,9 @@ Report vulnerabilities directly to the repository where the issue lives:
 - **ClawHub** — [godseye/clawhub](https://github.com/bitan-del/clawhub)
 - **Trust and threat model** — [godseye/trust](https://github.com/bitan-del/trust)
 
-For issues that don't fit a specific repo, or if you're unsure, email **[security@godseye.ai](mailto:security@godseye.ai)** and we'll route it.
+For issues that don't fit a specific repo, or if you're unsure, email **[security@gods-eye.org](mailto:security@gods-eye.org)** and we'll route it.
 
-For full reporting instructions see our [Trust page](https://trust.godseye.ai).
+For full reporting instructions see our [Trust page](https://trust.gods-eye.org).
 
 ### Required in Reports
 
@@ -213,7 +213,7 @@ Security boundary notes:
 
 For threat model + hardening guidance (including `godseye security audit --deep` and `--fix`), see:
 
-- `https://docs.godseye.ai/gateway/security`
+- `https://docs.gods-eye.org/gateway/security`
 
 ### Tool filesystem hardening
 

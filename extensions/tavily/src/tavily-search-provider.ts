@@ -32,7 +32,7 @@ export function createTavilyWebSearchProvider(): WebSearchProviderPlugin {
     envVars: ["TAVILY_API_KEY"],
     placeholder: "tvly-...",
     signupUrl: "https://tavily.com/",
-    docsUrl: "https://docs.godseye.ai/tools/tavily",
+    docsUrl: "https://docs.gods-eye.org/tools/tavily",
     autoDetectOrder: 70,
     credentialPath: "plugins.entries.tavily.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.tavily.config.webSearch.apiKey"],

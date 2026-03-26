@@ -1,6 +1,6 @@
-import type { Bot } from "grammy";
 import { createFinalizableDraftLifecycle } from "godseye/plugin-sdk/channel-lifecycle";
 import { resolveGlobalSingleton } from "godseye/plugin-sdk/text-runtime";
+import type { Bot } from "grammy";
 import { buildTelegramThreadParams, type TelegramThreadSpec } from "./bot/helpers.js";
 import { isSafeToRetrySendError, isTelegramClientRejection } from "./network-errors.js";
 

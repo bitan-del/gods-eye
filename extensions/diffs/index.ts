@@ -1,9 +1,5 @@
 import path from "node:path";
-import {
-  definePluginEntry,
-  resolvePreferredGodsEyeTmpDir,
-  type GodsEyePluginApi,
-} from "./api.js";
+import { definePluginEntry, resolvePreferredGodsEyeTmpDir, type GodsEyePluginApi } from "./api.js";
 import {
   diffsPluginConfigSchema,
   resolveDiffsPluginDefaults,

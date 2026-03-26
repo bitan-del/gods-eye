@@ -219,7 +219,7 @@ describe("firecrawl tools", () => {
     } as never);
 
     const result = await tool.execute("call-1", {
-      url: "https://docs.godseye.ai",
+      url: "https://docs.gods-eye.org",
       maxChars: 1500,
       onlyMainContent: false,
       maxAgeMs: 5000,
@@ -230,7 +230,7 @@ describe("firecrawl tools", () => {
 
     expect(runFirecrawlScrape).toHaveBeenCalledWith({
       cfg: { env: "test" },
-      url: "https://docs.godseye.ai",
+      url: "https://docs.gods-eye.org",
       extractMode: "markdown",
       maxChars: 1500,
       onlyMainContent: false,
@@ -244,7 +244,7 @@ describe("firecrawl tools", () => {
         ok: true,
         params: {
           cfg: { env: "test" },
-          url: "https://docs.godseye.ai",
+          url: "https://docs.gods-eye.org",
           extractMode: "markdown",
           maxChars: 1500,
           onlyMainContent: false,
@@ -263,14 +263,14 @@ describe("firecrawl tools", () => {
     } as never);
 
     await tool.execute("call-2", {
-      url: "https://docs.godseye.ai",
+      url: "https://docs.gods-eye.org",
       extractMode: "text",
       proxy: "invalid",
     });
 
     expect(runFirecrawlScrape).toHaveBeenCalledWith({
       cfg: { env: "test" },
-      url: "https://docs.godseye.ai",
+      url: "https://docs.gods-eye.org",
       extractMode: "text",
       maxChars: undefined,
       onlyMainContent: undefined,

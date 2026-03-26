@@ -7,13 +7,13 @@
 import { join } from "node:path";
 import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth";
-import { BrainMemory } from "./src/brain/memory.js";
 import { buildCreativeContext, renderCreativeContextPrompt } from "./src/brain/context-builder.js";
-import { buildImageGenToolDef } from "./src/tools/image-gen.js";
-import { buildVideoGenToolDef } from "./src/tools/video-gen.js";
+import { BrainMemory } from "./src/brain/memory.js";
 import { buildBrandScanToolDef } from "./src/tools/brand-scan.js";
 import { buildCalendarToolDef } from "./src/tools/content-calendar.js";
+import { buildImageGenToolDef } from "./src/tools/image-gen.js";
 import { buildRecallToolDef } from "./src/tools/recall.js";
+import { buildVideoGenToolDef } from "./src/tools/video-gen.js";
 
 const PLUGIN_ID = "gods-eye-studio";
 const DEFAULT_BRAIN_PATH = "~/.godseye/brain";
@@ -168,7 +168,8 @@ export default definePluginEntry({
         return {
           ...def,
           execute(params: Record<string, unknown>) {
-            const { executeCalendar } = require("./src/execute.js") as typeof import("./src/execute.js");
+            const { executeCalendar } =
+              require("./src/execute.js") as typeof import("./src/execute.js");
             return executeCalendar(brain, {
               action: String(params.action ?? "list"),
               date: params.date ? String(params.date) : undefined,
@@ -191,7 +192,8 @@ export default definePluginEntry({
         return {
           ...def,
           execute(params: Record<string, unknown>) {
-            const { executeStudioRecall } = require("./src/execute.js") as typeof import("./src/execute.js");
+            const { executeStudioRecall } =
+              require("./src/execute.js") as typeof import("./src/execute.js");
             return executeStudioRecall(brain, {
               query: String(params.query ?? ""),
               type: params.type ? String(params.type) : undefined,

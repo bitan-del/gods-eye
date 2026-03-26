@@ -11,11 +11,11 @@ Gods Eye Studio adds creative capabilities to your assistant: image generation, 
 
 Studio uses a BYOK (bring your own keys) model. You need at least one API key from a supported creative provider:
 
-| Provider | Key | What it enables |
-| --- | --- | --- |
-| [fal.ai](https://fal.ai) | `FAL_KEY` | Image generation (Flux), video generation (Minimax) |
-| [Google Gemini](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Brand analysis, creative reasoning, Imagen |
-| [OpenAI](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` | GPT Image, DALL-E 3 |
+| Provider                                            | Key                                  | What it enables                                     |
+| --------------------------------------------------- | ------------------------------------ | --------------------------------------------------- |
+| [fal.ai](https://fal.ai)                            | `FAL_KEY`                            | Image generation (Flux), video generation (Minimax) |
+| [Google Gemini](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Brand analysis, creative reasoning, Imagen          |
+| [OpenAI](https://platform.openai.com/api-keys)      | `OPENAI_API_KEY`                     | GPT Image, DALL-E 3                                 |
 
 You do not need all three. One provider is enough to start generating.
 

@@ -306,7 +306,11 @@ export type AppViewState = {
     attentionItems: AttentionItem[];
 
     // Gods Eye Studio state
-    studioActiveBrand: { id: string; name: string; colors: { primary: string; secondary: string } } | null;
+    studioActiveBrand: {
+      id: string;
+      name: string;
+      colors: { primary: string; secondary: string };
+    } | null;
     studioImageGenLoading: boolean;
     studioImageGenGenerating: boolean;
     studioImageGenError: string | null;
@@ -315,8 +319,22 @@ export type AppViewState = {
     studioImageGenWidth: number;
     studioImageGenHeight: number;
     studioImageGenStyle: string;
-    studioImageGenLastResult: { id: string; model: string; prompt: string; imageCount: number; savedTo?: string; createdAt: string } | null;
-    studioImageGenRecent: Array<{ id: string; model: string; prompt: string; imageCount: number; savedTo?: string; createdAt: string }>;
+    studioImageGenLastResult: {
+      id: string;
+      model: string;
+      prompt: string;
+      imageCount: number;
+      savedTo?: string;
+      createdAt: string;
+    } | null;
+    studioImageGenRecent: Array<{
+      id: string;
+      model: string;
+      prompt: string;
+      imageCount: number;
+      savedTo?: string;
+      createdAt: string;
+    }>;
     studioVideoGenLoading: boolean;
     studioVideoGenGenerating: boolean;
     studioVideoGenError: string | null;
@@ -330,16 +348,41 @@ export type AppViewState = {
     studioBrandError: string | null;
     studioBrandScanSource: string;
     studioBrandScanName: string;
-    studioBrands: Array<{ id: string; name: string; colors: { primary: string; secondary: string; accent?: string }; fonts?: { heading?: string; body?: string }; tone?: string; visualStyle?: string; createdAt: string }>;
+    studioBrands: Array<{
+      id: string;
+      name: string;
+      colors: { primary: string; secondary: string; accent?: string };
+      fonts?: { heading?: string; body?: string };
+      tone?: string;
+      visualStyle?: string;
+      createdAt: string;
+    }>;
     studioCalendarLoading: boolean;
     studioCalendarError: string | null;
-    studioCalendarSlots: Array<{ id: string; date: string; platform?: string; status: "ideated" | "generated" | "approved" | "published"; generationId?: string; notes?: string }>;
+    studioCalendarSlots: Array<{
+      id: string;
+      date: string;
+      platform?: string;
+      status: "ideated" | "generated" | "approved" | "published";
+      generationId?: string;
+      notes?: string;
+    }>;
     studioCalendarNewDate: string;
     studioCalendarNewPlatform: string;
     studioCalendarNewNotes: string;
     studioGalleryLoading: boolean;
     studioGalleryError: string | null;
-    studioGalleryItems: Array<{ id: string; type: "image" | "video" | "text"; prompt: string; model: string; provider: string; brandName?: string; tags: string[]; createdAt: string; resultRef?: string }>;
+    studioGalleryItems: Array<{
+      id: string;
+      type: "image" | "video" | "text";
+      prompt: string;
+      model: string;
+      provider: string;
+      brandName?: string;
+      tags: string[];
+      createdAt: string;
+      resultRef?: string;
+    }>;
     studioGalleryFilter: "all" | "image" | "video" | "text";
     studioGallerySearch: string;
     paletteOpen: boolean;

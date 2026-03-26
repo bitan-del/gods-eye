@@ -23,10 +23,7 @@ type CachedCompiledConfiguredBindingRegistry = {
   registry: CompiledConfiguredBindingRegistry;
 };
 
-const compiledRegistryCache = new WeakMap<
-  GodsEyeConfig,
-  CachedCompiledConfiguredBindingRegistry
->();
+const compiledRegistryCache = new WeakMap<GodsEyeConfig, CachedCompiledConfiguredBindingRegistry>();
 
 function resolveLoadedChannelPlugin(channel: string) {
   const normalized = channel.trim().toLowerCase();

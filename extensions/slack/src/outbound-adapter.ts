@@ -7,10 +7,7 @@ import {
   resolveInteractiveTextFallback,
   type InteractiveReply,
 } from "godseye/plugin-sdk/interactive-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundIdentity,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundIdentity } from "godseye/plugin-sdk/outbound-runtime";
 import { getGlobalHookRunner } from "godseye/plugin-sdk/plugin-runtime";
 import {
   resolvePayloadMediaUrls,

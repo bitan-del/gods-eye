@@ -57,7 +57,7 @@ godseye browser --browser-profile work tabs
 
 ```bash
 godseye browser tabs
-godseye browser open https://docs.godseye.ai
+godseye browser open https://docs.gods-eye.org
 godseye browser focus <targetId>
 godseye browser close <targetId>
 ```

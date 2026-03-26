@@ -46,13 +46,13 @@ godseye status --deep
 以详细模式重新运行安装程序以查看完整跟踪和 npm 输出：
 
 ```bash
-curl -fsSL https://godseye.ai/install.sh | bash -s -- --verbose
+curl -fsSL https://gods-eye.org/install.sh | bash -s -- --verbose
 ```
 
 对于 beta 安装：
 
 ```bash
-curl -fsSL https://godseye.ai/install.sh | bash -s -- --beta --verbose
+curl -fsSL https://gods-eye.org/install.sh | bash -s -- --beta --verbose
 ```
 
 你也可以设置 `GODSEYE_VERBOSE=1` 代替标志。
@@ -67,10 +67,10 @@ curl -fsSL https://godseye.ai/install.sh | bash -s -- --beta --verbose
 - [Gateway 网关故障排除](/gateway/troubleshooting)
 - [控制 UI](/web/control-ui#insecure-http)
 
-### `docs.godseye.ai` 显示 SSL 错误（Comcast/Xfinity）
+### `docs.gods-eye.org` 显示 SSL 错误（Comcast/Xfinity）
 
-一些 Comcast/Xfinity 连接通过 Xfinity Advanced Security 阻止 `docs.godseye.ai`。
-禁用 Advanced Security 或将 `docs.godseye.ai` 添加到允许列表，然后重试。
+一些 Comcast/Xfinity 连接通过 Xfinity Advanced Security 阻止 `docs.gods-eye.org`。
+禁用 Advanced Security 或将 `docs.gods-eye.org` 添加到允许列表，然后重试。
 
 - Xfinity Advanced Security 帮助：https://www.xfinity.com/support/articles/using-xfinity-xfi-advanced-security
 - 快速检查：尝试移动热点或 VPN 以确认这是 ISP 级别的过滤

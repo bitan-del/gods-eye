@@ -208,9 +208,7 @@ describeLive("gateway live (cli backend)", () => {
 
     const cliCommand = process.env.GODSEYE_LIVE_CLI_BACKEND_COMMAND ?? providerDefaults?.command;
     if (!cliCommand) {
-      throw new Error(
-        `GODSEYE_LIVE_CLI_BACKEND_COMMAND is required for provider "${providerId}".`,
-      );
+      throw new Error(`GODSEYE_LIVE_CLI_BACKEND_COMMAND is required for provider "${providerId}".`);
     }
     const baseCliArgs =
       parseJsonStringArray(

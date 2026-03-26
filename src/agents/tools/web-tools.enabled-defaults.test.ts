@@ -798,7 +798,7 @@ describe("web_search kimi provider", () => {
               },
             ],
             search_results: [
-              { title: "Gods Eye", url: "https://godseye.ai/docs", content: "docs" },
+              { title: "Gods Eye", url: "https://gods-eye.org/docs", content: "docs" },
             ],
           }),
           { status: 200, headers: { "content-type": "application/json" } },
@@ -834,7 +834,7 @@ describe("web_search kimi provider", () => {
       | undefined;
     expect(toolMessage?.tool_call_id).toBe("call_1");
     expect(JSON.parse(toolMessage?.content ?? "{}")).toMatchObject({
-      search_results: [{ url: "https://godseye.ai/docs" }],
+      search_results: [{ url: "https://gods-eye.org/docs" }],
     });
 
     const details = result?.details as {
@@ -843,7 +843,7 @@ describe("web_search kimi provider", () => {
       provider?: string;
     };
     expect(details.provider).toBe("kimi");
-    expect(details.citations).toEqual(["https://godseye.ai/docs"]);
+    expect(details.citations).toEqual(["https://gods-eye.org/docs"]);
     expect(details.content).toContain("final answer");
   });
 });

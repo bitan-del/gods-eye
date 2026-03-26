@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { GODSEYE_CLI_ENV_VALUE } from "./godseye-exec-env.js";
 import {
   isDangerousHostEnvOverrideVarName,
   isDangerousHostEnvVarName,
@@ -11,7 +12,6 @@ import {
   sanitizeHostExecEnvWithDiagnostics,
   sanitizeSystemRunEnvOverrides,
 } from "./host-env-security.js";
-import { GODSEYE_CLI_ENV_VALUE } from "./godseye-exec-env.js";
 
 function getSystemGitPath() {
   if (process.platform === "win32") {

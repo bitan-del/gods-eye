@@ -645,10 +645,7 @@ function resolveDefaultStoreAgentId(cfg: GodsEyeConfig): string {
   return normalizeAgentId(resolveDefaultAgentId(cfg));
 }
 
-export function resolveSessionStoreKey(params: {
-  cfg: GodsEyeConfig;
-  sessionKey: string;
-}): string {
+export function resolveSessionStoreKey(params: { cfg: GodsEyeConfig; sessionKey: string }): string {
   const raw = (params.sessionKey ?? "").trim();
   if (!raw) {
     return raw;

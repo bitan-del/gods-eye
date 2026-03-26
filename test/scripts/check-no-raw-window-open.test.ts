@@ -5,7 +5,7 @@ describe("check-no-raw-window-open", () => {
   it("finds direct window.open calls", () => {
     const source = `
       function openDocs() {
-        window.open("https://docs.godseye.ai");
+        window.open("https://docs.gods-eye.org");
       }
     `;
     expect(findRawWindowOpenLines(source)).toEqual([3]);
@@ -14,7 +14,7 @@ describe("check-no-raw-window-open", () => {
   it("finds globalThis.open calls", () => {
     const source = `
       function openDocs() {
-        globalThis.open("https://docs.godseye.ai");
+        globalThis.open("https://docs.gods-eye.org");
       }
     `;
     expect(findRawWindowOpenLines(source)).toEqual([3]);

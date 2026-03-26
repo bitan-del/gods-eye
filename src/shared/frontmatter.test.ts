@@ -51,9 +51,7 @@ describe("shared/frontmatter", () => {
 
   test("resolveGodsEyeManifestBlock returns undefined for invalid input", () => {
     expect(resolveGodsEyeManifestBlock({ frontmatter: {} })).toBeUndefined();
-    expect(
-      resolveGodsEyeManifestBlock({ frontmatter: { metadata: "not-json5" } }),
-    ).toBeUndefined();
+    expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "not-json5" } })).toBeUndefined();
     expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "123" } })).toBeUndefined();
     expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "[]" } })).toBeUndefined();
     expect(

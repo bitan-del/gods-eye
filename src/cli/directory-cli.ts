@@ -83,7 +83,7 @@ export function registerDirectoryCli(program: Command) {
           ],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/directory",
-          "docs.godseye.ai/cli/directory",
+          "docs.gods-eye.org/cli/directory",
         )}\n`,
     )
     .action(() => {

@@ -23,17 +23,17 @@ It answers you on the channels you already use (WhatsApp, Telegram, Slack, Disco
 
 If you want a personal, single-user assistant that feels local, fast, and always-on, this is it.
 
-[Website](https://godseye.ai) · [Docs](https://docs.godseye.ai) · [Vision](VISION.md) · [DeepWiki](https://deepwiki.com/godseye/godseye) · [Getting Started](https://docs.godseye.ai/start/getting-started) · [Updating](https://docs.godseye.ai/install/updating) · [Showcase](https://docs.godseye.ai/start/showcase) · [FAQ](https://docs.godseye.ai/help/faq) · [Onboarding](https://docs.godseye.ai/start/wizard) · [Nix](https://github.com/bitan-del/nix-godseye) · [Docker](https://docs.godseye.ai/install/docker) · [Discord](https://discord.gg/clawd)
+[Website](https://gods-eye.org) · [Docs](https://docs.gods-eye.org) · [Vision](VISION.md) · [DeepWiki](https://deepwiki.com/godseye/godseye) · [Getting Started](https://docs.gods-eye.org/start/getting-started) · [Updating](https://docs.gods-eye.org/install/updating) · [Showcase](https://docs.gods-eye.org/start/showcase) · [FAQ](https://docs.gods-eye.org/help/faq) · [Onboarding](https://docs.gods-eye.org/start/wizard) · [Nix](https://github.com/bitan-del/nix-godseye) · [Docker](https://docs.gods-eye.org/install/docker) · [Discord](https://discord.gg/clawd)
 
 Preferred setup: run `godseye onboard` in your terminal.
 Gods Eye Onboard guides you step by step through setting up the gateway, workspace, channels, and skills. It is the recommended CLI setup path and works on **macOS, Linux, and Windows (via WSL2; strongly recommended)**.
 Works with npm, pnpm, or bun.
-New install? Start here: [Getting started](https://docs.godseye.ai/start/getting-started)
+New install? Start here: [Getting started](https://docs.gods-eye.org/start/getting-started)
 
 ## Models (selection + auth)
 
-- Models config + CLI: [Models](https://docs.godseye.ai/concepts/models)
-- Auth profile rotation (OAuth vs API keys) + fallbacks: [Model failover](https://docs.godseye.ai/concepts/model-failover)
+- Models config + CLI: [Models](https://docs.gods-eye.org/concepts/models)
+- Auth profile rotation (OAuth vs API keys) + fallbacks: [Model failover](https://docs.gods-eye.org/concepts/model-failover)
 
 ## Install (recommended)
 
@@ -52,7 +52,7 @@ Gods Eye Onboard installs the Gateway daemon (launchd/systemd user service) so i
 
 Runtime: **Node 24 (recommended) or Node 22.16+**.
 
-Full beginner guide (auth, pairing, channels): [Getting started](https://docs.godseye.ai/start/getting-started)
+Full beginner guide (auth, pairing, channels): [Getting started](https://docs.gods-eye.org/start/getting-started)
 
 ```bash
 godseye onboard --install-daemon
@@ -66,7 +66,7 @@ godseye message send --to +1234567890 --message "Hello from Gods Eye"
 godseye agent --message "Ship checklist" --thinking high
 ```
 
-Upgrading? [Updating guide](https://docs.godseye.ai/install/updating) (and run `godseye doctor`).
+Upgrading? [Updating guide](https://docs.gods-eye.org/install/updating) (and run `godseye doctor`).
 
 ## Gods Eye Studio
 
@@ -87,9 +87,9 @@ godseye agent --message "show my content calendar for this week"
 
 Studio saves everything to creative memory (`~/.godseye/brain/`): brand profiles, generation history, characters, calendar slots, and style preferences. This context is automatically injected into every agent call so your assistant always knows your brand.
 
-Manage Studio visually from the **Studio** tabs in the [web control panel](https://docs.godseye.ai).
+Manage Studio visually from the **Studio** tabs in the [web control panel](https://docs.gods-eye.org).
 
-Docs: [Getting started](https://docs.godseye.ai/studio/getting-started) · [Brain architecture](https://docs.godseye.ai/studio/brain) · [Creative providers](https://docs.godseye.ai/studio/providers)
+Docs: [Getting started](https://docs.gods-eye.org/studio/getting-started) · [Brain architecture](https://docs.gods-eye.org/studio/brain) · [Creative providers](https://docs.gods-eye.org/studio/providers)
 
 ## Development channels
 
@@ -98,7 +98,7 @@ Docs: [Getting started](https://docs.godseye.ai/studio/getting-started) · [Brai
 - **dev**: moving head of `main`, npm dist-tag `dev` (when published).
 
 Switch channels (git + npm): `godseye update --channel stable|beta|dev`.
-Details: [Development channels](https://docs.godseye.ai/install/development-channels).
+Details: [Development channels](https://docs.gods-eye.org/install/development-channels).
 
 ## From source (development)
 
@@ -124,7 +124,7 @@ Note: `pnpm godseye ...` runs TypeScript directly (via `tsx`). `pnpm build` prod
 
 Gods Eye connects to real messaging surfaces. Treat inbound DMs as **untrusted input**.
 
-Full security guide: [Security](https://docs.godseye.ai/gateway/security)
+Full security guide: [Security](https://docs.gods-eye.org/gateway/security)
 
 Default behavior on Telegram/WhatsApp/Signal/iMessage/Microsoft Teams/Discord/Google Chat/Slack:
 
@@ -136,14 +136,14 @@ Run `godseye doctor` to surface risky/misconfigured DM policies.
 
 ## Highlights
 
-- **[Local-first Gateway](https://docs.godseye.ai/gateway)** — single control plane for sessions, channels, tools, and events.
-- **[Multi-channel inbox](https://docs.godseye.ai/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, WebChat, macOS, iOS/Android.
-- **[Multi-agent routing](https://docs.godseye.ai/gateway/configuration)** — route inbound channels/accounts/peers to isolated agents (workspaces + per-agent sessions).
-- **[Voice Wake](https://docs.godseye.ai/nodes/voicewake) + [Talk Mode](https://docs.godseye.ai/nodes/talk)** — wake words on macOS/iOS and continuous voice on Android (ElevenLabs + system TTS fallback).
-- **[Live Canvas](https://docs.godseye.ai/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.godseye.ai/platforms/mac/canvas#canvas-a2ui).
-- **[First-class tools](https://docs.godseye.ai/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
-- **[Companion apps](https://docs.godseye.ai/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.godseye.ai/nodes).
-- **[Onboarding](https://docs.godseye.ai/start/wizard) + [skills](https://docs.godseye.ai/tools/skills)** — onboarding-driven setup with bundled/managed/workspace skills.
+- **[Local-first Gateway](https://docs.gods-eye.org/gateway)** — single control plane for sessions, channels, tools, and events.
+- **[Multi-channel inbox](https://docs.gods-eye.org/channels)** — WhatsApp, Telegram, Slack, Discord, Google Chat, Signal, BlueBubbles (iMessage), iMessage (legacy), IRC, Microsoft Teams, Matrix, Feishu, LINE, Mattermost, Nextcloud Talk, Nostr, Synology Chat, Tlon, Twitch, Zalo, Zalo Personal, WeChat, WebChat, macOS, iOS/Android.
+- **[Multi-agent routing](https://docs.gods-eye.org/gateway/configuration)** — route inbound channels/accounts/peers to isolated agents (workspaces + per-agent sessions).
+- **[Voice Wake](https://docs.gods-eye.org/nodes/voicewake) + [Talk Mode](https://docs.gods-eye.org/nodes/talk)** — wake words on macOS/iOS and continuous voice on Android (ElevenLabs + system TTS fallback).
+- **[Live Canvas](https://docs.gods-eye.org/platforms/mac/canvas)** — agent-driven visual workspace with [A2UI](https://docs.gods-eye.org/platforms/mac/canvas#canvas-a2ui).
+- **[First-class tools](https://docs.gods-eye.org/tools)** — browser, canvas, nodes, cron, sessions, and Discord/Slack actions.
+- **[Companion apps](https://docs.gods-eye.org/platforms/macos)** — macOS menu bar app + iOS/Android [nodes](https://docs.gods-eye.org/nodes).
+- **[Onboarding](https://docs.gods-eye.org/start/wizard) + [skills](https://docs.gods-eye.org/tools/skills)** — onboarding-driven setup with bundled/managed/workspace skills.
 
 ## Star History
 
@@ -153,45 +153,45 @@ Run `godseye doctor` to surface risky/misconfigured DM policies.
 
 ### Core platform
 
-- [Gateway WS control plane](https://docs.godseye.ai/gateway) with sessions, presence, config, cron, webhooks, [Control UI](https://docs.godseye.ai/web), and [Canvas host](https://docs.godseye.ai/platforms/mac/canvas#canvas-a2ui).
-- [CLI surface](https://docs.godseye.ai/tools/agent-send): gateway, agent, send, [onboarding](https://docs.godseye.ai/start/wizard), and [doctor](https://docs.godseye.ai/gateway/doctor).
-- [Pi agent runtime](https://docs.godseye.ai/concepts/agent) in RPC mode with tool streaming and block streaming.
-- [Session model](https://docs.godseye.ai/concepts/session): `main` for direct chats, group isolation, activation modes, queue modes, reply-back. Group rules: [Groups](https://docs.godseye.ai/channels/groups).
-- [Media pipeline](https://docs.godseye.ai/nodes/images): images/audio/video, transcription hooks, size caps, temp file lifecycle. Audio details: [Audio](https://docs.godseye.ai/nodes/audio).
+- [Gateway WS control plane](https://docs.gods-eye.org/gateway) with sessions, presence, config, cron, webhooks, [Control UI](https://docs.gods-eye.org/web), and [Canvas host](https://docs.gods-eye.org/platforms/mac/canvas#canvas-a2ui).
+- [CLI surface](https://docs.gods-eye.org/tools/agent-send): gateway, agent, send, [onboarding](https://docs.gods-eye.org/start/wizard), and [doctor](https://docs.gods-eye.org/gateway/doctor).
+- [Pi agent runtime](https://docs.gods-eye.org/concepts/agent) in RPC mode with tool streaming and block streaming.
+- [Session model](https://docs.gods-eye.org/concepts/session): `main` for direct chats, group isolation, activation modes, queue modes, reply-back. Group rules: [Groups](https://docs.gods-eye.org/channels/groups).
+- [Media pipeline](https://docs.gods-eye.org/nodes/images): images/audio/video, transcription hooks, size caps, temp file lifecycle. Audio details: [Audio](https://docs.gods-eye.org/nodes/audio).
 
 ### Channels
 
-- [Channels](https://docs.godseye.ai/channels): [WhatsApp](https://docs.godseye.ai/channels/whatsapp) (Baileys), [Telegram](https://docs.godseye.ai/channels/telegram) (grammY), [Slack](https://docs.godseye.ai/channels/slack) (Bolt), [Discord](https://docs.godseye.ai/channels/discord) (discord.js), [Google Chat](https://docs.godseye.ai/channels/googlechat) (Chat API), [Signal](https://docs.godseye.ai/channels/signal) (signal-cli), [BlueBubbles](https://docs.godseye.ai/channels/bluebubbles) (iMessage, recommended), [iMessage](https://docs.godseye.ai/channels/imessage) (legacy imsg), [IRC](https://docs.godseye.ai/channels/irc), [Microsoft Teams](https://docs.godseye.ai/channels/msteams), [Matrix](https://docs.godseye.ai/channels/matrix), [Feishu](https://docs.godseye.ai/channels/feishu), [LINE](https://docs.godseye.ai/channels/line), [Mattermost](https://docs.godseye.ai/channels/mattermost), [Nextcloud Talk](https://docs.godseye.ai/channels/nextcloud-talk), [Nostr](https://docs.godseye.ai/channels/nostr), [Synology Chat](https://docs.godseye.ai/channels/synology-chat), [Tlon](https://docs.godseye.ai/channels/tlon), [Twitch](https://docs.godseye.ai/channels/twitch), [Zalo](https://docs.godseye.ai/channels/zalo), [Zalo Personal](https://docs.godseye.ai/channels/zalouser), WeChat (`@tencent-weixin/godseye-weixin`), [WebChat](https://docs.godseye.ai/web/webchat).
-- [Group routing](https://docs.godseye.ai/channels/group-messages): mention gating, reply tags, per-channel chunking and routing. Channel rules: [Channels](https://docs.godseye.ai/channels).
+- [Channels](https://docs.gods-eye.org/channels): [WhatsApp](https://docs.gods-eye.org/channels/whatsapp) (Baileys), [Telegram](https://docs.gods-eye.org/channels/telegram) (grammY), [Slack](https://docs.gods-eye.org/channels/slack) (Bolt), [Discord](https://docs.gods-eye.org/channels/discord) (discord.js), [Google Chat](https://docs.gods-eye.org/channels/googlechat) (Chat API), [Signal](https://docs.gods-eye.org/channels/signal) (signal-cli), [BlueBubbles](https://docs.gods-eye.org/channels/bluebubbles) (iMessage, recommended), [iMessage](https://docs.gods-eye.org/channels/imessage) (legacy imsg), [IRC](https://docs.gods-eye.org/channels/irc), [Microsoft Teams](https://docs.gods-eye.org/channels/msteams), [Matrix](https://docs.gods-eye.org/channels/matrix), [Feishu](https://docs.gods-eye.org/channels/feishu), [LINE](https://docs.gods-eye.org/channels/line), [Mattermost](https://docs.gods-eye.org/channels/mattermost), [Nextcloud Talk](https://docs.gods-eye.org/channels/nextcloud-talk), [Nostr](https://docs.gods-eye.org/channels/nostr), [Synology Chat](https://docs.gods-eye.org/channels/synology-chat), [Tlon](https://docs.gods-eye.org/channels/tlon), [Twitch](https://docs.gods-eye.org/channels/twitch), [Zalo](https://docs.gods-eye.org/channels/zalo), [Zalo Personal](https://docs.gods-eye.org/channels/zalouser), WeChat (`@tencent-weixin/godseye-weixin`), [WebChat](https://docs.gods-eye.org/web/webchat).
+- [Group routing](https://docs.gods-eye.org/channels/group-messages): mention gating, reply tags, per-channel chunking and routing. Channel rules: [Channels](https://docs.gods-eye.org/channels).
 
 ### Apps + nodes
 
-- [macOS app](https://docs.godseye.ai/platforms/macos): menu bar control plane, [Voice Wake](https://docs.godseye.ai/nodes/voicewake)/PTT, [Talk Mode](https://docs.godseye.ai/nodes/talk) overlay, [WebChat](https://docs.godseye.ai/web/webchat), debug tools, [remote gateway](https://docs.godseye.ai/gateway/remote) control.
-- [iOS node](https://docs.godseye.ai/platforms/ios): [Canvas](https://docs.godseye.ai/platforms/mac/canvas), [Voice Wake](https://docs.godseye.ai/nodes/voicewake), [Talk Mode](https://docs.godseye.ai/nodes/talk), camera, screen recording, Bonjour + device pairing.
-- [Android node](https://docs.godseye.ai/platforms/android): Connect tab (setup code/manual), chat sessions, voice tab, [Canvas](https://docs.godseye.ai/platforms/mac/canvas), camera/screen recording, and Android device commands (notifications/location/SMS/photos/contacts/calendar/motion/app update).
-- [macOS node mode](https://docs.godseye.ai/nodes): system.run/notify + canvas/camera exposure.
+- [macOS app](https://docs.gods-eye.org/platforms/macos): menu bar control plane, [Voice Wake](https://docs.gods-eye.org/nodes/voicewake)/PTT, [Talk Mode](https://docs.gods-eye.org/nodes/talk) overlay, [WebChat](https://docs.gods-eye.org/web/webchat), debug tools, [remote gateway](https://docs.gods-eye.org/gateway/remote) control.
+- [iOS node](https://docs.gods-eye.org/platforms/ios): [Canvas](https://docs.gods-eye.org/platforms/mac/canvas), [Voice Wake](https://docs.gods-eye.org/nodes/voicewake), [Talk Mode](https://docs.gods-eye.org/nodes/talk), camera, screen recording, Bonjour + device pairing.
+- [Android node](https://docs.gods-eye.org/platforms/android): Connect tab (setup code/manual), chat sessions, voice tab, [Canvas](https://docs.gods-eye.org/platforms/mac/canvas), camera/screen recording, and Android device commands (notifications/location/SMS/photos/contacts/calendar/motion/app update).
+- [macOS node mode](https://docs.gods-eye.org/nodes): system.run/notify + canvas/camera exposure.
 
 ### Tools + automation
 
-- [Browser control](https://docs.godseye.ai/tools/browser): dedicated godseye Chrome/Chromium, snapshots, actions, uploads, profiles.
-- [Canvas](https://docs.godseye.ai/platforms/mac/canvas): [A2UI](https://docs.godseye.ai/platforms/mac/canvas#canvas-a2ui) push/reset, eval, snapshot.
-- [Nodes](https://docs.godseye.ai/nodes): camera snap/clip, screen record, [location.get](https://docs.godseye.ai/nodes/location-command), notifications.
-- [Cron + wakeups](https://docs.godseye.ai/automation/cron-jobs); [webhooks](https://docs.godseye.ai/automation/webhook); [Gmail Pub/Sub](https://docs.godseye.ai/automation/gmail-pubsub).
-- [Skills platform](https://docs.godseye.ai/tools/skills): bundled, managed, and workspace skills with install gating + UI.
+- [Browser control](https://docs.gods-eye.org/tools/browser): dedicated godseye Chrome/Chromium, snapshots, actions, uploads, profiles.
+- [Canvas](https://docs.gods-eye.org/platforms/mac/canvas): [A2UI](https://docs.gods-eye.org/platforms/mac/canvas#canvas-a2ui) push/reset, eval, snapshot.
+- [Nodes](https://docs.gods-eye.org/nodes): camera snap/clip, screen record, [location.get](https://docs.gods-eye.org/nodes/location-command), notifications.
+- [Cron + wakeups](https://docs.gods-eye.org/automation/cron-jobs); [webhooks](https://docs.gods-eye.org/automation/webhook); [Gmail Pub/Sub](https://docs.gods-eye.org/automation/gmail-pubsub).
+- [Skills platform](https://docs.gods-eye.org/tools/skills): bundled, managed, and workspace skills with install gating + UI.
 
 ### Runtime + safety
 
-- [Channel routing](https://docs.godseye.ai/channels/channel-routing), [retry policy](https://docs.godseye.ai/concepts/retry), and [streaming/chunking](https://docs.godseye.ai/concepts/streaming).
-- [Presence](https://docs.godseye.ai/concepts/presence), [typing indicators](https://docs.godseye.ai/concepts/typing-indicators), and [usage tracking](https://docs.godseye.ai/concepts/usage-tracking).
-- [Models](https://docs.godseye.ai/concepts/models), [model failover](https://docs.godseye.ai/concepts/model-failover), and [session pruning](https://docs.godseye.ai/concepts/session-pruning).
-- [Security](https://docs.godseye.ai/gateway/security) and [troubleshooting](https://docs.godseye.ai/channels/troubleshooting).
+- [Channel routing](https://docs.gods-eye.org/channels/channel-routing), [retry policy](https://docs.gods-eye.org/concepts/retry), and [streaming/chunking](https://docs.gods-eye.org/concepts/streaming).
+- [Presence](https://docs.gods-eye.org/concepts/presence), [typing indicators](https://docs.gods-eye.org/concepts/typing-indicators), and [usage tracking](https://docs.gods-eye.org/concepts/usage-tracking).
+- [Models](https://docs.gods-eye.org/concepts/models), [model failover](https://docs.gods-eye.org/concepts/model-failover), and [session pruning](https://docs.gods-eye.org/concepts/session-pruning).
+- [Security](https://docs.gods-eye.org/gateway/security) and [troubleshooting](https://docs.gods-eye.org/channels/troubleshooting).
 
 ### Ops + packaging
 
-- [Control UI](https://docs.godseye.ai/web) + [WebChat](https://docs.godseye.ai/web/webchat) served directly from the Gateway.
-- [Tailscale Serve/Funnel](https://docs.godseye.ai/gateway/tailscale) or [SSH tunnels](https://docs.godseye.ai/gateway/remote) with token/password auth.
-- [Nix mode](https://docs.godseye.ai/install/nix) for declarative config; [Docker](https://docs.godseye.ai/install/docker)-based installs.
-- [Doctor](https://docs.godseye.ai/gateway/doctor) migrations, [logging](https://docs.godseye.ai/logging).
+- [Control UI](https://docs.gods-eye.org/web) + [WebChat](https://docs.gods-eye.org/web/webchat) served directly from the Gateway.
+- [Tailscale Serve/Funnel](https://docs.gods-eye.org/gateway/tailscale) or [SSH tunnels](https://docs.gods-eye.org/gateway/remote) with token/password auth.
+- [Nix mode](https://docs.gods-eye.org/install/nix) for declarative config; [Docker](https://docs.gods-eye.org/install/docker)-based installs.
+- [Doctor](https://docs.gods-eye.org/gateway/doctor) migrations, [logging](https://docs.gods-eye.org/logging).
 
 ## How it works (short)
 
@@ -214,12 +214,12 @@ WhatsApp / Telegram / Slack / Discord / Google Chat / Signal / iMessage / BlueBu
 
 ## Key subsystems
 
-- **[Gateway WebSocket network](https://docs.godseye.ai/concepts/architecture)** — single WS control plane for clients, tools, and events (plus ops: [Gateway runbook](https://docs.godseye.ai/gateway)).
-- **[Tailscale exposure](https://docs.godseye.ai/gateway/tailscale)** — Serve/Funnel for the Gateway dashboard + WS (remote access: [Remote](https://docs.godseye.ai/gateway/remote)).
-- **[Browser control](https://docs.godseye.ai/tools/browser)** — godseye‑managed Chrome/Chromium with CDP control.
-- **[Canvas + A2UI](https://docs.godseye.ai/platforms/mac/canvas)** — agent‑driven visual workspace (A2UI host: [Canvas/A2UI](https://docs.godseye.ai/platforms/mac/canvas#canvas-a2ui)).
-- **[Voice Wake](https://docs.godseye.ai/nodes/voicewake) + [Talk Mode](https://docs.godseye.ai/nodes/talk)** — wake words on macOS/iOS plus continuous voice on Android.
-- **[Nodes](https://docs.godseye.ai/nodes)** — Canvas, camera snap/clip, screen record, `location.get`, notifications, plus macOS‑only `system.run`/`system.notify`.
+- **[Gateway WebSocket network](https://docs.gods-eye.org/concepts/architecture)** — single WS control plane for clients, tools, and events (plus ops: [Gateway runbook](https://docs.gods-eye.org/gateway)).
+- **[Tailscale exposure](https://docs.gods-eye.org/gateway/tailscale)** — Serve/Funnel for the Gateway dashboard + WS (remote access: [Remote](https://docs.gods-eye.org/gateway/remote)).
+- **[Browser control](https://docs.gods-eye.org/tools/browser)** — godseye‑managed Chrome/Chromium with CDP control.
+- **[Canvas + A2UI](https://docs.gods-eye.org/platforms/mac/canvas)** — agent‑driven visual workspace (A2UI host: [Canvas/A2UI](https://docs.gods-eye.org/platforms/mac/canvas#canvas-a2ui)).
+- **[Voice Wake](https://docs.gods-eye.org/nodes/voicewake) + [Talk Mode](https://docs.gods-eye.org/nodes/talk)** — wake words on macOS/iOS plus continuous voice on Android.
+- **[Nodes](https://docs.gods-eye.org/nodes)** — Canvas, camera snap/clip, screen record, `location.get`, notifications, plus macOS‑only `system.run`/`system.notify`.
 
 ## Tailscale access (Gateway dashboard)
 
@@ -236,7 +236,7 @@ Notes:
 - Funnel refuses to start unless `gateway.auth.mode: "password"` is set.
 - Optional: `gateway.tailscale.resetOnExit` to undo Serve/Funnel on shutdown.
 
-Details: [Tailscale guide](https://docs.godseye.ai/gateway/tailscale) · [Web surfaces](https://docs.godseye.ai/web)
+Details: [Tailscale guide](https://docs.gods-eye.org/gateway/tailscale) · [Web surfaces](https://docs.gods-eye.org/web)
 
 ## Remote Gateway (Linux is great)
 
@@ -246,7 +246,7 @@ It’s perfectly fine to run the Gateway on a small Linux instance. Clients (mac
 - **Device nodes** run device‑local actions (`system.run`, camera, screen recording, notifications) via `node.invoke`.
   In short: exec runs where the Gateway lives; device actions run where the device lives.
 
-Details: [Remote access](https://docs.godseye.ai/gateway/remote) · [Nodes](https://docs.godseye.ai/nodes) · [Security](https://docs.godseye.ai/gateway/security)
+Details: [Remote access](https://docs.gods-eye.org/gateway/remote) · [Nodes](https://docs.gods-eye.org/nodes) · [Security](https://docs.gods-eye.org/gateway/security)
 
 ## macOS permissions via the Gateway protocol
 
@@ -261,7 +261,7 @@ Elevated bash (host permissions) is separate from macOS TCC:
 - Use `/elevated on|off` to toggle per‑session elevated access when enabled + allowlisted.
 - Gateway persists the per‑session toggle via `sessions.patch` (WS method) alongside `thinkingLevel`, `verboseLevel`, `model`, `sendPolicy`, and `groupActivation`.
 
-Details: [Nodes](https://docs.godseye.ai/nodes) · [macOS app](https://docs.godseye.ai/platforms/macos) · [Gateway protocol](https://docs.godseye.ai/concepts/architecture)
+Details: [Nodes](https://docs.gods-eye.org/nodes) · [macOS app](https://docs.gods-eye.org/platforms/macos) · [Gateway protocol](https://docs.gods-eye.org/concepts/architecture)
 
 ## Agent to Agent (sessions\_\* tools)
 
@@ -270,7 +270,7 @@ Details: [Nodes](https://docs.godseye.ai/nodes) · [macOS app](https://docs.gods
 - `sessions_history` — fetch transcript logs for a session.
 - `sessions_send` — message another session; optional reply‑back ping‑pong + announce step (`REPLY_SKIP`, `ANNOUNCE_SKIP`).
 
-Details: [Session tools](https://docs.godseye.ai/concepts/session-tool)
+Details: [Session tools](https://docs.gods-eye.org/concepts/session-tool)
 
 ## Skills registry (ClawHub)
 
@@ -304,7 +304,7 @@ If you plan to build/run companion apps, follow the platform runbooks below.
 - WebChat + debug tools.
 - Remote gateway control over SSH.
 
-Note: signed builds required for macOS permissions to stick across rebuilds (see [macOS Permissions](https://docs.godseye.ai/platforms/mac/permissions)).
+Note: signed builds required for macOS permissions to stick across rebuilds (see [macOS Permissions](https://docs.gods-eye.org/platforms/mac/permissions)).
 
 ### iOS node (optional)
 
@@ -312,13 +312,13 @@ Note: signed builds required for macOS permissions to stick across rebuilds (see
 - Voice trigger forwarding + Canvas surface.
 - Controlled via `godseye nodes …`.
 
-Runbook: [iOS connect](https://docs.godseye.ai/platforms/ios).
+Runbook: [iOS connect](https://docs.gods-eye.org/platforms/ios).
 
 ### Android node (optional)
 
 - Pairs as a WS node via device pairing (`godseye devices ...`).
 - Exposes Connect/Chat/Voice tabs plus Canvas, Camera, Screen capture, and Android device command families.
-- Runbook: [Android connect](https://docs.godseye.ai/platforms/android).
+- Runbook: [Android connect](https://docs.gods-eye.org/platforms/android).
 
 ## Agent workspace + skills
 
@@ -338,7 +338,7 @@ Minimal `~/.godseye/godseye.json` (model + defaults):
 }
 ```
 
-[Full configuration reference (all keys + examples).](https://docs.godseye.ai/gateway/configuration)
+[Full configuration reference (all keys + examples).](https://docs.gods-eye.org/gateway/configuration)
 
 ## Security model (important)
 
@@ -346,15 +346,15 @@ Minimal `~/.godseye/godseye.json` (model + defaults):
 - **Group/channel safety:** set `agents.defaults.sandbox.mode: "non-main"` to run **non‑main sessions** (groups/channels) inside per‑session Docker sandboxes; bash then runs in Docker for those sessions.
 - **Sandbox defaults:** allowlist `bash`, `process`, `read`, `write`, `edit`, `sessions_list`, `sessions_history`, `sessions_send`, `sessions_spawn`; denylist `browser`, `canvas`, `nodes`, `cron`, `discord`, `gateway`.
 
-Details: [Security guide](https://docs.godseye.ai/gateway/security) · [Docker + sandboxing](https://docs.godseye.ai/install/docker) · [Sandbox config](https://docs.godseye.ai/gateway/configuration)
+Details: [Security guide](https://docs.gods-eye.org/gateway/security) · [Docker + sandboxing](https://docs.gods-eye.org/install/docker) · [Sandbox config](https://docs.gods-eye.org/gateway/configuration)
 
-### [WhatsApp](https://docs.godseye.ai/channels/whatsapp)
+### [WhatsApp](https://docs.gods-eye.org/channels/whatsapp)
 
 - Link the device: `pnpm godseye channels login` (stores creds in `~/.godseye/credentials`).
 - Allowlist who can talk to the assistant via `channels.whatsapp.allowFrom`.
 - If `channels.whatsapp.groups` is set, it becomes a group allowlist; include `"*"` to allow all.
 
-### [Telegram](https://docs.godseye.ai/channels/telegram)
+### [Telegram](https://docs.gods-eye.org/channels/telegram)
 
 - Set `TELEGRAM_BOT_TOKEN` or `channels.telegram.botToken` (env wins).
 - Optional: set `channels.telegram.groups` (with `channels.telegram.groups."*".requireMention`); when set, it is a group allowlist (include `"*"` to allow all). Also `channels.telegram.allowFrom` or `channels.telegram.webhookUrl` + `channels.telegram.webhookSecret` as needed.
@@ -369,11 +369,11 @@ Details: [Security guide](https://docs.godseye.ai/gateway/security) · [Docker +
 }
 ```
 
-### [Slack](https://docs.godseye.ai/channels/slack)
+### [Slack](https://docs.gods-eye.org/channels/slack)
 
 - Set `SLACK_BOT_TOKEN` + `SLACK_APP_TOKEN` (or `channels.slack.botToken` + `channels.slack.appToken`).
 
-### [Discord](https://docs.godseye.ai/channels/discord)
+### [Discord](https://docs.gods-eye.org/channels/discord)
 
 - Set `DISCORD_BOT_TOKEN` or `channels.discord.token`.
 - Optional: set `commands.native`, `commands.text`, or `commands.useAccessGroups`, plus `channels.discord.allowFrom`, `channels.discord.guilds`, or `channels.discord.mediaMaxMb` as needed.
@@ -388,22 +388,22 @@ Details: [Security guide](https://docs.godseye.ai/gateway/security) · [Docker +
 }
 ```
 
-### [Signal](https://docs.godseye.ai/channels/signal)
+### [Signal](https://docs.gods-eye.org/channels/signal)
 
 - Requires `signal-cli` and a `channels.signal` config section.
 
-### [BlueBubbles (iMessage)](https://docs.godseye.ai/channels/bluebubbles)
+### [BlueBubbles (iMessage)](https://docs.gods-eye.org/channels/bluebubbles)
 
 - **Recommended** iMessage integration.
 - Configure `channels.bluebubbles.serverUrl` + `channels.bluebubbles.password` and a webhook (`channels.bluebubbles.webhookPath`).
 - The BlueBubbles server runs on macOS; the Gateway can run on macOS or elsewhere.
 
-### [iMessage (legacy)](https://docs.godseye.ai/channels/imessage)
+### [iMessage (legacy)](https://docs.gods-eye.org/channels/imessage)
 
 - Legacy macOS-only integration via `imsg` (Messages must be signed in).
 - If `channels.imessage.groups` is set, it becomes a group allowlist; include `"*"` to allow all.
 
-### [Microsoft Teams](https://docs.godseye.ai/channels/msteams)
+### [Microsoft Teams](https://docs.gods-eye.org/channels/msteams)
 
 - Configure a Teams app + Bot Framework, then add a `msteams` config section.
 - Allowlist who can talk via `msteams.allowFrom`; group access via `msteams.groupAllowFrom` or `msteams.groupPolicy: "open"`.
@@ -414,7 +414,7 @@ Details: [Security guide](https://docs.godseye.ai/gateway/security) · [Docker +
 - Install: `godseye plugins install "@tencent-weixin/godseye-weixin"`, then `godseye channels login --channel godseye-weixin` to scan the QR code.
 - Requires the WeChat ClawBot plugin (WeChat > Me > Settings > Plugins); gradual rollout by Tencent.
 
-### [WebChat](https://docs.godseye.ai/web/webchat)
+### [WebChat](https://docs.gods-eye.org/web/webchat)
 
 - Uses the Gateway WebSocket; no separate WebChat port/config.
 
@@ -433,76 +433,76 @@ Browser control (optional):
 
 Use these when you’re past the onboarding flow and want the deeper reference.
 
-- [Start with the docs index for navigation and “what’s where.”](https://docs.godseye.ai)
-- [Read the architecture overview for the gateway + protocol model.](https://docs.godseye.ai/concepts/architecture)
-- [Use the full configuration reference when you need every key and example.](https://docs.godseye.ai/gateway/configuration)
-- [Run the Gateway by the book with the operational runbook.](https://docs.godseye.ai/gateway)
-- [Learn how the Control UI/Web surfaces work and how to expose them safely.](https://docs.godseye.ai/web)
-- [Understand remote access over SSH tunnels or tailnets.](https://docs.godseye.ai/gateway/remote)
-- [Follow Gods Eye Onboard for a guided setup.](https://docs.godseye.ai/start/wizard)
-- [Wire external triggers via the webhook surface.](https://docs.godseye.ai/automation/webhook)
-- [Set up Gmail Pub/Sub triggers.](https://docs.godseye.ai/automation/gmail-pubsub)
-- [Learn the macOS menu bar companion details.](https://docs.godseye.ai/platforms/mac/menu-bar)
-- [Platform guides: Windows (WSL2)](https://docs.godseye.ai/platforms/windows), [Linux](https://docs.godseye.ai/platforms/linux), [macOS](https://docs.godseye.ai/platforms/macos), [iOS](https://docs.godseye.ai/platforms/ios), [Android](https://docs.godseye.ai/platforms/android)
-- [Debug common failures with the troubleshooting guide.](https://docs.godseye.ai/channels/troubleshooting)
-- [Review security guidance before exposing anything.](https://docs.godseye.ai/gateway/security)
+- [Start with the docs index for navigation and “what’s where.”](https://docs.gods-eye.org)
+- [Read the architecture overview for the gateway + protocol model.](https://docs.gods-eye.org/concepts/architecture)
+- [Use the full configuration reference when you need every key and example.](https://docs.gods-eye.org/gateway/configuration)
+- [Run the Gateway by the book with the operational runbook.](https://docs.gods-eye.org/gateway)
+- [Learn how the Control UI/Web surfaces work and how to expose them safely.](https://docs.gods-eye.org/web)
+- [Understand remote access over SSH tunnels or tailnets.](https://docs.gods-eye.org/gateway/remote)
+- [Follow Gods Eye Onboard for a guided setup.](https://docs.gods-eye.org/start/wizard)
+- [Wire external triggers via the webhook surface.](https://docs.gods-eye.org/automation/webhook)
+- [Set up Gmail Pub/Sub triggers.](https://docs.gods-eye.org/automation/gmail-pubsub)
+- [Learn the macOS menu bar companion details.](https://docs.gods-eye.org/platforms/mac/menu-bar)
+- [Platform guides: Windows (WSL2)](https://docs.gods-eye.org/platforms/windows), [Linux](https://docs.gods-eye.org/platforms/linux), [macOS](https://docs.gods-eye.org/platforms/macos), [iOS](https://docs.gods-eye.org/platforms/ios), [Android](https://docs.gods-eye.org/platforms/android)
+- [Debug common failures with the troubleshooting guide.](https://docs.gods-eye.org/channels/troubleshooting)
+- [Review security guidance before exposing anything.](https://docs.gods-eye.org/gateway/security)
 
 ## Advanced docs (discovery + control)
 
-- [Discovery + transports](https://docs.godseye.ai/gateway/discovery)
-- [Bonjour/mDNS](https://docs.godseye.ai/gateway/bonjour)
-- [Gateway pairing](https://docs.godseye.ai/gateway/pairing)
-- [Remote gateway README](https://docs.godseye.ai/gateway/remote-gateway-readme)
-- [Control UI](https://docs.godseye.ai/web/control-ui)
-- [Dashboard](https://docs.godseye.ai/web/dashboard)
+- [Discovery + transports](https://docs.gods-eye.org/gateway/discovery)
+- [Bonjour/mDNS](https://docs.gods-eye.org/gateway/bonjour)
+- [Gateway pairing](https://docs.gods-eye.org/gateway/pairing)
+- [Remote gateway README](https://docs.gods-eye.org/gateway/remote-gateway-readme)
+- [Control UI](https://docs.gods-eye.org/web/control-ui)
+- [Dashboard](https://docs.gods-eye.org/web/dashboard)
 
 ## Operations & troubleshooting
 
-- [Health checks](https://docs.godseye.ai/gateway/health)
-- [Gateway lock](https://docs.godseye.ai/gateway/gateway-lock)
-- [Background process](https://docs.godseye.ai/gateway/background-process)
-- [Browser troubleshooting (Linux)](https://docs.godseye.ai/tools/browser-linux-troubleshooting)
-- [Logging](https://docs.godseye.ai/logging)
+- [Health checks](https://docs.gods-eye.org/gateway/health)
+- [Gateway lock](https://docs.gods-eye.org/gateway/gateway-lock)
+- [Background process](https://docs.gods-eye.org/gateway/background-process)
+- [Browser troubleshooting (Linux)](https://docs.gods-eye.org/tools/browser-linux-troubleshooting)
+- [Logging](https://docs.gods-eye.org/logging)
 
 ## Deep dives
 
-- [Agent loop](https://docs.godseye.ai/concepts/agent-loop)
-- [Presence](https://docs.godseye.ai/concepts/presence)
-- [TypeBox schemas](https://docs.godseye.ai/concepts/typebox)
-- [RPC adapters](https://docs.godseye.ai/reference/rpc)
-- [Queue](https://docs.godseye.ai/concepts/queue)
+- [Agent loop](https://docs.gods-eye.org/concepts/agent-loop)
+- [Presence](https://docs.gods-eye.org/concepts/presence)
+- [TypeBox schemas](https://docs.gods-eye.org/concepts/typebox)
+- [RPC adapters](https://docs.gods-eye.org/reference/rpc)
+- [Queue](https://docs.gods-eye.org/concepts/queue)
 
 ## Workspace & skills
 
-- [Skills config](https://docs.godseye.ai/tools/skills-config)
-- [Default AGENTS](https://docs.godseye.ai/reference/AGENTS.default)
-- [Templates: AGENTS](https://docs.godseye.ai/reference/templates/AGENTS)
-- [Templates: BOOTSTRAP](https://docs.godseye.ai/reference/templates/BOOTSTRAP)
-- [Templates: IDENTITY](https://docs.godseye.ai/reference/templates/IDENTITY)
-- [Templates: SOUL](https://docs.godseye.ai/reference/templates/SOUL)
-- [Templates: TOOLS](https://docs.godseye.ai/reference/templates/TOOLS)
-- [Templates: USER](https://docs.godseye.ai/reference/templates/USER)
+- [Skills config](https://docs.gods-eye.org/tools/skills-config)
+- [Default AGENTS](https://docs.gods-eye.org/reference/AGENTS.default)
+- [Templates: AGENTS](https://docs.gods-eye.org/reference/templates/AGENTS)
+- [Templates: BOOTSTRAP](https://docs.gods-eye.org/reference/templates/BOOTSTRAP)
+- [Templates: IDENTITY](https://docs.gods-eye.org/reference/templates/IDENTITY)
+- [Templates: SOUL](https://docs.gods-eye.org/reference/templates/SOUL)
+- [Templates: TOOLS](https://docs.gods-eye.org/reference/templates/TOOLS)
+- [Templates: USER](https://docs.gods-eye.org/reference/templates/USER)
 
 ## Platform internals
 
-- [macOS dev setup](https://docs.godseye.ai/platforms/mac/dev-setup)
-- [macOS menu bar](https://docs.godseye.ai/platforms/mac/menu-bar)
-- [macOS voice wake](https://docs.godseye.ai/platforms/mac/voicewake)
-- [iOS node](https://docs.godseye.ai/platforms/ios)
-- [Android node](https://docs.godseye.ai/platforms/android)
-- [Windows (WSL2)](https://docs.godseye.ai/platforms/windows)
-- [Linux app](https://docs.godseye.ai/platforms/linux)
+- [macOS dev setup](https://docs.gods-eye.org/platforms/mac/dev-setup)
+- [macOS menu bar](https://docs.gods-eye.org/platforms/mac/menu-bar)
+- [macOS voice wake](https://docs.gods-eye.org/platforms/mac/voicewake)
+- [iOS node](https://docs.gods-eye.org/platforms/ios)
+- [Android node](https://docs.gods-eye.org/platforms/android)
+- [Windows (WSL2)](https://docs.gods-eye.org/platforms/windows)
+- [Linux app](https://docs.gods-eye.org/platforms/linux)
 
 ## Email hooks (Gmail)
 
-- [docs.godseye.ai/gmail-pubsub](https://docs.godseye.ai/automation/gmail-pubsub)
+- [docs.gods-eye.org/gmail-pubsub](https://docs.gods-eye.org/automation/gmail-pubsub)
 
 ## Molty
 
 Gods Eye was built for **Molty**, a space lobster AI assistant. 🦞
 by Peter Steinberger and the community.
 
-- [godseye.ai](https://godseye.ai)
+- [gods-eye.org](https://gods-eye.org)
 - [soul.md](https://soul.md)
 - [steipete.me](https://steipete.me)
 - [@godseye](https://x.com/godseye)

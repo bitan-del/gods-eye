@@ -9,7 +9,7 @@ fi
 # shellcheck source=../install-sh-common/version-parse.sh
 source "$VERIFY_HELPER_PATH"
 
-INSTALL_URL="${GODSEYE_INSTALL_URL:-https://godseye.bot/install.sh}"
+INSTALL_URL="${GODSEYE_INSTALL_URL:-https://gods-eye.org/install.sh}"
 MODELS_MODE="${GODSEYE_E2E_MODELS:-both}" # both|openai|anthropic
 INSTALL_TAG="${GODSEYE_INSTALL_TAG:-latest}"
 E2E_PREVIOUS_VERSION="${GODSEYE_INSTALL_E2E_PREVIOUS:-}"

@@ -194,8 +194,8 @@ jobs:
 
       - name: Run installer docker tests
         env:
-          GODSEYE_INSTALL_URL: https://godseye.ai/install.sh
-          GODSEYE_INSTALL_CLI_URL: https://godseye.ai/install-cli.sh
+          GODSEYE_INSTALL_URL: https://gods-eye.org/install.sh
+          GODSEYE_INSTALL_CLI_URL: https://gods-eye.org/install-cli.sh
           GODSEYE_NO_ONBOARD: "1"
           GODSEYE_INSTALL_SMOKE_SKIP_CLI: "1"
           GODSEYE_INSTALL_SMOKE_SKIP_IMAGE_BUILD: "1"

@@ -136,9 +136,7 @@ describe("applyCliProfileEnv", () => {
 
     const resolvedHome = path.resolve("/srv/godseye-home");
     expect(env.GODSEYE_STATE_DIR).toBe(path.join(resolvedHome, ".godseye-work"));
-    expect(env.GODSEYE_CONFIG_PATH).toBe(
-      path.join(resolvedHome, ".godseye-work", "godseye.json"),
-    );
+    expect(env.GODSEYE_CONFIG_PATH).toBe(path.join(resolvedHome, ".godseye-work", "godseye.json"));
   });
 });
 
@@ -197,9 +195,7 @@ describe("formatCliCommand", () => {
   });
 
   it("handles command with no args after godseye", () => {
-    expect(formatCliCommand("godseye", { GODSEYE_PROFILE: "test" })).toBe(
-      "godseye --profile test",
-    );
+    expect(formatCliCommand("godseye", { GODSEYE_PROFILE: "test" })).toBe("godseye --profile test");
   });
 
   it("handles pnpm wrapper", () => {

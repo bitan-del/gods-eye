@@ -1,7 +1,7 @@
 ---
 name: command-logger
 description: "Log all command events to a centralized audit file"
-homepage: https://docs.godseye.ai/automation/hooks#command-logger
+homepage: https://docs.gods-eye.org/automation/hooks#command-logger
 metadata:
   {
     "godseye":

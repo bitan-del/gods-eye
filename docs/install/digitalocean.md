@@ -46,7 +46,7 @@ Run a persistent Gods Eye Gateway on a DigitalOcean Droplet.
     apt install -y nodejs
 
     # Install Gods Eye
-    curl -fsSL https://godseye.ai/install.sh | bash
+    curl -fsSL https://gods-eye.org/install.sh | bash
     godseye --version
     ```
 

@@ -244,8 +244,8 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           "Docs:",
-          "https://docs.godseye.ai/gateway/health",
-          "https://docs.godseye.ai/gateway/troubleshooting",
+          "https://docs.gods-eye.org/gateway/health",
+          "https://docs.gods-eye.org/gateway/troubleshooting",
         ].join("\n"),
         "Health check help",
       );
@@ -329,7 +329,7 @@ export async function finalizeSetupWizard(
         : undefined,
       `Gateway WS: ${links.wsUrl}`,
       gatewayStatusLine,
-      "Docs: https://docs.godseye.ai/web/control-ui",
+      "Docs: https://docs.gods-eye.org/web/control-ui",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -432,13 +432,13 @@ export async function finalizeSetupWizard(
   await prompter.note(
     [
       "Back up your agent workspace.",
-      "Docs: https://docs.godseye.ai/concepts/agent-workspace",
+      "Docs: https://docs.gods-eye.org/concepts/agent-workspace",
     ].join("\n"),
     "Workspace backup",
   );
 
   await prompter.note(
-    "Running agents on your computer is risky — harden your setup: https://docs.godseye.ai/security",
+    "Running agents on your computer is risky — harden your setup: https://docs.gods-eye.org/security",
     "Security",
   );
 
@@ -508,7 +508,7 @@ export async function finalizeSetupWizard(
           "web_search will not work until the provider is re-enabled or a different provider is selected.",
           `  ${formatCliCommand("godseye configure --section web")}`,
           "",
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -519,7 +519,7 @@ export async function finalizeSetupWizard(
           "",
           `Provider: ${label}`,
           ...(keySource ? [keySource] : []),
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -530,8 +530,8 @@ export async function finalizeSetupWizard(
           "web_search will not work until a key is added.",
           `  ${formatCliCommand("godseye configure --section web")}`,
           "",
-          `Get your key at: ${entry?.signupUrl ?? "https://docs.godseye.ai/tools/web"}`,
-          "Docs: https://docs.godseye.ai/tools/web",
+          `Get your key at: ${entry?.signupUrl ?? "https://docs.gods-eye.org/tools/web"}`,
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -541,7 +541,7 @@ export async function finalizeSetupWizard(
           `Web search (${label}) is configured but disabled.`,
           `Re-enable: ${formatCliCommand("godseye configure --section web")}`,
           "",
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -557,7 +557,7 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           `Web search is available via ${legacyDetected.label} (auto-detected).`,
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -567,7 +567,7 @@ export async function finalizeSetupWizard(
           "Web search was skipped. You can enable it later:",
           `  ${formatCliCommand("godseye configure --section web")}`,
           "",
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -575,7 +575,7 @@ export async function finalizeSetupWizard(
   }
 
   await prompter.note(
-    'What now: https://godseye.ai/showcase ("What People Are Building").',
+    'What now: https://gods-eye.org/showcase ("What People Are Building").',
     "What now",
   );
 

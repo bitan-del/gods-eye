@@ -3,7 +3,6 @@
 // during `godseye onboard`. Runs after search setup, before skills.
 
 import type { GodsEyeConfig } from "../config/config.js";
-import type { SecretInput } from "../config/types.secrets.js";
 import { enablePluginInConfig } from "../plugins/enable.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
@@ -41,10 +40,6 @@ const CREATIVE_PROVIDERS: readonly CreativeProvider[] = [
   },
 ];
 
-function hasExistingKey(envVars: readonly string[], env: NodeJS.ProcessEnv): boolean {
-  return envVars.some((v) => Boolean(env[v]?.trim()));
-}
-
 function resolveExistingKeyVar(
   envVars: readonly string[],
   env: NodeJS.ProcessEnv,
@@ -56,7 +51,7 @@ export async function setupCreativeTools(
   config: GodsEyeConfig,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
-  options?: {
+  _options?: {
     quickstartDefaults?: boolean;
     secretInputMode?: SecretInputMode;
   },
@@ -71,7 +66,10 @@ export async function setupCreativeTools(
   });
 
   if (!wantsCreative) {
-    await prompter.note("Skipping creative tools setup. You can set them up later via godseye configure.", "Studio");
+    await prompter.note(
+      "Skipping creative tools setup. You can set them up later via godseye configure.",
+      "Studio",
+    );
     return nextConfig;
   }
 
@@ -113,7 +111,9 @@ export async function setupCreativeTools(
       initialValue: false,
     });
 
-    if (!wantsProvider) continue;
+    if (!wantsProvider) {
+      continue;
+    }
 
     const apiKey = await prompter.text({
       message: `Enter ${provider.label} API key`,

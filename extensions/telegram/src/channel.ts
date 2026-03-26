@@ -9,10 +9,7 @@ import { createChatChannelPlugin } from "godseye/plugin-sdk/core";
 import { createChannelDirectoryAdapter } from "godseye/plugin-sdk/directory-runtime";
 import { resolveExecApprovalCommandDisplay } from "godseye/plugin-sdk/infra-runtime";
 import { buildExecApprovalPendingReplyPayload } from "godseye/plugin-sdk/infra-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundSendDeps,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundSendDeps } from "godseye/plugin-sdk/outbound-runtime";
 import {
   buildOutboundBaseSessionKey,
   normalizeMessageChannel,

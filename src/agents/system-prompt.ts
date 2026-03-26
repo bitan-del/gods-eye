@@ -163,7 +163,7 @@ function buildDocsSection(params: { docsPath?: string; isMinimal: boolean; readT
   return [
     "## Documentation",
     `GodsEye docs: ${docsPath}`,
-    "Mirror: https://docs.godseye.ai",
+    "Mirror: https://docs.gods-eye.org",
     "Source: https://github.com/bitan-del/gods-eye",
     "Community: https://discord.com/invite/clawd",
     "Find new skills: https://clawhub.ai",

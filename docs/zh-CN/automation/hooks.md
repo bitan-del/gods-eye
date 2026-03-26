@@ -143,7 +143,7 @@ Hook 包可以携带依赖；它们会安装到 `~/.godseye/hooks/<id>` 下。
 ---
 name: my-hook
 description: "关于此 hook 功能的简短描述"
-homepage: https://docs.godseye.ai/automation/hooks#my-hook
+homepage: https://docs.gods-eye.org/automation/hooks#my-hook
 metadata:
   { "godseye": { "emoji": "🔗", "events": ["command:new"], "requires": { "bins": ["node"] } } }
 ---

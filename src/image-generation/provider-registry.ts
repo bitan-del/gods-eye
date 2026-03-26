@@ -62,9 +62,7 @@ function buildProviderMaps(cfg?: GodsEyeConfig): {
   return { canonical, aliases };
 }
 
-export function listImageGenerationProviders(
-  cfg?: GodsEyeConfig,
-): ImageGenerationProviderPlugin[] {
+export function listImageGenerationProviders(cfg?: GodsEyeConfig): ImageGenerationProviderPlugin[] {
   return [...buildProviderMaps(cfg).canonical.values()];
 }
 

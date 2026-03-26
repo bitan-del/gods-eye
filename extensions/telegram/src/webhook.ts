@@ -1,6 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
-import * as grammy from "grammy";
 import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
 import { isDiagnosticsEnabled } from "godseye/plugin-sdk/infra-runtime";
 import { formatErrorMessage } from "godseye/plugin-sdk/infra-runtime";
@@ -14,6 +13,7 @@ import {
   startDiagnosticHeartbeat,
   stopDiagnosticHeartbeat,
 } from "godseye/plugin-sdk/text-runtime";
+import * as grammy from "grammy";
 import { resolveTelegramAllowedUpdates } from "./allowed-updates.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { createTelegramBot } from "./bot.js";

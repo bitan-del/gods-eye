@@ -30,7 +30,7 @@ type PackageManifest = PluginPackageManifest & {
 };
 
 const MISSING_EXTENSIONS_ERROR =
-  'package.json missing godseye.extensions; update the plugin package to include godseye.extensions (for example ["./dist/index.js"]). See https://docs.godseye.ai/help/troubleshooting#plugin-install-fails-with-missing-godseye-extensions';
+  'package.json missing godseye.extensions; update the plugin package to include godseye.extensions (for example ["./dist/index.js"]). See https://docs.gods-eye.org/help/troubleshooting#plugin-install-fails-with-missing-godseye-extensions';
 const PLUGIN_ARCHIVE_ROOT_MARKERS = [
   "package.json",
   "godseye.plugin.json",

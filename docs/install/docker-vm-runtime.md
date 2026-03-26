@@ -118,18 +118,18 @@ Expected output:
 Gods Eye runs in Docker, but Docker is not the source of truth.
 All long-lived state must survive restarts, rebuilds, and reboots.
 
-| Component           | Location                          | Persistence mechanism  | Notes                            |
-| ------------------- | --------------------------------- | ---------------------- | -------------------------------- |
+| Component           | Location                         | Persistence mechanism  | Notes                           |
+| ------------------- | -------------------------------- | ---------------------- | ------------------------------- |
 | Gateway config      | `/home/node/.godseye/`           | Host volume mount      | Includes `godseye.json`, tokens |
-| Model auth profiles | `/home/node/.godseye/`           | Host volume mount      | OAuth tokens, API keys           |
-| Skill configs       | `/home/node/.godseye/skills/`    | Host volume mount      | Skill-level state                |
-| Agent workspace     | `/home/node/.godseye/workspace/` | Host volume mount      | Code and agent artifacts         |
-| WhatsApp session    | `/home/node/.godseye/`           | Host volume mount      | Preserves QR login               |
-| Gmail keyring       | `/home/node/.godseye/`           | Host volume + password | Requires `GOG_KEYRING_PASSWORD`  |
-| External binaries   | `/usr/local/bin/`                 | Docker image           | Must be baked at build time      |
-| Node runtime        | Container filesystem              | Docker image           | Rebuilt every image build        |
-| OS packages         | Container filesystem              | Docker image           | Do not install at runtime        |
-| Docker container    | Ephemeral                         | Restartable            | Safe to destroy                  |
+| Model auth profiles | `/home/node/.godseye/`           | Host volume mount      | OAuth tokens, API keys          |
+| Skill configs       | `/home/node/.godseye/skills/`    | Host volume mount      | Skill-level state               |
+| Agent workspace     | `/home/node/.godseye/workspace/` | Host volume mount      | Code and agent artifacts        |
+| WhatsApp session    | `/home/node/.godseye/`           | Host volume mount      | Preserves QR login              |
+| Gmail keyring       | `/home/node/.godseye/`           | Host volume + password | Requires `GOG_KEYRING_PASSWORD` |
+| External binaries   | `/usr/local/bin/`                | Docker image           | Must be baked at build time     |
+| Node runtime        | Container filesystem             | Docker image           | Rebuilt every image build       |
+| OS packages         | Container filesystem             | Docker image           | Do not install at runtime       |
+| Docker container    | Ephemeral                        | Restartable            | Safe to destroy                 |
 
 ## Updates
 

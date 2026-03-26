@@ -33,7 +33,7 @@ export function registerNodeCli(program: Command) {
           ["godseye node status", "Check node host service status."],
           ["godseye node install", "Install the node host service."],
           ["godseye node restart", "Restart the installed node host service."],
-        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/node", "docs.godseye.ai/cli/node")}\n`,
+        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/node", "docs.gods-eye.org/cli/node")}\n`,
     );
 
   node

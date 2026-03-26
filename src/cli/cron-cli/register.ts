@@ -16,7 +16,7 @@ export function registerCronCli(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/cron", "docs.godseye.ai/cli/cron")}\n${theme.muted("Upgrade tip:")} run \`godseye doctor --fix\` to normalize legacy cron job storage.\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/cron", "docs.gods-eye.org/cli/cron")}\n${theme.muted("Upgrade tip:")} run \`godseye doctor --fix\` to normalize legacy cron job storage.\n`,
     );
 
   registerCronStatusCommand(cron);

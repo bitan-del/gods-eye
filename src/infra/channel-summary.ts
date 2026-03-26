@@ -105,11 +105,7 @@ const buildAccountDetails = (params: {
   return details;
 };
 
-async function inspectChannelAccount(
-  plugin: ChannelPlugin,
-  cfg: GodsEyeConfig,
-  accountId: string,
-) {
+async function inspectChannelAccount(plugin: ChannelPlugin, cfg: GodsEyeConfig, accountId: string) {
   return (
     plugin.config.inspectAccount?.(cfg, accountId) ??
     (await inspectReadOnlyChannelAccount({

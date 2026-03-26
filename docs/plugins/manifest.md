@@ -186,10 +186,10 @@ Each field hint can include:
 
 The two files serve different jobs:
 
-| File                   | Use it for                                                                                                         |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `godseye.plugin.json` | Discovery, config validation, auth-choice metadata, and UI hints that must exist before plugin code runs           |
-| `package.json`         | npm metadata, dependency installation, and the `godseye` block used for entrypoints and setup or catalog metadata |
+| File                  | Use it for                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `godseye.plugin.json` | Discovery, config validation, auth-choice metadata, and UI hints that must exist before plugin code runs          |
+| `package.json`        | npm metadata, dependency installation, and the `godseye` block used for entrypoints and setup or catalog metadata |
 
 If you are unsure where a piece of metadata belongs, use this rule:
 

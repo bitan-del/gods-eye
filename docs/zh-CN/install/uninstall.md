@@ -123,7 +123,7 @@ Remove-Item -Force "$env:USERPROFILE\.godseye\gateway.cmd"
 
 ### 普通安装（install.sh / npm / pnpm / bun）
 
-如果你使用了 `https://godseye.ai/install.sh` 或 `install.ps1`，CLI 是通过 `npm install -g godseye@latest` 安装的。
+如果你使用了 `https://gods-eye.org/install.sh` 或 `install.ps1`，CLI 是通过 `npm install -g godseye@latest` 安装的。
 使用 `npm rm -g godseye` 移除（或 `pnpm remove -g` / `bun remove -g`，如果你是用那种方式安装的）。
 
 ### 源码检出（git clone）

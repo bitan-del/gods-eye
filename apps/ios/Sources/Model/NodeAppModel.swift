@@ -2229,7 +2229,7 @@ extension NodeAppModel {
 
         let payload = SharedContentPayload(
             title: "GodsEye Share Self-Test",
-            url: URL(string: "https://godseye.ai/share-self-test"),
+            url: URL(string: "https://gods-eye.org/share-self-test"),
             text: "Validate iOS share->deep-link->gateway forwarding.")
         guard let deepLink = ShareToAgentDeepLink.buildURL(
             from: payload,

@@ -99,7 +99,7 @@ export function registerGatewayCli(program: Command) {
             ["godseye gateway status", "Show service status and probe reachability."],
             ["godseye gateway discover", "Find local and wide-area gateway beacons."],
             ["godseye gateway call health", "Call a gateway RPC method directly."],
-          ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/gateway", "docs.godseye.ai/cli/gateway")}\n`,
+          ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/gateway", "docs.gods-eye.org/cli/gateway")}\n`,
       ),
   );
 

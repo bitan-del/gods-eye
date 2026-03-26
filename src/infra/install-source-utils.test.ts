@@ -264,7 +264,7 @@ describe("packNpmSpecToArchive", () => {
     if (!result.ok) {
       expect(result.error).toContain("Package not found on npm");
       expect(result.error).toContain("@godseye/whatsapp");
-      expect(result.error).toContain("docs.godseye.ai/tools/plugin");
+      expect(result.error).toContain("docs.gods-eye.org/tools/plugin");
     }
   });
 

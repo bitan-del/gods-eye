@@ -83,8 +83,7 @@ vi.mock("godseye/plugin-sdk/conversation-runtime", async (importOriginal) => {
   };
 });
 vi.mock("godseye/plugin-sdk/channel-reply-pipeline", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("godseye/plugin-sdk/channel-reply-pipeline")>();
+  const actual = await importOriginal<typeof import("godseye/plugin-sdk/channel-reply-pipeline")>();
   return {
     ...actual,
     createChannelReplyPipeline: replyPipelineMocks.createChannelReplyPipeline,

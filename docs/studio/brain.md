@@ -9,13 +9,13 @@ The brain is the persistent creative memory layer for Gods Eye Studio. It stores
 
 ## What the brain stores
 
-| Category | Description | Storage path |
-| --- | --- | --- |
-| **Brands** | Color palettes, fonts, tone, visual style, logos | `~/.godseye/brain/brands/` |
-| **Generations** | Every image, video, and text generation with prompt, model, settings, tags | `~/.godseye/brain/generations/` |
-| **Calendar** | Content slots with date, platform, status, and linked generations | `~/.godseye/brain/calendar/` |
-| **Characters** | Named characters with descriptions, reference images, and style notes | `~/.godseye/brain/characters/` |
-| **Preferences** | Default models, active brand, style preferences | `~/.godseye/brain/preferences.json` |
+| Category        | Description                                                                | Storage path                        |
+| --------------- | -------------------------------------------------------------------------- | ----------------------------------- |
+| **Brands**      | Color palettes, fonts, tone, visual style, logos                           | `~/.godseye/brain/brands/`          |
+| **Generations** | Every image, video, and text generation with prompt, model, settings, tags | `~/.godseye/brain/generations/`     |
+| **Calendar**    | Content slots with date, platform, status, and linked generations          | `~/.godseye/brain/calendar/`        |
+| **Characters**  | Named characters with descriptions, reference images, and style notes      | `~/.godseye/brain/characters/`      |
+| **Preferences** | Default models, active brand, style preferences                            | `~/.godseye/brain/preferences.json` |
 
 Each record is stored as an individual JSON file, making the data easy to inspect, back up, and version-control.
 

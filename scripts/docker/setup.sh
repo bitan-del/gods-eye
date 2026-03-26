@@ -522,7 +522,7 @@ echo "Telegram (bot token):"
 echo "  ${COMPOSE_HINT} run --rm godseye-cli channels add --channel telegram --token <token>"
 echo "Discord (bot token):"
 echo "  ${COMPOSE_HINT} run --rm godseye-cli channels add --channel discord --token <token>"
-echo "Docs: https://docs.godseye.ai/channels"
+echo "Docs: https://docs.gods-eye.org/channels"
 
 echo ""
 echo "==> Starting gateway"
@@ -606,7 +606,7 @@ if [[ -n "$SANDBOX_ENABLED" ]]; then
 
   if [[ "$sandbox_config_ok" == true ]]; then
     echo "Sandbox enabled: mode=non-main, scope=agent, workspaceAccess=none"
-    echo "Docs: https://docs.godseye.ai/gateway/sandboxing"
+    echo "Docs: https://docs.gods-eye.org/gateway/sandboxing"
     # Restart gateway with sandbox compose overlay to pick up socket mount + config.
     docker compose "${COMPOSE_ARGS[@]}" up -d godseye-gateway
   else

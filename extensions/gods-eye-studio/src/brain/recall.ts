@@ -88,16 +88,20 @@ export function findSimilarGenerations(
   limit = 5,
 ): GenerationRecord[] {
   const refTerms = new Set(
-    [...referenceGen.prompt.toLowerCase().split(/\s+/), ...referenceGen.tags.map((t) => t.toLowerCase())].filter(
-      Boolean,
-    ),
+    [
+      ...referenceGen.prompt.toLowerCase().split(/\s+/),
+      ...referenceGen.tags.map((t) => t.toLowerCase()),
+    ].filter(Boolean),
   );
 
   return brain
     .recentGenerations(50, referenceGen.type)
     .filter((g) => g.id !== referenceGen.id)
     .map((g) => {
-      const gTerms = [...g.prompt.toLowerCase().split(/\s+/), ...g.tags.map((t) => t.toLowerCase())];
+      const gTerms = [
+        ...g.prompt.toLowerCase().split(/\s+/),
+        ...g.tags.map((t) => t.toLowerCase()),
+      ];
       const overlap = gTerms.filter((t) => refTerms.has(t)).length;
       return { gen: g, overlap };
     })

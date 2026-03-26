@@ -7,7 +7,7 @@ export type { ChatChannelId } from "./ids.js";
 
 export type ChatChannelMeta = ChannelMeta;
 
-const WEBSITE_URL = "https://godseye.ai";
+const WEBSITE_URL = "https://gods-eye.org";
 
 type RegisteredChannelPluginEntry = {
   plugin: {

@@ -79,7 +79,9 @@ export function renderCreativeContextPrompt(ctx: CreativeContext): string[] {
     lines.push("### Upcoming Content Calendar");
     for (const slot of ctx.upcomingCalendar) {
       const platform = slot.platform ? ` (${slot.platform})` : "";
-      lines.push(`- ${slot.date}${platform}: ${slot.status}${slot.notes ? ` — ${slot.notes}` : ""}`);
+      lines.push(
+        `- ${slot.date}${platform}: ${slot.status}${slot.notes ? ` — ${slot.notes}` : ""}`,
+      );
     }
   }
 

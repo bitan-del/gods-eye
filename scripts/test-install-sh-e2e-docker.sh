@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_NAME="${GODSEYE_INSTALL_E2E_IMAGE:-godseye-install-e2e:local}"
-INSTALL_URL="${GODSEYE_INSTALL_URL:-https://godseye.bot/install.sh}"
+INSTALL_URL="${GODSEYE_INSTALL_URL:-https://gods-eye.org/install.sh}"
 
 OPENAI_API_KEY="${OPENAI_API_KEY:-}"
 ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}"

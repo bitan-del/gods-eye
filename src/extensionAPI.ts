@@ -8,11 +8,11 @@ const shouldWarnExtensionApiImport =
 
 if (shouldWarnExtensionApiImport) {
   process.emitWarning(
-    "godseye/extension-api is deprecated. Migrate to api.runtime.agent.* or focused godseye/plugin-sdk/<subpath> imports. See https://docs.godseye.ai/plugins/sdk-migration",
+    "godseye/extension-api is deprecated. Migrate to api.runtime.agent.* or focused godseye/plugin-sdk/<subpath> imports. See https://docs.gods-eye.org/plugins/sdk-migration",
     {
       code: "GODSEYE_EXTENSION_API_DEPRECATED",
       detail:
-        "This compatibility bridge is temporary. Bundled plugins should use the injected plugin runtime instead of importing host-side agent helpers directly. Migration guide: https://docs.godseye.ai/plugins/sdk-migration",
+        "This compatibility bridge is temporary. Bundled plugins should use the injected plugin runtime instead of importing host-side agent helpers directly. Migration guide: https://docs.gods-eye.org/plugins/sdk-migration",
     },
   );
 }

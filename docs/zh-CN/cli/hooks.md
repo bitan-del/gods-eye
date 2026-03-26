@@ -96,7 +96,7 @@ Details:
   Source: godseye-bundled
   Path: /path/to/godseye/hooks/bundled/session-memory/HOOK.md
   Handler: /path/to/godseye/hooks/bundled/session-memory/handler.ts
-  Homepage: https://docs.godseye.ai/automation/hooks#session-memory
+  Homepage: https://docs.gods-eye.org/automation/hooks#session-memory
   Events: command:new
 
 Requirements:

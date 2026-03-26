@@ -21,7 +21,7 @@ export const TELEGRAM_TOKEN_HELP_LINES = [
   "3) Copy the token (looks like 123456:ABC...)",
   "Tip: you can also set TELEGRAM_BOT_TOKEN in your env.",
   `Docs: ${formatDocsLink("/telegram")}`,
-  "Website: https://godseye.ai",
+  "Website: https://gods-eye.org",
 ];
 
 export const TELEGRAM_USER_ID_HELP_LINES = [
@@ -29,7 +29,7 @@ export const TELEGRAM_USER_ID_HELP_LINES = [
   "2) Or call https://api.telegram.org/bot<bot_token>/getUpdates and read message.from.id",
   "3) Third-party: DM @userinfobot or @getidsbot",
   `Docs: ${formatDocsLink("/telegram")}`,
-  "Website: https://godseye.ai",
+  "Website: https://gods-eye.org",
 ];
 
 export function normalizeTelegramAllowFromInput(raw: string): string {

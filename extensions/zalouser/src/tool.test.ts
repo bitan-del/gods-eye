@@ -99,10 +99,10 @@ describe("executeZalouserTool", () => {
     const linkResult = await executeZalouserTool("tool-1", {
       action: "link",
       threadId: "t-2",
-      url: "https://godseye.ai",
+      url: "https://gods-eye.org",
       message: "read this",
     });
-    expect(mockSendLink).toHaveBeenCalledWith("t-2", "https://godseye.ai", {
+    expect(mockSendLink).toHaveBeenCalledWith("t-2", "https://gods-eye.org", {
       profile: undefined,
       caption: "read this",
       isGroup: undefined,

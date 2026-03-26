@@ -62,7 +62,7 @@ Gods Eye recognizes two plugin formats:
 
 | Format     | How it works                                                       | Examples                                               |
 | ---------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
-| **Native** | `godseye.plugin.json` + runtime module; executes in-process       | Official plugins, community npm packages               |
+| **Native** | `godseye.plugin.json` + runtime module; executes in-process        | Official plugins, community npm packages               |
 | **Bundle** | Codex/Claude/Cursor-compatible layout; mapped to Gods Eye features | `.codex-plugin/`, `.claude-plugin/`, `.cursor-plugin/` |
 
 Both show up under `godseye plugins list`. See [Plugin Bundles](/plugins/bundles) for bundle details.
@@ -74,8 +74,8 @@ and the [Plugin SDK Overview](/plugins/sdk-overview).
 
 ### Installable (npm)
 
-| Plugin          | Package                | Docs                                 |
-| --------------- | ---------------------- | ------------------------------------ |
+| Plugin          | Package               | Docs                                 |
+| --------------- | --------------------- | ------------------------------------ |
 | Matrix          | `@godseye/matrix`     | [Matrix](/channels/matrix)           |
 | Microsoft Teams | `@godseye/msteams`    | [Microsoft Teams](/channels/msteams) |
 | Nostr           | `@godseye/nostr`      | [Nostr](/channels/nostr)             |

@@ -79,7 +79,7 @@ Run a persistent, always-on Gods Eye Gateway on a Raspberry Pi. Since the Pi is 
 
   <Step title="Install Gods Eye">
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash
+    curl -fsSL https://gods-eye.org/install.sh | bash
     ```
   </Step>
 

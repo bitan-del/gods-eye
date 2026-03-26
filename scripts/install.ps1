@@ -1,11 +1,11 @@
-# OpenClaw Installer for Windows (PowerShell)
-# Usage: iwr -useb https://openclaw.ai/install.ps1 | iex
-# Or: & ([scriptblock]::Create((iwr -useb https://openclaw.ai/install.ps1))) -NoOnboard
+# Gods Eye Installer for Windows (PowerShell)
+# Usage: iwr -useb https://gods-eye.org/install.ps1 | iex
+# Or: & ([scriptblock]::Create((iwr -useb https://gods-eye.org/install.ps1))) -NoOnboard
 
 param(
     [string]$InstallMethod = "npm",
     [string]$Tag = "latest",
-    [string]$GitDir = "$env:USERPROFILE\openclaw",
+    [string]$GitDir = "$env:USERPROFILE\godseye",
     [switch]$NoOnboard,
     [switch]$NoGitUpdate,
     [switch]$DryRun
@@ -34,8 +34,8 @@ function Write-Host {
 
 function Write-Banner {
     Write-Host ""
-    Write-Host "${ACCENT}  🦞 OpenClaw Installer$NC" -Level info
-    Write-Host "${MUTED}  All your chats, one OpenClaw.$NC" -Level info
+    Write-Host "${ACCENT}  👁 Gods Eye Installer$NC" -Level info
+    Write-Host "${MUTED}  All your chats, one Gods Eye.$NC" -Level info
     Write-Host ""
 }
 
@@ -199,17 +199,17 @@ function Ensure-Git {
     return Install-Git
 }
 
-function Install-OpenClawNpm {
+function Install-GodsEyeNpm {
     param([string]$Target = "latest")
 
     $installSpec = Resolve-PackageInstallSpec -Target $Target
-    
-    Write-Host "Installing OpenClaw ($installSpec)..." -Level info
-    
+
+    Write-Host "Installing Gods Eye ($installSpec)..." -Level info
+
     try {
         # Use -ExecutionPolicy Bypass to handle restricted execution policy
         npm install -g $installSpec --no-fund --no-audit 2>&1
-        Write-Host "OpenClaw installed" -Level success
+        Write-Host "Gods Eye installed" -Level success
         return $true
     } catch {
         Write-Host "npm install failed: $_" -Level error
@@ -217,45 +217,45 @@ function Install-OpenClawNpm {
     }
 }
 
-function Install-OpenClawGit {
+function Install-GodsEyeGit {
     param([string]$RepoDir, [switch]$Update)
-    
-    Write-Host "Installing OpenClaw from git..." -Level info
-    
+
+    Write-Host "Installing Gods Eye from git..." -Level info
+
     if (!(Test-Path $RepoDir)) {
         Write-Host "  Cloning repository..." -Level info
-        git clone https://github.com/openclaw/openclaw.git $RepoDir 2>&1
+        git clone https://github.com/bitan-del/gods-eye.git $RepoDir 2>&1
     } elseif ($Update) {
         Write-Host "  Updating repository..." -Level info
         git -C $RepoDir pull --rebase 2>&1
     }
-    
+
     # Install pnpm if not present
     if (!(Get-Command pnpm -ErrorAction SilentlyContinue)) {
         Write-Host "  Installing pnpm..." -Level info
         npm install -g pnpm 2>&1
     }
-    
+
     # Install dependencies
     Write-Host "  Installing dependencies..." -Level info
     pnpm install --dir $RepoDir 2>&1
-    
+
     # Build
     Write-Host "  Building..." -Level info
     pnpm --dir $RepoDir build 2>&1
-    
+
     # Create wrapper
     $wrapperDir = "$env:USERPROFILE\.local\bin"
     if (!(Test-Path $wrapperDir)) {
         New-Item -ItemType Directory -Path $wrapperDir -Force | Out-Null
     }
-    
+
     @"
 @echo off
-node "%~dp0..\openclaw\dist\entry.js" %*
-"@ | Out-File -FilePath "$wrapperDir\openclaw.cmd" -Encoding ASCII -Force
-    
-    Write-Host "OpenClaw installed" -Level success
+node "%~dp0..\godseye\dist\entry.js" %*
+"@ | Out-File -FilePath "$wrapperDir\godseye.cmd" -Encoding ASCII -Force
+
+    Write-Host "Gods Eye installed" -Level success
     return $true
 }
 
@@ -276,15 +276,15 @@ function Resolve-PackageInstallSpec {
 
     $trimmed = $Target.Trim()
     if ([string]::IsNullOrWhiteSpace($trimmed)) {
-        return "openclaw@latest"
+        return "godseye@latest"
     }
     if ($trimmed.ToLowerInvariant() -eq "main") {
-        return "github:openclaw/openclaw#main"
+        return "github:bitan-del/gods-eye#main"
     }
     if (Test-ExplicitPackageInstallSpec -Target $trimmed) {
         return $trimmed
     }
-    return "openclaw@$trimmed"
+    return "godseye@$trimmed"
 }
 
 function Add-ToPath {
@@ -320,9 +320,9 @@ function Main {
         }
         
         if ($DryRun) {
-            Write-Host "[DRY RUN] Would install OpenClaw from git to $GitDir" -Level info
+            Write-Host "[DRY RUN] Would install Gods Eye from git to $GitDir" -Level info
         } else {
-            Install-OpenClawGit -RepoDir $GitDir -Update:(-not $NoGitUpdate)
+            Install-GodsEyeGit -RepoDir $GitDir -Update:(-not $NoGitUpdate)
         }
     } else {
         # npm method
@@ -331,9 +331,9 @@ function Main {
         }
         
         if ($DryRun) {
-            Write-Host "[DRY RUN] Would install OpenClaw via npm ($((Resolve-PackageInstallSpec -Target $Tag)))" -Level info
+            Write-Host "[DRY RUN] Would install Gods Eye via npm ($((Resolve-PackageInstallSpec -Target $Tag)))" -Level info
         } else {
-            if (!(Install-OpenClawNpm -Target $Tag)) {
+            if (!(Install-GodsEyeNpm -Target $Tag)) {
                 exit 1
             }
         }
@@ -349,11 +349,11 @@ function Main {
     
     if (!$NoOnboard -and !$DryRun) {
         Write-Host ""
-        Write-Host "Run 'openclaw onboard' to complete setup" -Level info
+        Write-Host "Run 'godseye onboard' to complete setup" -Level info
     }
     
     Write-Host ""
-    Write-Host "🦞 OpenClaw installed successfully!" -Level success
+    Write-Host "👁 Gods Eye installed successfully!" -Level success
 }
 
 Main

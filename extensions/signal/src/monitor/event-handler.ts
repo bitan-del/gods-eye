@@ -9,10 +9,7 @@ import {
   resolveEnvelopeFormatOptions,
   shouldDebounceTextInbound,
 } from "godseye/plugin-sdk/channel-inbound";
-import {
-  logInboundDrop,
-  resolveMentionGatingWithBypass,
-} from "godseye/plugin-sdk/channel-inbound";
+import { logInboundDrop, resolveMentionGatingWithBypass } from "godseye/plugin-sdk/channel-inbound";
 import { createChannelReplyPipeline } from "godseye/plugin-sdk/channel-reply-pipeline";
 import { resolveControlCommandGate } from "godseye/plugin-sdk/command-auth";
 import { hasControlCommand } from "godseye/plugin-sdk/command-auth";

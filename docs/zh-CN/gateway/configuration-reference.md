@@ -1800,7 +1800,7 @@ Talk 模式的默认值（macOS/iOS/Android）。
 | `group:automation` | `cron`、`gateway`                                                                        |
 | `group:messaging`  | `message`                                                                                |
 | `group:nodes`      | `nodes`                                                                                  |
-| `group:godseye`   | 所有内置工具（不含提供商插件）                                                           |
+| `group:godseye`    | 所有内置工具（不含提供商插件）                                                           |
 
 ### `tools.allow` / `tools.deny`
 

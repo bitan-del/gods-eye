@@ -410,10 +410,7 @@ export type ChannelMessagingAdapter = {
    */
   inferTargetChatType?: (params: { to: string }) => ChatType | undefined;
   buildCrossContextComponents?: ChannelCrossContextComponentsFactory;
-  enableInteractiveReplies?: (params: {
-    cfg: GodsEyeConfig;
-    accountId?: string | null;
-  }) => boolean;
+  enableInteractiveReplies?: (params: { cfg: GodsEyeConfig; accountId?: string | null }) => boolean;
   hasStructuredReplyPayload?: (params: { payload: ReplyPayload }) => boolean;
   targetResolver?: {
     looksLikeId?: (raw: string, normalized?: string) => boolean;

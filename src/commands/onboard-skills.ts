@@ -194,7 +194,7 @@ export async function setupSkills(
       runtime.log(
         `Tip: run \`${formatCliCommand("godseye doctor")}\` to review skills + requirements.`,
       );
-      runtime.log("Docs: https://docs.godseye.ai/skills");
+      runtime.log("Docs: https://docs.gods-eye.org/skills");
     }
   }
 

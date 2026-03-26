@@ -167,7 +167,7 @@ If you're an experienced contributor who wants to help shape Gods Eye's directio
 
 Being a maintainer is a responsibility, not an honorary title. We expect active, consistent involvement — triaging issues, reviewing PRs, and helping move the project forward.
 
-Still interested? Email contributing@godseye.ai with:
+Still interested? Email contributing@gods-eye.org with:
 
 - Links to your PRs on Gods Eye (if you don't have any, start there first)
 - Links to open source projects you maintain or actively contribute to
@@ -191,7 +191,7 @@ We take security reports seriously. Report vulnerabilities directly to the repos
 - **ClawHub** — [godseye/clawhub](https://github.com/bitan-del/clawhub)
 - **Trust and threat model** — [godseye/trust](https://github.com/bitan-del/trust)
 
-For issues that don't fit a specific repo, or if you're unsure, email **security@godseye.ai** and we'll route it.
+For issues that don't fit a specific repo, or if you're unsure, email **security@gods-eye.org** and we'll route it.
 
 ### Required in Reports
 

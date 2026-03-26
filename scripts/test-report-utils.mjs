@@ -33,11 +33,7 @@ export function writeJsonFile(filePath, value) {
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-export function runVitestJsonReport({
-  config,
-  reportPath = "",
-  prefix = "godseye-vitest-report",
-}) {
+export function runVitestJsonReport({ config, reportPath = "", prefix = "godseye-vitest-report" }) {
   const resolvedReportPath = reportPath || path.join(os.tmpdir(), `${prefix}-${Date.now()}.json`);
 
   if (!(reportPath && fs.existsSync(resolvedReportPath))) {

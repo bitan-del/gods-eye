@@ -103,16 +103,16 @@ Both resolve from process env at activation time. SecretRef details are document
 
 ## Path-related env vars
 
-| Variable               | Purpose                                                                                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable              | Purpose                                                                                                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GODSEYE_HOME`        | Override the home directory used for all internal path resolution (`~/.godseye/`, agent dirs, sessions, credentials). Useful when running Gods Eye as a dedicated service user. |
 | `GODSEYE_STATE_DIR`   | Override the state directory (default `~/.godseye`).                                                                                                                            |
-| `GODSEYE_CONFIG_PATH` | Override the config file path (default `~/.godseye/godseye.json`).                                                                                                             |
+| `GODSEYE_CONFIG_PATH` | Override the config file path (default `~/.godseye/godseye.json`).                                                                                                              |
 
 ## Logging
 
-| Variable             | Purpose                                                                                                                                                                                      |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable            | Purpose                                                                                                                                                                                      |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GODSEYE_LOG_LEVEL` | Override log level for both file and console (e.g. `debug`, `trace`). Takes precedence over `logging.level` and `logging.consoleLevel` in config. Invalid values are ignored with a warning. |
 
 ### `GODSEYE_HOME`

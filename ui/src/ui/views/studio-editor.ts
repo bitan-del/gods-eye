@@ -50,7 +50,16 @@ const TOOLS: Array<{ id: EditorTool; icon: string; label: string }> = [
   { id: "arrow", icon: "\u2192", label: "Arrow" },
 ];
 
-const DEFAULT_COLORS = ["#000000", "#ffffff", "#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"];
+const DEFAULT_COLORS = [
+  "#000000",
+  "#ffffff",
+  "#ef4444",
+  "#f59e0b",
+  "#10b981",
+  "#3b82f6",
+  "#8b5cf6",
+  "#ec4899",
+];
 
 // --- SVG annotation rendering ---
 // Builds an SVG overlay string representing all annotations on the canvas.
@@ -61,12 +70,16 @@ function annotationToSvg(ann: EditorAnnotation): string {
 
   switch (ann.tool) {
     case "pencil": {
-      if (ann.points.length < 2) return "";
+      if (ann.points.length < 2) {
+        return "";
+      }
       const d = ann.points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
       return `<path d="${d}" stroke="${c}" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
     }
     case "rectangle": {
-      if (ann.points.length < 2) return "";
+      if (ann.points.length < 2) {
+        return "";
+      }
       const [p0, p1] = ann.points;
       const x = Math.min(p0.x, p1.x);
       const y = Math.min(p0.y, p1.y);
@@ -75,7 +88,9 @@ function annotationToSvg(ann: EditorAnnotation): string {
       return `<rect x="${x}" y="${y}" width="${w}" height="${h}" stroke="${c}" stroke-width="${sw}" fill="none" />`;
     }
     case "circle": {
-      if (ann.points.length < 2) return "";
+      if (ann.points.length < 2) {
+        return "";
+      }
       const [p0, p1] = ann.points;
       const cx = (p0.x + p1.x) / 2;
       const cy = (p0.y + p1.y) / 2;
@@ -84,7 +99,9 @@ function annotationToSvg(ann: EditorAnnotation): string {
       return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" stroke="${c}" stroke-width="${sw}" fill="none" />`;
     }
     case "arrow": {
-      if (ann.points.length < 2) return "";
+      if (ann.points.length < 2) {
+        return "";
+      }
       const [p0, p1] = ann.points;
       // Line with arrowhead
       const angle = Math.atan2(p1.y - p0.y, p1.x - p0.x);
@@ -97,7 +114,9 @@ function annotationToSvg(ann: EditorAnnotation): string {
         <polygon points="${p1.x},${p1.y} ${ax1},${ay1} ${ax2},${ay2}" fill="${c}" />`;
     }
     case "text": {
-      if (ann.points.length < 1 || !ann.textContent) return "";
+      if (ann.points.length < 1 || !ann.textContent) {
+        return "";
+      }
       const p = ann.points[0];
       return `<text x="${p.x}" y="${p.y}" fill="${c}" font-size="${14 + sw * 2}px" font-family="sans-serif">${escapeXml(ann.textContent)}</text>`;
     }
@@ -107,10 +126,18 @@ function annotationToSvg(ann: EditorAnnotation): string {
 }
 
 function escapeXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function buildAnnotationsSvg(annotations: EditorAnnotation[], width: number, height: number): string {
+function buildAnnotationsSvg(
+  annotations: EditorAnnotation[],
+  width: number,
+  height: number,
+): string {
   const inner = annotations.map(annotationToSvg).join("\n");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="position:absolute;top:0;left:0;pointer-events:none;">${inner}</svg>`;
 }
@@ -192,15 +219,29 @@ export function renderStudioEditor(props: StudioEditorProps): TemplateResult {
           overflow: hidden;
         "
       >
-        ${props.imageUrl
-          ? html`<img
+        ${
+          props.imageUrl
+            ? html`<img
               src=${props.imageUrl}
               style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain;"
               alt="Base image"
             />`
-          : html`<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.3; font-size: 0.9em;">
-              Blank canvas. Sketch something or load an image from Gallery.
-            </div>`}
+            : html`
+                <div
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0.3;
+                    font-size: 0.9em;
+                  "
+                >
+                  Blank canvas. Sketch something or load an image from Gallery.
+                </div>
+              `
+        }
 
         <!-- SVG annotation overlay -->
         <div .innerHTML=${svgOverlay}></div>

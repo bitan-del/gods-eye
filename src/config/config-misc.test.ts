@@ -12,11 +12,11 @@ import { GodsEyeSchema } from "./zod-schema.js";
 describe("$schema key in config (#14998)", () => {
   it("accepts config with $schema string", () => {
     const result = GodsEyeSchema.safeParse({
-      $schema: "https://godseye.ai/config.json",
+      $schema: "https://gods-eye.org/config.json",
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.$schema).toBe("https://godseye.ai/config.json");
+      expect(result.data.$schema).toBe("https://gods-eye.org/config.json");
     }
   });
 

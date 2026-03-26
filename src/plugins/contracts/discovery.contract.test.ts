@@ -133,9 +133,7 @@ describe("provider discovery contract", () => {
       };
     });
     vi.doMock("godseye/plugin-sdk/self-hosted-provider-setup", async () => {
-      const actual = await vi.importActual<object>(
-        "godseye/plugin-sdk/self-hosted-provider-setup",
-      );
+      const actual = await vi.importActual<object>("godseye/plugin-sdk/self-hosted-provider-setup");
       return {
         ...actual,
         buildVllmProvider: (...args: unknown[]) => buildVllmProviderMock(...args),

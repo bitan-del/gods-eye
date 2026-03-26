@@ -59,7 +59,7 @@ async function requireRiskAcknowledgement(params: {
       "godseye security audit --deep",
       "godseye security audit --fix",
       "",
-      "Must read: https://docs.godseye.ai/gateway/security",
+      "Must read: https://docs.gods-eye.org/gateway/security",
     ].join("\n"),
     "Security",
   );
@@ -94,7 +94,7 @@ export async function runSetupWizard(
         [
           ...snapshot.issues.map((iss) => `- ${iss.path}: ${iss.message}`),
           "",
-          "Docs: https://docs.godseye.ai/gateway/configuration",
+          "Docs: https://docs.gods-eye.org/gateway/configuration",
         ].join("\n"),
         "Config issues",
       );

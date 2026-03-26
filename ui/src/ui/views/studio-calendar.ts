@@ -52,7 +52,7 @@ export function renderStudioCalendar(props: StudioCalendarProps): TemplateResult
     existing.push(slot);
     grouped.set(slot.date, existing);
   }
-  const sortedDates = [...grouped.keys()].sort();
+  const sortedDates = [...grouped.keys()].toSorted();
 
   return html`
     <section class="card">
@@ -94,13 +94,20 @@ export function renderStudioCalendar(props: StudioCalendarProps): TemplateResult
         ${props.error ? html`<div class="error-message">${props.error}</div>` : nothing}
 
         <!-- Calendar slots -->
-        ${sortedDates.length === 0
-          ? html`<div style="opacity: 0.6; font-size: 0.9em;">No upcoming content scheduled. Add a slot above.</div>`
-          : sortedDates.map((date) => {
-              const dateSlots = grouped.get(date) ?? [];
-              const dateObj = new Date(date + "T00:00:00");
-              const dayLabel = dateObj.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-              return html`
+        ${
+          sortedDates.length === 0
+            ? html`
+                <div style="opacity: 0.6; font-size: 0.9em">No upcoming content scheduled. Add a slot above.</div>
+              `
+            : sortedDates.map((date) => {
+                const dateSlots = grouped.get(date) ?? [];
+                const dateObj = new Date(date + "T00:00:00");
+                const dayLabel = dateObj.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                });
+                return html`
                 <div style="margin-bottom: 8px;">
                   <div style="font-weight: 600; font-size: 0.9em; margin-bottom: 8px; opacity: 0.8;">${dayLabel}</div>
                   ${dateSlots.map(
@@ -124,7 +131,8 @@ export function renderStudioCalendar(props: StudioCalendarProps): TemplateResult
                   )}
                 </div>
               `;
-            })}
+              })
+        }
       </div>
     </section>
   `;

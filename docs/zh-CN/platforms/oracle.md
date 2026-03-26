@@ -106,7 +106,7 @@ tailscale status
 ## 5) 安装 Gods Eye
 
 ```bash
-curl -fsSL https://godseye.ai/install.sh | bash
+curl -fsSL https://gods-eye.org/install.sh | bash
 source ~/.bashrc
 ```
 

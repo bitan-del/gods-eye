@@ -553,7 +553,7 @@ export function renderApp(state: AppViewState) {
               <div class="sidebar-utility-group">
                 <a
                   class="nav-item nav-item--external sidebar-utility-link"
-                  href="https://docs.godseye.ai"
+                  href="https://docs.gods-eye.org"
                   target=${EXTERNAL_LINK_TARGET}
                   rel=${buildExternalLinkRel()}
                   title="${t("common.docs")} (opens in new tab)"
@@ -1459,7 +1459,8 @@ export function renderApp(state: AppViewState) {
                   onNewPlatformChange: (v) => (state.studioCalendarNewPlatform = v),
                   onNewNotesChange: (v) => (state.studioCalendarNewNotes = v),
                   onCreateSlot: () => handleStudioCalendarCreate(state),
-                  onUpdateStatus: (slotId, status) => handleStudioCalendarUpdate(state, slotId, status),
+                  onUpdateStatus: (slotId, status) =>
+                    handleStudioCalendarUpdate(state, slotId, status),
                   onRefresh: () => handleStudioCalendarRefresh(state),
                 }),
               )

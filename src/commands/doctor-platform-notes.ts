@@ -73,9 +73,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
   }
 
   const getenv = deps?.getenv ?? launchctlGetenv;
-  const tokenEntries = [
-    ["GODSEYE_GATEWAY_TOKEN", await getenv("GODSEYE_GATEWAY_TOKEN")],
-  ] as const;
+  const tokenEntries = [["GODSEYE_GATEWAY_TOKEN", await getenv("GODSEYE_GATEWAY_TOKEN")]] as const;
   const passwordEntries = [
     ["GODSEYE_GATEWAY_PASSWORD", await getenv("GODSEYE_GATEWAY_PASSWORD")],
   ] as const;

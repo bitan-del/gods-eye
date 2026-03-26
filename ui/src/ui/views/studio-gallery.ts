@@ -66,13 +66,15 @@ function renderGalleryCard(
       @click=${() => onPreview(item)}>
 
       <!-- Thumbnail placeholder -->
-      ${item.thumbnailUrl
-        ? html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: var(--surface-1);">
+      ${
+        item.thumbnailUrl
+          ? html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: var(--surface-1);">
             <img src=${item.thumbnailUrl} alt="Thumbnail" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>`
-        : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; font-size: 2em; opacity: 0.3;">
+          : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; font-size: 2em; opacity: 0.3;">
             ${TYPE_ICONS[item.type] ?? ""}
-          </div>`}
+          </div>`
+      }
 
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -94,8 +96,9 @@ function renderGalleryCard(
       </div>
 
       <!-- Tags -->
-      ${item.tags.length > 0
-        ? html`
+      ${
+        item.tags.length > 0
+          ? html`
             <div style="display: flex; flex-wrap: wrap; gap: 4px;">
               ${item.tags.map(
                 (tag) => html`
@@ -106,7 +109,8 @@ function renderGalleryCard(
               )}
             </div>
           `
-        : nothing}
+          : nothing
+      }
 
       <!-- Action buttons -->
       <div style="display: flex; gap: 4px; margin-top: 4px;" @click=${(e: Event) => e.stopPropagation()}>
@@ -157,13 +161,15 @@ function renderPreviewModal(
         </div>
 
         <!-- Image preview -->
-        ${item.fullUrl || item.thumbnailUrl
-          ? html`<div style="width: 100%; border-radius: 8px; overflow: hidden; margin: 12px 0; background: var(--surface-1);">
+        ${
+          item.fullUrl || item.thumbnailUrl
+            ? html`<div style="width: 100%; border-radius: 8px; overflow: hidden; margin: 12px 0; background: var(--surface-1);">
               <img src=${item.fullUrl ?? item.thumbnailUrl ?? ""} alt="Preview" style="width: 100%; display: block;" />
             </div>`
-          : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 8px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; margin: 12px 0; font-size: 3em; opacity: 0.3;">
+            : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 8px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; margin: 12px 0; font-size: 3em; opacity: 0.3;">
               ${TYPE_ICONS[item.type] ?? ""}
-            </div>`}
+            </div>`
+        }
 
         <!-- Details -->
         <div style="display: grid; gap: 8px; margin-top: 12px;">
@@ -177,13 +183,16 @@ function renderPreviewModal(
             Created: ${new Date(item.createdAt).toLocaleString("en-US")}
             ${item.resultRef ? html` | Ref: ${item.resultRef}` : nothing}
           </div>
-          ${item.tags.length > 0
-            ? html`<div style="display: flex; flex-wrap: wrap; gap: 4px;">
+          ${
+            item.tags.length > 0
+              ? html`<div style="display: flex; flex-wrap: wrap; gap: 4px;">
                 ${item.tags.map(
-                  (tag) => html`<span style="display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 0.75em; background: var(--surface-3);">${tag}</span>`,
+                  (tag) =>
+                    html`<span style="display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 0.75em; background: var(--surface-3);">${tag}</span>`,
                 )}
               </div>`
-            : nothing}
+              : nothing
+          }
         </div>
 
         <!-- Actions -->
@@ -198,11 +207,10 @@ function renderPreviewModal(
 
 // --- Side-by-side comparison ---
 
-function renderComparisonView(
-  items: StudioGalleryItem[],
-  onClear: () => void,
-): TemplateResult {
-  if (items.length < 2) return html``;
+function renderComparisonView(items: StudioGalleryItem[], onClear: () => void): TemplateResult {
+  if (items.length < 2) {
+    return html``;
+  }
 
   const [a, b] = items;
   return html`
@@ -215,13 +223,15 @@ function renderComparisonView(
         ${[a, b].map(
           (item) => html`
             <div style="display: flex; flex-direction: column; gap: 8px;">
-              ${item.thumbnailUrl
-                ? html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: var(--surface-1);">
+              ${
+                item.thumbnailUrl
+                  ? html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; overflow: hidden; background: var(--surface-1);">
                     <img src=${item.thumbnailUrl} alt="Compare" style="width: 100%; height: 100%; object-fit: cover;" />
                   </div>`
-                : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; font-size: 2em; opacity: 0.3;">
+                  : html`<div style="width: 100%; aspect-ratio: 16/9; border-radius: 6px; background: var(--surface-1); display: flex; align-items: center; justify-content: center; font-size: 2em; opacity: 0.3;">
                     ${TYPE_ICONS[item.type] ?? ""}
-                  </div>`}
+                  </div>`
+              }
               <div style="font-size: 0.85em; line-height: 1.4;">
                 ${item.prompt.length > 100 ? `${item.prompt.slice(0, 100)}...` : item.prompt}
               </div>
@@ -238,7 +248,9 @@ function renderComparisonView(
 
 export function renderStudioGallery(props: StudioGalleryProps): TemplateResult {
   const filteredGenerations = props.generations.filter((item) => {
-    if (props.filterType !== "all" && item.type !== props.filterType) return false;
+    if (props.filterType !== "all" && item.type !== props.filterType) {
+      return false;
+    }
     if (props.searchQuery.trim()) {
       const q = props.searchQuery.toLowerCase();
       return (
@@ -286,22 +298,38 @@ export function renderStudioGallery(props: StudioGalleryProps): TemplateResult {
         ${props.error ? html`<div class="error-message">${props.error}</div>` : nothing}
 
         <!-- A/B Comparison view (shown when 2 items selected) -->
-        ${props.compareItems.length >= 2
-          ? renderComparisonView(props.compareItems, props.onClearCompare)
-          : props.compareItems.length === 1
-            ? html`<div style="font-size: 0.85em; opacity: 0.6; padding: 8px 12px; border-radius: 6px; background: var(--surface-2); border: 1px dashed #f59e0b;">
-                1 item selected for comparison. Select one more to compare side-by-side.
-              </div>`
-            : nothing}
+        ${
+          props.compareItems.length >= 2
+            ? renderComparisonView(props.compareItems, props.onClearCompare)
+            : props.compareItems.length === 1
+              ? html`
+                  <div
+                    style="
+                      font-size: 0.85em;
+                      opacity: 0.6;
+                      padding: 8px 12px;
+                      border-radius: 6px;
+                      background: var(--surface-2);
+                      border: 1px dashed #f59e0b;
+                    "
+                  >
+                    1 item selected for comparison. Select one more to compare side-by-side.
+                  </div>
+                `
+              : nothing
+        }
 
         <!-- Gallery grid -->
-        ${filteredGenerations.length === 0
-          ? html`<div style="opacity: 0.6; font-size: 0.9em; text-align: center; padding: 32px;">
-              ${props.generations.length === 0
-                ? "No generations yet. Use Image Gen or Video Gen to create your first asset."
-                : "No results match your filter."}
+        ${
+          filteredGenerations.length === 0
+            ? html`<div style="opacity: 0.6; font-size: 0.9em; text-align: center; padding: 32px;">
+              ${
+                props.generations.length === 0
+                  ? "No generations yet. Use Image Gen or Video Gen to create your first asset."
+                  : "No results match your filter."
+              }
             </div>`
-          : html`
+            : html`
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
                 ${filteredGenerations.map((item) =>
                   renderGalleryCard(
@@ -314,7 +342,8 @@ export function renderStudioGallery(props: StudioGalleryProps): TemplateResult {
                   ),
                 )}
               </div>
-            `}
+            `
+        }
 
         <div style="font-size: 0.8em; opacity: 0.5; text-align: center;">
           ${filteredGenerations.length} of ${props.generations.length} items
@@ -322,14 +351,16 @@ export function renderStudioGallery(props: StudioGalleryProps): TemplateResult {
       </div>
 
       <!-- Preview modal -->
-      ${props.previewItem
-        ? renderPreviewModal(
-            props.previewItem,
-            () => props.onPreview(null),
-            (it) => props.onDownload(it),
-            (it) => props.onRegenerate(it),
-          )
-        : nothing}
+      ${
+        props.previewItem
+          ? renderPreviewModal(
+              props.previewItem,
+              () => props.onPreview(null),
+              (it) => props.onDownload(it),
+              (it) => props.onRegenerate(it),
+            )
+          : nothing
+      }
     </section>
   `;
 }

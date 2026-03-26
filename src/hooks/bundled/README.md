@@ -81,7 +81,7 @@ session-memory/
 ---
 name: my-hook
 description: "Short description"
-homepage: https://docs.godseye.ai/automation/hooks#my-hook
+homepage: https://docs.gods-eye.org/automation/hooks#my-hook
 metadata:
   { "godseye": { "emoji": "🔗", "events": ["command:new"], "requires": { "bins": ["node"] } } }
 ---
@@ -220,4 +220,4 @@ Test your hooks by:
 
 ## Documentation
 
-Full documentation: https://docs.godseye.ai/automation/hooks
+Full documentation: https://docs.gods-eye.org/automation/hooks

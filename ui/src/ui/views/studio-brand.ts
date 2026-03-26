@@ -36,17 +36,29 @@ function renderColorSwatch(color: string): TemplateResult {
   `;
 }
 
-function renderBrandCard(brand: StudioBrandProfile, isActive: boolean, onSetActive: (id: string) => void): TemplateResult {
+function renderBrandCard(
+  brand: StudioBrandProfile,
+  isActive: boolean,
+  onSetActive: (id: string) => void,
+): TemplateResult {
   return html`
     <div style="padding: 16px; border-radius: 8px; background: var(--surface-2); margin-bottom: 12px; border: 2px solid ${isActive ? brand.colors.primary : "transparent"};">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <strong>${brand.name}</strong>
-          ${isActive ? html`<span style="font-size: 0.8em; opacity: 0.7; margin-left: 8px;">(active)</span>` : nothing}
+          ${
+            isActive
+              ? html`
+                  <span style="font-size: 0.8em; opacity: 0.7; margin-left: 8px">(active)</span>
+                `
+              : nothing
+          }
         </div>
-        ${!isActive
-          ? html`<button class="btn btn-secondary btn-sm" @click=${() => onSetActive(brand.id)}>Set Active</button>`
-          : nothing}
+        ${
+          !isActive
+            ? html`<button class="btn btn-secondary btn-sm" @click=${() => onSetActive(brand.id)}>Set Active</button>`
+            : nothing
+        }
       </div>
       <div style="margin-top: 8px;">
         ${renderColorSwatch(brand.colors.primary)}
@@ -97,9 +109,17 @@ export function renderStudioBrand(props: StudioBrandProps): TemplateResult {
           <div style="font-weight: 600; margin-bottom: 12px;">
             Brand Profiles ${props.brands.length > 0 ? html`<span style="opacity: 0.6;">(${props.brands.length})</span>` : nothing}
           </div>
-          ${props.brands.length === 0
-            ? html`<div style="opacity: 0.6; font-size: 0.9em;">No brands yet. Scan a website to create your first brand profile.</div>`
-            : props.brands.map((brand) => renderBrandCard(brand, brand.id === props.activeBrand?.id, props.onSetActive))}
+          ${
+            props.brands.length === 0
+              ? html`
+                  <div style="opacity: 0.6; font-size: 0.9em">
+                    No brands yet. Scan a website to create your first brand profile.
+                  </div>
+                `
+              : props.brands.map((brand) =>
+                  renderBrandCard(brand, brand.id === props.activeBrand?.id, props.onSetActive),
+                )
+          }
         </div>
       </div>
     </section>

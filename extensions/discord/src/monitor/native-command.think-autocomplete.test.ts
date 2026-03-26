@@ -47,10 +47,7 @@ vi.mock("godseye/plugin-sdk/conversation-runtime", async (importOriginal) => {
   );
 });
 
-const STORE_PATH = path.join(
-  os.tmpdir(),
-  `godseye-discord-think-autocomplete-${process.pid}.json`,
-);
+const STORE_PATH = path.join(os.tmpdir(), `godseye-discord-think-autocomplete-${process.pid}.json`);
 const SESSION_KEY = "agent:main:main";
 
 describe("discord native /think autocomplete", () => {

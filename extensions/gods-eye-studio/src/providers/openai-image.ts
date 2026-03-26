@@ -59,8 +59,9 @@ export async function resolveOpenAIApiKey(params?: {
 }
 
 function resolveOpenAIBaseUrl(cfg?: Record<string, unknown>): string {
-  const providers = (cfg as { models?: { providers?: { openai?: { baseUrl?: string } } } })?.models
-    ?.providers?.openai?.baseUrl?.trim();
+  const providers = (
+    cfg as { models?: { providers?: { openai?: { baseUrl?: string } } } }
+  )?.models?.providers?.openai?.baseUrl?.trim();
   return (providers || DEFAULT_OPENAI_BASE_URL).replace(/\/+$/u, "");
 }
 

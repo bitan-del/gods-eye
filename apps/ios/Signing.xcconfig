@@ -4,17 +4,17 @@
 
 #include "Config/Version.xcconfig"
 
-OPENCLAW_CODE_SIGN_STYLE = Manual
-OPENCLAW_DEVELOPMENT_TEAM = Y5PE65HELJ
+GODSEYE_CODE_SIGN_STYLE = Manual
+GODSEYE_DEVELOPMENT_TEAM = Y5PE65HELJ
 
-OPENCLAW_APP_BUNDLE_ID = ai.openclaw.client
-OPENCLAW_SHARE_BUNDLE_ID = ai.openclaw.client.share
-OPENCLAW_WATCH_APP_BUNDLE_ID = ai.openclaw.client.watchkitapp
-OPENCLAW_WATCH_EXTENSION_BUNDLE_ID = ai.openclaw.client.watchkitapp.extension
-OPENCLAW_ACTIVITY_WIDGET_BUNDLE_ID = ai.openclaw.client.activitywidget
+GODSEYE_APP_BUNDLE_ID = ai.godseye.client
+GODSEYE_SHARE_BUNDLE_ID = ai.godseye.client.share
+GODSEYE_WATCH_APP_BUNDLE_ID = ai.godseye.client.watchkitapp
+GODSEYE_WATCH_EXTENSION_BUNDLE_ID = ai.godseye.client.watchkitapp.extension
+GODSEYE_ACTIVITY_WIDGET_BUNDLE_ID = ai.godseye.client.activitywidget
 
-OPENCLAW_APP_PROFILE = ai.openclaw.client Development
-OPENCLAW_SHARE_PROFILE = ai.openclaw.client.share Development
+GODSEYE_APP_PROFILE = ai.godseye.client Development
+GODSEYE_SHARE_PROFILE = ai.godseye.client.share Development
 
 // Keep local includes after defaults: xcconfig is evaluated top-to-bottom,
 // so later assignments in local files override the defaults above.

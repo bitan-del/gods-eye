@@ -73,5 +73,5 @@ scripts/pi/run-tests.sh --live
 
 ## 参考资料
 
-- https://docs.godseye.ai/testing
-- https://docs.godseye.ai/start/getting-started
+- https://docs.gods-eye.org/testing
+- https://docs.gods-eye.org/start/getting-started

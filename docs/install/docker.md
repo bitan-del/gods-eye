@@ -127,8 +127,8 @@ and setup-time config writes through `godseye-gateway` with
 
 The setup script accepts these optional environment variables:
 
-| Variable                       | Purpose                                                          |
-| ------------------------------ | ---------------------------------------------------------------- |
+| Variable                      | Purpose                                                          |
+| ----------------------------- | ---------------------------------------------------------------- |
 | `GODSEYE_IMAGE`               | Use a remote image instead of building locally                   |
 | `GODSEYE_DOCKER_APT_PACKAGES` | Install extra apt packages during build (space-separated)        |
 | `GODSEYE_EXTENSIONS`          | Pre-install extension deps at build time (space-separated names) |

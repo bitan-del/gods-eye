@@ -10,14 +10,14 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { BrainMemory } from "./brain/memory.js";
-import { enrichPromptWithBrand, recordGeneration } from "./tools/image-gen.js";
-import { recordVideoGeneration } from "./tools/video-gen.js";
-import { saveBrandScanResult } from "./tools/brand-scan.js";
-import { createCalendarSlot, updateCalendarSlot } from "./tools/content-calendar.js";
-import { executeRecall } from "./tools/recall.js";
 import { generateImageWithFal, generateVideoWithFal } from "./providers/fal.js";
 import { analyzeBrandWithGemini, generateImageWithGemini } from "./providers/gemini.js";
 import { generateImageWithOpenAI } from "./providers/openai-image.js";
+import { saveBrandScanResult } from "./tools/brand-scan.js";
+import { createCalendarSlot, updateCalendarSlot } from "./tools/content-calendar.js";
+import { enrichPromptWithBrand, recordGeneration } from "./tools/image-gen.js";
+import { executeRecall } from "./tools/recall.js";
+import { recordVideoGeneration } from "./tools/video-gen.js";
 
 // ---------------------------------------------------------------------------
 // Provider routing
@@ -50,7 +50,11 @@ export async function executeImageGeneration(
   const prefs = brain.getPreferences();
   const model = params.model ?? prefs.defaultImageModel;
   const provider = resolveImageProvider(model);
-  const tags = params.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
+  const tags =
+    params.tags
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean) ?? [];
 
   // Enrich prompt with brand context
   const enrichedPrompt = enrichPromptWithBrand(brain, {
@@ -94,7 +98,11 @@ export async function executeImageGeneration(
     }
   } else if (provider === "openai") {
     const result = await generateImageWithOpenAI(
-      { prompt: finalPrompt, model, size: params.width && params.height ? `${params.width}x${params.height}` : undefined },
+      {
+        prompt: finalPrompt,
+        model,
+        size: params.width && params.height ? `${params.width}x${params.height}` : undefined,
+      },
       cfg,
     );
     resultModel = result.model;
@@ -119,7 +127,15 @@ export async function executeImageGeneration(
   // Record in brain memory
   recordGeneration(
     brain,
-    { prompt: params.prompt, model: resultModel, width: params.width, height: params.height, style: params.style, negativePrompt: params.negativePrompt, tags },
+    {
+      prompt: params.prompt,
+      model: resultModel,
+      width: params.width,
+      height: params.height,
+      style: params.style,
+      negativePrompt: params.negativePrompt,
+      tags,
+    },
     { id: genId, imageRef: imageRef ?? "", prompt: finalPrompt, model: resultModel, revisedPrompt },
   );
 
@@ -149,7 +165,11 @@ export async function executeVideoGeneration(
 ): Promise<{ id: string; model: string; videoUrl: string }> {
   const prefs = brain.getPreferences();
   const model = params.model ?? prefs.defaultVideoModel;
-  const tags = params.tags?.split(",").map((t) => t.trim()).filter(Boolean) ?? [];
+  const tags =
+    params.tags
+      ?.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean) ?? [];
 
   // Enrich prompt with brand context
   const enrichedPrompt = enrichPromptWithBrand(brain, {

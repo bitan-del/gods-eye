@@ -85,10 +85,10 @@ For how skills are loaded and prioritized, see [Skills](/tools/skills).
 
 The YAML frontmatter supports these fields:
 
-| Field                               | Required | Description                                 |
-| ----------------------------------- | -------- | ------------------------------------------- |
-| `name`                              | Yes      | Unique identifier (snake_case)              |
-| `description`                       | Yes      | One-line description shown to the agent     |
+| Field                              | Required | Description                                 |
+| ---------------------------------- | -------- | ------------------------------------------- |
+| `name`                             | Yes      | Unique identifier (snake_case)              |
+| `description`                      | Yes      | One-line description shown to the agent     |
 | `metadata.godseye.os`              | No       | OS filter (`["darwin"]`, `["linux"]`, etc.) |
 | `metadata.godseye.requires.bins`   | No       | Required binaries on PATH                   |
 | `metadata.godseye.requires.config` | No       | Required config keys                        |
@@ -105,7 +105,7 @@ The YAML frontmatter supports these fields:
 | Location                        | Precedence | Scope                 |
 | ------------------------------- | ---------- | --------------------- |
 | `\<workspace\>/skills/`         | Highest    | Per-agent             |
-| `~/.godseye/skills/`           | Medium     | Shared (all agents)   |
+| `~/.godseye/skills/`            | Medium     | Shared (all agents)   |
 | Bundled (shipped with Gods Eye) | Lowest     | Global                |
 | `skills.load.extraDirs`         | Lowest     | Custom shared folders |
 

@@ -377,10 +377,7 @@ describeLive("live models (profile keys)", () => {
         "[live-models] load config",
       );
       logProgress("[live-models] preparing models.json");
-      await withLiveStageTimeout(
-        ensureGodsEyeModelsJson(cfg),
-        "[live-models] prepare models.json",
-      );
+      await withLiveStageTimeout(ensureGodsEyeModelsJson(cfg), "[live-models] prepare models.json");
       if (!DIRECT_ENABLED) {
         logProgress(
           "[live-models] skipping (set GODSEYE_LIVE_MODELS=modern|all|<list>; all=modern)",

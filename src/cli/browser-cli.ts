@@ -29,7 +29,7 @@ export function registerBrowserCli(program: Command) {
           true,
         )}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/browser",
-          "docs.godseye.ai/cli/browser",
+          "docs.gods-eye.org/cli/browser",
         )}\n`,
     )
     .action(() => {

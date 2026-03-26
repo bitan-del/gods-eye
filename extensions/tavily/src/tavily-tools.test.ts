@@ -139,7 +139,7 @@ describe("tavily tools", () => {
       max_results: 5,
       include_answer: true,
       time_range: "week",
-      include_domains: ["docs.godseye.ai", "", "godseye.ai"],
+      include_domains: ["docs.gods-eye.org", "", "gods-eye.org"],
       exclude_domains: ["bad.example", ""],
     });
 
@@ -151,7 +151,7 @@ describe("tavily tools", () => {
       maxResults: 5,
       includeAnswer: true,
       timeRange: "week",
-      includeDomains: ["docs.godseye.ai", "godseye.ai"],
+      includeDomains: ["docs.gods-eye.org", "gods-eye.org"],
       excludeDomains: ["bad.example"],
     });
     expect(result).toMatchObject({
@@ -165,7 +165,7 @@ describe("tavily tools", () => {
           maxResults: 5,
           includeAnswer: true,
           timeRange: "week",
-          includeDomains: ["docs.godseye.ai", "godseye.ai"],
+          includeDomains: ["docs.gods-eye.org", "gods-eye.org"],
           excludeDomains: ["bad.example"],
         },
       },

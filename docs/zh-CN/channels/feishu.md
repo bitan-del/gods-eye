@@ -444,8 +444,8 @@ godseye pairing list feishu
 
 ## Gateway 网关管理命令
 
-| Command                    | Description                |
-| -------------------------- | -------------------------- |
+| Command                   | Description                |
+| ------------------------- | -------------------------- |
 | `godseye gateway status`  | 显示 Gateway 网关状态      |
 | `godseye gateway install` | 安装/启动 Gateway 网关服务 |
 | `godseye gateway stop`    | 停止 Gateway 网关服务      |

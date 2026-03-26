@@ -1,5 +1,5 @@
-import MarkdownIt from "markdown-it";
 import { isAutoLinkedFileRef } from "godseye/plugin-sdk/text-runtime";
+import MarkdownIt from "markdown-it";
 
 const md = new MarkdownIt({
   html: false,

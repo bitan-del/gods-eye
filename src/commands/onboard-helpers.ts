@@ -220,8 +220,8 @@ export function formatControlUiSshHint(params: {
     localUrl,
     authedUrl,
     "Docs:",
-    "https://docs.godseye.ai/gateway/remote",
-    "https://docs.godseye.ai/web/control-ui",
+    "https://docs.gods-eye.org/gateway/remote",
+    "https://docs.gods-eye.org/web/control-ui",
   ]
     .filter(Boolean)
     .join("\n");

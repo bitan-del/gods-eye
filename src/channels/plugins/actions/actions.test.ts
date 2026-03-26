@@ -143,9 +143,7 @@ function createSignalAccountOverrideCfg(): GodsEyeConfig {
   } as GodsEyeConfig;
 }
 
-function createDiscordModerationOverrideCfg(params?: {
-  channelsEnabled?: boolean;
-}): GodsEyeConfig {
+function createDiscordModerationOverrideCfg(params?: { channelsEnabled?: boolean }): GodsEyeConfig {
   const accountActions = params?.channelsEnabled
     ? { moderation: true, channels: true }
     : { moderation: true };

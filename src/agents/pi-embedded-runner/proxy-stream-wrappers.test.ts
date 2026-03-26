@@ -27,7 +27,7 @@ describe("proxy stream wrappers", () => {
     expect(calls).toEqual([
       {
         headers: {
-          "HTTP-Referer": "https://godseye.ai",
+          "HTTP-Referer": "https://gods-eye.org",
           "X-OpenRouter-Title": "Gods Eye",
           "X-OpenRouter-Categories": "cli-agent",
           "X-Custom": "1",

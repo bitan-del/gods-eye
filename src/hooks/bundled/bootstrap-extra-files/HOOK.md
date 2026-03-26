@@ -1,7 +1,7 @@
 ---
 name: bootstrap-extra-files
 description: "Inject additional workspace bootstrap files via glob/path patterns"
-homepage: https://docs.godseye.ai/automation/hooks#bootstrap-extra-files
+homepage: https://docs.gods-eye.org/automation/hooks#bootstrap-extra-files
 metadata:
   {
     "godseye":

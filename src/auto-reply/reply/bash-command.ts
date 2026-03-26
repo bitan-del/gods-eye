@@ -192,7 +192,7 @@ export async function handleBashChatCommand(params: {
     return buildDisabledCommandReply({
       label: "bash",
       configKey: "bash",
-      docsUrl: "https://docs.godseye.ai/tools/slash-commands#config",
+      docsUrl: "https://docs.gods-eye.org/tools/slash-commands#config",
     });
   }
 

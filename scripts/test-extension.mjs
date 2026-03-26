@@ -314,8 +314,7 @@ async function run() {
   const rawArgs = process.argv.slice(2);
   const dryRun = rawArgs.includes("--dry-run");
   const requireTests =
-    rawArgs.includes("--require-tests") ||
-    process.env.GODSEYE_TEST_EXTENSION_REQUIRE_TESTS === "1";
+    rawArgs.includes("--require-tests") || process.env.GODSEYE_TEST_EXTENSION_REQUIRE_TESTS === "1";
   const json = rawArgs.includes("--json");
   const list = rawArgs.includes("--list");
   const listChanged = rawArgs.includes("--list-changed");

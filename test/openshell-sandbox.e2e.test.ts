@@ -10,8 +10,7 @@ import { createSandboxTestContext } from "../src/agents/sandbox/test-fixtures.js
 
 const GODSEYE_OPENSHELL_E2E = process.env.GODSEYE_E2E_OPENSHELL === "1";
 const GODSEYE_OPENSHELL_E2E_TIMEOUT_MS = 12 * 60_000;
-const GODSEYE_OPENSHELL_COMMAND =
-  process.env.GODSEYE_E2E_OPENSHELL_COMMAND?.trim() || "openshell";
+const GODSEYE_OPENSHELL_COMMAND = process.env.GODSEYE_E2E_OPENSHELL_COMMAND?.trim() || "openshell";
 
 const CUSTOM_IMAGE_DOCKERFILE = `FROM python:3.13-slim
 

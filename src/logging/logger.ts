@@ -2,10 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Logger as TsLogger } from "tslog";
 import type { GodsEyeConfig } from "../config/types.js";
-import {
-  POSIX_GODSEYE_TMP_DIR,
-  resolvePreferredGodsEyeTmpDir,
-} from "../infra/tmp-godseye-dir.js";
+import { POSIX_GODSEYE_TMP_DIR, resolvePreferredGodsEyeTmpDir } from "../infra/tmp-godseye-dir.js";
 import { readLoggingConfig, shouldSkipMutatingLoggingConfigRead } from "./config.js";
 import type { ConsoleStyle } from "./console.js";
 import { resolveEnvLogLevelOverride } from "./env-log-level.js";

@@ -411,7 +411,7 @@ describe("runConfigureWizard", () => {
         envVars: [],
         placeholder: "(no key needed)",
         signupUrl: "https://duckduckgo.com/",
-        docsUrl: "https://docs.godseye.ai/tools/web",
+        docsUrl: "https://docs.gods-eye.org/tools/web",
         credentialPath: "",
       }),
     ]);

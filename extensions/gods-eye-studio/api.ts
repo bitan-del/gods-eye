@@ -20,10 +20,23 @@ export type { RecallResult } from "./src/brain/recall.js";
 
 // Providers
 export { generateImageWithFal, generateVideoWithFal } from "./src/providers/fal.js";
-export type { FalImageRequest, FalImageResult, FalVideoRequest, FalVideoResult } from "./src/providers/fal.js";
+export type {
+  FalImageRequest,
+  FalImageResult,
+  FalVideoRequest,
+  FalVideoResult,
+} from "./src/providers/fal.js";
 
-export { analyzeBrandWithGemini, generateImageWithGemini, reasonWithGemini } from "./src/providers/gemini.js";
-export type { GeminiBrandAnalysis, GeminiCreativeResponse, GeminiImageResult } from "./src/providers/gemini.js";
+export {
+  analyzeBrandWithGemini,
+  generateImageWithGemini,
+  reasonWithGemini,
+} from "./src/providers/gemini.js";
+export type {
+  GeminiBrandAnalysis,
+  GeminiCreativeResponse,
+  GeminiImageResult,
+} from "./src/providers/gemini.js";
 
 export { generateImageWithOpenAI } from "./src/providers/openai-image.js";
 export type { OpenAIImageRequest, OpenAIImageResult } from "./src/providers/openai-image.js";

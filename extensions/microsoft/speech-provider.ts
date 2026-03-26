@@ -1,14 +1,14 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
+import type { SpeechProviderPlugin } from "godseye/plugin-sdk/core";
+import { resolvePreferredGodsEyeTmpDir } from "godseye/plugin-sdk/llm-task";
+import { isVoiceCompatibleAudio } from "godseye/plugin-sdk/media-runtime";
+import { edgeTTS, inferEdgeExtension, type SpeechVoiceOption } from "godseye/plugin-sdk/speech";
 import {
   CHROMIUM_FULL_VERSION,
   TRUSTED_CLIENT_TOKEN,
   generateSecMsGecToken,
 } from "node-edge-tts/dist/drm.js";
-import type { SpeechProviderPlugin } from "godseye/plugin-sdk/core";
-import { resolvePreferredGodsEyeTmpDir } from "godseye/plugin-sdk/llm-task";
-import { isVoiceCompatibleAudio } from "godseye/plugin-sdk/media-runtime";
-import { edgeTTS, inferEdgeExtension, type SpeechVoiceOption } from "godseye/plugin-sdk/speech";
 
 const DEFAULT_EDGE_OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3";
 

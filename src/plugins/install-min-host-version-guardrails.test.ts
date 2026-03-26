@@ -47,9 +47,7 @@ describe("install minHostVersion guardrails", () => {
       const manifest = JSON.parse(
         fs.readFileSync(path.resolve(relativePath), "utf-8"),
       ) as PackageJsonLike;
-      const requirement = parseMinHostVersionRequirement(
-        manifest.godseye?.install?.minHostVersion,
-      );
+      const requirement = parseMinHostVersionRequirement(manifest.godseye?.install?.minHostVersion);
 
       expect(
         requirement,

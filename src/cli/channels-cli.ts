@@ -78,7 +78,7 @@ export function registerChannelsCli(program: Command) {
           ["godseye channels login --channel whatsapp", "Link a WhatsApp Web account."],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/channels",
-          "docs.godseye.ai/cli/channels",
+          "docs.gods-eye.org/cli/channels",
         )}\n`,
     );
 

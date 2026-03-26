@@ -48,7 +48,7 @@ export function registerSecurityCli(program: Command) {
           ],
           ["godseye security audit --fix", "Apply safe remediations and file-permission fixes."],
           ["godseye security audit --json", "Output machine-readable JSON."],
-        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/security", "docs.godseye.ai/cli/security")}\n`,
+        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/security", "docs.gods-eye.org/cli/security")}\n`,
     );
 
   security

@@ -54,7 +54,7 @@ jobs:
                 label: "r: support",
                 close: true,
                 message:
-                  "Please use [our support server](https://discord.gg/clawd) and ask in #help or #users-helping-users to resolve this, or follow the stuck FAQ at https://docs.godseye.ai/help/faq#im-stuck-whats-the-fastest-way-to-get-unstuck.",
+                  "Please use [our support server](https://discord.gg/clawd) and ask in #help or #users-helping-users to resolve this, or follow the stuck FAQ at https://docs.gods-eye.org/help/faq#im-stuck-whats-the-fastest-way-to-get-unstuck.",
               },
               {
                 label: "r: no-ci-pr",
@@ -81,7 +81,7 @@ jobs:
                 label: "r: third-party-extension",
                 close: true,
                 message:
-                  "Please make this as a third-party plugin that you maintain yourself in your own repo. Docs: https://docs.godseye.ai/plugin. Feel free to open a PR after to add it to our community plugins page: https://docs.godseye.ai/plugins/community",
+                  "Please make this as a third-party plugin that you maintain yourself in your own repo. Docs: https://docs.gods-eye.org/plugin. Feel free to open a PR after to add it to our community plugins page: https://docs.gods-eye.org/plugins/community",
               },
               {
                 label: "r: moltbook",

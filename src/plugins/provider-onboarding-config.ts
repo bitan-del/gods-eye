@@ -73,10 +73,7 @@ export function applyOnboardAuthAgentModelsAndProviders(
   };
 }
 
-export function applyAgentDefaultModelPrimary(
-  cfg: GodsEyeConfig,
-  primary: string,
-): GodsEyeConfig {
+export function applyAgentDefaultModelPrimary(cfg: GodsEyeConfig, primary: string): GodsEyeConfig {
   const existingFallbacks = extractAgentDefaultModelFallbacks(cfg.agents?.defaults?.model);
   return {
     ...cfg,

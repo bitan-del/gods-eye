@@ -13,7 +13,11 @@ export type StudioState = {
   client: GatewayBrowserClient | null;
 
   // Shared
-  studioActiveBrand: { id: string; name: string; colors: { primary: string; secondary: string } } | null;
+  studioActiveBrand: {
+    id: string;
+    name: string;
+    colors: { primary: string; secondary: string };
+  } | null;
 
   // Image Gen
   studioImageGenLoading: boolean;
@@ -105,7 +109,9 @@ export type StudioState = {
 // ---------------------------------------------------------------------------
 
 export async function handleStudioImageGenerate(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioImageGenGenerating = true;
   state.studioImageGenError = null;
 
@@ -141,7 +147,9 @@ export async function handleStudioImageGenerate(state: StudioState) {
 // ---------------------------------------------------------------------------
 
 export async function handleStudioVideoGenerate(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioVideoGenGenerating = true;
   state.studioVideoGenError = null;
 
@@ -172,7 +180,9 @@ export async function handleStudioVideoGenerate(state: StudioState) {
 // ---------------------------------------------------------------------------
 
 export async function handleStudioBrandScan(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioBrandScanning = true;
   state.studioBrandError = null;
 
@@ -214,7 +224,9 @@ export function handleStudioSetActiveBrand(state: StudioState, brandId: string) 
 // ---------------------------------------------------------------------------
 
 export async function handleStudioCalendarCreate(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioCalendarError = null;
 
   try {
@@ -237,8 +249,14 @@ export async function handleStudioCalendarCreate(state: StudioState) {
   }
 }
 
-export async function handleStudioCalendarUpdate(state: StudioState, slotId: string, status: string) {
-  if (!state.client || !state.connected) return;
+export async function handleStudioCalendarUpdate(
+  state: StudioState,
+  slotId: string,
+  status: string,
+) {
+  if (!state.client || !state.connected) {
+    return;
+  }
 
   try {
     await state.client.request("studio.calendar.update", {
@@ -258,7 +276,9 @@ export async function handleStudioCalendarUpdate(state: StudioState, slotId: str
 }
 
 export async function handleStudioCalendarRefresh(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioCalendarLoading = true;
 
   try {
@@ -279,7 +299,9 @@ export async function handleStudioCalendarRefresh(state: StudioState) {
 // ---------------------------------------------------------------------------
 
 export async function handleStudioGalleryRefresh(state: StudioState) {
-  if (!state.client || !state.connected) return;
+  if (!state.client || !state.connected) {
+    return;
+  }
   state.studioGalleryLoading = true;
   state.studioGalleryError = null;
 

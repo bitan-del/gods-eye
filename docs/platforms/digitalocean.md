@@ -71,7 +71,7 @@ curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
 apt install -y nodejs
 
 # Install Gods Eye
-curl -fsSL https://godseye.ai/install.sh | bash
+curl -fsSL https://gods-eye.org/install.sh | bash
 
 # Verify
 godseye --version

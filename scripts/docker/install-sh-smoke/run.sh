@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INSTALL_URL="${GODSEYE_INSTALL_URL:-https://godseye.bot/install.sh}"
+INSTALL_URL="${GODSEYE_INSTALL_URL:-https://gods-eye.org/install.sh}"
 SMOKE_PREVIOUS_VERSION="${GODSEYE_INSTALL_SMOKE_PREVIOUS:-}"
 SKIP_PREVIOUS="${GODSEYE_INSTALL_SMOKE_SKIP_PREVIOUS:-0}"
 DEFAULT_PACKAGE="godseye"

@@ -1,4 +1,3 @@
-import { type Bot, GrammyError, InputFile } from "grammy";
 import type { ReplyToMode } from "godseye/plugin-sdk/config-runtime";
 import type { MarkdownTableMode } from "godseye/plugin-sdk/config-runtime";
 import { fireAndForgetHook } from "godseye/plugin-sdk/hook-runtime";
@@ -18,6 +17,7 @@ import { chunkMarkdownTextWithMode, type ChunkMode } from "godseye/plugin-sdk/re
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { loadWebMedia } from "godseye/plugin-sdk/web-media";
+import { type Bot, GrammyError, InputFile } from "grammy";
 import type { TelegramInlineButtons } from "../button-types.js";
 import { splitTelegramCaption } from "../caption.js";
 import {

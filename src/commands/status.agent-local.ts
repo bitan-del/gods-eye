@@ -33,9 +33,7 @@ async function fileExists(p: string): Promise<boolean> {
   }
 }
 
-export async function getAgentLocalStatuses(
-  cfg: GodsEyeConfig,
-): Promise<AgentLocalStatusesResult> {
+export async function getAgentLocalStatuses(cfg: GodsEyeConfig): Promise<AgentLocalStatusesResult> {
   const agentList = listGatewayAgentsBasic(cfg);
   const now = Date.now();
 

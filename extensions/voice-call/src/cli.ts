@@ -112,7 +112,7 @@ export function registerVoiceCallCli(params: {
   const root = program
     .command("voicecall")
     .description("Voice call utilities")
-    .addHelpText("after", () => `\nDocs: https://docs.godseye.ai/cli/voicecall\n`);
+    .addHelpText("after", () => `\nDocs: https://docs.gods-eye.org/cli/voicecall\n`);
 
   root
     .command("call")

@@ -60,7 +60,7 @@ export async function setupWizardCommand(
     runtime.error(
       [
         "Non-interactive setup requires explicit risk acknowledgement.",
-        "Read: https://docs.godseye.ai/security",
+        "Read: https://docs.gods-eye.org/security",
         `Re-run with: ${formatCliCommand("godseye onboard --non-interactive --accept-risk ...")}`,
       ].join("\n"),
     );
@@ -83,7 +83,7 @@ export async function setupWizardCommand(
         "Windows detected - GodsEye runs great on WSL2!",
         "Native Windows might be trickier.",
         "Quick setup: wsl --install (one command, one reboot)",
-        "Guide: https://docs.godseye.ai/windows",
+        "Guide: https://docs.gods-eye.org/windows",
       ].join("\n"),
     );
   }

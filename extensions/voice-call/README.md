@@ -9,8 +9,8 @@ Providers:
 - **Plivo** (Voice API + XML transfer + GetInput speech)
 - **Mock** (dev/no network)
 
-Docs: `https://docs.godseye.ai/plugins/voice-call`
-Plugin system: `https://docs.godseye.ai/plugin`
+Docs: `https://docs.gods-eye.org/plugins/voice-call`
+Plugin system: `https://docs.gods-eye.org/plugin`
 
 ## Install (local dev)
 
@@ -89,18 +89,18 @@ Notes:
 - Twilio/Telnyx/Plivo require a **publicly reachable** webhook URL.
 - `mock` is a local dev provider (no network calls).
 - Telnyx requires `telnyx.publicKey` (or `TELNYX_PUBLIC_KEY`) unless `skipSignatureVerification` is true.
-- advanced webhook, streaming, and tunnel notes: `https://docs.godseye.ai/plugins/voice-call`
+- advanced webhook, streaming, and tunnel notes: `https://docs.gods-eye.org/plugins/voice-call`
 
 ## Stale call reaper
 
 See the plugin docs for recommended ranges and production examples:
-`https://docs.godseye.ai/plugins/voice-call#stale-call-reaper`
+`https://docs.gods-eye.org/plugins/voice-call#stale-call-reaper`
 
 ## TTS for calls
 
 Voice Call uses the core `messages.tts` configuration for
 streaming speech on calls. Override examples and provider caveats live here:
-`https://docs.godseye.ai/plugins/voice-call#tts-for-calls`
+`https://docs.gods-eye.org/plugins/voice-call#tts-for-calls`
 
 ## CLI
 

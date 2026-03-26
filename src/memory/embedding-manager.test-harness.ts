@@ -12,11 +12,7 @@ export function installEmbeddingManagerFixture(opts: {
   fixturePrefix: string;
   largeTokens: number;
   smallTokens: number;
-  createCfg: (params: {
-    workspaceDir: string;
-    indexPath: string;
-    tokens: number;
-  }) => GodsEyeConfig;
+  createCfg: (params: { workspaceDir: string; indexPath: string; tokens: number }) => GodsEyeConfig;
   resetIndexEachTest?: boolean;
 }) {
   const resetIndexEachTest = opts.resetIndexEachTest ?? true;

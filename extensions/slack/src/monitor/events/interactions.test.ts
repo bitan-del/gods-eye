@@ -1473,13 +1473,13 @@ describe("registerSlackInteractionEvents", () => {
               email_block: {
                 email_input: {
                   type: "email_text_input",
-                  value: "team@godseye.ai",
+                  value: "team@gods-eye.org",
                 },
               },
               url_block: {
                 url_input: {
                   type: "url_text_input",
-                  value: "https://docs.godseye.ai",
+                  value: "https://docs.gods-eye.org",
                 },
               },
               richtext_block: {
@@ -1570,12 +1570,12 @@ describe("registerSlackInteractionEvents", () => {
         expect.objectContaining({
           actionId: "email_input",
           inputKind: "email",
-          inputEmail: "team@godseye.ai",
+          inputEmail: "team@gods-eye.org",
         }),
         expect.objectContaining({
           actionId: "url_input",
           inputKind: "url",
-          inputUrl: "https://docs.godseye.ai/",
+          inputUrl: "https://docs.gods-eye.org/",
         }),
         expect.objectContaining({
           actionId: "richtext_input",

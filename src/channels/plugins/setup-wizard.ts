@@ -81,10 +81,7 @@ export type ChannelSetupWizardCredential = {
   keepPrompt: string;
   inputPrompt: string;
   allowEnv?: (params: { cfg: GodsEyeConfig; accountId: string }) => boolean;
-  inspect: (params: {
-    cfg: GodsEyeConfig;
-    accountId: string;
-  }) => ChannelSetupWizardCredentialState;
+  inspect: (params: { cfg: GodsEyeConfig; accountId: string }) => ChannelSetupWizardCredentialState;
   shouldPrompt?: (params: {
     cfg: GodsEyeConfig;
     accountId: string;

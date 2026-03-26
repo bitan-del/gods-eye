@@ -8,11 +8,11 @@ const shouldWarnCompatImport =
 
 if (shouldWarnCompatImport) {
   process.emitWarning(
-    "godseye/plugin-sdk/compat is deprecated for new plugins. Migrate to focused godseye/plugin-sdk/<subpath> imports. See https://docs.godseye.ai/plugins/sdk-migration",
+    "godseye/plugin-sdk/compat is deprecated for new plugins. Migrate to focused godseye/plugin-sdk/<subpath> imports. See https://docs.gods-eye.org/plugins/sdk-migration",
     {
       code: "GODSEYE_PLUGIN_SDK_COMPAT_DEPRECATED",
       detail:
-        "Bundled plugins must use scoped plugin-sdk subpaths. External plugins may keep compat temporarily while migrating. Migration guide: https://docs.godseye.ai/plugins/sdk-migration",
+        "Bundled plugins must use scoped plugin-sdk subpaths. External plugins may keep compat temporarily while migrating. Migration guide: https://docs.gods-eye.org/plugins/sdk-migration",
     },
   );
 }

@@ -145,9 +145,7 @@ export function extractHookToken(req: IncomingMessage): string | undefined {
     }
   }
   const headerToken =
-    typeof req.headers["x-godseye-token"] === "string"
-      ? req.headers["x-godseye-token"].trim()
-      : "";
+    typeof req.headers["x-godseye-token"] === "string" ? req.headers["x-godseye-token"].trim() : "";
   if (headerToken) {
     return headerToken;
   }

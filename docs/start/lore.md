@@ -119,7 +119,7 @@ In just 3 hours:
 - GitHub renamed: `github.com/bitan-del/gods-eye` ✅
 - X handle `@godseye` secured with GOLD CHECKMARK 💰
 - npm packages released under new name
-- Docs migrated to `docs.godseye.ai`
+- Docs migrated to `docs.gods-eye.org`
 - 200K+ views on announcement in 90 minutes
 
 **The Heroes:**

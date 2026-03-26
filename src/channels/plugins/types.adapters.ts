@@ -304,7 +304,7 @@ export type ChannelGatewayContext<ResolvedAccount = unknown> = {
    * - External plugins should check for undefined before using
    *
    * @since Plugin SDK 2026.2.19
-   * @see {@link https://docs.godseye.ai/plugins/developing-plugins | Plugin SDK documentation}
+   * @see {@link https://docs.gods-eye.org/plugins/developing-plugins | Plugin SDK documentation}
    */
   channelRuntime?: PluginRuntime["channel"];
 };

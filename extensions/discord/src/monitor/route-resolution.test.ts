@@ -8,10 +8,7 @@ import {
   resolveDiscordEffectiveRoute,
 } from "./route-resolution.js";
 
-function buildWorkerBindingConfig(peer: {
-  kind: "channel" | "direct";
-  id: string;
-}): GodsEyeConfig {
+function buildWorkerBindingConfig(peer: { kind: "channel" | "direct"; id: string }): GodsEyeConfig {
   return {
     agents: {
       list: [{ id: "worker" }],

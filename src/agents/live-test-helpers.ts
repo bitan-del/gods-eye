@@ -6,9 +6,7 @@ export function isLiveTestEnabled(
   extraEnvVars: readonly string[] = [],
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
-  return [...extraEnvVars, "LIVE", "GODSEYE_LIVE_TEST"].some((name) =>
-    isTruthyEnvValue(env[name]),
-  );
+  return [...extraEnvVars, "LIVE", "GODSEYE_LIVE_TEST"].some((name) => isTruthyEnvValue(env[name]));
 }
 
 export function isLiveProfileKeyModeEnabled(env: NodeJS.ProcessEnv = process.env): boolean {

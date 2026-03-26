@@ -336,5 +336,5 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
   }
 
   defaultRuntime.log(`${label("Troubles:")} run ${formatCliCommand("godseye status")}`);
-  defaultRuntime.log(`${label("Troubleshooting:")} https://docs.godseye.ai/troubleshooting`);
+  defaultRuntime.log(`${label("Troubleshooting:")} https://docs.gods-eye.org/troubleshooting`);
 }

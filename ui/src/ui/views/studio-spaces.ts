@@ -65,8 +65,22 @@ const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     description: "Scan brand, generate hero image, create social variants, schedule posts.",
     nodes: [
       { id: "t1-brand", type: "brand-scan", label: "Scan Brand", x: 60, y: 120, config: {} },
-      { id: "t1-hero", type: "image-gen", label: "Hero Image", x: 300, y: 60, config: { style: "photorealistic" } },
-      { id: "t1-social", type: "image-gen", label: "Social Variants", x: 300, y: 200, config: { style: "flat-design" } },
+      {
+        id: "t1-hero",
+        type: "image-gen",
+        label: "Hero Image",
+        x: 300,
+        y: 60,
+        config: { style: "photorealistic" },
+      },
+      {
+        id: "t1-social",
+        type: "image-gen",
+        label: "Social Variants",
+        x: 300,
+        y: 200,
+        config: { style: "flat-design" },
+      },
       { id: "t1-schedule", type: "calendar", label: "Schedule Posts", x: 540, y: 120, config: {} },
     ],
     connections: [
@@ -125,15 +139,19 @@ function renderConnectionSvg(
     .map((c) => {
       const from = nodeMap.get(c.fromId);
       const to = nodeMap.get(c.toId);
-      if (!from || !to) return "";
+      if (!from || !to) {
+        return "";
+      }
       const x1 = from.x + NODE_W;
       const y1 = from.y + NODE_H / 2;
       const x2 = to.x;
       const y2 = to.y + NODE_H / 2;
       // Cubic bezier for a smooth curve
       const cx = (x1 + x2) / 2;
-      const isActive = runProgress.completedIds.includes(c.fromId) && !runProgress.completedIds.includes(c.toId);
-      const isDone = runProgress.completedIds.includes(c.fromId) && runProgress.completedIds.includes(c.toId);
+      const isActive =
+        runProgress.completedIds.includes(c.fromId) && !runProgress.completedIds.includes(c.toId);
+      const isDone =
+        runProgress.completedIds.includes(c.fromId) && runProgress.completedIds.includes(c.toId);
       const color = isActive ? "#f59e0b" : isDone ? "#10b981" : "var(--text-3, #666)";
       return `<path d="M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}"
         stroke="${color}" stroke-width="2" fill="none" stroke-dasharray="${isActive ? "6 3" : "none"}"
@@ -171,9 +189,15 @@ function renderWorkflowNode(
   const isDone = runProgress.completedIds.includes(node.id);
 
   let borderColor = "var(--border-1, #333)";
-  if (selected) borderColor = meta.color;
-  if (isRunning) borderColor = "#f59e0b";
-  if (isDone) borderColor = "#10b981";
+  if (selected) {
+    borderColor = meta.color;
+  }
+  if (isRunning) {
+    borderColor = "#f59e0b";
+  }
+  if (isDone) {
+    borderColor = "#10b981";
+  }
 
   return html`
     <div
@@ -197,11 +221,17 @@ function renderWorkflowNode(
     >
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <span style="font-size: 1.1em;">${meta.icon}</span>
-        ${isDone
-          ? html`<span style="color: #10b981; font-size: 0.8em;">Done</span>`
-          : isRunning
-            ? html`<span style="color: #f59e0b; font-size: 0.8em;">Running...</span>`
-            : nothing}
+        ${
+          isDone
+            ? html`
+                <span style="color: #10b981; font-size: 0.8em">Done</span>
+              `
+            : isRunning
+              ? html`
+                  <span style="color: #f59e0b; font-size: 0.8em">Running...</span>
+                `
+              : nothing
+        }
         <button
           class="btn btn-secondary btn-sm"
           style="padding: 0 4px; font-size: 0.7em; line-height: 1.4;"
@@ -233,8 +263,9 @@ function renderNodeConfig(
           <input class="field-input" .value=${node.label}
             @input=${(e: Event) => onUpdate(node.id, "label", (e.target as HTMLInputElement).value)} />
         </div>
-        ${node.type === "image-gen"
-          ? html`
+        ${
+          node.type === "image-gen"
+            ? html`
               <div>
                 <label class="field-label">Style override</label>
                 <input class="field-input" placeholder="e.g. photorealistic"
@@ -242,9 +273,11 @@ function renderNodeConfig(
                   @input=${(e: Event) => onUpdate(node.id, "style", (e.target as HTMLInputElement).value)} />
               </div>
             `
-          : nothing}
-        ${node.type === "video-gen"
-          ? html`
+            : nothing
+        }
+        ${
+          node.type === "video-gen"
+            ? html`
               <div>
                 <label class="field-label">Duration (seconds)</label>
                 <input class="field-input" type="number" placeholder="5"
@@ -252,9 +285,11 @@ function renderNodeConfig(
                   @input=${(e: Event) => onUpdate(node.id, "duration", (e.target as HTMLInputElement).value)} />
               </div>
             `
-          : nothing}
-        ${node.type === "brand-scan"
-          ? html`
+            : nothing
+        }
+        ${
+          node.type === "brand-scan"
+            ? html`
               <div>
                 <label class="field-label">Source URL</label>
                 <input class="field-input" placeholder="https://example.com"
@@ -262,9 +297,11 @@ function renderNodeConfig(
                   @input=${(e: Event) => onUpdate(node.id, "source", (e.target as HTMLInputElement).value)} />
               </div>
             `
-          : nothing}
-        ${node.type === "calendar"
-          ? html`
+            : nothing
+        }
+        ${
+          node.type === "calendar"
+            ? html`
               <div>
                 <label class="field-label">Schedule note</label>
                 <input class="field-input" placeholder="Post at 9 AM EST"
@@ -272,7 +309,8 @@ function renderNodeConfig(
                   @input=${(e: Event) => onUpdate(node.id, "note", (e.target as HTMLInputElement).value)} />
               </div>
             `
-          : nothing}
+            : nothing
+        }
       </div>
     </div>
   `;
@@ -342,11 +380,25 @@ export function renderStudioSpaces(props: StudioSpacesProps): TemplateResult {
         "
         @click=${() => props.onSelectNode(null)}
       >
-        ${props.nodes.length === 0
-          ? html`<div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.4; font-size: 0.9em;">
-              Add nodes or load a template to start building.
-            </div>`
-          : nothing}
+        ${
+          props.nodes.length === 0
+            ? html`
+                <div
+                  style="
+                    position: absolute;
+                    inset: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0.4;
+                    font-size: 0.9em;
+                  "
+                >
+                  Add nodes or load a template to start building.
+                </div>
+              `
+            : nothing
+        }
 
         ${renderConnectionSvg(props.nodes, props.connections, props.runProgress)}
         ${props.nodes.map((node) =>
@@ -361,8 +413,9 @@ export function renderStudioSpaces(props: StudioSpacesProps): TemplateResult {
       </div>
 
       <!-- Connection helper: when a node is selected, offer connect buttons to others -->
-      ${selectedNode && props.nodes.length > 1
-        ? html`
+      ${
+        selectedNode && props.nodes.length > 1
+          ? html`
             <div style="margin-top: 12px; font-size: 0.85em;">
               <span style="opacity: 0.6;">Connect "${selectedNode.label}" to:</span>
               <span style="display: inline-flex; gap: 4px; margin-left: 8px;">
@@ -381,7 +434,8 @@ export function renderStudioSpaces(props: StudioSpacesProps): TemplateResult {
               </span>
             </div>
           `
-        : nothing}
+          : nothing
+      }
 
       <!-- Selected node config -->
       ${selectedNode ? renderNodeConfig(selectedNode, props.onUpdateNodeConfig) : nothing}
@@ -397,11 +451,13 @@ export function renderStudioSpaces(props: StudioSpacesProps): TemplateResult {
         >
           ${props.running ? "Running Workflow..." : "Run Workflow"}
         </button>
-        ${props.running
-          ? html`<span style="font-size: 0.85em; opacity: 0.6;">
+        ${
+          props.running
+            ? html`<span style="font-size: 0.85em; opacity: 0.6;">
               ${props.runProgress.completedIds.length} / ${props.nodes.length} steps complete
             </span>`
-          : html`<span style="font-size: 0.85em; opacity: 0.4;">${props.nodes.length} nodes, ${props.connections.length} connections</span>`}
+            : html`<span style="font-size: 0.85em; opacity: 0.4;">${props.nodes.length} nodes, ${props.connections.length} connections</span>`
+        }
       </div>
     </section>
   `;

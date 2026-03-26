@@ -126,9 +126,7 @@ describe("warning filter", () => {
         { type: "Warning", code: "GODSEYE_VISIBLE_OVERRIDE" },
       );
       await flushWarnings();
-      expect(
-        seenWarnings.find((warning) => warning.code === "GODSEYE_TEST_WARNING"),
-      ).toBeDefined();
+      expect(seenWarnings.find((warning) => warning.code === "GODSEYE_TEST_WARNING")).toBeDefined();
       expect(
         seenWarnings.find((warning) => warning.message === "The punycode module is deprecated."),
       ).toBeDefined();

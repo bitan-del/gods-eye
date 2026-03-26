@@ -382,7 +382,7 @@ function missingBraveKeyPayload() {
   return {
     error: "missing_brave_api_key",
     message: `web_search (brave) needs a Brave Search API key. Run \`${formatCliCommand("godseye configure --section web")}\` to store it, or set BRAVE_API_KEY in the Gateway environment.`,
-    docs: "https://docs.godseye.ai/tools/web",
+    docs: "https://docs.gods-eye.org/tools/web",
   };
 }
 
@@ -423,14 +423,14 @@ function createBraveToolDefinition(
           error: "invalid_search_lang",
           message:
             "search_lang must be a Brave-supported language code like 'en', 'en-gb', 'zh-hans', or 'zh-hant'.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       if (normalizedLanguage.invalidField === "ui_lang") {
         return {
           error: "invalid_ui_lang",
           message: "ui_lang must be a language-region locale like 'en-US'.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       if (normalizedLanguage.ui_lang && braveMode === "llm-context") {
@@ -438,7 +438,7 @@ function createBraveToolDefinition(
           error: "unsupported_ui_lang",
           message:
             "ui_lang is not supported by Brave llm-context mode. Remove ui_lang or use Brave web mode for locale-based UI hints.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
 
@@ -448,7 +448,7 @@ function createBraveToolDefinition(
           error: "unsupported_freshness",
           message:
             "freshness filtering is not supported by Brave llm-context mode. Remove freshness or use Brave web mode.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       const freshness = rawFreshness ? normalizeFreshness(rawFreshness, "brave") : undefined;
@@ -456,7 +456,7 @@ function createBraveToolDefinition(
         return {
           error: "invalid_freshness",
           message: "freshness must be day, week, month, or year.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
 
@@ -467,7 +467,7 @@ function createBraveToolDefinition(
           error: "conflicting_time_filters",
           message:
             "freshness and date_after/date_before cannot be used together. Use either freshness (day/week/month/year) or a date range (date_after/date_before), not both.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       if ((rawDateAfter || rawDateBefore) && braveMode === "llm-context") {
@@ -475,7 +475,7 @@ function createBraveToolDefinition(
           error: "unsupported_date_filter",
           message:
             "date_after/date_before filtering is not supported by Brave llm-context mode. Use Brave web mode for date filters.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
       const parsedDateRange = parseIsoDateRange({
@@ -584,7 +584,7 @@ export function createBraveWebSearchProvider(): WebSearchProviderPlugin {
     envVars: ["BRAVE_API_KEY"],
     placeholder: "BSA...",
     signupUrl: "https://brave.com/search/api/",
-    docsUrl: "https://docs.godseye.ai/brave-search",
+    docsUrl: "https://docs.gods-eye.org/brave-search",
     autoDetectOrder: 10,
     credentialPath: "plugins.entries.brave.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.brave.config.webSearch.apiKey"],

@@ -4,8 +4,6 @@ import type {
   ReactionType,
   ReactionTypeEmoji,
 } from "@grammyjs/types";
-import { type ApiClientOptions, Bot, HttpError } from "grammy";
-import * as grammy from "grammy";
 import { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import { resolveMarkdownTableMode } from "godseye/plugin-sdk/config-runtime";
 import { recordChannelActivity } from "godseye/plugin-sdk/infra-runtime";
@@ -22,6 +20,8 @@ import { logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
 import { redactSensitiveText } from "godseye/plugin-sdk/text-runtime";
 import { loadWebMedia } from "godseye/plugin-sdk/web-media";
+import { type ApiClientOptions, Bot, HttpError } from "grammy";
+import * as grammy from "grammy";
 import { type ResolvedTelegramAccount, resolveTelegramAccount } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { buildTelegramThreadParams, buildTypingThreadParams } from "./bot/helpers.js";

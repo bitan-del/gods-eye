@@ -34,9 +34,7 @@ describe("npm registry spec validation", () => {
     expect(validateRegistryNpmSpec("@godseye/voice-call@")).toContain(
       "missing version/tag after @",
     );
-    expect(validateRegistryNpmSpec("@godseye/voice-call@../beta")).toContain(
-      "invalid version/tag",
-    );
+    expect(validateRegistryNpmSpec("@godseye/voice-call@../beta")).toContain("invalid version/tag");
   });
 });
 

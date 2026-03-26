@@ -120,7 +120,7 @@ Use `group:*` shorthands in allow/deny lists:
 | `group:automation` | cron, gateway                                                                                             |
 | `group:messaging`  | message                                                                                                   |
 | `group:nodes`      | nodes                                                                                                     |
-| `group:godseye`   | All built-in Gods Eye tools (excludes plugin tools)                                                       |
+| `group:godseye`    | All built-in Gods Eye tools (excludes plugin tools)                                                       |
 
 ### Provider-specific restrictions
 

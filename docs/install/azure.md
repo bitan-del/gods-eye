@@ -256,7 +256,7 @@ This guide sets up an Azure Linux VM with the Azure CLI, applies Network Securit
 
   <Step title="Install Gods Eye (in the VM shell)">
     ```bash
-    curl -fsSL https://godseye.ai/install.sh -o /tmp/install.sh
+    curl -fsSL https://gods-eye.org/install.sh -o /tmp/install.sh
     bash /tmp/install.sh
     rm -f /tmp/install.sh
     ```

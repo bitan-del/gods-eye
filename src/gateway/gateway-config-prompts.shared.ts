@@ -26,8 +26,8 @@ export const TAILSCALE_MISSING_BIN_NOTE_LINES = [
 
 export const TAILSCALE_DOCS_LINES = [
   "Docs:",
-  "https://docs.godseye.ai/gateway/tailscale",
-  "https://docs.godseye.ai/web",
+  "https://docs.gods-eye.org/gateway/tailscale",
+  "https://docs.gods-eye.org/web",
 ] as const;
 
 function normalizeTailnetHostForUrl(rawHost: string): string | null {

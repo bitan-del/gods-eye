@@ -242,14 +242,10 @@ describe("diagnostics-otel service", () => {
     });
 
     expect(telemetryState.counters.get("godseye.webhook.received")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("godseye.webhook.duration_ms")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("godseye.webhook.duration_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("godseye.message.queued")?.add).toHaveBeenCalled();
     expect(telemetryState.counters.get("godseye.message.processed")?.add).toHaveBeenCalled();
-    expect(
-      telemetryState.histograms.get("godseye.message.duration_ms")?.record,
-    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("godseye.message.duration_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.histograms.get("godseye.queue.wait_ms")?.record).toHaveBeenCalled();
     expect(telemetryState.counters.get("godseye.session.stuck")?.add).toHaveBeenCalled();
     expect(

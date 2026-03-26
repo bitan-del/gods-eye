@@ -11,11 +11,11 @@ describe("resolveCanvasHostUrl", () => {
     expect(
       resolveCanvasHostUrl({
         canvasPort: 3000,
-        hostOverride: " canvas.godseye.ai ",
+        hostOverride: " canvas.gods-eye.org ",
         requestHost: "gateway.local:9000",
         localAddress: "192.168.1.10",
       }),
-    ).toBe("http://canvas.godseye.ai:3000");
+    ).toBe("http://canvas.gods-eye.org:3000");
   });
 
   it("falls back from rejected loopback overrides to request hosts", () => {

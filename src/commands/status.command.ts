@@ -701,8 +701,8 @@ export async function statusCommand(
   }
 
   runtime.log("");
-  runtime.log("FAQ: https://docs.godseye.ai/faq");
-  runtime.log("Troubleshooting: https://docs.godseye.ai/troubleshooting");
+  runtime.log("FAQ: https://docs.gods-eye.org/faq");
+  runtime.log("Troubleshooting: https://docs.gods-eye.org/troubleshooting");
   runtime.log("");
   const updateHint = formatUpdateAvailableHint(update);
   if (updateHint) {

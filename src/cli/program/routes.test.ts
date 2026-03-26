@@ -158,16 +158,7 @@ describe("program routes", () => {
   it("routes status --json through the lean JSON command", async () => {
     const route = expectRoute(["status"]);
     await expect(
-      route?.run([
-        "node",
-        "godseye",
-        "status",
-        "--json",
-        "--deep",
-        "--usage",
-        "--timeout",
-        "5000",
-      ]),
+      route?.run(["node", "godseye", "status", "--json", "--deep", "--usage", "--timeout", "5000"]),
     ).resolves.toBe(true);
     expect(statusJsonCommandMock).toHaveBeenCalledWith(
       { deep: true, all: false, usage: true, timeoutMs: 5000 },

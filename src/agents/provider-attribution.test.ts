@@ -33,7 +33,7 @@ describe("provider attribution", () => {
       product: "Gods Eye",
       version: "2026.3.22",
       headers: {
-        "HTTP-Referer": "https://godseye.ai",
+        "HTTP-Referer": "https://gods-eye.org",
         "X-OpenRouter-Title": "Gods Eye",
         "X-OpenRouter-Categories": "cli-agent",
       },
@@ -46,7 +46,7 @@ describe("provider attribution", () => {
         GODSEYE_VERSION: "2026.3.22",
       }),
     ).toEqual({
-      "HTTP-Referer": "https://godseye.ai",
+      "HTTP-Referer": "https://gods-eye.org",
       "X-OpenRouter-Title": "Gods Eye",
       "X-OpenRouter-Categories": "cli-agent",
     });

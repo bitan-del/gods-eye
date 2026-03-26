@@ -76,11 +76,11 @@ defaults write ai.godseye.mac godseye.nixMode -bool true
 
 Gods Eye reads JSON5 config from `GODSEYE_CONFIG_PATH` and stores mutable data in `GODSEYE_STATE_DIR`. When running under Nix, set these explicitly to Nix-managed locations so runtime state and config stay out of the immutable store.
 
-| Variable               | Default                                 |
-| ---------------------- | --------------------------------------- |
+| Variable              | Default                                 |
+| --------------------- | --------------------------------------- |
 | `GODSEYE_HOME`        | `HOME` / `USERPROFILE` / `os.homedir()` |
-| `GODSEYE_STATE_DIR`   | `~/.godseye`                           |
-| `GODSEYE_CONFIG_PATH` | `$GODSEYE_STATE_DIR/godseye.json`     |
+| `GODSEYE_STATE_DIR`   | `~/.godseye`                            |
+| `GODSEYE_CONFIG_PATH` | `$GODSEYE_STATE_DIR/godseye.json`       |
 
 ## Related
 

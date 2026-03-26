@@ -1,6 +1,6 @@
-import { type Bot, GrammyError } from "grammy";
 import { formatErrorMessage } from "godseye/plugin-sdk/infra-runtime";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import { type Bot, GrammyError } from "grammy";
 import { withTelegramApiErrorLogging } from "../api-logging.js";
 import { markdownToTelegramHtml } from "../format.js";
 import { buildInlineKeyboard } from "../send.js";

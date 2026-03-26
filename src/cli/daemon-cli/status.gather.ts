@@ -4,11 +4,7 @@ import {
   resolveGatewayPort,
   resolveStateDir,
 } from "../../config/config.js";
-import type {
-  GodsEyeConfig,
-  GatewayBindMode,
-  GatewayControlUiConfig,
-} from "../../config/types.js";
+import type { GodsEyeConfig, GatewayBindMode, GatewayControlUiConfig } from "../../config/types.js";
 import { readLastGatewayErrorLine } from "../../daemon/diagnostics.js";
 import type { FindExtraGatewayServicesOptions } from "../../daemon/inspect.js";
 import { findExtraGatewayServices } from "../../daemon/inspect.js";

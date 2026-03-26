@@ -11,10 +11,7 @@ import {
   type GodsEyeConfig,
 } from "godseye/plugin-sdk/account-resolution";
 import { isTruthyEnvValue } from "godseye/plugin-sdk/infra-runtime";
-import {
-  listBoundAccountIds,
-  resolveDefaultAgentBoundAccountId,
-} from "godseye/plugin-sdk/routing";
+import { listBoundAccountIds, resolveDefaultAgentBoundAccountId } from "godseye/plugin-sdk/routing";
 import { formatSetExplicitDefaultInstruction } from "godseye/plugin-sdk/routing";
 import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
 import type { TelegramAccountConfig, TelegramActionConfig } from "../runtime-api.js";

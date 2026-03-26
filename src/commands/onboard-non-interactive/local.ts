@@ -260,7 +260,7 @@ export async function runNonInteractiveLocalSetup(params: {
 
   if (!opts.json) {
     runtime.log(
-      `Tip: run \`${formatCliCommand("godseye configure --section web")}\` to store your Brave API key for web_search. Docs: https://docs.godseye.ai/tools/web`,
+      `Tip: run \`${formatCliCommand("godseye configure --section web")}\` to store your Brave API key for web_search. Docs: https://docs.gods-eye.org/tools/web`,
     );
   }
 }

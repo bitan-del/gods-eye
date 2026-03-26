@@ -448,7 +448,7 @@ export async function monitorTlonProvider(opts: MonitorTlonOpts = {}): Promise<v
             `This can leak conversation context between users.\n\n` +
             `Fix: Add to your GodsEye config:\n` +
             `session:\n  dmScope: "per-channel-peer"\n\n` +
-            `Docs: https://docs.godseye.ai/concepts/session#secure-dm-mode`;
+            `Docs: https://docs.gods-eye.org/concepts/session#secure-dm-mode`;
 
           // Send async, don't block message processing
           sendDm({

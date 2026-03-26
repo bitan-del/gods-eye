@@ -32,7 +32,7 @@ export function createFirecrawlWebSearchProvider(): WebSearchProviderPlugin {
     envVars: ["FIRECRAWL_API_KEY"],
     placeholder: "fc-...",
     signupUrl: "https://www.firecrawl.dev/",
-    docsUrl: "https://docs.godseye.ai/tools/firecrawl",
+    docsUrl: "https://docs.gods-eye.org/tools/firecrawl",
     autoDetectOrder: 60,
     credentialPath: "plugins.entries.firecrawl.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.firecrawl.config.webSearch.apiKey"],

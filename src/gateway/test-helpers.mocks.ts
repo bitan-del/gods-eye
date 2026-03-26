@@ -624,8 +624,7 @@ vi.mock("../config/config.js", async () => {
       config: testState.migrationConfig ?? (raw as Record<string, unknown>),
       changes: testState.migrationChanges,
     }),
-    applyConfigOverrides: (cfg: GodsEyeConfig) =>
-      composeTestConfig(cfg as Record<string, unknown>),
+    applyConfigOverrides: (cfg: GodsEyeConfig) => composeTestConfig(cfg as Record<string, unknown>),
     loadConfig: () => {
       const configPath = resolveConfigPath();
       let fileConfig: Record<string, unknown> = {};

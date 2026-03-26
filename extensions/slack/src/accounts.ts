@@ -29,10 +29,7 @@ const { listAccountIds, resolveDefaultAccountId } = createAccountListHelpers("sl
 export const listSlackAccountIds = listAccountIds;
 export const resolveDefaultSlackAccountId = resolveDefaultAccountId;
 
-export function mergeSlackAccountConfig(
-  cfg: GodsEyeConfig,
-  accountId: string,
-): SlackAccountConfig {
+export function mergeSlackAccountConfig(cfg: GodsEyeConfig, accountId: string): SlackAccountConfig {
   return resolveMergedAccountConfig<SlackAccountConfig>({
     channelConfig: cfg.channels?.slack as SlackAccountConfig | undefined,
     accounts: cfg.channels?.slack?.accounts as

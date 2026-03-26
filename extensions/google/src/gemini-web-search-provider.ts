@@ -194,7 +194,7 @@ function createGeminiToolDefinition(
           error: "missing_gemini_api_key",
           message:
             "web_search (gemini) needs an API key. Set GEMINI_API_KEY in the Gateway environment, or configure tools.web.search.gemini.apiKey.",
-          docs: "https://docs.godseye.ai/tools/web",
+          docs: "https://docs.gods-eye.org/tools/web",
         };
       }
 
@@ -251,7 +251,7 @@ export function createGeminiWebSearchProvider(): WebSearchProviderPlugin {
     envVars: ["GEMINI_API_KEY"],
     placeholder: "AIza...",
     signupUrl: "https://aistudio.google.com/apikey",
-    docsUrl: "https://docs.godseye.ai/tools/web",
+    docsUrl: "https://docs.gods-eye.org/tools/web",
     autoDetectOrder: 20,
     credentialPath: "plugins.entries.google.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.google.config.webSearch.apiKey"],

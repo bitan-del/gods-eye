@@ -18,11 +18,7 @@ export async function createOperatorApprovalsGatewayClient(
     url: params.gatewayUrl,
   });
   const gatewayUrlOverrideSource =
-    urlSource === "cli --url"
-      ? "cli"
-      : urlSource === "env GODSEYE_GATEWAY_URL"
-        ? "env"
-        : undefined;
+    urlSource === "cli --url" ? "cli" : urlSource === "env GODSEYE_GATEWAY_URL" ? "env" : undefined;
   const auth = await resolveGatewayConnectionAuth({
     config: params.config,
     env: process.env,

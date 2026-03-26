@@ -255,7 +255,7 @@ export function buildGatewayConnectionDetails(
           ? undefined
           : "Break-glass (trusted private networks only): set GODSEYE_ALLOW_INSECURE_PRIVATE_WS=1",
         "Doctor: godseye doctor --fix",
-        "Docs: https://docs.godseye.ai/gateway/remote",
+        "Docs: https://docs.gods-eye.org/gateway/remote",
       ].join("\n"),
     );
   }

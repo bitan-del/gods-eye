@@ -119,10 +119,10 @@ ARG GODSEYE_DOCKER_APT_UPGRADE
 # OCI base-image metadata for downstream image consumers.
 # If you change these annotations, also update:
 # - docs/install/docker.md ("Base image metadata" section)
-# - https://docs.godseye.ai/install/docker
+# - https://docs.gods-eye.org/install/docker
 LABEL org.opencontainers.image.source="https://github.com/bitan-del/gods-eye" \
-  org.opencontainers.image.url="https://godseye.ai" \
-  org.opencontainers.image.documentation="https://docs.godseye.ai/install/docker" \
+  org.opencontainers.image.url="https://gods-eye.org" \
+  org.opencontainers.image.documentation="https://docs.gods-eye.org/install/docker" \
   org.opencontainers.image.licenses="MIT" \
   org.opencontainers.image.title="Gods Eye" \
   org.opencontainers.image.description="Gods Eye gateway and CLI runtime container image"

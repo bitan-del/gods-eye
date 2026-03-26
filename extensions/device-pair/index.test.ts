@@ -1,10 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type {
-  GodsEyePluginCommandDefinition,
-  PluginCommandContext,
-} from "godseye/plugin-sdk/core";
+import type { GodsEyePluginCommandDefinition, PluginCommandContext } from "godseye/plugin-sdk/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestPluginApi } from "../../test/helpers/extensions/plugin-api.js";
 import type { GodsEyePluginApi } from "./api.js";

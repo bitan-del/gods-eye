@@ -580,7 +580,7 @@ function buildAttentionItems(host: GodsEyeApp) {
       title: "Missing operator.read scope",
       description:
         "This connection does not have the operator.read scope. Some features may be unavailable.",
-      href: "https://docs.godseye.ai/web/dashboard",
+      href: "https://docs.gods-eye.org/web/dashboard",
       external: true,
     });
   }

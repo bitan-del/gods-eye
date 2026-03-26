@@ -159,9 +159,7 @@ export function collectPublishablePluginPackageErrors(
   const extensions = packageJson.godseye?.extensions ?? [];
 
   if (!packageName.startsWith("@godseye/")) {
-    errors.push(
-      `package name must start with "@godseye/"; found "${packageName || "<missing>"}".`,
-    );
+    errors.push(`package name must start with "@godseye/"; found "${packageName || "<missing>"}".`);
   }
   if (packageJson.private === true) {
     errors.push("package.json private must not be true.");

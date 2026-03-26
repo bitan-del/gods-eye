@@ -104,8 +104,8 @@ async function runGatewayHealthCheck(params: {
     note(
       [
         "Docs:",
-        "https://docs.godseye.ai/gateway/health",
-        "https://docs.godseye.ai/gateway/troubleshooting",
+        "https://docs.gods-eye.org/gateway/health",
+        "https://docs.gods-eye.org/gateway/troubleshooting",
       ].join("\n"),
       "Health check help",
     );
@@ -195,7 +195,7 @@ async function promptWebToolsConfig(
     [
       "Web search lets your agent look things up online using the `web_search` tool.",
       "Choose a provider. Some providers need an API key, and some work key-free.",
-      "Docs: https://docs.godseye.ai/tools/web",
+      "Docs: https://docs.gods-eye.org/tools/web",
     ].join("\n"),
     "Web search",
   );
@@ -221,7 +221,7 @@ async function promptWebToolsConfig(
         [
           "No web search providers are currently available under this plugin policy.",
           "Enable plugins or remove deny rules, then rerun configure.",
-          "Docs: https://docs.godseye.ai/tools/web",
+          "Docs: https://docs.gods-eye.org/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -270,7 +270,7 @@ async function promptWebToolsConfig(
           [
             `${entry.label} works without an API key.`,
             "GodsEye enabled the plugin and selected it as your web_search provider.",
-            `Docs: ${entry.docsUrl ?? "https://docs.godseye.ai/tools/web"}`,
+            `Docs: ${entry.docsUrl ?? "https://docs.gods-eye.org/tools/web"}`,
           ].join("\n"),
           "Web search",
         );
@@ -303,7 +303,7 @@ async function promptWebToolsConfig(
               "No key stored yet — web_search won't work until a key is available.",
               `Store your ${credentialLabel} here or set ${envVarNames} in the Gateway environment.`,
               `Get your API key at: ${entry.signupUrl}`,
-              "Docs: https://docs.godseye.ai/tools/web",
+              "Docs: https://docs.gods-eye.org/tools/web",
             ].join("\n"),
             "Web search",
           );
@@ -357,7 +357,7 @@ export async function runConfigureWizard(
           [
             ...snapshot.issues.map((iss) => `- ${iss.path}: ${iss.message}`),
             "",
-            "Docs: https://docs.godseye.ai/gateway/configuration",
+            "Docs: https://docs.gods-eye.org/gateway/configuration",
           ].join("\n"),
           "Config issues",
         );
@@ -714,7 +714,7 @@ export async function runConfigureWizard(
         `Web UI: ${links.httpUrl}`,
         `Gateway WS: ${links.wsUrl}`,
         gatewayStatusLine,
-        "Docs: https://docs.godseye.ai/web/control-ui",
+        "Docs: https://docs.gods-eye.org/web/control-ui",
       ].join("\n"),
       "Control UI",
     );

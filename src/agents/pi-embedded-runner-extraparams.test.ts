@@ -1265,7 +1265,7 @@ describe("applyExtraParamsToAgent", () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0]?.headers).toEqual({
-      "HTTP-Referer": "https://godseye.ai",
+      "HTTP-Referer": "https://gods-eye.org",
       "X-OpenRouter-Title": "Gods Eye",
       "X-OpenRouter-Categories": "cli-agent",
       "X-Custom": "1",

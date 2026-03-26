@@ -6,10 +6,7 @@ import {
 } from "godseye/plugin-sdk/channel-send-result";
 import { resolveMarkdownTableMode } from "godseye/plugin-sdk/config-runtime";
 import { createScopedChannelMediaMaxBytesResolver } from "godseye/plugin-sdk/media-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundSendDeps,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundSendDeps } from "godseye/plugin-sdk/outbound-runtime";
 import { resolveTextChunkLimit } from "godseye/plugin-sdk/reply-runtime";
 import { markdownToSignalTextChunks } from "./format.js";
 import { sendMessageSignal } from "./send.js";

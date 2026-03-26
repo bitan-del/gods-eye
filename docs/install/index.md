@@ -16,12 +16,12 @@ The fastest way to install. It detects your OS, installs Node if needed, install
 <Tabs>
   <Tab title="macOS / Linux / WSL2">
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash
+    curl -fsSL https://gods-eye.org/install.sh | bash
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">
     ```powershell
-    iwr -useb https://godseye.ai/install.ps1 | iex
+    iwr -useb https://gods-eye.org/install.ps1 | iex
     ```
   </Tab>
 </Tabs>
@@ -31,12 +31,12 @@ To install without running onboarding:
 <Tabs>
   <Tab title="macOS / Linux / WSL2">
     ```bash
-    curl -fsSL https://godseye.ai/install.sh | bash -s -- --no-onboard
+    curl -fsSL https://gods-eye.org/install.sh | bash -s -- --no-onboard
     ```
   </Tab>
   <Tab title="Windows (PowerShell)">
     ```powershell
-    & ([scriptblock]::Create((iwr -useb https://godseye.ai/install.ps1))) -NoOnboard
+    & ([scriptblock]::Create((iwr -useb https://gods-eye.org/install.ps1))) -NoOnboard
     ```
   </Tab>
 </Tabs>

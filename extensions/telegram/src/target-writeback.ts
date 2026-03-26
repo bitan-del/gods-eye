@@ -1,8 +1,5 @@
 import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import {
-  readConfigFileSnapshotForWrite,
-  writeConfigFile,
-} from "godseye/plugin-sdk/config-runtime";
+import { readConfigFileSnapshotForWrite, writeConfigFile } from "godseye/plugin-sdk/config-runtime";
 import {
   loadCronStore,
   resolveCronStorePath,

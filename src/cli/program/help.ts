@@ -22,10 +22,7 @@ const ROOT_COMMANDS_HINT =
 
 const EXAMPLES = [
   ["godseye models --help", "Show detailed help for the models command."],
-  [
-    "godseye channels login --verbose",
-    "Link personal WhatsApp Web and show QR + connection logs.",
-  ],
+  ["godseye channels login --verbose", "Link personal WhatsApp Web and show QR + connection logs."],
   [
     'godseye message send --target +15555550123 --message "Hi" --json',
     "Send via your web session and print JSON result.",
@@ -138,7 +135,7 @@ export function configureProgramHelp(program: Command, ctx: ProgramContext) {
     if (command !== program) {
       return "";
     }
-    const docs = formatDocsLink("/cli", "docs.godseye.ai/cli");
+    const docs = formatDocsLink("/cli", "docs.gods-eye.org/cli");
     return `\n${theme.heading("Examples:")}\n${fmtExamples}\n\n${theme.muted("Docs:")} ${docs}\n`;
   });
 }

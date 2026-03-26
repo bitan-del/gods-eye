@@ -1,4 +1,3 @@
-import type { Bot } from "grammy";
 import { resolveAgentDir } from "godseye/plugin-sdk/agent-runtime";
 import {
   findModelInCatalog,
@@ -32,6 +31,7 @@ import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
 import { resolveAutoTopicLabelConfig, generateTopicLabel } from "godseye/plugin-sdk/reply-runtime";
 import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import type { Bot } from "grammy";
 import { defaultTelegramBotDeps, type TelegramBotDeps } from "./bot-deps.js";
 import type { TelegramMessageContext } from "./bot-message-context.js";
 import type { TelegramBotOptions } from "./bot.js";

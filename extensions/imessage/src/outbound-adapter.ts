@@ -2,10 +2,7 @@ import {
   createDirectTextMediaOutbound,
   createScopedChannelMediaMaxBytesResolver,
 } from "godseye/plugin-sdk/media-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundSendDeps,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundSendDeps } from "godseye/plugin-sdk/outbound-runtime";
 import { sendMessageIMessage } from "./send.js";
 
 function resolveIMessageSender(deps: OutboundSendDeps | undefined) {

@@ -559,11 +559,11 @@ const LOCAL_PROVIDER_HINTS: Record<string, string> = {
   ollama:
     "Ollama requires authentication to be registered as a provider. " +
     'Set OLLAMA_API_KEY="ollama-local" (any value works) or run "godseye configure". ' +
-    "See: https://docs.godseye.ai/providers/ollama",
+    "See: https://docs.gods-eye.org/providers/ollama",
   vllm:
     "vLLM requires authentication to be registered as a provider. " +
     'Set VLLM_API_KEY (any value works) or run "godseye configure". ' +
-    "See: https://docs.godseye.ai/providers/vllm",
+    "See: https://docs.gods-eye.org/providers/vllm",
 };
 
 function buildUnknownModelError(provider: string, modelId: string): string {
