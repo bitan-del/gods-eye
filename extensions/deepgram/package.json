@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/deepgram-provider",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "GodsEye Deepgram media-understanding provider",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

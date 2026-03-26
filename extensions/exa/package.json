@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/exa-plugin",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Exa plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

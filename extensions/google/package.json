@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/google-plugin",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Google plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

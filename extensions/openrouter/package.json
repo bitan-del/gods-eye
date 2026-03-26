@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/openrouter-provider",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye OpenRouter provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

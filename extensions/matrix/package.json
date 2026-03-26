@@ -1,0 +1,54 @@
+{
+  "name": "@godseye/matrix",
+  "version": "2026.3.22",
+  "description": "GodsEye Matrix channel plugin",
+  "type": "module",
+  "dependencies": {
+    "@matrix-org/matrix-sdk-crypto-nodejs": "^0.4.0",
+    "fake-indexeddb": "^6.2.5",
+    "markdown-it": "14.1.1",
+    "matrix-js-sdk": "41.2.0-rc.0",
+    "music-metadata": "^11.12.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "godseye": "workspace:*"
+  },
+  "peerDependencies": {
+    "godseye": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "godseye": {
+      "optional": true
+    }
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "matrix",
+      "label": "Matrix",
+      "selectionLabel": "Matrix (plugin)",
+      "docsPath": "/channels/matrix",
+      "docsLabel": "matrix",
+      "blurb": "open protocol; install the plugin to enable.",
+      "order": 70,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@godseye/matrix",
+      "localPath": "extensions/matrix",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    },
+    "releaseChecks": {
+      "rootDependencyMirrorAllowlist": [
+        "@matrix-org/matrix-sdk-crypto-nodejs",
+        "matrix-js-sdk",
+        "music-metadata"
+      ]
+    }
+  }
+}

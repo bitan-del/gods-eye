@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/duckduckgo-plugin",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye DuckDuckGo plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

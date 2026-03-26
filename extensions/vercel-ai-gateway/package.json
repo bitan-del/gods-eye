@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/vercel-ai-gateway-provider",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Vercel AI Gateway provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

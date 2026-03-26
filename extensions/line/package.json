@@ -1,0 +1,40 @@
+{
+  "name": "@godseye/line",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye LINE channel plugin",
+  "type": "module",
+  "devDependencies": {
+    "godseye": "workspace:*"
+  },
+  "peerDependencies": {
+    "godseye": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "godseye": {
+      "optional": true
+    }
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "line",
+      "label": "LINE",
+      "selectionLabel": "LINE (Messaging API)",
+      "docsPath": "/channels/line",
+      "docsLabel": "line",
+      "blurb": "LINE Messaging API bot for Japan/Taiwan/Thailand markets.",
+      "order": 75,
+      "quickstartAllowFrom": true
+    },
+    "install": {
+      "npmSpec": "@godseye/line",
+      "localPath": "extensions/line",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/deepseek-provider",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "GodsEye DeepSeek provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

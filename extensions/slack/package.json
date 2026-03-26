@@ -1,0 +1,30 @@
+{
+  "name": "@godseye/slack",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Slack channel plugin",
+  "type": "module",
+  "dependencies": {
+    "@slack/bolt": "^4.6.0",
+    "@slack/web-api": "^7.15.0"
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "slack",
+      "label": "Slack",
+      "selectionLabel": "Slack (Socket Mode)",
+      "detailLabel": "Slack Bot",
+      "docsPath": "/channels/slack",
+      "docsLabel": "slack",
+      "blurb": "supported (Socket Mode).",
+      "systemImage": "number"
+    },
+    "bundle": {
+      "stageRuntimeDependencies": true
+    }
+  }
+}

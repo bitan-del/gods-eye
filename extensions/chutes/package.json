@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/chutes-provider",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Chutes.ai provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

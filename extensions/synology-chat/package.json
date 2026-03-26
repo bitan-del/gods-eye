@@ -1,0 +1,30 @@
+{
+  "name": "@godseye/synology-chat",
+  "version": "2026.3.22",
+  "description": "Synology Chat channel plugin for GodsEye",
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "synology-chat",
+      "label": "Synology Chat",
+      "selectionLabel": "Synology Chat (Webhook)",
+      "docsPath": "/channels/synology-chat",
+      "docsLabel": "synology-chat",
+      "blurb": "Connect your Synology NAS Chat to GodsEye with full agent capabilities.",
+      "order": 90
+    },
+    "install": {
+      "npmSpec": "@godseye/synology-chat",
+      "localPath": "extensions/synology-chat",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    }
+  }
+}

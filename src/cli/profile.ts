@@ -1,0 +1,122 @@
+import os from "node:os";
+import path from "node:path";
+import { consumeRootOptionToken, FLAG_TERMINATOR } from "../infra/cli-root-options.js";
+import { resolveRequiredHomeDir } from "../infra/home-dir.js";
+import { getPrimaryCommand } from "./argv.js";
+import { isValidProfileName } from "./profile-utils.js";
+import { takeCliRootOptionValue } from "./root-option-value.js";
+
+export type CliProfileParseResult =
+  | { ok: true; profile: string | null; argv: string[] }
+  | { ok: false; error: string };
+
+export function parseCliProfileArgs(argv: string[]): CliProfileParseResult {
+  if (argv.length < 2) {
+    return { ok: true, profile: null, argv };
+  }
+
+  const out: string[] = argv.slice(0, 2);
+  let profile: string | null = null;
+  let sawDev = false;
+
+  const args = argv.slice(2);
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === undefined) {
+      continue;
+    }
+    if (arg === FLAG_TERMINATOR) {
+      out.push(arg, ...args.slice(i + 1));
+      break;
+    }
+
+    if (arg === "--dev") {
+      if (getPrimaryCommand(out) === "gateway") {
+        out.push(arg);
+        continue;
+      }
+      if (profile && profile !== "dev") {
+        return { ok: false, error: "Cannot combine --dev with --profile" };
+      }
+      sawDev = true;
+      profile = "dev";
+      continue;
+    }
+
+    if (arg === "--profile" || arg.startsWith("--profile=")) {
+      if (sawDev) {
+        return { ok: false, error: "Cannot combine --dev with --profile" };
+      }
+      const next = args[i + 1];
+      const { value, consumedNext } = takeCliRootOptionValue(arg, next);
+      if (consumedNext) {
+        i += 1;
+      }
+      if (!value) {
+        return { ok: false, error: "--profile requires a value" };
+      }
+      if (!isValidProfileName(value)) {
+        return {
+          ok: false,
+          error: 'Invalid --profile (use letters, numbers, "_", "-" only)',
+        };
+      }
+      profile = value;
+      continue;
+    }
+
+    const consumedRootOption = consumeRootOptionToken(args, i);
+    if (consumedRootOption > 0) {
+      for (let offset = 0; offset < consumedRootOption; offset += 1) {
+        const token = args[i + offset];
+        if (token !== undefined) {
+          out.push(token);
+        }
+      }
+      i += consumedRootOption - 1;
+      continue;
+    }
+
+    out.push(arg);
+  }
+
+  return { ok: true, profile, argv: out };
+}
+
+function resolveProfileStateDir(
+  profile: string,
+  env: Record<string, string | undefined>,
+  homedir: () => string,
+): string {
+  const suffix = profile.toLowerCase() === "default" ? "" : `-${profile}`;
+  return path.join(resolveRequiredHomeDir(env as NodeJS.ProcessEnv, homedir), `.godseye${suffix}`);
+}
+
+export function applyCliProfileEnv(params: {
+  profile: string;
+  env?: Record<string, string | undefined>;
+  homedir?: () => string;
+}) {
+  const env = params.env ?? (process.env as Record<string, string | undefined>);
+  const homedir = params.homedir ?? os.homedir;
+  const profile = params.profile.trim();
+  if (!profile) {
+    return;
+  }
+
+  // Convenience only: fill defaults, never override explicit env values.
+  env.GODSEYE_PROFILE = profile;
+
+  const stateDir = env.GODSEYE_STATE_DIR?.trim() || resolveProfileStateDir(profile, env, homedir);
+  if (!env.GODSEYE_STATE_DIR?.trim()) {
+    env.GODSEYE_STATE_DIR = stateDir;
+  }
+
+  if (!env.GODSEYE_CONFIG_PATH?.trim()) {
+    env.GODSEYE_CONFIG_PATH = path.join(stateDir, "godseye.json");
+  }
+
+  if (profile === "dev" && !env.GODSEYE_GATEWAY_PORT?.trim()) {
+    env.GODSEYE_GATEWAY_PORT = "19001";
+  }
+}

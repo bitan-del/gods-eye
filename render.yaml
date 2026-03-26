@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: godseye
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: GODSEYE_GATEWAY_PORT
+        value: "8080"
+      - key: GODSEYE_STATE_DIR
+        value: /data/.godseye
+      - key: GODSEYE_WORKSPACE_DIR
+        value: /data/workspace
+      - key: GODSEYE_GATEWAY_TOKEN
+        generateValue: true
+    disk:
+      name: godseye-data
+      mountPath: /data
+      sizeGB: 1

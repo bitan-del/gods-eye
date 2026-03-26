@@ -1,0 +1,49 @@
+{
+  "name": "@godseye/msteams",
+  "version": "2026.3.22",
+  "description": "GodsEye Microsoft Teams channel plugin",
+  "type": "module",
+  "dependencies": {
+    "@microsoft/teams.api": "2.0.5",
+    "@microsoft/teams.apps": "2.0.5",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "godseye": "workspace:*"
+  },
+  "peerDependencies": {
+    "godseye": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "godseye": {
+      "optional": true
+    }
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "msteams",
+      "label": "Microsoft Teams",
+      "selectionLabel": "Microsoft Teams (Teams SDK)",
+      "docsPath": "/channels/msteams",
+      "docsLabel": "msteams",
+      "blurb": "Teams SDK; enterprise support.",
+      "aliases": [
+        "teams"
+      ],
+      "order": 60
+    },
+    "install": {
+      "npmSpec": "@godseye/msteams",
+      "localPath": "extensions/msteams",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    },
+    "release": {
+      "publishToNpm": true
+    }
+  }
+}

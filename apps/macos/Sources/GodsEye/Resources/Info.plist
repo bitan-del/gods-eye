@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>Gods Eye</string>
+    <key>CFBundleIdentifier</key>
+    <string>ai.godseye.mac</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Gods Eye</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2026.3.25</string>
+    <key>CFBundleVersion</key>
+    <string>202603250</string>
+    <key>CFBundleIconFile</key>
+    <string>Gods Eye</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>ai.godseye.mac.deeplink</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>godseye</string>
+            </array>
+        </dict>
+    </array>
+    <key>LSMinimumSystemVersion</key>
+    <string>15.0</string>
+    <key>LSUIElement</key>
+    <true/>
+
+    <key>Gods EyeBuildTimestamp</key>
+    <string></string>
+    <key>Gods EyeGitCommit</key>
+    <string></string>
+
+    <key>NSUserNotificationUsageDescription</key>
+    <string>Gods Eye needs notification permission to show alerts for agent actions.</string>
+    <key>NSScreenCaptureDescription</key>
+    <string>Gods Eye captures the screen when the agent needs screenshots for context.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Gods Eye can capture photos or short video clips when requested by the agent.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Gods Eye can share your location when requested by the agent.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Gods Eye can share your location when requested by the agent.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Gods Eye can share your location when requested by the agent.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gods Eye needs the mic for Voice Wake tests and agent audio capture.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>Gods Eye uses speech recognition to detect your Voice Wake trigger phrase.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>Gods Eye needs Automation (AppleScript) permission to drive Terminal and other apps for agent actions.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>Gods Eye can access Reminders when requested by the agent for the apple-reminders skill.</string>
+
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoadsInWebContent</key>
+        <true/>
+        <key>NSExceptionDomains</key>
+        <dict>
+            <key>100.100.100.100</key>
+            <dict>
+                <key>NSExceptionAllowsInsecureHTTPLoads</key>
+                <true/>
+                <key>NSIncludesSubdomains</key>
+                <true/>
+            </dict>
+        </dict>
+    </dict>
+</dict>
+</plist>

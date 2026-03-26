@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: godseye-config
+  labels:
+    app: godseye
+data:
+  godseye.json: |
+    {
+      "gateway": {
+        "mode": "local",
+        "bind": "loopback",
+        "port": 18789,
+        "auth": {
+          "mode": "token"
+        },
+        "controlUi": {
+          "enabled": true
+        }
+      },
+      "agents": {
+        "defaults": {
+          "workspace": "~/.godseye/workspace"
+        },
+        "list": [
+          {
+            "id": "default",
+            "name": "Gods Eye Assistant",
+            "workspace": "~/.godseye/workspace"
+          }
+        ]
+      },
+      "cron": { "enabled": false }
+    }
+  AGENTS.md: |
+    # Gods Eye Assistant
+
+    You are a helpful AI assistant running in Kubernetes.

@@ -1,0 +1,339 @@
+name: Gods Eye
+options:
+  bundleIdPrefix: ai.godseye
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+
+packages:
+  Gods EyeKit:
+    path: ../shared/Gods EyeKit
+  Swabble:
+    path: ../../Swabble
+
+schemes:
+  Gods Eye:
+    shared: true
+    build:
+      targets:
+        Gods Eye: all
+    test:
+      targets:
+        - Gods EyeTests
+        - Gods EyeLogicTests
+  Gods EyeLogicTests:
+    shared: true
+    build:
+      targets:
+        Gods EyeLogicTests: all
+    test:
+      targets:
+        - Gods EyeLogicTests
+
+targets:
+  Gods Eye:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Sources
+    dependencies:
+      - target: Gods EyeShareExtension
+        embed: true
+      - target: Gods EyeActivityWidget
+        embed: true
+      - target: Gods EyeWatchApp
+      - package: Gods EyeKit
+      - package: Gods EyeKit
+        product: Gods EyeChatUI
+      - package: Gods EyeKit
+        product: Gods EyeProtocol
+      - package: Swabble
+        product: SwabbleKit
+      - sdk: AppIntents.framework
+    preBuildScripts:
+      - name: SwiftFormat (lint)
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftformat >/dev/null 2>&1; then
+            echo "error: swiftformat not found (brew install swiftformat)" >&2
+            exit 1
+          fi
+          swiftformat --lint --config "$SRCROOT/../../.swiftformat" \
+            --filelist "$SRCROOT/SwiftSources.input.xcfilelist"
+      - name: SwiftLint
+        basedOnDependencyAnalysis: false
+        inputFileLists:
+          - $(SRCROOT)/SwiftSources.input.xcfilelist
+        script: |
+          set -euo pipefail
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            echo "error: swiftlint not found (brew install swiftlint)" >&2
+            exit 1
+          fi
+          swiftlint lint --config "$SRCROOT/.swiftlint.yml" --use-script-input-file-lists
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_ENTITLEMENTS: Sources/Gods Eye.entitlements
+        CODE_SIGN_STYLE: "$(GODSEYE_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(GODSEYE_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(GODSEYE_APP_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(GODSEYE_APP_PROFILE)"
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+      configs:
+        Debug:
+          GODSEYE_PUSH_TRANSPORT: direct
+          GODSEYE_PUSH_DISTRIBUTION: local
+          GODSEYE_PUSH_RELAY_BASE_URL: ""
+          GODSEYE_PUSH_APNS_ENVIRONMENT: sandbox
+        Release:
+          GODSEYE_PUSH_TRANSPORT: direct
+          GODSEYE_PUSH_DISTRIBUTION: local
+          GODSEYE_PUSH_RELAY_BASE_URL: ""
+          GODSEYE_PUSH_APNS_ENVIRONMENT: production
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Gods Eye
+        CFBundleIconName: AppIcon
+        CFBundleURLTypes:
+          - CFBundleURLName: ai.godseye.ios
+            CFBundleURLSchemes:
+              - godseye
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UIBackgroundModes:
+          - audio
+          - remote-notification
+        BGTaskSchedulerPermittedIdentifiers:
+          - ai.godseye.ios.bgrefresh
+        NSLocalNetworkUsageDescription: Gods Eye discovers and connects to your Gods Eye gateway on the local network.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
+        NSBonjourServices:
+          - _godseye-gw._tcp
+        NSCameraUsageDescription: Gods Eye can capture photos or short video clips when requested via the gateway.
+        NSLocationWhenInUseUsageDescription: Gods Eye uses your location when you allow location sharing.
+        NSLocationAlwaysAndWhenInUseUsageDescription: Gods Eye can share your location in the background when you enable Always.
+        NSMicrophoneUsageDescription: Gods Eye needs microphone access for voice wake.
+        NSMotionUsageDescription: Gods Eye may use motion data to support device-aware interactions and automations.
+        NSPhotoLibraryUsageDescription: Gods Eye needs photo library access when you choose existing photos to share with your assistant.
+        NSSpeechRecognitionUsageDescription: Gods Eye uses on-device speech recognition for voice wake.
+        NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        Gods EyePushTransport: "$(GODSEYE_PUSH_TRANSPORT)"
+        Gods EyePushDistribution: "$(GODSEYE_PUSH_DISTRIBUTION)"
+        Gods EyePushRelayBaseURL: "$(GODSEYE_PUSH_RELAY_BASE_URL)"
+        Gods EyePushAPNsEnvironment: "$(GODSEYE_PUSH_APNS_ENVIRONMENT)"
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+
+  Gods EyeShareExtension:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ShareExtension
+    dependencies:
+      - package: Gods EyeKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(GODSEYE_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(GODSEYE_DEVELOPMENT_TEAM)"
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(GODSEYE_SHARE_BUNDLE_ID)"
+        PROVISIONING_PROFILE_SPECIFIER: "$(GODSEYE_SHARE_PROFILE)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Gods Eye Share
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController"
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 10
+              NSExtensionActivationSupportsMovieWithMaxCount: 1
+
+  Gods EyeActivityWidget:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: ActivityWidget
+      - path: Sources/LiveActivity/Gods EyeActivityAttributes.swift
+    dependencies:
+      - sdk: WidgetKit.framework
+      - sdk: ActivityKit.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(GODSEYE_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(GODSEYE_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: "$(GODSEYE_ACTIVITY_WIDGET_BUNDLE_ID)"
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SUPPORTS_LIVE_ACTIVITIES: YES
+    info:
+      path: ActivityWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Gods Eye Activity
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+        NSSupportsLiveActivities: true
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+  Gods EyeWatchApp:
+    type: application.watchapp2
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchApp
+    dependencies:
+      - target: Gods EyeWatchExtension
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_APPINTENTS_METADATA: NO
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        PRODUCT_BUNDLE_IDENTIFIER: "$(GODSEYE_WATCH_APP_BUNDLE_ID)"
+    info:
+      path: WatchApp/Info.plist
+      properties:
+        CFBundleDisplayName: Gods Eye
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+        WKCompanionAppBundleIdentifier: "$(GODSEYE_APP_BUNDLE_ID)"
+        WKWatchKitApp: true
+
+  Gods EyeWatchExtension:
+    type: watchkit2-extension
+    platform: watchOS
+    deploymentTarget: "11.0"
+    sources:
+      - path: WatchExtension/Sources
+    dependencies:
+      - sdk: AppIntents.framework
+      - sdk: WatchConnectivity.framework
+      - sdk: UserNotifications.framework
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(GODSEYE_WATCH_EXTENSION_BUNDLE_ID)"
+    info:
+      path: WatchExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Gods Eye
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+        NSExtension:
+          NSExtensionAttributes:
+            WKAppBundleIdentifier: "$(GODSEYE_WATCH_APP_BUNDLE_ID)"
+          NSExtensionPointIdentifier: com.apple.watchkit
+
+  Gods EyeTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests
+        excludes:
+          - Logic
+    dependencies:
+      - target: Gods Eye
+      - package: Swabble
+        product: SwabbleKit
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(GODSEYE_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(GODSEYE_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.godseye.ios.tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Gods Eye.app/Gods Eye"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: Gods EyeTests
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"
+
+  Gods EyeLogicTests:
+    type: bundle.unit-test
+    platform: iOS
+    configFiles:
+      Debug: Signing.xcconfig
+      Release: Signing.xcconfig
+    sources:
+      - path: Tests/Logic
+    dependencies:
+      - package: Gods EyeKit
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: "$(GODSEYE_CODE_SIGN_STYLE)"
+        DEVELOPMENT_TEAM: "$(GODSEYE_DEVELOPMENT_TEAM)"
+        PRODUCT_BUNDLE_IDENTIFIER: ai.godseye.ios.logic-tests
+        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+    info:
+      path: Tests/Info.plist
+      properties:
+        CFBundleDisplayName: Gods EyeLogicTests
+        CFBundleShortVersionString: "$(GODSEYE_MARKETING_VERSION)"
+        CFBundleVersion: "$(GODSEYE_BUILD_VERSION)"

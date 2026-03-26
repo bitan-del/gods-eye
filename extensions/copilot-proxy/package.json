@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/copilot-proxy",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Copilot Proxy provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

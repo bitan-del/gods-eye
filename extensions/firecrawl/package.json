@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/firecrawl-plugin",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye Firecrawl plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

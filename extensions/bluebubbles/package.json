@@ -1,0 +1,52 @@
+{
+  "name": "@godseye/bluebubbles",
+  "version": "2026.3.22",
+  "description": "GodsEye BlueBubbles channel plugin",
+  "type": "module",
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "godseye": "workspace:*"
+  },
+  "peerDependencies": {
+    "godseye": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "godseye": {
+      "optional": true
+    }
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "setupEntry": "./setup-entry.ts",
+    "channel": {
+      "id": "bluebubbles",
+      "label": "BlueBubbles",
+      "selectionLabel": "BlueBubbles (macOS app)",
+      "detailLabel": "BlueBubbles",
+      "docsPath": "/channels/bluebubbles",
+      "docsLabel": "bluebubbles",
+      "blurb": "iMessage via the BlueBubbles mac app + REST API.",
+      "aliases": [
+        "bb"
+      ],
+      "preferOver": [
+        "imessage"
+      ],
+      "systemImage": "bubble.left.and.text.bubble.right",
+      "order": 75
+    },
+    "install": {
+      "npmSpec": "@godseye/bluebubbles",
+      "localPath": "extensions/bluebubbles",
+      "defaultChoice": "npm",
+      "minHostVersion": ">=2026.3.22"
+    },
+    "release": {
+      "publishToNpm": true
+    }
+  }
+}

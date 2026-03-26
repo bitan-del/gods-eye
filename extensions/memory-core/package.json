@@ -1,0 +1,23 @@
+{
+  "name": "@godseye/memory-core",
+  "version": "2026.3.22",
+  "private": true,
+  "description": "GodsEye core memory search plugin",
+  "type": "module",
+  "devDependencies": {
+    "godseye": "workspace:*"
+  },
+  "peerDependencies": {
+    "godseye": ">=2026.3.22"
+  },
+  "peerDependenciesMeta": {
+    "godseye": {
+      "optional": true
+    }
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

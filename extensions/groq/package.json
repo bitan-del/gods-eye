@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/groq-provider",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "GodsEye Groq media-understanding provider",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

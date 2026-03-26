@@ -1,0 +1,12 @@
+{
+  "name": "@godseye/microsoft-foundry",
+  "version": "2026.3.14",
+  "private": true,
+  "description": "GodsEye Microsoft Foundry provider plugin",
+  "type": "module",
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

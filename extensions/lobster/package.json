@@ -1,0 +1,17 @@
+{
+  "name": "@godseye/lobster",
+  "version": "2026.3.22",
+  "description": "Lobster workflow tool plugin (typed pipelines + resumable approvals)",
+  "type": "module",
+  "dependencies": {
+    "@sinclair/typebox": "0.34.48"
+  },
+  "godseye": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "release": {
+      "publishToNpm": true
+    }
+  }
+}
