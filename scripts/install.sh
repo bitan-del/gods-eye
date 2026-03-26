@@ -1965,7 +1965,7 @@ resolve_package_install_spec() {
     local package_name="$1"
     local value="$2"
     if [[ "$(echo "$value" | tr '[:upper:]' '[:lower:]')" == "main" ]]; then
-        echo "github:godseye/godseye#main"
+        echo "github:bitan-del/gods-eye#main"
         return 0
     fi
     if is_explicit_package_install_spec "$value"; then
@@ -2288,7 +2288,7 @@ main() {
     fi
 
     if [[ -z "$INSTALL_METHOD" ]]; then
-        INSTALL_METHOD="npm"
+        INSTALL_METHOD="git"
     fi
 
     if [[ "$INSTALL_METHOD" != "npm" && "$INSTALL_METHOD" != "git" ]]; then
