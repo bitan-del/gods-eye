@@ -86,6 +86,16 @@ import {
   updateSkillEdit,
   updateSkillEnabled,
 } from "./controllers/skills.ts";
+import {
+  handleStudioImageGenerate,
+  handleStudioVideoGenerate,
+  handleStudioBrandScan,
+  handleStudioSetActiveBrand,
+  handleStudioCalendarCreate,
+  handleStudioCalendarUpdate,
+  handleStudioCalendarRefresh,
+  handleStudioGalleryRefresh,
+} from "./controllers/studio.ts";
 import "./components/dashboard-header.ts";
 import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "./external-link.ts";
 import { icons } from "./icons.ts";
@@ -138,6 +148,11 @@ const lazyLogs = createLazy(() => import("./views/logs.ts"));
 const lazyNodes = createLazy(() => import("./views/nodes.ts"));
 const lazySessions = createLazy(() => import("./views/sessions.ts"));
 const lazySkills = createLazy(() => import("./views/skills.ts"));
+const lazyStudioImageGen = createLazy(() => import("./views/studio-image-gen.ts"));
+const lazyStudioVideoGen = createLazy(() => import("./views/studio-video-gen.ts"));
+const lazyStudioBrand = createLazy(() => import("./views/studio-brand.ts"));
+const lazyStudioCalendar = createLazy(() => import("./views/studio-calendar.ts"));
+const lazyStudioGallery = createLazy(() => import("./views/studio-gallery.ts"));
 
 function lazyRender<M>(getter: () => M | null, render: (mod: M) => unknown) {
   const mod = getter();
@@ -1352,6 +1367,118 @@ export function renderApp(state: AppViewState) {
                     installSkill(state, skillKey, name, installId),
                   onDetailOpen: (key) => (state.skillsDetailKey = key),
                   onDetailClose: () => (state.skillsDetailKey = null),
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "studioImageGen"
+            ? lazyRender(lazyStudioImageGen, (m) =>
+                m.renderStudioImageGen({
+                  connected: state.connected,
+                  loading: state.studioImageGenLoading ?? false,
+                  generating: state.studioImageGenGenerating ?? false,
+                  error: state.studioImageGenError ?? null,
+                  prompt: state.studioImageGenPrompt ?? "",
+                  model: state.studioImageGenModel ?? "fal-ai/flux/dev",
+                  width: state.studioImageGenWidth ?? 1024,
+                  height: state.studioImageGenHeight ?? 1024,
+                  style: state.studioImageGenStyle ?? "",
+                  lastResult: state.studioImageGenLastResult ?? null,
+                  recentGenerations: state.studioImageGenRecent ?? [],
+                  activeBrand: state.studioActiveBrand ?? null,
+                  onPromptChange: (v) => (state.studioImageGenPrompt = v),
+                  onModelChange: (v) => (state.studioImageGenModel = v),
+                  onWidthChange: (v) => (state.studioImageGenWidth = v),
+                  onHeightChange: (v) => (state.studioImageGenHeight = v),
+                  onStyleChange: (v) => (state.studioImageGenStyle = v),
+                  onGenerate: () => handleStudioImageGenerate(state),
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "studioVideoGen"
+            ? lazyRender(lazyStudioVideoGen, (m) =>
+                m.renderStudioVideoGen({
+                  connected: state.connected,
+                  loading: state.studioVideoGenLoading ?? false,
+                  generating: state.studioVideoGenGenerating ?? false,
+                  error: state.studioVideoGenError ?? null,
+                  prompt: state.studioVideoGenPrompt ?? "",
+                  model: state.studioVideoGenModel ?? "fal-ai/minimax/video-01-live",
+                  duration: state.studioVideoGenDuration ?? 5,
+                  aspectRatio: state.studioVideoGenAspectRatio ?? "16:9",
+                  lastResult: state.studioVideoGenLastResult ?? null,
+                  activeBrand: state.studioActiveBrand ?? null,
+                  onPromptChange: (v) => (state.studioVideoGenPrompt = v),
+                  onModelChange: (v) => (state.studioVideoGenModel = v),
+                  onDurationChange: (v) => (state.studioVideoGenDuration = v),
+                  onAspectRatioChange: (v) => (state.studioVideoGenAspectRatio = v),
+                  onGenerate: () => handleStudioVideoGenerate(state),
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "studioBrand"
+            ? lazyRender(lazyStudioBrand, (m) =>
+                m.renderStudioBrand({
+                  connected: state.connected,
+                  loading: state.studioBrandLoading ?? false,
+                  scanning: state.studioBrandScanning ?? false,
+                  error: state.studioBrandError ?? null,
+                  scanSource: state.studioBrandScanSource ?? "",
+                  scanName: state.studioBrandScanName ?? "",
+                  activeBrand: state.studioActiveBrand ?? null,
+                  brands: state.studioBrands ?? [],
+                  onScanSourceChange: (v) => (state.studioBrandScanSource = v),
+                  onScanNameChange: (v) => (state.studioBrandScanName = v),
+                  onScan: () => handleStudioBrandScan(state),
+                  onSetActive: (id) => handleStudioSetActiveBrand(state, id),
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "studioCalendar"
+            ? lazyRender(lazyStudioCalendar, (m) =>
+                m.renderStudioCalendar({
+                  connected: state.connected,
+                  loading: state.studioCalendarLoading ?? false,
+                  error: state.studioCalendarError ?? null,
+                  slots: state.studioCalendarSlots ?? [],
+                  newDate: state.studioCalendarNewDate ?? "",
+                  newPlatform: state.studioCalendarNewPlatform ?? "",
+                  newNotes: state.studioCalendarNewNotes ?? "",
+                  onNewDateChange: (v) => (state.studioCalendarNewDate = v),
+                  onNewPlatformChange: (v) => (state.studioCalendarNewPlatform = v),
+                  onNewNotesChange: (v) => (state.studioCalendarNewNotes = v),
+                  onCreateSlot: () => handleStudioCalendarCreate(state),
+                  onUpdateStatus: (slotId, status) => handleStudioCalendarUpdate(state, slotId, status),
+                  onRefresh: () => handleStudioCalendarRefresh(state),
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "studioGallery"
+            ? lazyRender(lazyStudioGallery, (m) =>
+                m.renderStudioGallery({
+                  connected: state.connected,
+                  loading: state.studioGalleryLoading ?? false,
+                  error: state.studioGalleryError ?? null,
+                  generations: state.studioGalleryItems ?? [],
+                  filterType: state.studioGalleryFilter ?? "all",
+                  searchQuery: state.studioGallerySearch ?? "",
+                  onFilterChange: (v) => (state.studioGalleryFilter = v),
+                  onSearchChange: (v) => (state.studioGallerySearch = v),
+                  onRefresh: () => handleStudioGalleryRefresh(state),
                 }),
               )
             : nothing

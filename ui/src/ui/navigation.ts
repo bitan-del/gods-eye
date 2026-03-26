@@ -9,6 +9,10 @@ export const TAB_GROUPS = [
   },
   { label: "agent", tabs: ["agents", "skills", "nodes"] },
   {
+    label: "studio",
+    tabs: ["studioImageGen", "studioVideoGen", "studioBrand", "studioCalendar", "studioGallery"],
+  },
+  {
     label: "settings",
     tabs: [
       "config",
@@ -34,6 +38,11 @@ export type Tab =
   | "skills"
   | "nodes"
   | "chat"
+  | "studioImageGen"
+  | "studioVideoGen"
+  | "studioBrand"
+  | "studioCalendar"
+  | "studioGallery"
   | "config"
   | "communications"
   | "appearance"
@@ -54,6 +63,11 @@ const TAB_PATHS: Record<Tab, string> = {
   skills: "/skills",
   nodes: "/nodes",
   chat: "/chat",
+  studioImageGen: "/studio/image-gen",
+  studioVideoGen: "/studio/video-gen",
+  studioBrand: "/studio/brand",
+  studioCalendar: "/studio/calendar",
+  studioGallery: "/studio/gallery",
   config: "/config",
   communications: "/communications",
   appearance: "/appearance",
@@ -179,6 +193,16 @@ export function iconForTab(tab: Tab): IconName {
       return "globe";
     case "aiAgents":
       return "brain";
+    case "studioImageGen":
+      return "image";
+    case "studioVideoGen":
+      return "video";
+    case "studioBrand":
+      return "palette";
+    case "studioCalendar":
+      return "calendar";
+    case "studioGallery":
+      return "gallery";
     case "debug":
       return "bug";
     case "logs":
