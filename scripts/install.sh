@@ -1884,6 +1884,12 @@ resolve_godseye_bin() {
         return 0
     fi
 
+    # Check common wrapper locations
+    if [[ -x "$HOME/.local/bin/godseye" ]]; then
+        echo "$HOME/.local/bin/godseye"
+        return 0
+    fi
+
     echo ""
     return 1
 }
@@ -2502,26 +2508,33 @@ main() {
                 ui_info "Config already present; running doctor"
                 run_doctor
                 should_open_dashboard=true
-                ui_info "Config already present; skipping onboarding"
                 skip_onboard=true
             fi
-            ui_info "Starting setup"
-            echo ""
-            if [[ -r /dev/tty && -w /dev/tty ]]; then
-                local claw="${GODSEYE_BIN:-}"
-                if [[ -z "$claw" ]]; then
-                    claw="$(resolve_godseye_bin || true)"
+            if [[ "$skip_onboard" != "true" ]]; then
+                ui_info "Starting setup"
+                echo ""
+                if [[ -r /dev/tty && -w /dev/tty ]]; then
+                    local claw="${GODSEYE_BIN:-}"
+                    if [[ -z "$claw" ]]; then
+                        claw="$(resolve_godseye_bin || true)"
+                    fi
+                    if [[ -z "$claw" ]]; then
+                        # Try direct path as fallback
+                        if [[ -x "$HOME/.local/bin/godseye" ]]; then
+                            claw="$HOME/.local/bin/godseye"
+                        fi
+                    fi
+                    if [[ -z "$claw" ]]; then
+                        ui_info "Skipping onboarding (godseye not on PATH yet)"
+                        warn_godseye_not_found
+                        return 0
+                    fi
+                    exec </dev/tty
+                    exec "$claw" onboard
                 fi
-                if [[ -z "$claw" ]]; then
-                    ui_info "Skipping onboarding (godseye not on PATH yet)"
-                    warn_godseye_not_found
-                    return 0
-                fi
-                exec </dev/tty
-                exec "$claw" onboard
+                ui_info "No TTY; run godseye onboard to finish setup"
+                return 0
             fi
-            ui_info "No TTY; run godseye onboard to finish setup"
-            return 0
         fi
     fi
 
