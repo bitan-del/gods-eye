@@ -323,12 +323,17 @@ export type AppViewState = {
     studioImageGenWidth: number;
     studioImageGenHeight: number;
     studioImageGenStyle: string;
+    studioImageGenAspectRatio: string;
+    studioImageGenResolution: string;
+    studioImageGenBatchCount: number;
     studioImageGenLastResult: {
       id: string;
       model: string;
       prompt: string;
       imageCount: number;
       savedTo?: string;
+      imageUrl?: string;
+      thumbnailUrl?: string;
       createdAt: string;
     } | null;
     studioImageGenRecent: Array<{
@@ -337,6 +342,8 @@ export type AppViewState = {
       prompt: string;
       imageCount: number;
       savedTo?: string;
+      imageUrl?: string;
+      thumbnailUrl?: string;
       createdAt: string;
     }>;
     studioVideoGenLoading: boolean;

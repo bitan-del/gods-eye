@@ -28,12 +28,17 @@ export type StudioState = {
   studioImageGenWidth: number;
   studioImageGenHeight: number;
   studioImageGenStyle: string;
+  studioImageGenAspectRatio: string;
+  studioImageGenResolution: string;
+  studioImageGenBatchCount: number;
   studioImageGenLastResult: {
     id: string;
     model: string;
     prompt: string;
     imageCount: number;
     savedTo?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
     createdAt: string;
   } | null;
   studioImageGenRecent: Array<{
@@ -42,6 +47,8 @@ export type StudioState = {
     prompt: string;
     imageCount: number;
     savedTo?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
     createdAt: string;
   }>;
 
