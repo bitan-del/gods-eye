@@ -1388,17 +1388,51 @@ export function renderApp(state: AppViewState) {
                   aspectRatio: state.studioImageGenAspectRatio ?? "16:9",
                   resolution: state.studioImageGenResolution ?? "1K",
                   batchCount: state.studioImageGenBatchCount ?? 1,
+                  activePopup: state.studioImageGenActivePopup ?? null,
                   lastResult: state.studioImageGenLastResult ?? null,
                   recentGenerations: state.studioImageGenRecent ?? [],
                   activeBrand: state.studioActiveBrand ?? null,
-                  onPromptChange: (v) => (state.studioImageGenPrompt = v),
-                  onModelChange: (v) => (state.studioImageGenModel = v),
-                  onWidthChange: (v) => (state.studioImageGenWidth = v),
-                  onHeightChange: (v) => (state.studioImageGenHeight = v),
-                  onStyleChange: (v) => (state.studioImageGenStyle = v),
-                  onAspectRatioChange: (v) => (state.studioImageGenAspectRatio = v),
-                  onResolutionChange: (v) => (state.studioImageGenResolution = v),
-                  onBatchCountChange: (v) => (state.studioImageGenBatchCount = v),
+                  onPromptChange: (v) => {
+                    state.studioImageGenPrompt = v;
+                    state.requestUpdate();
+                  },
+                  onModelChange: (v) => {
+                    state.studioImageGenModel = v;
+                    state.studioImageGenActivePopup = null;
+                    state.requestUpdate();
+                  },
+                  onWidthChange: (v) => {
+                    state.studioImageGenWidth = v;
+                    state.requestUpdate();
+                  },
+                  onHeightChange: (v) => {
+                    state.studioImageGenHeight = v;
+                    state.requestUpdate();
+                  },
+                  onStyleChange: (v) => {
+                    state.studioImageGenStyle = v;
+                    state.studioImageGenActivePopup = null;
+                    state.requestUpdate();
+                  },
+                  onAspectRatioChange: (v) => {
+                    state.studioImageGenAspectRatio = v;
+                    state.studioImageGenActivePopup = null;
+                    state.requestUpdate();
+                  },
+                  onResolutionChange: (v) => {
+                    state.studioImageGenResolution = v;
+                    state.studioImageGenActivePopup = null;
+                    state.requestUpdate();
+                  },
+                  onBatchCountChange: (v) => {
+                    state.studioImageGenBatchCount = v;
+                    state.requestUpdate();
+                  },
+                  onPopupToggle: (v) => {
+                    state.studioImageGenActivePopup =
+                      state.studioImageGenActivePopup === v ? null : v;
+                    state.requestUpdate();
+                  },
                   onGenerate: () => handleStudioImageGenerate(state),
                 }),
               )

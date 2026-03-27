@@ -1,5 +1,5 @@
-// Studio Image Generation view — exact replica of Gods Eye Online ControlBar + Canvas.
-// Dark/light mode via CSS custom properties matching the original theme system.
+// Studio Image Generation — Gods Eye Online exact replica
+// Dark/light mode via CSS custom props; popups via reactive state.
 
 import { html, nothing, type TemplateResult } from "lit";
 
@@ -16,6 +16,7 @@ export type StudioImageGenProps = {
   aspectRatio: string;
   resolution: string;
   batchCount: number;
+  activePopup: string | null;
   lastResult: StudioImageGenResult | null;
   recentGenerations: StudioImageGenResult[];
   activeBrand: { name: string; colors: { primary: string; secondary: string } } | null;
@@ -27,6 +28,7 @@ export type StudioImageGenProps = {
   onAspectRatioChange: (value: string) => void;
   onResolutionChange: (value: string) => void;
   onBatchCountChange: (value: number) => void;
+  onPopupToggle: (popup: string) => void;
   onGenerate: () => void;
 };
 
@@ -41,12 +43,11 @@ export type StudioImageGenResult = {
   createdAt: string;
 };
 
-// --- Models exactly matching Gods Eye Online ---
 const IMAGE_MODELS = [
   {
     value: "gemini-3.1-flash",
     label: "Gemini 3.1 Flash",
-    desc: "Google's Newest Model. Pro quality at Flash speed.",
+    desc: "Google newest. Pro quality at Flash speed.",
     badge: "NEW",
     premium: false,
     hasQuality: true,
@@ -55,7 +56,7 @@ const IMAGE_MODELS = [
   {
     value: "gemini-3.0-pro",
     label: "Gemini 3.0 Pro",
-    desc: "Google's Flagship Generation Model",
+    desc: "Google flagship generation model",
     badge: "Pro",
     premium: true,
     hasQuality: true,
@@ -64,25 +65,16 @@ const IMAGE_MODELS = [
   {
     value: "fal-ai/seedream-4.5",
     label: "Seedream 4.5",
-    desc: "ByteDance's newest model. Up to 4K output.",
+    desc: "ByteDance newest. Up to 4K output.",
     badge: "NEW",
     premium: false,
     hasQuality: false,
     maxBatch: 4,
   },
   {
-    value: "gpt-image-1.5",
-    label: "GPT Image 1.5",
-    desc: "OpenAI's latest image model. High-fidelity.",
-    badge: "NEW",
-    premium: true,
-    hasQuality: false,
-    maxBatch: 4,
-  },
-  {
     value: "gpt-image-1",
     label: "GPT Image 1",
-    desc: "OpenAI GPT Image 1 via fal.ai.",
+    desc: "OpenAI GPT Image 1",
     badge: "OpenAI",
     premium: true,
     hasQuality: false,
@@ -91,7 +83,7 @@ const IMAGE_MODELS = [
   {
     value: "fal-ai/flux-2-ultra",
     label: "FLUX.2 Ultra",
-    desc: "Black Forest Labs. State-of-the-art photorealism.",
+    desc: "Black Forest Labs. Photorealism.",
     badge: "BFL",
     premium: true,
     hasQuality: false,
@@ -100,7 +92,7 @@ const IMAGE_MODELS = [
   {
     value: "fal-ai/reve-1",
     label: "Reve Image 1.0",
-    desc: "High-fidelity with outstanding color accuracy.",
+    desc: "Outstanding color accuracy.",
     badge: "Reve",
     premium: false,
     hasQuality: false,
@@ -109,7 +101,7 @@ const IMAGE_MODELS = [
   {
     value: "fal-ai/flux/dev",
     label: "Flux Dev",
-    desc: "Fast development model from fal.ai.",
+    desc: "Fast dev model from fal.ai.",
     badge: "Fast",
     premium: false,
     hasQuality: false,
@@ -118,7 +110,7 @@ const IMAGE_MODELS = [
   {
     value: "dall-e-3",
     label: "DALL-E 3",
-    desc: "OpenAI DALL-E 3 image generation.",
+    desc: "OpenAI DALL-E 3",
     badge: "OpenAI",
     premium: true,
     hasQuality: false,
@@ -170,7 +162,7 @@ const STYLE_PRESETS = [
   "anime",
 ];
 
-function arIcon(icon: string): TemplateResult {
+function arSvg(icon: string): TemplateResult {
   switch (icon) {
     case "monitor":
       return html`
@@ -208,245 +200,123 @@ function arIcon(icon: string): TemplateResult {
 }
 
 export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult {
-  const currentModel = IMAGE_MODELS.find((m) => m.value === props.model) ?? IMAGE_MODELS[0];
+  const cur = IMAGE_MODELS.find((m) => m.value === props.model) ?? IMAGE_MODELS[0];
+  const ap = props.activePopup;
+  const backdrop = () =>
+    html`<div style="position:fixed;inset:0;z-index:49;" @click=${() => props.onPopupToggle("")}></div>`;
 
   return html`
     <style>
-      /* ── Gods Eye Online Theme System ── */
-      .ge-studio {
-        --ge-bg: #ffffff;
-        --ge-surface: #f4f4f5;
-        --ge-panel: #ffffff;
-        --ge-border: #e4e4e7;
-        --ge-brand: #000000;
-        --ge-brand-hover: #333333;
-        --ge-text-1: #000000;
-        --ge-text-2: #52525b;
-        --ge-dot: #e4e4e7;
-      }
-      @media (prefers-color-scheme: dark) {
-        .ge-studio {
-          --ge-bg: #030303;
-          --ge-surface: #0f0f0f;
-          --ge-panel: #141414;
-          --ge-border: #27272a;
-          --ge-brand: #CCFF00;
-          --ge-brand-hover: #B2DF00;
-          --ge-text-1: #ffffff;
-          --ge-text-2: #a1a1aa;
-          --ge-dot: #1a1a1a;
-        }
-      }
-      /* Also respect .dark class on root */
-      :root.dark .ge-studio,
-      .dark .ge-studio {
-        --ge-bg: #030303;
-        --ge-surface: #0f0f0f;
-        --ge-panel: #141414;
-        --ge-border: #27272a;
-        --ge-brand: #CCFF00;
-        --ge-brand-hover: #B2DF00;
-        --ge-text-1: #ffffff;
-        --ge-text-2: #a1a1aa;
-        --ge-dot: #1a1a1a;
-      }
-      .ge-studio {
-        display: flex;
-        flex-direction: column;
-        height: calc(100vh - 60px);
-        background-color: var(--ge-bg);
-        background-image: radial-gradient(var(--ge-dot) 1px, transparent 1px);
-        background-size: 24px 24px;
-        color: var(--ge-text-1);
-        font-family: 'Inter', -apple-system, sans-serif;
-        position: relative;
-        -webkit-font-smoothing: antialiased;
-      }
-      /* Grain overlay */
-      .ge-studio::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        opacity: 0.025;
-        pointer-events: none;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        z-index: 1;
-        mix-blend-mode: overlay;
-      }
-      .ge-canvas { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 2; }
-      .ge-empty h2 { font-size: 1.5rem; font-weight: 600; color: var(--ge-text-1); margin: 0 0 8px; }
-      .ge-empty p { font-size: 0.95rem; color: var(--ge-text-2); margin: 0; }
-      .ge-sync { position: absolute; top: 12px; right: 16px; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--ge-panel); border: 1px solid var(--ge-border); border-radius: 12px; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--ge-text-1); z-index: 3; }
-      .ge-sync:hover { border-color: var(--ge-brand); }
-
-      /* ── Control Bar (bottom) ── */
-      .ge-bar-wrap { position: relative; z-index: 40; padding: 0 16px 16px; display: flex; justify-content: center; }
-      .ge-bar { position: relative; width: 100%; max-width: 900px; background: color-mix(in srgb, var(--ge-panel) 80%, transparent); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid color-mix(in srgb, var(--ge-text-1) 5%, transparent); border-radius: 28px; padding: 6px; box-shadow: 0 20px 40px -10px rgba(0,0,0,0.3); }
-      .ge-bar-inner { display: flex; flex-direction: column; gap: 6px; }
-
-      /* Top row: prompt + generate */
-      .ge-top-row { display: flex; align-items: center; gap: 10px; padding: 4px 6px 0; }
-      .ge-add-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--ge-surface); border: 1px solid var(--ge-border); display: flex; align-items: center; justify-content: center; color: var(--ge-text-2); cursor: pointer; flex-shrink: 0; font-size: 1.2rem; }
-      .ge-add-btn:hover { border-color: var(--ge-brand); color: var(--ge-text-1); }
-      .ge-prompt { flex: 1; background: transparent; border: none; outline: none; color: var(--ge-text-1); font-size: 0.9rem; font-weight: 500; padding: 8px 4px; resize: none; height: 48px; font-family: inherit; line-height: 1.6; }
-      .ge-prompt::placeholder { color: color-mix(in srgb, var(--ge-text-2) 50%, transparent); }
-      .ge-icon-btn { width: 40px; height: 48px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--ge-text-2); cursor: pointer; border-radius: 12px; font-size: 1.1rem; flex-shrink: 0; }
-      .ge-icon-btn:hover { background: var(--ge-surface); color: var(--ge-text-1); }
-      .ge-icon-btn.active { color: var(--ge-brand); }
-      .ge-gen-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
-      .ge-gen-btn { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 20px; background: var(--ge-brand); color: var(--ge-bg); border: none; border-radius: 12px; font-size: 0.7rem; font-weight: 800; cursor: pointer; letter-spacing: 0.08em; text-transform: uppercase; transition: opacity 0.15s, transform 0.15s; }
-      .ge-gen-btn:hover:not(:disabled) { transform: scale(1.05); }
-      .ge-gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-      .ge-gen-btn .sparkle { font-size: 0.9rem; }
-      .ge-gen-label { font-size: 0.55rem; color: var(--ge-text-2); font-family: monospace; text-transform: uppercase; opacity: 0.5; padding-right: 4px; }
-
-      /* Chip row */
-      .ge-chips { display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--ge-surface) 50%, transparent); border-radius: 24px; padding: 6px; overflow-x: auto; }
-      .ge-chips::-webkit-scrollbar { display: none; }
-      .ge-chip { height: 36px; padding: 0 12px 0 4px; border-radius: 999px; background: var(--ge-panel); border: 1px solid var(--ge-border); display: flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; color: var(--ge-text-1); font-size: 0.78rem; font-weight: 700; letter-spacing: -0.01em; transition: border-color 0.15s; position: relative; }
-      .ge-chip:hover { border-color: color-mix(in srgb, var(--ge-brand) 50%, transparent); }
-      .ge-chip-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--ge-surface); display: flex; align-items: center; justify-content: center; color: var(--ge-brand); transition: background 0.15s, color 0.15s; font-size: 0.85rem; }
-      .ge-chip:hover .ge-chip-icon { background: var(--ge-brand); color: var(--ge-bg); }
-      .ge-chip-arrow { font-size: 0.65rem; color: var(--ge-text-2); margin-left: 2px; }
-      .ge-chip-plain { height: 32px; padding: 0 12px; border-radius: 8px; background: transparent; border: 1px solid transparent; display: flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; color: var(--ge-text-2); font-size: 0.78rem; font-weight: 500; transition: all 0.15s; }
-      .ge-chip-plain:hover { background: color-mix(in srgb, var(--ge-text-1) 5%, transparent); color: var(--ge-text-1); }
-      .ge-chip-plain.active { color: var(--ge-brand); border-color: color-mix(in srgb, var(--ge-brand) 30%, transparent); }
-      .ge-chip-plain .dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; background: var(--ge-brand); border-radius: 50%; box-shadow: 0 0 8px color-mix(in srgb, var(--ge-brand) 50%, transparent); }
-      .ge-sep { width: 1px; height: 20px; background: var(--ge-border); margin: 0 4px; flex-shrink: 0; }
-      .ge-spacer { flex: 1; }
-      .ge-batch { display: flex; align-items: center; background: var(--ge-panel); border-radius: 8px; border: 1px solid var(--ge-border); height: 32px; padding: 0 4px; margin-left: auto; }
-      .ge-batch button { width: 24px; height: 100%; display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--ge-text-2); cursor: pointer; font-size: 0.85rem; }
-      .ge-batch button:hover { color: var(--ge-text-1); }
-      .ge-batch span { font-size: 0.78rem; font-family: monospace; font-weight: 600; color: var(--ge-text-1); width: 24px; text-align: center; }
-
-      /* ── Popups ── */
-      .ge-popup { position: absolute; bottom: calc(100% + 12px); background: #1a1a1a; border: 1px solid var(--ge-border); border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 100; color: #fff; overflow: hidden; animation: ge-scale-in 0.15s ease-out; }
-      .ge-popup-sm { border-radius: 20px; padding: 8px; }
-      @keyframes ge-scale-in { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-      .ge-popup-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #27272a; background: rgba(15,15,15,0.5); }
-      .ge-popup-header span { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #a1a1aa; }
-      .ge-popup-close { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: none; background: none; color: #a1a1aa; cursor: pointer; font-size: 0.9rem; }
-      .ge-popup-close:hover { background: rgba(255,255,255,0.1); }
-      .ge-popup-body { max-height: 320px; overflow-y: auto; padding: 8px; }
-      .ge-model-row { width: 100%; text-align: left; padding: 12px; border-radius: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; border: 1px solid transparent; transition: all 0.1s; background: none; color: #fff; }
-      .ge-model-row:hover { background: #0f0f0f; }
-      .ge-model-row.selected { background: #0f0f0f; border-color: color-mix(in srgb, var(--ge-brand, #CCFF00) 50%, transparent); }
-      .ge-model-ava { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem; border: 1px solid #27272a; background: #0f0f0f; color: #a1a1aa; }
-      .ge-model-row.selected .ge-model-ava { background: var(--ge-brand, #CCFF00); color: #030303; border-color: transparent; }
-      .ge-model-info { flex: 1; min-width: 0; }
-      .ge-model-name { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
-      .ge-model-name .badge { font-size: 0.55rem; background: rgba(204,255,0,0.2); color: #CCFF00; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
-      .ge-model-desc { font-size: 0.65rem; color: #71717a; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      .ge-model-check { color: #CCFF00; font-size: 0.9rem; flex-shrink: 0; }
-      .ge-ar-row { width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: #a1a1aa; transition: all 0.1s; background: none; border: none; }
-      .ge-ar-row:hover { background: rgba(255,255,255,0.05); color: #fff; }
-      .ge-ar-row.selected { background: #0f0f0f; color: #fff; }
-      .ge-ar-row .check { color: #CCFF00; font-size: 0.8rem; }
-      .ge-ar-row .left { display: flex; align-items: center; gap: 8px; }
-      .ge-popup-title { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #71717a; padding: 8px 12px 4px; }
-      .ge-quality-row { width: 100%; text-align: left; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.82rem; font-weight: 500; color: rgba(255,255,255,0.6); transition: all 0.1s; background: none; border: none; }
-      .ge-quality-row:hover { background: rgba(255,255,255,0.05); color: #fff; }
-      .ge-quality-row.selected { background: rgba(255,255,255,0.1); color: #fff; }
-
-      /* ── Perspective popup ── */
-      .ge-persp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-      .ge-persp-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; font-size: 0.62rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; background: rgba(15,15,15,0.5); color: #a1a1aa; transition: all 0.15s; }
-      .ge-persp-btn:hover { border-color: rgba(204,255,0,0.3); color: #fff; }
-      .ge-persp-btn.active { background: rgba(204,255,0,0.2); border-color: rgba(204,255,0,0.6); color: #CCFF00; }
-      .ge-persp-btn .icon { font-size: 1rem; }
-
-      /* ── Rotate popup ── */
-      .ge-rot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-      .ge-rot-btn { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; background: var(--ge-surface, #0f0f0f); color: #a1a1aa; transition: all 0.15s; }
-      .ge-rot-btn:hover { border-color: rgba(204,255,0,0.3); color: #fff; }
-      .ge-rot-btn.active { background: rgba(204,255,0,0.2); border-color: rgba(204,255,0,0.6); color: #CCFF00; }
-
-      /* ── Spinner ── */
-      .ge-spinner { width: 48px; height: 48px; border: 3px solid var(--ge-border); border-top-color: var(--ge-brand); border-radius: 50%; animation: ge-spin 0.8s linear infinite; }
-      @keyframes ge-spin { to { transform: rotate(360deg); } }
-
-      /* ── Result ── */
-      .ge-result img { max-width: 80%; max-height: 60vh; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
-      .ge-result-meta { font-size: 0.85rem; color: var(--ge-text-2); text-align: center; margin-top: 12px; }
-
-      /* ── Gallery strip ── */
-      .ge-strip { display: flex; gap: 8px; padding: 8px 20px; overflow-x: auto; z-index: 2; }
-      .ge-strip::-webkit-scrollbar { display: none; }
-      .ge-thumb { flex-shrink: 0; width: 72px; height: 72px; border-radius: 10px; background: var(--ge-surface); border: 1px solid var(--ge-border); overflow: hidden; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-      .ge-thumb:hover { border-color: var(--ge-brand); }
-      .ge-thumb img { width: 100%; height: 100%; object-fit: cover; }
-      .ge-thumb span { font-size: 0.6rem; color: var(--ge-text-2); padding: 4px; text-align: center; line-height: 1.2; }
-
-      /* ── Brand bar ── */
-      .ge-brand-bar { position: absolute; top: 12px; left: 16px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: color-mix(in srgb, var(--ge-panel) 90%, transparent); backdrop-filter: blur(12px); border: 1px solid var(--ge-border); border-radius: 10px; font-size: 0.78rem; font-weight: 600; }
-      .ge-brand-dot { width: 10px; height: 10px; border-radius: 50%; }
-
-      /* ── Error ── */
-      .ge-error { background: rgba(239,68,68,0.1); color: #ef4444; padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; margin: 0 20px 8px; z-index: 2; }
+      .gs{--bg:#fff;--sf:#f4f4f5;--pn:#fff;--bd:#e4e4e7;--br:#000;--t1:#000;--t2:#52525b;--dt:#e4e4e7}
+      @media(prefers-color-scheme:dark){.gs{--bg:#030303;--sf:#0f0f0f;--pn:#141414;--bd:#27272a;--br:#CCFF00;--t1:#fff;--t2:#a1a1aa;--dt:#1a1a1a}}
+      :root.dark .gs,.dark .gs{--bg:#030303;--sf:#0f0f0f;--pn:#141414;--bd:#27272a;--br:#CCFF00;--t1:#fff;--t2:#a1a1aa;--dt:#1a1a1a}
+      .gs{display:flex;flex-direction:column;height:calc(100vh - 60px);background:var(--bg);background-image:radial-gradient(var(--dt) 1px,transparent 1px);background-size:24px 24px;color:var(--t1);font-family:'Inter',-apple-system,sans-serif;position:relative}
+      .gs *{box-sizing:border-box}
+      .gs-cv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:2}
+      .gs-eh h2{font-size:1.5rem;font-weight:600;margin:0 0 8px}
+      .gs-eh p{font-size:.95rem;color:var(--t2);margin:0}
+      .gs-sy{position:absolute;top:12px;right:16px;display:flex;align-items:center;gap:6px;padding:8px 16px;background:var(--pn);border:1px solid var(--bd);border-radius:12px;font-size:.82rem;font-weight:600;cursor:pointer;color:var(--t1);z-index:3}
+      .gs-sy:hover{border-color:var(--br)}
+      .gs-bb{position:absolute;top:12px;left:16px;z-index:3;display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--pn);border:1px solid var(--bd);border-radius:10px;font-size:.78rem;font-weight:600}
+      .gs-bd{width:10px;height:10px;border-radius:50%}
+      .gs-er{background:rgba(239,68,68,.1);color:#ef4444;padding:8px 16px;border-radius:8px;font-size:.82rem;margin:0 20px 8px;z-index:2}
+      .gs-bw{position:relative;z-index:40;padding:0 16px 16px;display:flex;justify-content:center}
+      .gs-bar{position:relative;width:100%;max-width:900px;background:color-mix(in srgb,var(--pn) 80%,transparent);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid color-mix(in srgb,var(--t1) 5%,transparent);border-radius:28px;padding:6px;box-shadow:0 20px 40px -10px rgba(0,0,0,.3)}
+      .gs-in{display:flex;flex-direction:column;gap:6px}
+      .gs-top{display:flex;align-items:center;gap:10px;padding:4px 6px 0}
+      .gs-ab{width:40px;height:40px;border-radius:50%;background:var(--sf);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;color:var(--t2);cursor:pointer;flex-shrink:0;font-size:1.2rem}
+      .gs-ab:hover{border-color:var(--br);color:var(--t1)}
+      .gs-pr{flex:1;background:transparent;border:none;outline:none;color:var(--t1);font-size:.9rem;font-weight:500;padding:8px 4px;resize:none;height:48px;font-family:inherit;line-height:1.6}
+      .gs-pr::placeholder{color:color-mix(in srgb,var(--t2) 50%,transparent)}
+      .gs-ib{width:40px;height:48px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--t2);cursor:pointer;border-radius:12px;font-size:1.1rem;flex-shrink:0}
+      .gs-ib:hover{background:var(--sf);color:var(--t1)}
+      .gs-gw{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+      .gs-gn{display:flex;align-items:center;gap:8px;height:40px;padding:0 20px;background:var(--br);color:var(--bg);border:none;border-radius:12px;font-size:.7rem;font-weight:800;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:opacity .15s,transform .15s}
+      .gs-gn:hover:not(:disabled){transform:scale(1.05)}
+      .gs-gn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+      .gs-gs{font-size:.55rem;color:var(--t2);font-family:monospace;text-transform:uppercase;opacity:.5;padding-right:4px}
+      .gs-ch{display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--sf) 50%,transparent);border-radius:24px;padding:6px;overflow-x:auto}
+      .gs-ch::-webkit-scrollbar{display:none}
+      .gs-mc{height:36px;padding:0 12px 0 4px;border-radius:999px;background:var(--pn);border:1px solid var(--bd);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;color:var(--t1);font-size:.78rem;font-weight:700;letter-spacing:-.01em;transition:border-color .15s;position:relative}
+      .gs-mc:hover{border-color:color-mix(in srgb,var(--br) 50%,transparent)}
+      .gs-ci{width:28px;height:28px;border-radius:50%;background:var(--sf);display:flex;align-items:center;justify-content:center;color:var(--br);font-size:.85rem;transition:background .15s,color .15s}
+      .gs-mc:hover .gs-ci{background:var(--br);color:var(--bg)}
+      .gs-cp{height:32px;padding:0 12px;border-radius:8px;background:transparent;border:1px solid transparent;display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap;color:var(--t2);font-size:.78rem;font-weight:500;transition:all .15s;position:relative}
+      .gs-cp:hover{background:color-mix(in srgb,var(--t1) 5%,transparent);color:var(--t1)}
+      .gs-cp.on{color:var(--br);border-color:color-mix(in srgb,var(--br) 30%,transparent)}
+      .gs-sp{width:1px;height:20px;background:var(--bd);margin:0 4px;flex-shrink:0}
+      .gs-bt{display:flex;align-items:center;background:var(--pn);border-radius:8px;border:1px solid var(--bd);height:32px;padding:0 4px;margin-left:auto}
+      .gs-bt button{width:24px;height:100%;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--t2);cursor:pointer;font-size:.85rem}
+      .gs-bt button:hover{color:var(--t1)}
+      .gs-bt span{font-size:.78rem;font-family:monospace;font-weight:600;color:var(--t1);width:24px;text-align:center}
+      .gs-pop{position:absolute;bottom:calc(100% + 12px);background:#1a1a1a;border:1px solid #27272a;border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:100;color:#fff;overflow:hidden;animation:gsi .15s ease-out}
+      .gs-pop-s{border-radius:20px;padding:8px}
+      @keyframes gsi{from{opacity:0;transform:scale(.95) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+      .gs-ph{display:flex;justify-content:space-between;align-items:center;padding:16px;border-bottom:1px solid #27272a;background:rgba(15,15,15,.5)}
+      .gs-ph span{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#a1a1aa}
+      .gs-px{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:none;background:none;color:#a1a1aa;cursor:pointer;font-size:.9rem}
+      .gs-px:hover{background:rgba(255,255,255,.1)}
+      .gs-pb{max-height:320px;overflow-y:auto;padding:8px}
+      .gs-mr{width:100%;text-align:left;padding:12px;border-radius:12px;display:flex;align-items:center;gap:12px;cursor:pointer;border:1px solid transparent;transition:all .1s;background:none;color:#fff}
+      .gs-mr:hover{background:#0f0f0f}
+      .gs-mr.sl{background:#0f0f0f;border-color:rgba(204,255,0,.5)}
+      .gs-ma{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;border:1px solid #27272a;background:#0f0f0f;color:#a1a1aa}
+      .gs-mr.sl .gs-ma{background:#CCFF00;color:#030303;border-color:transparent}
+      .gs-mn{font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:6px}
+      .gs-mn .bg{font-size:.55rem;background:rgba(204,255,0,.2);color:#CCFF00;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-weight:800;letter-spacing:.05em}
+      .gs-md{font-size:.65rem;color:#71717a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .gs-ar{width:100%;text-align:left;padding:10px 12px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-size:.82rem;font-weight:500;color:#a1a1aa;transition:all .1s;background:none;border:none}
+      .gs-ar:hover{background:rgba(255,255,255,.05);color:#fff}
+      .gs-ar.sl{background:#0f0f0f;color:#fff}
+      .gs-pt{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#71717a;padding:8px 12px 4px}
+      .gs-cg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+      .gs-cb{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px;border-radius:12px;font-size:.62rem;font-weight:600;cursor:pointer;border:1px solid transparent;background:rgba(15,15,15,.5);color:#a1a1aa;transition:all .15s}
+      .gs-cb:hover{border-color:rgba(204,255,0,.3);color:#fff}
+      .gs-rg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+      .gs-rb{display:flex;align-items:center;gap:10px;padding:12px;border-radius:12px;font-size:.75rem;font-weight:600;cursor:pointer;border:1px solid transparent;background:#0f0f0f;color:#a1a1aa;transition:all .15s}
+      .gs-rb:hover{border-color:rgba(204,255,0,.3);color:#fff}
+      .gs-sn{width:48px;height:48px;border:3px solid var(--bd);border-top-color:var(--br);border-radius:50%;animation:gss .8s linear infinite}
+      @keyframes gss{to{transform:rotate(360deg)}}
+      .gs-ri img{max-width:80%;max-height:60vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+      .gs-rm{font-size:.85rem;color:var(--t2);text-align:center;margin-top:12px}
+      .gs-st{display:flex;gap:8px;padding:8px 20px;overflow-x:auto;z-index:2}
+      .gs-st::-webkit-scrollbar{display:none}
+      .gs-th{flex-shrink:0;width:72px;height:72px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center}
+      .gs-th:hover{border-color:var(--br)}
+      .gs-th img{width:100%;height:100%;object-fit:cover}
+      .gs-th span{font-size:.6rem;color:var(--t2);padding:4px;text-align:center;line-height:1.2}
     </style>
 
-    <div class="ge-studio">
-      <!-- Canvas area -->
-      <div class="ge-canvas">
+    <div class="gs">
+      <div class="gs-cv">
         ${
           props.generating
-            ? html`
-            <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
-              <div class="ge-spinner"></div>
-              <div style="font-size:0.95rem;color:var(--ge-text-2);">Generating with ${currentModel.label}...</div>
-            </div>`
+            ? html`<div style="display:flex;flex-direction:column;align-items:center;gap:16px"><div class="gs-sn"></div><div style="font-size:.95rem;color:var(--t2)">Generating with ${cur.label}...</div></div>`
             : props.lastResult?.imageUrl
-              ? html`
-              <div class="ge-result">
-                <img src=${props.lastResult.imageUrl} alt=${props.lastResult.prompt} />
-                <div class="ge-result-meta">${props.lastResult.prompt} &mdash; ${currentModel.label}</div>
-              </div>`
+              ? html`<div class="gs-ri"><img src=${props.lastResult.imageUrl} alt=${props.lastResult.prompt} /><div class="gs-rm">${props.lastResult.prompt}</div></div>`
               : html`
-                  <div class="ge-empty" style="text-align: center">
+                  <div class="gs-eh" style="text-align: center">
                     <h2>Your canvas is empty</h2>
                     <p>Enter a prompt below to start creating</p>
                   </div>
                 `
         }
-
-        <button class="ge-sync"><span>\uD83D\uDCC1</span> Sync Folder</button>
-
-        ${
-          props.activeBrand
-            ? html`
-          <div class="ge-brand-bar">
-            <span class="ge-brand-dot" style="background:${props.activeBrand.colors.primary}"></span>
-            ${props.activeBrand.name}
-          </div>`
-            : nothing
-        }
+        <button class="gs-sy">\uD83D\uDCC1 Sync Folder</button>
+        ${props.activeBrand ? html`<div class="gs-bb"><span class="gs-bd" style="background:${props.activeBrand.colors.primary}"></span>${props.activeBrand.name}</div>` : nothing}
       </div>
 
-      ${props.error ? html`<div class="ge-error">${props.error}</div>` : nothing}
+      ${props.error ? html`<div class="gs-er">${props.error}</div>` : nothing}
 
-      <!-- Recent generations strip -->
-      ${
-        props.recentGenerations.length > 0
-          ? html`
-        <div class="ge-strip">
-          ${props.recentGenerations.map(
-            (g) => html`
-            <div class="ge-thumb" title=${g.prompt}>
-              ${g.imageUrl ? html`<img src=${g.imageUrl} alt=${g.prompt} />` : html`<span>${g.prompt.slice(0, 25)}</span>`}
-            </div>`,
-          )}
-        </div>`
-          : nothing
-      }
+      ${props.recentGenerations.length > 0 ? html`<div class="gs-st">${props.recentGenerations.map((g) => html`<div class="gs-th" title=${g.prompt}>${g.imageUrl ? html`<img src=${g.imageUrl} alt=${g.prompt} />` : html`<span>${g.prompt.slice(0, 25)}</span>`}</div>`)}</div>` : nothing}
 
-      <!-- Control Bar -->
-      <div class="ge-bar-wrap">
-        <div class="ge-bar">
-          <div class="ge-bar-inner">
-            <!-- Top row: prompt area -->
-            <div class="ge-top-row">
-              <button class="ge-add-btn" title="Add Reference Image">+</button>
-              <textarea class="ge-prompt" placeholder="Imagine something extraordinary..."
+      ${ap ? backdrop() : nothing}
+
+      <div class="gs-bw">
+        <div class="gs-bar">
+          <div class="gs-in">
+            <div class="gs-top">
+              <button class="gs-ab" title="Add Reference Image">+</button>
+              <textarea class="gs-pr" placeholder="Imagine something extraordinary..."
                 .value=${props.prompt}
                 @input=${(e: Event) => props.onPromptChange((e.target as HTMLTextAreaElement).value)}
                 @keydown=${(e: KeyboardEvent) => {
@@ -454,132 +324,70 @@ export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult
                     e.preventDefault();
                     props.onGenerate();
                   }
-                }}
-              ></textarea>
-              <button class="ge-icon-btn" title="Save Prompt">\uD83D\uDD16</button>
-              <button class="ge-icon-btn" title="Harmonize / Lighting">\u2600\uFE0F</button>
-              <div class="ge-gen-wrap">
-                <button class="ge-gen-btn" ?disabled=${props.generating || !props.prompt.trim() || !props.connected}
-                  @click=${props.onGenerate}>
-                  <span class="sparkle">\u2728</span>
-                  ${props.generating ? "GENERATING..." : "GENERATE"}
+                }}></textarea>
+              <button class="gs-ib" title="Save Prompt">\uD83D\uDD16</button>
+              <button class="gs-ib" title="Harmonize">\u2600\uFE0F</button>
+              <div class="gs-gw">
+                <button class="gs-gn" ?disabled=${props.generating || !props.prompt.trim() || !props.connected} @click=${() => props.onGenerate()}>
+                  <span>\u2728</span> ${props.generating ? "GENERATING..." : "GENERATE"}
                 </button>
-                <span class="ge-gen-label">${currentModel.label}</span>
+                <span class="gs-gs">${cur.label}</span>
               </div>
             </div>
 
-            <!-- Chip row -->
-            <div class="ge-chips">
-              <!-- Model chip -->
-              <div class="ge-chip" style="position:relative"
-                @click=${(e: Event) => {
-                  const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                  if (p)
-                    (p as HTMLElement).style.display =
-                      (p as HTMLElement).style.display === "block" ? "none" : "block";
-                }}>
-                <div class="ge-chip-icon">\u26A1</div>
-                <span>${currentModel.label}</span>
-                <span class="ge-chip-arrow">\u203A</span>
-                <div class="ge-popup" style="display:none;left:0;width:320px;" @click=${(e: Event) => e.stopPropagation()}>
-                  <div class="ge-popup-header">
-                    <span>Select model</span>
-                    <button class="ge-popup-close" @click=${(e: Event) => {
-                      (
-                        (e.currentTarget as HTMLElement).closest(".ge-popup") as HTMLElement
-                      ).style.display = "none";
-                    }}>\u2715</button>
-                  </div>
-                  <div class="ge-popup-body">
-                    ${IMAGE_MODELS.map(
+            <div class="gs-ch">
+              <!-- Model -->
+              <div class="gs-mc" @click=${(e: Event) => {
+                e.stopPropagation();
+                props.onPopupToggle("model");
+              }}>
+                <div class="gs-ci">\u26A1</div><span>${cur.label}</span><span style="font-size:.65rem;color:var(--t2);margin-left:2px">\u203A</span>
+                ${
+                  ap === "model"
+                    ? html`
+                  <div class="gs-pop" style="left:0;width:320px" @click=${(e: Event) => e.stopPropagation()}>
+                    <div class="gs-ph"><span>Select model</span><button class="gs-px" @click=${() => props.onPopupToggle("model")}>\u2715</button></div>
+                    <div class="gs-pb">${IMAGE_MODELS.map(
                       (m) => html`
-                      <button class="ge-model-row ${m.value === props.model ? "selected" : ""}"
-                        @click=${() => {
-                          props.onModelChange(m.value);
-                          document
-                            .querySelectorAll(".ge-popup")
-                            .forEach((p) => ((p as HTMLElement).style.display = "none"));
-                        }}>
-                        <div class="ge-model-ava">${m.premium ? "\uD83D\uDC51" : "\u26A1"}</div>
-                        <div class="ge-model-info">
-                          <div class="ge-model-name">${m.label} ${m.badge ? html`<span class="badge">${m.badge}</span>` : nothing}</div>
-                          <div class="ge-model-desc">${m.desc}</div>
+                      <button class="gs-mr ${m.value === props.model ? "sl" : ""}" @click=${() => props.onModelChange(m.value)}>
+                        <div class="gs-ma">${m.premium ? "\uD83D\uDC51" : "\u26A1"}</div>
+                        <div style="flex:1;min-width:0">
+                          <div class="gs-mn">${m.label} ${m.badge ? html`<span class="bg">${m.badge}</span>` : nothing}</div>
+                          <div class="gs-md">${m.desc}</div>
                         </div>
                         ${
                           m.value === props.model
                             ? html`
-                                <span class="ge-model-check">\u2713</span>
+                                <span style="color: #ccff00">\u2713</span>
                               `
                             : nothing
                         }
                       </button>`,
-                    )}
-                  </div>
-                </div>
+                    )}</div>
+                  </div>`
+                    : nothing
+                }
               </div>
 
-              <div class="ge-sep"></div>
+              <div class="gs-sp"></div>
 
-              <!-- Aspect ratio chip -->
-              <div class="ge-chip-plain active" style="position:relative"
-                @click=${(e: Event) => {
-                  const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                  if (p)
-                    (p as HTMLElement).style.display =
-                      (p as HTMLElement).style.display === "block" ? "none" : "block";
-                }}>
-                ${arIcon(ASPECT_RATIOS.find((a) => a.value === props.aspectRatio)?.icon ?? "square")}
-                ${props.aspectRatio}
-                <div class="ge-popup ge-popup-sm" style="display:none;left:0;width:220px;" @click=${(e: Event) => e.stopPropagation()}>
-                  <div class="ge-popup-title">ASPECT RATIO</div>
-                  ${ASPECT_RATIOS.map(
-                    (ar) => html`
-                    <button class="ge-ar-row ${ar.value === props.aspectRatio ? "selected" : ""}"
-                      @click=${() => {
-                        props.onAspectRatioChange(ar.value);
-                        document
-                          .querySelectorAll(".ge-popup")
-                          .forEach((p) => ((p as HTMLElement).style.display = "none"));
-                      }}>
-                      <span class="left">${arIcon(ar.icon)} ${ar.label}</span>
-                      ${
-                        ar.value === props.aspectRatio
-                          ? html`
-                              <span class="check">\u2713</span>
-                            `
-                          : nothing
-                      }
-                    </button>`,
-                  )}
-                </div>
-              </div>
-
-              <!-- Quality chip (Gemini models) -->
-              ${
-                currentModel.hasQuality
-                  ? html`
-                <div class="ge-chip-plain" style="position:relative"
-                  @click=${(e: Event) => {
-                    const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                    if (p)
-                      (p as HTMLElement).style.display =
-                        (p as HTMLElement).style.display === "block" ? "none" : "block";
-                  }}>
-                  <span style="color:var(--ge-brand)">\uD83D\uDC8E</span> ${props.resolution}
-                  <div class="ge-popup ge-popup-sm" style="display:none;left:0;width:160px;" @click=${(e: Event) => e.stopPropagation()}>
-                    <div class="ge-popup-title" style="color:#CCFF00">Quality</div>
-                    ${["1K", "2K", "4K"].map(
-                      (q) => html`
-                      <button class="ge-quality-row ${q === props.resolution ? "selected" : ""}"
-                        @click=${() => {
-                          props.onResolutionChange(q);
-                          document
-                            .querySelectorAll(".ge-popup")
-                            .forEach((p) => ((p as HTMLElement).style.display = "none"));
-                        }}>
-                        ${q}
+              <!-- Aspect Ratio -->
+              <div class="gs-cp on" @click=${(e: Event) => {
+                e.stopPropagation();
+                props.onPopupToggle("aspect");
+              }}>
+                ${arSvg(ASPECT_RATIOS.find((a) => a.value === props.aspectRatio)?.icon ?? "square")} ${props.aspectRatio}
+                ${
+                  ap === "aspect"
+                    ? html`
+                  <div class="gs-pop gs-pop-s" style="left:0;width:220px" @click=${(e: Event) => e.stopPropagation()}>
+                    <div class="gs-pt">ASPECT RATIO</div>
+                    ${ASPECT_RATIOS.map(
+                      (ar) => html`
+                      <button class="gs-ar ${ar.value === props.aspectRatio ? "sl" : ""}" @click=${() => props.onAspectRatioChange(ar.value)}>
+                        <span style="display:flex;align-items:center;gap:8px">${arSvg(ar.icon)} ${ar.label}</span>
                         ${
-                          q === props.resolution
+                          ar.value === props.aspectRatio
                             ? html`
                                 <span style="color: #ccff00">\u2713</span>
                               `
@@ -587,147 +395,118 @@ export function renderStudioImageGen(props: StudioImageGenProps): TemplateResult
                         }
                       </button>`,
                     )}
-                  </div>
+                  </div>`
+                    : nothing
+                }
+              </div>
+
+              ${
+                cur.hasQuality
+                  ? html`
+                <div class="gs-cp" @click=${(e: Event) => {
+                  e.stopPropagation();
+                  props.onPopupToggle("quality");
+                }}>
+                  <span style="color:var(--br)">\uD83D\uDC8E</span> ${props.resolution}
+                  ${
+                    ap === "quality"
+                      ? html`
+                    <div class="gs-pop gs-pop-s" style="left:0;width:160px" @click=${(e: Event) => e.stopPropagation()}>
+                      <div class="gs-pt" style="color:#CCFF00">Quality</div>
+                      ${["1K", "2K", "4K"].map(
+                        (q) => html`
+                        <button class="gs-ar ${q === props.resolution ? "sl" : ""}" @click=${() => props.onResolutionChange(q)}>
+                          ${q} ${
+                            q === props.resolution
+                              ? html`
+                                  <span style="color: #ccff00">\u2713</span>
+                                `
+                              : nothing
+                          }
+                        </button>`,
+                      )}
+                    </div>`
+                      : nothing
+                  }
                 </div>`
                   : nothing
               }
 
-              <!-- Camera Angle chip -->
-              <div class="ge-chip-plain" style="position:relative"
-                @click=${(e: Event) => {
-                  const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                  if (p)
-                    (p as HTMLElement).style.display =
-                      (p as HTMLElement).style.display === "block" ? "none" : "block";
-                }}>
+              <div class="gs-cp" @click=${(e: Event) => {
+                e.stopPropagation();
+                props.onPopupToggle("camera");
+              }}>
                 \uD83D\uDCF7 Camera Angle
-                <div class="ge-popup" style="display:none;right:0;width:340px;" @click=${(e: Event) => e.stopPropagation()}>
-                  <div class="ge-popup-header">
-                    <span>\uD83D\uDCF7 Camera Perspective</span>
-                    <button class="ge-popup-close" @click=${(e: Event) => {
-                      (
-                        (e.currentTarget as HTMLElement).closest(".ge-popup") as HTMLElement
-                      ).style.display = "none";
-                    }}>\u2715</button>
-                  </div>
-                  <div style="padding:16px;">
-                    <div class="ge-popup-title" style="padding:0 0 8px">CAMERA ANGLE</div>
-                    <div class="ge-persp-grid">
-                      ${CAMERA_ANGLES.map(
-                        (a) => html`
-                        <button class="ge-persp-btn" @click=${() => {}}>
-                          <span class="icon">${a.icon}</span>
-                          <span>${a.label}</span>
-                        </button>`,
-                      )}
+                ${
+                  ap === "camera"
+                    ? html`
+                  <div class="gs-pop" style="right:0;width:340px" @click=${(e: Event) => e.stopPropagation()}>
+                    <div class="gs-ph"><span>\uD83D\uDCF7 Camera Perspective</span><button class="gs-px" @click=${() => props.onPopupToggle("camera")}>\u2715</button></div>
+                    <div style="padding:16px"><div class="gs-pt" style="padding:0 0 8px">CAMERA ANGLE</div>
+                      <div class="gs-cg">${CAMERA_ANGLES.map((a) => html`<button class="gs-cb"><span style="font-size:1rem">${a.icon}</span><span>${a.label}</span></button>`)}</div>
                     </div>
-                  </div>
-                </div>
+                  </div>`
+                    : nothing
+                }
               </div>
 
-              <!-- Rotate Object chip -->
-              <div class="ge-chip-plain" style="position:relative"
-                @click=${(e: Event) => {
-                  const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                  if (p)
-                    (p as HTMLElement).style.display =
-                      (p as HTMLElement).style.display === "block" ? "none" : "block";
-                }}>
+              <div class="gs-cp" @click=${(e: Event) => {
+                e.stopPropagation();
+                props.onPopupToggle("rotate");
+              }}>
                 \u21BA Rotate Object
-                <div class="ge-popup" style="display:none;right:0;width:320px;" @click=${(e: Event) => e.stopPropagation()}>
-                  <div class="ge-popup-header">
-                    <span>\u21BA Rotate Object</span>
-                    <button class="ge-popup-close" @click=${(e: Event) => {
-                      (
-                        (e.currentTarget as HTMLElement).closest(".ge-popup") as HTMLElement
-                      ).style.display = "none";
-                    }}>\u2715</button>
-                  </div>
-                  <div style="padding:16px;">
-                    <div class="ge-rot-grid">
-                      ${OBJECT_ROTATIONS.map(
-                        (r) => html`
-                        <button class="ge-rot-btn" @click=${() => {}}>
-                          <span style="font-size:1.1rem">${r.icon}</span>
-                          <span>${r.label}</span>
-                        </button>`,
-                      )}
-                    </div>
-                  </div>
-                </div>
+                ${
+                  ap === "rotate"
+                    ? html`
+                  <div class="gs-pop" style="right:0;width:320px" @click=${(e: Event) => e.stopPropagation()}>
+                    <div class="gs-ph"><span>\u21BA Rotate Object</span><button class="gs-px" @click=${() => props.onPopupToggle("rotate")}>\u2715</button></div>
+                    <div style="padding:16px"><div class="gs-rg">${OBJECT_ROTATIONS.map((r) => html`<button class="gs-rb"><span style="font-size:1.1rem">${r.icon}</span><span>${r.label}</span></button>`)}</div></div>
+                  </div>`
+                    : nothing
+                }
               </div>
 
-              <!-- Prompts chip -->
-              <div class="ge-chip-plain" style="position:relative"
-                @click=${(e: Event) => {
-                  const p = (e.currentTarget as HTMLElement).querySelector(".ge-popup");
-                  if (p)
-                    (p as HTMLElement).style.display =
-                      (p as HTMLElement).style.display === "block" ? "none" : "block";
-                }}>
-                \uD83D\uDD16 ${props.style || "Prompts"}
-                <div class="ge-popup" style="display:none;left:0;width:300px;" @click=${(e: Event) => e.stopPropagation()}>
-                  <div class="ge-popup-header">
-                    <span>\uD83D\uDD16 Style Presets</span>
-                    <button class="ge-popup-close" @click=${(e: Event) => {
-                      (
-                        (e.currentTarget as HTMLElement).closest(".ge-popup") as HTMLElement
-                      ).style.display = "none";
-                    }}>\u2715</button>
-                  </div>
-                  <div class="ge-popup-body">
-                    <button class="ge-ar-row ${!props.style ? "selected" : ""}" @click=${() => {
-                      props.onStyleChange("");
-                      document
-                        .querySelectorAll(".ge-popup")
-                        .forEach((p) => ((p as HTMLElement).style.display = "none"));
-                    }}>
-                      <span>Auto (no style)</span>
-                      ${
+              <div class="gs-cp" @click=${(e: Event) => {
+                e.stopPropagation();
+                props.onPopupToggle("prompts");
+              }}>
+                \uD83D\uDD16 Prompts
+                ${
+                  ap === "prompts"
+                    ? html`
+                  <div class="gs-pop" style="left:0;width:300px" @click=${(e: Event) => e.stopPropagation()}>
+                    <div class="gs-ph"><span>\uD83C\uDFA8 Style Presets</span><button class="gs-px" @click=${() => props.onPopupToggle("prompts")}>\u2715</button></div>
+                    <div class="gs-pb">
+                      <button class="gs-ar ${!props.style ? "sl" : ""}" @click=${() => props.onStyleChange("")}><span>Auto (no style)</span>${
                         !props.style
                           ? html`
-                              <span class="check">\u2713</span>
+                              <span style="color: #ccff00">\u2713</span>
                             `
                           : nothing
-                      }
-                    </button>
-                    ${STYLE_PRESETS.map(
-                      (s) => html`
-                      <button class="ge-ar-row ${s === props.style ? "selected" : ""}"
-                        @click=${() => {
-                          props.onStyleChange(s);
-                          document
-                            .querySelectorAll(".ge-popup")
-                            .forEach((p) => ((p as HTMLElement).style.display = "none"));
-                        }}>
-                        <span>${s}</span>
-                        ${
-                          s === props.style
-                            ? html`
-                                <span class="check">\u2713</span>
-                              `
-                            : nothing
-                        }
-                      </button>`,
-                    )}
-                  </div>
-                </div>
+                      }</button>
+                      ${STYLE_PRESETS.map(
+                        (s) =>
+                          html`<button class="gs-ar ${s === props.style ? "sl" : ""}" @click=${() => props.onStyleChange(s)}><span>${s}</span>${
+                            s === props.style
+                              ? html`
+                                  <span style="color: #ccff00">\u2713</span>
+                                `
+                              : nothing
+                          }</button>`,
+                      )}
+                    </div>
+                  </div>`
+                    : nothing
+                }
               </div>
 
-              <div class="ge-sep"></div>
+              <div class="gs-sp"></div>
+              <div class="gs-cp ${props.activeBrand ? "on" : ""}">\u2728 ${props.activeBrand?.name ?? "No Brand"}</div>
 
-              <!-- Brand chip -->
-              <div class="ge-chip-plain ${props.activeBrand ? "active" : ""}">
-                \u2728 ${props.activeBrand?.name ?? "No Brand"}
-              </div>
-
-              <div class="ge-spacer"></div>
-
-              <!-- Batch count -->
-              <div class="ge-batch">
+              <div class="gs-bt">
                 <button @click=${() => props.onBatchCountChange(Math.max(1, props.batchCount - 1))}>-</button>
                 <span>${props.batchCount}</span>
-                <button @click=${() => props.onBatchCountChange(Math.min(currentModel.maxBatch, props.batchCount + 1))}>+</button>
+                <button @click=${() => props.onBatchCountChange(Math.min(cur.maxBatch, props.batchCount + 1))}>+</button>
               </div>
             </div>
           </div>

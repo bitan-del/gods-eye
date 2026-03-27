@@ -326,6 +326,7 @@ export type AppViewState = {
     studioImageGenAspectRatio: string;
     studioImageGenResolution: string;
     studioImageGenBatchCount: number;
+    studioImageGenActivePopup: string | null;
     studioImageGenLastResult: {
       id: string;
       model: string;
