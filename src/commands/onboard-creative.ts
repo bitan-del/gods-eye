@@ -6,7 +6,7 @@ import type { GodsEyeConfig } from "../config/config.js";
 import { enablePluginInConfig } from "../plugins/enable.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
-import type { SecretInputMode } from "./onboard-types.js";
+// SecretInputMode reserved for future use when we support masked input.
 
 interface CreativeProvider {
   id: string;
@@ -53,7 +53,6 @@ export async function setupCreativeTools(
   prompter: WizardPrompter,
   _options?: {
     quickstartDefaults?: boolean;
-    secretInputMode?: SecretInputMode;
   },
 ): Promise<GodsEyeConfig> {
   let nextConfig = { ...config };
@@ -89,7 +88,7 @@ export async function setupCreativeTools(
   );
 
   // Enable the studio plugin
-  nextConfig = enablePluginInConfig(nextConfig, "gods-eye-studio");
+  nextConfig = enablePluginInConfig(nextConfig, "gods-eye-studio").config;
 
   for (const provider of CREATIVE_PROVIDERS) {
     const existingVar = resolveExistingKeyVar(provider.envVars, env);
@@ -101,7 +100,7 @@ export async function setupCreativeTools(
       });
       if (useExisting) {
         await prompter.note(`Using existing ${existingVar} for ${provider.label}.`, "Studio");
-        nextConfig = enablePluginInConfig(nextConfig, provider.pluginId);
+        nextConfig = enablePluginInConfig(nextConfig, provider.pluginId).config;
         continue;
       }
     }
@@ -127,13 +126,13 @@ export async function setupCreativeTools(
         // Set in current process so subsequent steps can see it
         env[envVar] = apiKey.trim();
       }
-      nextConfig = enablePluginInConfig(nextConfig, provider.pluginId);
+      nextConfig = enablePluginInConfig(nextConfig, provider.pluginId).config;
       await prompter.note(`${provider.label} configured.`, "Studio");
     }
   }
 
   // Enable the studio extension itself
-  nextConfig = enablePluginInConfig(nextConfig, "gods-eye-studio");
+  nextConfig = enablePluginInConfig(nextConfig, "gods-eye-studio").config;
 
   await prompter.note(
     [

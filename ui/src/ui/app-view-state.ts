@@ -310,6 +310,10 @@ export type AppViewState = {
       id: string;
       name: string;
       colors: { primary: string; secondary: string };
+      fonts?: { heading?: string; body?: string };
+      tone?: string;
+      visualStyle?: string;
+      createdAt?: string;
     } | null;
     studioImageGenLoading: boolean;
     studioImageGenGenerating: boolean;
@@ -385,6 +389,31 @@ export type AppViewState = {
     }>;
     studioGalleryFilter: "all" | "image" | "video" | "text";
     studioGallerySearch: string;
+    studioGalleryPreviewItem: null | {
+      id: string;
+      type: "image" | "video" | "text";
+      prompt: string;
+      model: string;
+      provider: string;
+      brandName?: string;
+      tags: string[];
+      createdAt: string;
+      resultRef?: string;
+      thumbnailUrl?: string;
+      fullUrl?: string;
+    };
+    studioGalleryCompareItems: Array<{
+      id: string;
+      type: "image" | "video" | "text";
+      prompt: string;
+      model: string;
+      provider: string;
+      brandName?: string;
+      tags: string[];
+      createdAt: string;
+      resultRef?: string;
+    }>;
+    studioGallerySubView: "gallery" | "spaces" | "editor";
     paletteOpen: boolean;
     paletteQuery: string;
     paletteActiveIndex: number;

@@ -568,7 +568,6 @@ export async function runSetupWizard(
     const { setupCreativeTools } = await import("../commands/onboard-creative.js");
     nextConfig = await setupCreativeTools(nextConfig, runtime, prompter, {
       quickstartDefaults: flow === "quickstart",
-      secretInputMode: opts.secretInputMode,
     });
   }
 

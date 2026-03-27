@@ -1433,9 +1433,14 @@ export function renderApp(state: AppViewState) {
                   error: state.studioBrandError ?? null,
                   scanSource: state.studioBrandScanSource ?? "",
                   scanName: state.studioBrandScanName ?? "",
-                  activeBrand: state.studioActiveBrand ?? null,
+                  activeBrand: state.studioActiveBrand
+                    ? {
+                        ...state.studioActiveBrand,
+                        createdAt: state.studioActiveBrand.createdAt ?? new Date().toISOString(),
+                      }
+                    : null,
                   brands: state.studioBrands ?? [],
-                  onScanSourceChange: (v) => (state.studioBrandScanSource = v),
+                  onScanSourceChange: (v: string) => (state.studioBrandScanSource = v),
                   onScanNameChange: (v) => (state.studioBrandScanName = v),
                   onScan: () => handleStudioBrandScan(state),
                   onSetActive: (id) => handleStudioSetActiveBrand(state, id),
@@ -1477,9 +1482,34 @@ export function renderApp(state: AppViewState) {
                   generations: state.studioGalleryItems ?? [],
                   filterType: state.studioGalleryFilter ?? "all",
                   searchQuery: state.studioGallerySearch ?? "",
-                  onFilterChange: (v) => (state.studioGalleryFilter = v),
-                  onSearchChange: (v) => (state.studioGallerySearch = v),
+                  previewItem: state.studioGalleryPreviewItem ?? null,
+                  compareItems: state.studioGalleryCompareItems ?? [],
+                  subView: state.studioGallerySubView ?? "gallery",
+                  onFilterChange: (v: "all" | "image" | "video" | "text") =>
+                    (state.studioGalleryFilter = v),
+                  onSearchChange: (v: string) => (state.studioGallerySearch = v),
                   onRefresh: () => handleStudioGalleryRefresh(state),
+                  onPreview: (item: unknown) =>
+                    (state.studioGalleryPreviewItem =
+                      item as typeof state.studioGalleryPreviewItem),
+                  onToggleCompare: (item: unknown) => {
+                    const items = state.studioGalleryCompareItems ?? [];
+                    const existing = items.findIndex(
+                      (i: { id: string }) => i.id === (item as { id: string }).id,
+                    );
+                    if (existing >= 0) {
+                      state.studioGalleryCompareItems = items.filter(
+                        (_: unknown, idx: number) => idx !== existing,
+                      );
+                    } else if (items.length < 2) {
+                      state.studioGalleryCompareItems = [...items, item as (typeof items)[0]];
+                    }
+                  },
+                  onClearCompare: () => (state.studioGalleryCompareItems = []),
+                  onDownload: () => {},
+                  onRegenerate: () => {},
+                  onOpenSpaces: () => (state.studioGallerySubView = "spaces"),
+                  onOpenEditor: () => (state.studioGallerySubView = "editor"),
                 }),
               )
             : nothing

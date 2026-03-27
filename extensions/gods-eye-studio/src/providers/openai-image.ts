@@ -1,6 +1,6 @@
 // OpenAI image provider — DALL-E 3 and GPT Image generation.
 
-import { resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth";
+import { type AuthProfileStore, resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1";
@@ -48,7 +48,7 @@ export async function resolveOpenAIApiKey(params?: {
     provider: "openai",
     cfg: params?.cfg,
     agentDir: params?.agentDir,
-    store: params?.authStore,
+    store: params?.authStore as AuthProfileStore | undefined,
   });
   if (!auth.apiKey) {
     throw new Error(

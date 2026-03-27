@@ -5,8 +5,7 @@
 // provider APIs (fal, Gemini, OpenAI) and records results in the brain.
 
 import { join } from "node:path";
-import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
-import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth";
+import { definePluginEntry, type AnyAgentTool } from "godseye/plugin-sdk/plugin-entry";
 import { buildCreativeContext, renderCreativeContextPrompt } from "./src/brain/context-builder.js";
 import { BrainMemory } from "./src/brain/memory.js";
 import { buildBrandScanToolDef } from "./src/tools/brand-scan.js";
@@ -35,42 +34,10 @@ export default definePluginEntry({
   name: "Gods Eye Studio",
   description:
     "Unified creative brain — image generation, video generation, brand intelligence, content calendar, and persistent creative memory. One brain, always aware.",
-  kind: "studio",
 
   register(api) {
-    // -- Auth providers for creative APIs ----------------------------------
-
-    api.registerAuthMethod({
-      ...createProviderApiKeyAuthMethod({
-        providerId: "fal",
-        envVarNames: ["FAL_KEY"],
-        wizard: {
-          choiceId: "studio-fal-api-key",
-          choiceLabel: "fal API key (image/video generation)",
-          choiceHint: "Powers image and video generation in Gods Eye Studio",
-          groupId: PLUGIN_ID,
-          groupLabel: "Gods Eye Studio",
-          groupHint: "Creative tools (image gen, video gen, brand intelligence)",
-          onboardingScopes: ["image-generation"],
-        },
-      }),
-    });
-
-    api.registerAuthMethod({
-      ...createProviderApiKeyAuthMethod({
-        providerId: "google",
-        envVarNames: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-        wizard: {
-          choiceId: "studio-gemini-api-key",
-          choiceLabel: "Google Gemini API key (creative intelligence)",
-          choiceHint: "Powers brand analysis and creative reasoning",
-          groupId: PLUGIN_ID,
-          groupLabel: "Gods Eye Studio",
-          groupHint: "Creative tools (image gen, video gen, brand intelligence)",
-          onboardingScopes: ["image-generation"],
-        },
-      }),
-    });
+    // Auth for fal + google is declared in godseye.plugin.json (authChoices).
+    // No runtime registerAuthMethod call needed — the manifest handles it.
 
     // -- Initialize the Brain -----------------------------------------------
 
@@ -88,11 +55,12 @@ export default definePluginEntry({
 
     api.registerTool(
       (ctx) => {
-        const brain = getBrain(ctx.pluginConfig ?? {});
+        const brain = getBrain((ctx.config as Record<string, unknown> | undefined) ?? {});
         const def = buildImageGenToolDef(brain);
         return {
           ...def,
-          async execute(params: Record<string, unknown>) {
+          label: "Generate Image",
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
             const { executeImageGeneration } = await import("./src/execute.js");
             return executeImageGeneration(
               brain,
@@ -108,18 +76,19 @@ export default definePluginEntry({
               ctx.config,
             );
           },
-        };
+        } as unknown as AnyAgentTool;
       },
       { names: ["studio_image_generate"] },
     );
 
     api.registerTool(
       (ctx) => {
-        const brain = getBrain(ctx.pluginConfig ?? {});
+        const brain = getBrain((ctx.config as Record<string, unknown> | undefined) ?? {});
         const def = buildVideoGenToolDef(brain);
         return {
           ...def,
-          async execute(params: Record<string, unknown>) {
+          label: "Generate Video",
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
             const { executeVideoGeneration } = await import("./src/execute.js");
             return executeVideoGeneration(
               brain,
@@ -133,18 +102,19 @@ export default definePluginEntry({
               ctx.config,
             );
           },
-        };
+        } as unknown as AnyAgentTool;
       },
       { names: ["studio_video_generate"] },
     );
 
     api.registerTool(
       (ctx) => {
-        const brain = getBrain(ctx.pluginConfig ?? {});
+        const brain = getBrain((ctx.config as Record<string, unknown> | undefined) ?? {});
         const def = buildBrandScanToolDef();
         return {
           ...def,
-          async execute(params: Record<string, unknown>) {
+          label: "Brand Scan",
+          async execute(_toolCallId: string, params: Record<string, unknown>) {
             const { executeBrandScan } = await import("./src/execute.js");
             return executeBrandScan(
               brain,
@@ -156,18 +126,19 @@ export default definePluginEntry({
               ctx.config,
             );
           },
-        };
+        } as unknown as AnyAgentTool;
       },
       { names: ["studio_brand_scan"] },
     );
 
     api.registerTool(
       (ctx) => {
-        const brain = getBrain(ctx.pluginConfig ?? {});
+        const brain = getBrain((ctx.config as Record<string, unknown> | undefined) ?? {});
         const def = buildCalendarToolDef();
         return {
           ...def,
-          execute(params: Record<string, unknown>) {
+          label: "Content Calendar",
+          execute(_toolCallId: string, params: Record<string, unknown>) {
             const { executeCalendar } =
               require("./src/execute.js") as typeof import("./src/execute.js");
             return executeCalendar(brain, {
@@ -180,18 +151,19 @@ export default definePluginEntry({
               notes: params.notes ? String(params.notes) : undefined,
             });
           },
-        };
+        } as unknown as AnyAgentTool;
       },
       { names: ["studio_calendar"] },
     );
 
     api.registerTool(
       (ctx) => {
-        const brain = getBrain(ctx.pluginConfig ?? {});
+        const brain = getBrain((ctx.config as Record<string, unknown> | undefined) ?? {});
         const def = buildRecallToolDef();
         return {
           ...def,
-          execute(params: Record<string, unknown>) {
+          label: "Studio Recall",
+          execute(_toolCallId: string, params: Record<string, unknown>) {
             const { executeStudioRecall } =
               require("./src/execute.js") as typeof import("./src/execute.js");
             return executeStudioRecall(brain, {
@@ -200,7 +172,7 @@ export default definePluginEntry({
               limit: params.limit ? Number(params.limit) : undefined,
             });
           },
-        };
+        } as unknown as AnyAgentTool;
       },
       { names: ["studio_recall"] },
     );
