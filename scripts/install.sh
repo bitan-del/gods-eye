@@ -2465,6 +2465,26 @@ main() {
         ui_kv "Wrapper" "$HOME/.local/bin/godseye"
         ui_kv "Update command" "godseye update --restart"
         ui_kv "Switch to npm" "curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash -s -- --install-method npm"
+
+        # Auto-run onboard on fresh git installs
+        local config_path="${GODSEYE_CONFIG_PATH:-$HOME/.godseye/godseye.json}"
+        if [[ "$NO_ONBOARD" != "1" && "$skip_onboard" != "true" && ! -f "${config_path}" ]]; then
+            if [[ -r /dev/tty && -w /dev/tty ]]; then
+                local claw="${GODSEYE_BIN:-}"
+                if [[ -z "$claw" ]]; then
+                    claw="$(resolve_godseye_bin || true)"
+                fi
+                if [[ -z "$claw" && -x "$HOME/.local/bin/godseye" ]]; then
+                    claw="$HOME/.local/bin/godseye"
+                fi
+                if [[ -n "$claw" ]]; then
+                    echo ""
+                    ui_info "Starting setup"
+                    exec </dev/tty
+                    exec "$claw" onboard
+                fi
+            fi
+        fi
     elif [[ "$is_upgrade" == "true" ]]; then
         ui_info "Upgrade complete"
         if [[ -r /dev/tty && -w /dev/tty ]]; then
