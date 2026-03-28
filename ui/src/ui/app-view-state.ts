@@ -347,6 +347,7 @@ export type AppViewState = {
       thumbnailUrl?: string;
       createdAt: string;
     }>;
+    _imageGenLoaded?: boolean;
     studioVideoGenLoading: boolean;
     studioVideoGenGenerating: boolean;
     studioVideoGenError: string | null;

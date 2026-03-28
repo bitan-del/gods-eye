@@ -2,6 +2,9 @@
 // Prompts the user for fal.ai, Gemini, and other creative provider keys
 // during `godseye onboard`. Runs after search setup, before skills.
 
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { GodsEyeConfig } from "../config/config.js";
 import { enablePluginInConfig } from "../plugins/enable.js";
 import type { RuntimeEnv } from "../runtime.js";
@@ -45,6 +48,35 @@ function resolveExistingKeyVar(
   env: NodeJS.ProcessEnv,
 ): string | undefined {
   return envVars.find((v) => Boolean(env[v]?.trim()));
+}
+
+// Persist an API key into the auth-profiles store so it survives process restarts.
+function persistApiKeyToAuthStore(providerId: string, apiKey: string): void {
+  const authDir = join(homedir(), ".godseye", "agents", "main", "agent");
+  const authPath = join(authDir, "auth-profiles.json");
+  try {
+    mkdirSync(authDir, { recursive: true });
+    let data: Record<string, unknown> = {};
+    try {
+      data = JSON.parse(readFileSync(authPath, "utf-8")) as Record<string, unknown>;
+    } catch {
+      data = { version: 1, profiles: {}, lastGood: {}, usageStats: {} };
+    }
+    const profiles = (data.profiles ?? {}) as Record<string, unknown>;
+    const lastGood = (data.lastGood ?? {}) as Record<string, string>;
+    const profileKey = `${providerId}:default`;
+    profiles[profileKey] = {
+      type: "api_key",
+      provider: providerId,
+      key: apiKey,
+    };
+    lastGood[providerId] = profileKey;
+    data.profiles = profiles;
+    data.lastGood = lastGood;
+    writeFileSync(authPath, JSON.stringify(data, null, 2));
+  } catch {
+    // Non-fatal — the key is still in process.env for this session.
+  }
 }
 
 export async function setupCreativeTools(
@@ -99,7 +131,18 @@ export async function setupCreativeTools(
         initialValue: true,
       });
       if (useExisting) {
-        await prompter.note(`Using existing ${existingVar} for ${provider.label}.`, "Studio");
+        // Also persist the env key to auth store so it survives beyond this process
+        const envValue = env[existingVar]?.trim();
+        if (envValue) {
+          persistApiKeyToAuthStore(
+            provider.id === "gemini-creative" ? "google" : provider.id,
+            envValue,
+          );
+        }
+        await prompter.note(
+          `Using existing ${existingVar} for ${provider.label}. Saved.`,
+          "Studio",
+        );
         nextConfig = enablePluginInConfig(nextConfig, provider.pluginId).config;
         continue;
       }
@@ -120,14 +163,19 @@ export async function setupCreativeTools(
     });
 
     if (apiKey?.trim()) {
-      // Store the key — use the credential storage system
+      const trimmedKey = apiKey.trim();
+      // Set in current process so subsequent steps can see it
       const envVar = provider.envVars[0];
       if (envVar) {
-        // Set in current process so subsequent steps can see it
-        env[envVar] = apiKey.trim();
+        env[envVar] = trimmedKey;
       }
+      // Persist to auth-profiles.json so the key survives restarts
+      persistApiKeyToAuthStore(
+        provider.id === "gemini-creative" ? "google" : provider.id,
+        trimmedKey,
+      );
       nextConfig = enablePluginInConfig(nextConfig, provider.pluginId).config;
-      await prompter.note(`${provider.label} configured.`, "Studio");
+      await prompter.note(`${provider.label} configured and saved.`, "Studio");
     }
   }
 

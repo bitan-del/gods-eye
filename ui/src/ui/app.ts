@@ -135,7 +135,7 @@ export class GodsEyeApp extends LitElement {
   @state() onboarding = resolveOnboardingMode();
   @state() connected = false;
   @state() theme: ThemeName = this.settings.theme ?? "claw";
-  @state() themeMode: ThemeMode = this.settings.themeMode ?? "system";
+  @state() themeMode: ThemeMode = this.settings.themeMode ?? "light";
   @state() themeResolved: ResolvedTheme = "dark";
   @state() themeOrder: ThemeName[] = this.buildThemeOrder(this.theme);
   @state() hello: GatewayHelloOk | null = null;
@@ -443,6 +443,103 @@ export class GodsEyeApp extends LitElement {
   @state() logsLimit = 500;
   @state() logsMaxBytes = 250_000;
   @state() logsAtBottom = true;
+
+  // Studio — Image Gen
+  @state() studioImageGenLoading = false;
+  @state() studioImageGenGenerating = false;
+  @state() studioImageGenError: string | null = null;
+  @state() studioImageGenPrompt = "";
+  @state() studioImageGenModel = "fal-ai/flux/dev";
+  @state() studioImageGenWidth = 1024;
+  @state() studioImageGenHeight = 1024;
+  @state() studioImageGenStyle = "";
+  @state() studioImageGenAspectRatio = "16:9";
+  @state() studioImageGenResolution = "1K";
+  @state() studioImageGenBatchCount = 1;
+  @state() studioImageGenActivePopup: string | null = null;
+  @state() studioImageGenLastResult: {
+    id: string;
+    model: string;
+    prompt: string;
+    imageCount: number;
+    savedTo?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    createdAt: string;
+  } | null = null;
+  @state() studioImageGenRecent: Array<{
+    id: string;
+    model: string;
+    prompt: string;
+    imageCount: number;
+    savedTo?: string;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    createdAt: string;
+  }> = [];
+
+  // Studio — Video Gen
+  @state() studioVideoGenLoading = false;
+  @state() studioVideoGenGenerating = false;
+  @state() studioVideoGenError: string | null = null;
+  @state() studioVideoGenPrompt = "";
+  @state() studioVideoGenModel = "fal-ai/kling-video/v2/master";
+  @state() studioVideoGenDuration = 5;
+  @state() studioVideoGenAspectRatio = "16:9";
+  @state() studioVideoGenLastResult: { id: string; model: string; videoUrl: string } | null = null;
+
+  // Studio — Brand
+  @state() studioBrandLoading = false;
+  @state() studioBrandScanning = false;
+  @state() studioBrandError: string | null = null;
+  @state() studioBrandScanSource = "";
+  @state() studioBrandScanName = "";
+  @state() studioBrands: Array<{
+    id: string;
+    name: string;
+    colors: { primary: string; secondary: string; accent?: string };
+    fonts?: { heading?: string; body?: string };
+    tone?: string;
+    visualStyle?: string;
+    createdAt: string;
+  }> = [];
+  @state() studioActiveBrand: {
+    id: string;
+    name: string;
+    colors: { primary: string; secondary: string };
+  } | null = null;
+
+  // Studio — Calendar
+  @state() studioCalendarLoading = false;
+  @state() studioCalendarError: string | null = null;
+  @state() studioCalendarSlots: Array<{
+    id: string;
+    date: string;
+    platform?: string;
+    status: "ideated" | "generated" | "approved" | "published";
+    generationId?: string;
+    notes?: string;
+  }> = [];
+  @state() studioCalendarNewDate = "";
+  @state() studioCalendarNewPlatform = "";
+  @state() studioCalendarNewNotes = "";
+
+  // Studio — Gallery
+  @state() studioGalleryLoading = false;
+  @state() studioGalleryError: string | null = null;
+  @state() studioGalleryItems: Array<{
+    id: string;
+    type: "image" | "video" | "text";
+    prompt: string;
+    model: string;
+    provider: string;
+    brandName?: string;
+    tags: string[];
+    createdAt: string;
+    resultRef?: string;
+  }> = [];
+  @state() studioGalleryFilter: "all" | "image" | "video" | "text" = "all";
+  @state() studioGallerySearch = "";
 
   client: GatewayBrowserClient | null = null;
   private chatScrollFrame: number | null = null;

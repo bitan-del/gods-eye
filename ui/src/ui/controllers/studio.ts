@@ -115,6 +115,33 @@ export type StudioState = {
 // Image Generation
 // ---------------------------------------------------------------------------
 
+// Load recent image generations from brain gallery into the Image Gen tab.
+export async function loadImageGenRecent(state: StudioState) {
+  if (!state.client || !state.connected) {
+    return;
+  }
+  try {
+    const items = await state.client.request<
+      Array<{
+        id: string;
+        model: string;
+        prompt: string;
+        imageCount: number;
+        savedTo?: string;
+        imageUrl?: string;
+        thumbnailUrl?: string;
+        createdAt: string;
+      }>
+    >("studio.gallery.list", { timeoutMs: 10_000 });
+    if (Array.isArray(items)) {
+      // Filter to image type and take the most recent 10
+      state.studioImageGenRecent = items.slice(0, 10);
+    }
+  } catch {
+    // Non-fatal — gallery may not be available yet.
+  }
+}
+
 export async function handleStudioImageGenerate(state: StudioState) {
   if (!state.client || !state.connected) {
     return;

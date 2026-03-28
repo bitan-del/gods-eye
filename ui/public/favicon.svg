@@ -1,22 +1,28 @@
 <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="lobster-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ff4d4d"/>
-      <stop offset="100%" stop-color="#991b1b"/>
+    <linearGradient id="eye-g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5cc"/>
+      <stop offset="100%" stop-color="#0088ff"/>
     </linearGradient>
+    <radialGradient id="iris-g" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00ffcc"/>
+      <stop offset="60%" stop-color="#0088ff"/>
+      <stop offset="100%" stop-color="#003366"/>
+    </radialGradient>
   </defs>
-  <!-- Body -->
-  <path d="M60 10 C30 10 15 35 15 55 C15 75 30 95 45 100 L45 110 L55 110 L55 100 C55 100 60 102 65 100 L65 110 L75 110 L75 100 C90 95 105 75 105 55 C105 35 90 10 60 10Z" fill="url(#lobster-gradient)"/>
-  <!-- Left Claw -->
-  <path d="M20 45 C5 40 0 50 5 60 C10 70 20 65 25 55 C28 48 25 45 20 45Z" fill="url(#lobster-gradient)"/>
-  <!-- Right Claw -->
-  <path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="url(#lobster-gradient)"/>
-  <!-- Antenna -->
-  <path d="M45 15 Q35 5 30 8" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>
-  <path d="M75 15 Q85 5 90 8" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>
-  <!-- Eyes -->
-  <circle cx="45" cy="35" r="6" fill="#050810"/>
-  <circle cx="75" cy="35" r="6" fill="#050810"/>
-  <circle cx="46" cy="34" r="2.5" fill="#00e5cc"/>
-  <circle cx="76" cy="34" r="2.5" fill="#00e5cc"/>
+  <!-- Outer glow -->
+  <ellipse cx="60" cy="60" rx="52" ry="32" fill="url(#eye-g)" opacity="0.15"/>
+  <!-- Eye shape -->
+  <path d="M8 60 Q60 15 112 60 Q60 105 8 60Z" fill="url(#eye-g)" opacity="0.25"/>
+  <path d="M8 60 Q60 15 112 60 Q60 105 8 60Z" stroke="url(#eye-g)" stroke-width="2.5" fill="none"/>
+  <!-- Iris -->
+  <circle cx="60" cy="60" r="22" fill="url(#iris-g)"/>
+  <circle cx="60" cy="60" r="22" stroke="#00e5cc" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <!-- Pupil -->
+  <circle cx="60" cy="60" r="10" fill="#050810"/>
+  <!-- Light reflections -->
+  <circle cx="53" cy="54" r="4" fill="white" opacity="0.7"/>
+  <circle cx="66" cy="52" r="2" fill="white" opacity="0.4"/>
+  <!-- Inner ring detail -->
+  <circle cx="60" cy="60" r="16" stroke="#00e5cc" stroke-width="0.8" fill="none" opacity="0.3"/>
 </svg>

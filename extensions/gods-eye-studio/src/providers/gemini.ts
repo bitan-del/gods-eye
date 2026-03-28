@@ -5,7 +5,7 @@ import { type AuthProfileStore, resolveApiKeyForProvider } from "godseye/plugin-
 
 const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_ANALYSIS_MODEL = "gemini-2.5-flash";
-const DEFAULT_IMAGE_MODEL = "gemini-3.1-flash-image-preview";
+const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,6 +204,7 @@ export async function generateImageWithGemini(
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig,
     }),
+    signal: AbortSignal.timeout(90_000), // image gen can take up to 90s
   });
 
   if (!response.ok) {

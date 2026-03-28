@@ -4,10 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GodsEye Control</title>
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="light dark" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
     <script>
       (function () {
         var THEMES = { claw: 1, knot: 1, dash: 1 };
@@ -23,21 +32,34 @@
         try {
           var keys = Object.keys(localStorage);
           var raw;
+          var settingsKey;
           for (var i = 0; i < keys.length; i++) {
             if (keys[i].indexOf("godseye.control.settings.v1") === 0) {
               raw = localStorage.getItem(keys[i]);
+              settingsKey = keys[i];
               if (raw) break;
             }
           }
-          if (!raw) return;
+          if (!raw) {
+            document.documentElement.setAttribute("data-theme", "light");
+            document.documentElement.setAttribute("data-theme-mode", "light");
+            return;
+          }
           var s = JSON.parse(raw);
           var t = s && s.theme;
           var m = s && s.themeMode;
           if (typeof t !== "string") t = "";
           if (typeof m !== "string") m = "";
+          /* Migrate old default dark/system to light */
+          if ((!m || m === "system" || m === "dark") && !s._themeMigrated) {
+            m = "light";
+            s.themeMode = "light";
+            s._themeMigrated = true;
+            if (settingsKey) localStorage.setItem(settingsKey, JSON.stringify(s));
+          }
           var legacy = LEGACY[t];
           var theme = THEMES[t] ? t : legacy ? legacy.split(":")[0] : "claw";
-          var mode = MODES[m] ? m : legacy ? legacy.split(":")[1] : "system";
+          var mode = MODES[m] ? m : legacy ? legacy.split(":")[1] : "light";
           if (mode === "system") {
             mode = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
           }

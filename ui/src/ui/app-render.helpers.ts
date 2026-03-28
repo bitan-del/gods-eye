@@ -55,10 +55,38 @@ function resetChatStateForSessionSwitch(state: AppViewState, sessionKey: string)
   });
 }
 
+/** Simple tooltip descriptions so anyone can understand what each page does. */
+const TAB_TOOLTIPS: Partial<Record<Tab, string>> & Record<string, string> = {
+  chat: "Talk to your AI assistant — ask questions, generate content, or just chat",
+  overview: "See everything at a glance — your connections, recent activity, and system health",
+  channels: "Connect messaging apps like Telegram, Discord, WhatsApp, and more",
+  instances: "See all the AI brains running right now and what they are doing",
+  sessions: "Browse past conversations and their history",
+  usage: "Track how much AI you have used — tokens, costs, and charts",
+  cron: "Set up tasks that run automatically on a schedule (like daily reminders)",
+  agents: "Manage your AI assistants — their personalities, skills, and settings",
+  skills: "Add or remove special abilities your AI can use (like web search or code)",
+  nodes: "See the servers and machines powering your setup",
+  studioImageGen: "Create images with AI — pick a model, describe what you want, and generate",
+  studioVideoGen: "Create videos with AI — turn text or images into short clips",
+  studioBrand: "Scan a website to extract brand colors, fonts, and style automatically",
+  studioCalendar: "Plan your content — schedule posts and track what is ready to publish",
+  studioGallery: "Browse everything you have created — images, videos, and more",
+  config: "Change how Gods Eye works — API keys, default models, and behavior",
+  communications: "Manage notification preferences and message routing",
+  appearance: "Customize colors, themes, fonts, and how the dashboard looks",
+  automation: "Set up hooks and scripts that run when certain things happen",
+  infrastructure: "Advanced server and gateway configuration",
+  aiAgents: "Create and manage multiple AI agents with different personalities",
+  debug: "Developer tools — test API calls, inspect raw data, and troubleshoot",
+  logs: "Read the system log — see exactly what happened and when",
+};
+
 export function renderTab(state: AppViewState, tab: Tab, opts?: { collapsed?: boolean }) {
   const href = pathForTab(tab, state.basePath);
   const isActive = state.tab === tab;
   const collapsed = opts?.collapsed ?? state.settings.navCollapsed;
+  const tooltip = TAB_TOOLTIPS[tab] ?? titleForTab(tab);
   return html`
     <a
       href=${href}
@@ -84,7 +112,7 @@ export function renderTab(state: AppViewState, tab: Tab, opts?: { collapsed?: bo
         }
         state.setTab(tab);
       }}
-      title=${titleForTab(tab)}
+      title=${tooltip}
     >
       <span class="nav-item__icon" aria-hidden="true">${icons[iconForTab(tab)]}</span>
       ${!collapsed ? html`<span class="nav-item__text">${titleForTab(tab)}</span>` : nothing}
