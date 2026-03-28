@@ -2028,373 +2028,41 @@ run_doctor() {
     ui_success "Doctor complete — system health verified"
 }
 
-# Auto-start gateway and open browser after setup wizard completes
-auto_start_gateway_after_setup() {
-    local claw="$1"
+# ---------------------------------------------------------------------------
+# Onboard flow — delegates to the built-in godseye onboard command
+# (same proven TUI that OpenClaw uses — handles all providers, auth, etc.)
+# ---------------------------------------------------------------------------
+run_onboard_flow() {
+    local claw="${GODSEYE_BIN:-}"
     if [[ -z "$claw" ]]; then
+        claw="$(resolve_godseye_bin || true)"
+    fi
+    if [[ -z "$claw" ]]; then
+        ui_info "Skipping onboarding (godseye not on PATH yet)"
+        warn_godseye_not_found
         return 0
     fi
 
     echo ""
-    ui_section "Step 3: Starting Gods Eye Gateway"
+    ui_section "Gods Eye Setup"
+    echo ""
+    echo -e "${INFO}Starting the onboarding wizard...${NC}"
+    echo -e "${INFO}This will walk you through configuring your AI providers.${NC}"
+    echo ""
 
-    # Ensure gateway.mode is set
+    # Ensure gateway.mode is set before onboard (prevents mode error)
     local current_mode
     current_mode="$("$claw" config get gateway.mode 2>/dev/null || true)"
     if [[ -z "$current_mode" || "$current_mode" == "null" || "$current_mode" == "undefined" ]]; then
         run_quiet_step "Setting gateway mode" "$claw" config set gateway.mode local
     fi
 
-    # Start the gateway in the background
-    if "$claw" gateway run --bind loopback --port 18789 --force &>/dev/null &
-    then
-        local gw_pid=$!
-        # Wait a few seconds for startup
-        local attempts=0
-        while (( attempts < 10 )); do
-            if curl -s -o /dev/null -w "" http://127.0.0.1:18789/ 2>/dev/null; then
-                ui_success "Gateway is running on http://127.0.0.1:18789"
-                break
-            fi
-            sleep 1
-            (( attempts++ ))
-        done
-
-        if (( attempts >= 10 )); then
-            ui_warn "Gateway may still be starting; check: http://127.0.0.1:18789"
-        fi
-
-        # Open the dashboard in the browser
-        echo ""
-        ui_info "Opening Gods Eye dashboard in your browser..."
-        if [[ "$(uname)" == "Darwin" ]]; then
-            open "http://127.0.0.1:18789" 2>/dev/null || true
-        elif command -v xdg-open &>/dev/null; then
-            xdg-open "http://127.0.0.1:18789" 2>/dev/null || true
-        elif command -v wslview &>/dev/null; then
-            wslview "http://127.0.0.1:18789" 2>/dev/null || true
-        fi
-
-        echo ""
-        ui_celebrate "👁 Gods Eye is live!"
-        echo ""
-        echo -e "  ${SUCCESS}Dashboard${NC}  http://127.0.0.1:18789"
-        echo -e "  ${SUCCESS}Docs${NC}       https://docs.gods-eye.org"
-        echo -e "  ${SUCCESS}Discord${NC}    https://discord.gg/clawd"
-        echo ""
-        echo -e "${MUTED}The gateway is running in the background (PID ${gw_pid}).${NC}"
-        echo -e "${MUTED}To stop: godseye gateway stop${NC}"
-        echo -e "${MUTED}To restart: godseye gateway run --bind loopback --port 18789${NC}"
+    # Run the built-in onboard command (handles all providers, auth, validation)
+    if "$claw" onboard </dev/tty; then
+        ui_success "Onboarding complete"
     else
-        ui_warn "Could not start gateway; run manually: godseye gateway run --bind loopback --port 18789"
+        ui_warn "Onboarding exited early; you can run it again with: godseye onboard"
     fi
-}
-
-# ---------------------------------------------------------------------------
-# Interactive API key setup wizard (runs inline in the installer)
-# ---------------------------------------------------------------------------
-
-# Prompt user to select a provider using gum or fallback read
-wizard_select_provider() {
-    local prompt_msg="$1"
-    local default_val="${2:-}"
-    local result=""
-
-    if [[ -n "$GUM" ]]; then
-        result="$("$GUM" choose --header "$prompt_msg" "anthropic (Claude)" "openai (GPT)" "gemini (Google)" "Skip for now" </dev/tty 2>/dev/tty)" || true
-    else
-        # Print menu to /dev/tty so it shows even inside $(...) subshell
-        {
-            echo ""
-            echo -e "${ACCENT}${prompt_msg}${NC}"
-            echo ""
-            echo -e "  ${SUCCESS}1${NC})  anthropic  — Claude (Opus, Sonnet, Haiku)"
-            echo -e "  ${SUCCESS}2${NC})  openai     — GPT (GPT-4o, GPT-5, o1)"
-            echo -e "  ${SUCCESS}3${NC})  gemini     — Google (Gemini Pro, Flash)"
-            echo ""
-            echo -e "  ${MUTED}s${NC})  Skip for now"
-            echo ""
-        } >/dev/tty
-        echo -n "  Enter choice [1-3 or s to skip]: " >/dev/tty
-        read -r choice </dev/tty
-        case "$choice" in
-            1) result="anthropic" ;;
-            2) result="openai" ;;
-            3) result="gemini" ;;
-            s|S|"") result="skip" ;;
-            *) result="skip" ;;
-        esac
-    fi
-
-    # Extract provider id from the selection
-    case "$result" in
-        anthropic*) echo "anthropic" ;;
-        openai*) echo "openai" ;;
-        gemini*) echo "gemini" ;;
-        *) echo "skip" ;;
-    esac
-}
-
-# Prompt user for an API key with masked input
-wizard_prompt_api_key() {
-    local provider="$1"
-    local key=""
-
-    local hint=""
-    local example=""
-    case "$provider" in
-        anthropic)
-            hint="Get your key at: https://console.anthropic.com/settings/keys"
-            example="Starts with sk-ant-api03-..."
-            ;;
-        openai)
-            hint="Get your key at: https://platform.openai.com/api-keys"
-            example="Starts with sk-..."
-            ;;
-        gemini)
-            hint="Get your key at: https://aistudio.google.com/apikey"
-            example="Starts with AI..."
-            ;;
-    esac
-
-    # Print to /dev/tty so it shows even inside $(...) subshell
-    {
-        echo ""
-        echo -e "  ${INFO}${hint}${NC}"
-        echo -e "  ${MUTED}${example}${NC}"
-        echo ""
-    } >/dev/tty
-
-    if [[ -n "$GUM" ]]; then
-        key="$("$GUM" input --header "Paste your ${provider} API key:" --placeholder "${example}" --password </dev/tty 2>/dev/tty)" || true
-    else
-        echo -n "  Paste your ${provider} API key: " >/dev/tty
-        read -r -s key </dev/tty
-        echo "" >/dev/tty
-    fi
-
-    echo "$key"
-}
-
-# Validate an API key format (quick offline check)
-wizard_validate_key_format() {
-    local provider="$1"
-    local key="$2"
-
-    if [[ -z "$key" ]]; then
-        return 1
-    fi
-
-    case "$provider" in
-        anthropic)
-            if [[ "$key" =~ ^sk-ant-.{34,194}$ ]]; then
-                return 0
-            fi
-            ui_error "Invalid Anthropic key format. Keys start with sk-ant- and are 40-200 characters."
-            return 1
-            ;;
-        openai)
-            if [[ "$key" =~ ^sk-.{38,198}$ ]]; then
-                return 0
-            fi
-            ui_error "Invalid OpenAI key format. Keys start with sk- and are 40-200 characters."
-            return 1
-            ;;
-        gemini)
-            if [[ "$key" =~ ^AI.{28,48}$ ]]; then
-                return 0
-            fi
-            ui_error "Invalid Google/Gemini key format. Keys start with AI and are 30-50 characters."
-            return 1
-            ;;
-        *)
-            if [[ ${#key} -gt 10 ]]; then
-                return 0
-            fi
-            return 1
-            ;;
-    esac
-}
-
-# Store an API key using godseye models auth paste-token
-wizard_store_api_key() {
-    local claw="$1"
-    local provider="$2"
-    local key="$3"
-
-    # Write the key to auth-profiles.json directly (avoids interactive prompt)
-    local agent_dir="$HOME/.godseye/agents/main/agent"
-    local auth_file="$agent_dir/auth-profiles.json"
-
-    mkdir -p "$agent_dir"
-
-    local profile_id="${provider}:manual"
-
-    if [[ -f "$auth_file" ]]; then
-        # Merge into existing auth-profiles.json
-        node -e "
-const fs = require('fs');
-const data = JSON.parse(fs.readFileSync('$auth_file', 'utf8'));
-if (!data.profiles) data.profiles = {};
-data.profiles['$profile_id'] = { provider: '$provider', token: process.argv[1] };
-fs.writeFileSync('$auth_file', JSON.stringify(data, null, 2));
-" "$key" 2>/dev/null
-    else
-        # Create new auth-profiles.json
-        node -e "
-const fs = require('fs');
-const data = { profiles: { '$profile_id': { provider: '$provider', token: process.argv[1] } } };
-fs.writeFileSync('$auth_file', JSON.stringify(data, null, 2));
-" "$key" 2>/dev/null
-    fi
-
-    if [[ $? -eq 0 ]]; then
-        ui_success "${provider} API key saved"
-        return 0
-    else
-        ui_error "Failed to save ${provider} API key"
-        return 1
-    fi
-}
-
-# Ask yes/no question
-wizard_confirm() {
-    local msg="$1"
-    local result=""
-
-    if [[ -n "$GUM" ]]; then
-        if "$GUM" confirm "$msg" </dev/tty 2>/dev/tty; then
-            echo "yes"
-        else
-            echo "no"
-        fi
-    else
-        echo "" >/dev/tty
-        echo -n "  $msg [y/N]: " >/dev/tty
-        read -r result </dev/tty
-        case "$result" in
-            [yY]|[yY][eE][sS]) echo "yes" ;;
-            *) echo "no" ;;
-        esac
-    fi
-}
-
-# Main setup wizard: primary key + fallback keys
-run_quickstart() {
-    local claw="${GODSEYE_BIN:-}"
-    if [[ -z "$claw" ]]; then
-        claw="$(resolve_godseye_bin || true)"
-    fi
-    if [[ -z "$claw" ]]; then
-        ui_info "Skipping setup wizard (godseye not on PATH yet)"
-        warn_godseye_not_found
-        return 0
-    fi
-
-    echo ""
-    ui_section "Gods Eye Setup Wizard"
-    echo ""
-    echo -e "${INFO}Let's configure your AI gateway step by step.${NC}"
-    echo -e "${INFO}You'll need at least one API key from a provider.${NC}"
-
-    local configured_providers=()
-    local primary_provider=""
-
-    # ── Step 1: Primary provider ──
-    echo ""
-    ui_section "Step 1: Primary AI Provider"
-    primary_provider="$(wizard_select_provider "Choose your primary AI provider:")"
-
-    if [[ "$primary_provider" == "skip" ]]; then
-        ui_warn "No provider configured. You can set one later with: godseye onboard"
-        return 0
-    fi
-
-    # Get and validate the API key
-    local primary_key=""
-    local attempts=0
-    while (( attempts < 3 )); do
-        primary_key="$(wizard_prompt_api_key "$primary_provider")"
-        if wizard_validate_key_format "$primary_provider" "$primary_key"; then
-            break
-        fi
-        (( attempts++ ))
-        if (( attempts >= 3 )); then
-            ui_error "Too many invalid attempts. Run godseye onboard later to configure."
-            return 0
-        fi
-    done
-
-    # Store the key
-    if wizard_store_api_key "$claw" "$primary_provider" "$primary_key"; then
-        configured_providers+=("$primary_provider")
-    fi
-
-    # ── Step 2: Fallback providers ──
-    echo ""
-    ui_section "Step 2: Fallback Providers (Optional)"
-    echo -e "${INFO}Fallback providers are used when your primary provider is unavailable${NC}"
-    echo -e "${INFO}or for smart model routing (cheap models for simple tasks).${NC}"
-    echo ""
-
-    while true; do
-        local add_more
-        add_more="$(wizard_confirm "Add a fallback provider?")"
-        if [[ "$add_more" != "yes" ]]; then
-            break
-        fi
-
-        # Show only providers not yet configured
-        local fallback_provider=""
-        fallback_provider="$(wizard_select_provider "Choose a fallback provider:")"
-
-        if [[ "$fallback_provider" == "skip" ]]; then
-            break
-        fi
-
-        # Check if already configured
-        local already_done=false
-        for p in "${configured_providers[@]}"; do
-            if [[ "$p" == "$fallback_provider" ]]; then
-                already_done=true
-                break
-            fi
-        done
-        if [[ "$already_done" == "true" ]]; then
-            ui_info "${fallback_provider} is already configured. Choose a different one."
-            continue
-        fi
-
-        local fallback_key=""
-        fallback_key="$(wizard_prompt_api_key "$fallback_provider")"
-        if wizard_validate_key_format "$fallback_provider" "$fallback_key"; then
-            if wizard_store_api_key "$claw" "$fallback_provider" "$fallback_key"; then
-                configured_providers+=("$fallback_provider")
-            fi
-        else
-            ui_warn "Invalid key format; skipping ${fallback_provider}"
-        fi
-    done
-
-    # ── Summary ──
-    echo ""
-    ui_section "Configuration Summary"
-    echo ""
-    echo -e "  ${SUCCESS}Primary${NC}    ${primary_provider}"
-    if (( ${#configured_providers[@]} > 1 )); then
-        local fallback_list=""
-        for p in "${configured_providers[@]}"; do
-            if [[ "$p" != "$primary_provider" ]]; then
-                fallback_list="${fallback_list}${fallback_list:+, }${p}"
-            fi
-        done
-        echo -e "  ${SUCCESS}Fallbacks${NC}  ${fallback_list}"
-    fi
-    echo -e "  ${SUCCESS}Gateway${NC}    loopback (port 18789)"
-    echo ""
-
-    # ── Step 3: Start the gateway ──
-    auto_start_gateway_after_setup "$claw"
 }
 
 maybe_open_dashboard() {
@@ -2815,7 +2483,7 @@ main() {
             if [[ "$has_api_keys" != "true" ]]; then
                 if [[ -r /dev/tty && -w /dev/tty ]]; then
                     echo ""
-                    run_quickstart
+                    run_onboard_flow
                 else
                     ui_info "No TTY; run godseye onboard to configure API keys"
                 fi
@@ -2895,7 +2563,7 @@ main() {
             if [[ "$skip_onboard" != "true" ]]; then
                 echo ""
                 if [[ -r /dev/tty && -w /dev/tty ]]; then
-                    run_quickstart
+                    run_onboard_flow
                 else
                     ui_info "No TTY; run godseye onboard to finish setup"
                 fi
