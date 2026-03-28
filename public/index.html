@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gods Eye — Your Personal AI Assistant</title>
+    <title>Gods Eye — The AI Gateway That Sees Everything</title>
     <meta
       name="description"
-      content="Gods Eye: One Brain, Every Channel. Connect your AI assistant to WhatsApp, Telegram, Discord, Slack, and more."
+      content="Gods Eye: 24 production modules. 635+ tests. 25+ channels. The AI gateway that fixes everything others got wrong. Built in India."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <style>
@@ -23,18 +23,22 @@
         padding: 0;
       }
       :root {
-        --bg: #0a0f1a;
-        --bg-card: #111827;
-        --bg-card-hover: #1a2332;
-        --coral: #ff4d4d;
-        --coral-glow: #ff4d4d33;
-        --cyan: #00e5cc;
-        --cyan-glow: #00e5cc22;
+        --bg: #050a12;
+        --bg-card: #0c1220;
+        --bg-card-hover: #111a2e;
+        --green: #00ffaa;
+        --green-dim: #00cc88;
+        --green-glow: rgba(0, 255, 170, 0.15);
+        --green-glow-strong: rgba(0, 255, 170, 0.25);
+        --amber: #ff9933;
+        --amber-glow: rgba(255, 153, 51, 0.15);
+        --red: #ff4444;
+        --red-dim: rgba(255, 68, 68, 0.15);
         --text: #e2e8f0;
         --text-dim: #94a3b8;
         --text-muted: #475569;
-        --border: #1e293b;
-        --border-light: #334155;
+        --border: #1a2540;
+        --border-light: #243050;
         --radius: 12px;
         --radius-lg: 16px;
       }
@@ -55,19 +59,19 @@
         -webkit-font-smoothing: antialiased;
       }
       a {
-        color: var(--cyan);
+        color: var(--green);
         text-decoration: none;
         transition: opacity 0.2s;
       }
       a:hover {
-        opacity: 0.8;
+        opacity: 0.85;
       }
 
       /* ── Animations ── */
       @keyframes fadeUp {
         from {
           opacity: 0;
-          transform: translateY(24px);
+          transform: translateY(30px);
         }
         to {
           opacity: 1;
@@ -77,19 +81,39 @@
       @keyframes glow {
         0%,
         100% {
-          opacity: 0.4;
+          opacity: 0.3;
         }
         50% {
-          opacity: 0.8;
+          opacity: 0.7;
         }
       }
-      @keyframes blink {
+      @keyframes pulse {
         0%,
         100% {
-          opacity: 1;
+          transform: scale(1);
+          opacity: 0.8;
         }
         50% {
+          transform: scale(1.05);
+          opacity: 1;
+        }
+      }
+      @keyframes scan {
+        0% {
+          transform: translateY(-100%);
+        }
+        100% {
+          transform: translateY(100%);
+        }
+      }
+      @keyframes countUp {
+        from {
           opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
       }
       .fade-up {
@@ -107,10 +131,13 @@
       .fade-up-d4 {
         animation-delay: 0.4s;
       }
+      .fade-up-d5 {
+        animation-delay: 0.5s;
+      }
 
       /* ── Layout ── */
       .container {
-        max-width: 1120px;
+        max-width: 1200px;
         margin: 0 auto;
         padding: 0 24px;
       }
@@ -130,9 +157,9 @@
         left: 0;
         right: 0;
         z-index: 100;
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        background: rgba(10, 15, 26, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        background: rgba(5, 10, 18, 0.85);
         border-bottom: 1px solid var(--border);
       }
       nav .container {
@@ -142,20 +169,29 @@
         height: 64px;
       }
       .nav-logo {
-        font-weight: 700;
-        font-size: 1.2rem;
-        letter-spacing: -0.02em;
+        font-weight: 800;
+        font-size: 1.15rem;
+        letter-spacing: 0.04em;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        color: var(--text);
       }
-      .nav-logo .eye {
-        color: var(--coral);
-        font-size: 1.4rem;
+      .nav-eye {
+        width: 32px;
+        height: 32px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .nav-eye svg {
+        width: 32px;
+        height: 32px;
       }
       .nav-links {
         display: flex;
-        gap: 24px;
+        gap: 28px;
         align-items: center;
       }
       .nav-links a {
@@ -169,52 +205,72 @@
         opacity: 1;
       }
       .nav-cta {
-        background: var(--coral);
-        color: #fff;
-        padding: 8px 20px;
+        background: var(--green);
+        color: #050a12;
+        padding: 8px 22px;
         border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.875rem;
+        font-weight: 700;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
         transition: all 0.2s;
       }
       .nav-cta:hover {
         opacity: 1;
         transform: translateY(-1px);
-        box-shadow: 0 4px 24px var(--coral-glow);
+        box-shadow: 0 4px 24px var(--green-glow);
+      }
+      .nav-india {
+        font-size: 0.7rem;
+        color: var(--amber);
+        font-weight: 600;
+        letter-spacing: 0.05em;
       }
 
       /* ── Hero ── */
       .hero {
         padding-top: 140px;
-        padding-bottom: 80px;
+        padding-bottom: 60px;
         text-align: center;
         position: relative;
       }
       @media (min-width: 768px) {
         .hero {
           padding-top: 180px;
-          padding-bottom: 120px;
+          padding-bottom: 80px;
         }
       }
       .hero::before {
         content: "";
         position: absolute;
-        top: -200px;
+        top: -300px;
         left: 50%;
         transform: translateX(-50%);
-        width: 800px;
-        height: 800px;
-        background: radial-gradient(circle, var(--coral-glow) 0%, transparent 70%);
+        width: 900px;
+        height: 900px;
+        background: radial-gradient(circle, var(--green-glow) 0%, transparent 60%);
         pointer-events: none;
-        animation: glow 6s ease-in-out infinite;
+        animation: glow 8s ease-in-out infinite;
       }
+
+      /* Eye Logo */
+      .hero-eye {
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 32px;
+        position: relative;
+      }
+      .hero-eye svg {
+        width: 100%;
+        height: 100%;
+      }
+
       .hero-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
         background: var(--bg-card);
         border: 1px solid var(--border);
-        padding: 6px 16px;
+        padding: 6px 18px;
         border-radius: 999px;
         font-size: 0.8rem;
         color: var(--text-dim);
@@ -224,37 +280,67 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: var(--cyan);
+        background: var(--green);
         animation: glow 2s ease-in-out infinite;
       }
       h1 {
-        font-size: clamp(2.2rem, 5vw, 4rem);
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1.1;
-        margin-bottom: 16px;
-        background: linear-gradient(135deg, #fff 0%, var(--text) 50%, var(--text-dim) 100%);
+        font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        line-height: 1.08;
+        margin-bottom: 20px;
+      }
+      h1 .line1 {
+        display: block;
+        background: linear-gradient(135deg, #fff 0%, var(--text) 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
       }
-      h1 .accent {
-        background: linear-gradient(135deg, var(--coral), #ff8066);
+      h1 .line2 {
+        display: block;
+        background: linear-gradient(135deg, var(--green), var(--green-dim));
         -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         background-clip: text;
       }
       .hero-sub {
-        font-size: clamp(1rem, 2vw, 1.25rem);
+        font-size: clamp(1rem, 2vw, 1.2rem);
         color: var(--text-dim);
-        max-width: 560px;
+        max-width: 620px;
         margin: 0 auto 48px;
         line-height: 1.7;
-        font-weight: 400;
+      }
+
+      /* ── Stats Bar ── */
+      .stats-bar {
+        display: flex;
+        justify-content: center;
+        gap: 48px;
+        flex-wrap: wrap;
+        margin-bottom: 48px;
+      }
+      .stat-item {
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 2rem;
+        font-weight: 900;
+        color: var(--green);
+        font-family: "JetBrains Mono", monospace;
+        letter-spacing: -0.02em;
+      }
+      .stat-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 600;
       }
 
       /* ── Install Widget ── */
       .install-widget {
-        max-width: 680px;
+        max-width: 700px;
         margin: 0 auto;
         background: var(--bg-card);
         border: 1px solid var(--border);
@@ -262,13 +348,13 @@
         overflow: hidden;
         text-align: left;
         box-shadow:
-          0 8px 64px rgba(0, 0, 0, 0.4),
-          0 0 0 1px var(--border);
+          0 8px 64px rgba(0, 0, 0, 0.5),
+          0 0 80px var(--green-glow);
       }
       .install-tabs {
         display: flex;
         border-bottom: 1px solid var(--border);
-        background: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.3);
         padding: 0 4px;
       }
       .install-tab {
@@ -281,14 +367,14 @@
         background: none;
         border-bottom: 2px solid transparent;
         transition: all 0.2s;
-        position: relative;
+        font-family: "Inter", sans-serif;
       }
       .install-tab:hover {
         color: var(--text-dim);
       }
       .install-tab.active {
-        color: var(--cyan);
-        border-bottom-color: var(--cyan);
+        color: var(--green);
+        border-bottom-color: var(--green);
       }
       .install-panel {
         display: none;
@@ -301,7 +387,7 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        background: #0d1117;
+        background: rgba(0, 0, 0, 0.3);
         border: 1px solid var(--border);
         border-radius: 8px;
         padding: 14px 16px;
@@ -322,7 +408,7 @@
         flex: 1;
         font-family: "JetBrains Mono", monospace;
         font-size: 0.85rem;
-        color: var(--cyan);
+        color: var(--green);
         white-space: nowrap;
         overflow-x: auto;
       }
@@ -333,7 +419,7 @@
         background: none;
         border: 1px solid var(--border);
         border-radius: 6px;
-        padding: 6px 12px;
+        padding: 6px 14px;
         color: var(--text-dim);
         cursor: pointer;
         font-size: 0.75rem;
@@ -344,12 +430,12 @@
         flex-shrink: 0;
       }
       .copy-btn:hover {
-        border-color: var(--cyan);
-        color: var(--cyan);
+        border-color: var(--green);
+        color: var(--green);
       }
       .copy-btn.copied {
-        border-color: var(--cyan);
-        color: var(--cyan);
+        border-color: var(--green);
+        color: var(--green);
       }
       .install-note {
         font-size: 0.75rem;
@@ -359,39 +445,245 @@
       }
       .install-note code {
         font-family: "JetBrains Mono", monospace;
-        background: rgba(0, 229, 204, 0.08);
+        background: rgba(0, 255, 170, 0.08);
         padding: 2px 6px;
         border-radius: 4px;
-        color: var(--cyan);
+        color: var(--green);
         font-size: 0.7rem;
       }
 
-      /* ── Section Headers ── */
+      /* ── Problems Section ── */
+      .problems {
+        background: var(--bg);
+        position: relative;
+      }
+      .problems::before {
+        content: "";
+        position: absolute;
+        top: -100px;
+        right: -200px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(255, 68, 68, 0.06) 0%, transparent 70%);
+        pointer-events: none;
+      }
       .section-label {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: var(--coral);
+        letter-spacing: 0.12em;
+        color: var(--green);
         margin-bottom: 12px;
+        font-family: "JetBrains Mono", monospace;
       }
       .section-title {
-        font-size: clamp(1.5rem, 3vw, 2.25rem);
-        font-weight: 700;
-        letter-spacing: -0.02em;
+        font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
         margin-bottom: 16px;
       }
       .section-desc {
         color: var(--text-dim);
-        max-width: 560px;
+        max-width: 600px;
         margin-bottom: 48px;
+        font-size: 1.05rem;
+      }
+      .problems-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      @media (min-width: 768px) {
+        .problems-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .problem-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 28px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .problem-card:hover {
+        border-color: var(--green);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 40px var(--green-glow);
+      }
+      .problem-card .number {
+        position: absolute;
+        top: 16px;
+        right: 20px;
+        font-size: 3rem;
+        font-weight: 900;
+        color: rgba(255, 255, 255, 0.03);
+        font-family: "JetBrains Mono", monospace;
+        line-height: 1;
+      }
+      .problem-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .problem-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        background: var(--green-glow);
+        flex-shrink: 0;
+      }
+      .problem-name {
+        font-weight: 700;
         font-size: 1rem;
+      }
+      .problem-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 0.82rem;
+        line-height: 1.5;
+      }
+      .problem-row:last-child {
+        margin-bottom: 0;
+      }
+      .problem-x {
+        color: var(--red);
+        font-weight: 700;
+        flex-shrink: 0;
+        width: 18px;
+        text-align: center;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .problem-check {
+        color: var(--green);
+        font-weight: 700;
+        flex-shrink: 0;
+        width: 18px;
+        text-align: center;
+        font-family: "JetBrains Mono", monospace;
+      }
+      .problem-others {
+        color: var(--text-muted);
+      }
+      .problem-ours {
+        color: var(--text-dim);
+      }
+
+      /* ── Modules Section ── */
+      .modules {
+        position: relative;
+      }
+      .modules::before {
+        content: "";
+        position: absolute;
+        bottom: -200px;
+        left: -100px;
+        width: 700px;
+        height: 700px;
+        background: radial-gradient(circle, var(--green-glow) 0%, transparent 60%);
+        pointer-events: none;
+      }
+      .phase-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+      @media (min-width: 768px) {
+        .phase-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .phase-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 32px;
+        transition: all 0.3s ease;
+      }
+      .phase-card:hover {
+        border-color: var(--border-light);
+        transform: translateY(-2px);
+      }
+      .phase-tag {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 4px 12px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+        font-family: "JetBrains Mono", monospace;
+        background: var(--green-glow);
+        color: var(--green);
+      }
+      .phase-card h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .phase-card p {
+        font-size: 0.85rem;
+        color: var(--text-dim);
+        line-height: 1.6;
+      }
+      .phase-card .module-list {
+        list-style: none;
+        margin-top: 12px;
+      }
+      .phase-card .module-list li {
+        font-size: 0.8rem;
+        color: var(--text-dim);
+        padding: 4px 0;
+        padding-left: 18px;
+        position: relative;
+      }
+      .phase-card .module-list li::before {
+        content: ">";
+        position: absolute;
+        left: 0;
+        color: var(--green);
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 700;
+      }
+
+      /* ── Channels Grid ── */
+      .channels {
+        text-align: center;
+      }
+      .channel-logos {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 12px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .channel-chip {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-dim);
+        transition: all 0.2s;
+      }
+      .channel-chip:hover {
+        border-color: var(--green);
+        color: var(--green);
+        background: var(--green-glow);
       }
 
       /* ── Features Grid ── */
-      .features {
-        background: var(--bg);
-      }
       .features-grid {
         display: grid;
         grid-template-columns: 1fr;
@@ -413,8 +705,6 @@
         border-radius: var(--radius);
         padding: 28px;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
       }
       .feature-card:hover {
         border-color: var(--border-light);
@@ -431,14 +721,7 @@
         justify-content: center;
         font-size: 1.3rem;
         margin-bottom: 16px;
-      }
-      .feature-icon.coral {
-        background: rgba(255, 77, 77, 0.12);
-        color: var(--coral);
-      }
-      .feature-icon.cyan {
-        background: rgba(0, 229, 204, 0.12);
-        color: var(--cyan);
+        background: var(--green-glow);
       }
       .feature-card h3 {
         font-size: 1rem;
@@ -446,73 +729,7 @@
         margin-bottom: 8px;
       }
       .feature-card p {
-        font-size: 0.875rem;
-        color: var(--text-dim);
-        line-height: 1.6;
-      }
-
-      /* ── Studio Section ── */
-      .studio {
-        position: relative;
-        overflow: hidden;
-      }
-      .studio::before {
-        content: "";
-        position: absolute;
-        bottom: -200px;
-        right: -100px;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, var(--cyan-glow) 0%, transparent 70%);
-        pointer-events: none;
-      }
-      .studio-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 24px;
-      }
-      @media (min-width: 768px) {
-        .studio-grid {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
-      .studio-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 32px;
-        position: relative;
-        transition: all 0.3s ease;
-      }
-      .studio-card:hover {
-        border-color: var(--border-light);
-        transform: translateY(-2px);
-      }
-      .studio-card .tag {
-        display: inline-block;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 4px 10px;
-        border-radius: 6px;
-        margin-bottom: 16px;
-      }
-      .tag-coral {
-        background: rgba(255, 77, 77, 0.12);
-        color: var(--coral);
-      }
-      .tag-cyan {
-        background: rgba(0, 229, 204, 0.12);
-        color: var(--cyan);
-      }
-      .studio-card h3 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 8px;
-      }
-      .studio-card p {
-        font-size: 0.875rem;
+        font-size: 0.85rem;
         color: var(--text-dim);
         line-height: 1.6;
       }
@@ -528,14 +745,14 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 600px;
-        height: 400px;
-        background: radial-gradient(ellipse, var(--coral-glow) 0%, transparent 70%);
+        width: 700px;
+        height: 500px;
+        background: radial-gradient(ellipse, var(--green-glow) 0%, transparent 60%);
         pointer-events: none;
       }
       .cta-section h2 {
         font-size: clamp(1.5rem, 3vw, 2.5rem);
-        font-weight: 700;
+        font-weight: 800;
         letter-spacing: -0.02em;
         margin-bottom: 16px;
       }
@@ -554,22 +771,22 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        padding: 14px 28px;
+        padding: 14px 32px;
         border-radius: 10px;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 0.95rem;
         transition: all 0.2s;
         border: none;
         cursor: pointer;
       }
       .btn-primary {
-        background: var(--coral);
-        color: #fff;
+        background: var(--green);
+        color: #050a12;
       }
       .btn-primary:hover {
         opacity: 1;
         transform: translateY(-2px);
-        box-shadow: 0 8px 32px var(--coral-glow);
+        box-shadow: 0 8px 40px var(--green-glow-strong);
       }
       .btn-secondary {
         background: var(--bg-card);
@@ -578,8 +795,46 @@
       }
       .btn-secondary:hover {
         opacity: 1;
-        border-color: var(--border-light);
+        border-color: var(--green);
         transform: translateY(-2px);
+      }
+
+      /* ── India Banner ── */
+      .india-banner {
+        text-align: center;
+        padding: 60px 0;
+        border-top: 1px solid var(--border);
+        position: relative;
+      }
+      .india-banner::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        height: 3px;
+        background: linear-gradient(90deg, #ff9933, #ffffff, #138808);
+        border-radius: 2px;
+      }
+      .india-text {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        letter-spacing: 0.06em;
+      }
+      .india-text strong {
+        color: var(--amber);
+        font-weight: 700;
+      }
+      .india-tagline {
+        font-size: 1.4rem;
+        font-weight: 800;
+        margin-top: 8px;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--amber), #ffcc66);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       /* ── Footer ── */
@@ -604,16 +859,37 @@
         color: var(--text-dim);
         font-size: 0.85rem;
       }
+      .footer-brand {
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        color: var(--text-dim);
+      }
+      .footer-brand span {
+        color: var(--green);
+      }
 
       /* ── Scroll reveal ── */
       .reveal {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(24px);
         transition: all 0.6s ease;
       }
       .reveal.visible {
         opacity: 1;
         transform: translateY(0);
+      }
+
+      /* ── Mobile ── */
+      @media (max-width: 640px) {
+        .nav-links a:not(.nav-cta) {
+          display: none;
+        }
+        .stats-bar {
+          gap: 24px;
+        }
+        .stat-number {
+          font-size: 1.5rem;
+        }
       }
     </style>
   </head>
@@ -621,11 +897,28 @@
     <!-- Nav -->
     <nav>
       <div class="container">
-        <div class="nav-logo"><span class="eye">&#x25C9;</span> Gods Eye</div>
+        <div class="nav-logo">
+          <div class="nav-eye">
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M50 50 Q25 20 50 10 Q75 0 100 10 Q125 20 100 50 Q125 80 100 90 Q75 100 50 90 Q25 80 50 50Z"
+                fill="none"
+                stroke="#00FFAA"
+                stroke-width="4"
+                transform="translate(-25, 0)"
+              />
+              <circle cx="50" cy="50" r="14" fill="none" stroke="#00FFAA" stroke-width="3" />
+              <circle cx="50" cy="50" r="6" fill="#00FFAA" />
+            </svg>
+          </div>
+          GODS EYE
+        </div>
         <div class="nav-links">
-          <a href="#features">Features</a>
-          <a href="#studio">Studio</a>
+          <a href="#problems">Why Gods Eye</a>
+          <a href="#modules">Modules</a>
+          <a href="#channels">Channels</a>
           <a href="https://docs.gods-eye.org" target="_blank">Docs</a>
+          <span class="nav-india">MADE IN INDIA</span>
           <a href="https://github.com/bitan-del/gods-eye" target="_blank" class="nav-cta">GitHub</a>
         </div>
       </div>
@@ -634,23 +927,101 @@
     <!-- Hero -->
     <section class="hero">
       <div class="container">
-        <div class="hero-badge fade-up"><span class="dot"></span> Open Source AI Gateway</div>
-        <h1 class="fade-up fade-up-d1">
-          Your Personal AI Assistant<br /><span class="accent">One Brain, Every Channel</span>
+        <!-- Eye Logo -->
+        <div class="hero-eye fade-up">
+          <svg viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path
+              d="M75 50 Q37 10 75 2 Q113 -6 137 15 Q155 30 137 50 Q155 70 137 85 Q113 106 75 98 Q37 90 75 50Z"
+              fill="none"
+              stroke="#00FFAA"
+              stroke-width="2.5"
+              opacity="0.8"
+            />
+            <circle cx="75" cy="50" r="20" fill="none" stroke="#00FFAA" stroke-width="2" />
+            <circle cx="75" cy="50" r="8" fill="#00FFAA" />
+            <line x1="20" y1="50" x2="50" y2="50" stroke="#00FFAA" stroke-width="1" opacity="0.3" />
+            <line
+              x1="100"
+              y1="50"
+              x2="130"
+              y2="50"
+              stroke="#00FFAA"
+              stroke-width="1"
+              opacity="0.3"
+            />
+            <line x1="75" y1="15" x2="75" y2="25" stroke="#00FFAA" stroke-width="1" opacity="0.3" />
+            <line x1="75" y1="75" x2="75" y2="85" stroke="#00FFAA" stroke-width="1" opacity="0.3" />
+            <path
+              d="M10 15 L10 5 L20 5"
+              fill="none"
+              stroke="#00FFAA"
+              stroke-width="1.5"
+              opacity="0.3"
+            />
+            <path
+              d="M130 5 L140 5 L140 15"
+              fill="none"
+              stroke="#00FFAA"
+              stroke-width="1.5"
+              opacity="0.3"
+            />
+            <path
+              d="M10 85 L10 95 L20 95"
+              fill="none"
+              stroke="#00FFAA"
+              stroke-width="1.5"
+              opacity="0.3"
+            />
+            <path
+              d="M130 95 L140 95 L140 85"
+              fill="none"
+              stroke="#00FFAA"
+              stroke-width="1.5"
+              opacity="0.3"
+            />
+          </svg>
+        </div>
+
+        <div class="hero-badge fade-up fade-up-d1">
+          <span class="dot"></span> Open Source AI Gateway
+        </div>
+        <h1 class="fade-up fade-up-d2">
+          <span class="line1">The AI Gateway That</span>
+          <span class="line2">Sees Everything</span>
         </h1>
-        <p class="hero-sub fade-up fade-up-d2">
-          Connect a single AI brain to WhatsApp, Telegram, Discord, Slack, iMessage, and more.
-          Self-hosted, privacy-first, fully yours.
+        <p class="hero-sub fade-up fade-up-d3">
+          One brain across 25+ channels. Pinned memory that never forgets. Budget controls that
+          prevent cost explosions. A 3-layer firewall that blocks attacks. All running on your
+          hardware.
         </p>
 
+        <!-- Stats -->
+        <div class="stats-bar fade-up fade-up-d4">
+          <div class="stat-item">
+            <div class="stat-number">24</div>
+            <div class="stat-label">Modules</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">635+</div>
+            <div class="stat-label">Tests</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">25+</div>
+            <div class="stat-label">Channels</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">4</div>
+            <div class="stat-label">Phases</div>
+          </div>
+        </div>
+
         <!-- Install Widget -->
-        <div class="install-widget fade-up fade-up-d3">
+        <div class="install-widget fade-up fade-up-d5">
           <div class="install-tabs">
             <button class="install-tab active" data-tab="oneliner">One-liner</button>
             <button class="install-tab" data-tab="npm">npm</button>
             <button class="install-tab" data-tab="windows">Windows</button>
           </div>
-
           <div class="install-panel active" id="panel-oneliner">
             <div class="install-row">
               <span class="install-label">macOS / Linux</span>
@@ -660,7 +1031,6 @@
               <button class="copy-btn" onclick="copyCode('code-oneliner', this)">Copy</button>
             </div>
           </div>
-
           <div class="install-panel" id="panel-npm">
             <div class="install-row">
               <span class="install-label">npm</span>
@@ -668,7 +1038,6 @@
               <button class="copy-btn" onclick="copyCode('code-npm', this)">Copy</button>
             </div>
           </div>
-
           <div class="install-panel" id="panel-windows">
             <div class="install-row">
               <span class="install-label">PowerShell</span>
@@ -678,58 +1047,327 @@
               <button class="copy-btn" onclick="copyCode('code-windows', this)">Copy</button>
             </div>
           </div>
-
           <div class="install-note">
-            Then run <code>godseye setup</code> to connect your first channel.
+            Then run <code>godseye quickstart</code> to set up everything in one command.
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Features -->
-    <section class="features" id="features">
+    <!-- 8 Problems Solved -->
+    <section class="problems" id="problems">
       <div class="container">
-        <div class="section-label reveal">Capabilities</div>
-        <h2 class="section-title reveal">Everything you need, nothing you don't</h2>
+        <div class="section-label reveal">// WHY_GODS_EYE</div>
+        <h2 class="section-title reveal">
+          8 problems every AI gateway gets wrong.<br />We fixed all of them.
+        </h2>
         <p class="section-desc reveal">
-          A single self-hosted gateway that routes your AI across every messaging platform.
+          We studied every pain point users face with AI gateways. Then we researched the best
+          solutions from LiteLLM, RouteLLM, Mem0, LlamaFirewall, and Flutter Doctor &mdash; and
+          engineered proper fixes.
         </p>
 
+        <div class="problems-grid">
+          <div class="problem-card reveal">
+            <div class="number">01</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F6E0;</div>
+              <div class="problem-name">Setup Hell</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">47-step manual config, cryptic YAML errors</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                ><code
+                  style="
+                    color: var(--green);
+                    font-family: &quot;JetBrains Mono&quot;, monospace;
+                    font-size: 0.8rem;
+                  "
+                  >godseye quickstart</code
+                >
+                &mdash; one-command wizard + doctor health checks</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">02</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F4B8;</div>
+              <div class="problem-name">Cost Explosions</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">No budget controls, $200+ surprise bills</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                >Token budgets + smart model routing to cheap models for simple queries</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">03</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F9E0;</div>
+              <div class="problem-name">Context Amnesia</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others"
+                >Compaction destroys critical info, AI forgets mid-conversation</span
+              >
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                >Pinned memory that persists + structured JSON compaction</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">04</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F504;</div>
+              <div class="problem-name">Runaway Agents</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">Infinite tool loops, no circuit breaker</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                >3-state circuit breaker + progressive autonomy governor</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">05</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F6E1;</div>
+              <div class="problem-name">Security Gaps</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">No input scanning, prompt injection risk</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                >3-layer runtime firewall: input + execution + output scanning</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">06</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F510;</div>
+              <div class="problem-name">Over-Permissioning</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">Root-level access by default, no audit trail</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours">OWASP permission profiles + 5-layer audit trail</span>
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">07</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F393;</div>
+              <div class="problem-name">Not Beginner-Friendly</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">"Read the docs" is the entire onboarding</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours"
+                >Interactive tutorial, friendly error codes, 6 agent templates</span
+              >
+            </div>
+          </div>
+
+          <div class="problem-card reveal">
+            <div class="number">08</div>
+            <div class="problem-header">
+              <div class="problem-icon">&#x1F4E1;</div>
+              <div class="problem-name">Channel Failures</div>
+            </div>
+            <div class="problem-row">
+              <span class="problem-x">&#x2717;</span>
+              <span class="problem-others">Silent disconnects, no diagnostics</span>
+            </div>
+            <div class="problem-row">
+              <span class="problem-check">&#x2713;</span>
+              <span class="problem-ours">Per-channel health diagnostics with auto-fix hints</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 24 Modules -->
+    <section class="modules" id="modules">
+      <div class="container">
+        <div class="section-label reveal">// MODULES</div>
+        <h2 class="section-title reveal">24 modules. 4 phases. Zero shortcuts.</h2>
+        <p class="section-desc reveal">
+          Each module is production-grade with full test coverage. Not prototypes. Not proofs of
+          concept. Real solutions backed by research from the best in the industry.
+        </p>
+
+        <div class="phase-grid">
+          <div class="phase-card reveal">
+            <div class="phase-tag">Phase 1</div>
+            <h3>Setup &amp; Security Hardening</h3>
+            <p>The foundation. If setup is hard, users never get to the good stuff.</p>
+            <ul class="module-list">
+              <li>Doctor Framework (Flutter-style health checks)</li>
+              <li>API Key Validation (format + probe + capability)</li>
+              <li>Auto Token Generation (crypto-secure defaults)</li>
+              <li>Network Exposure Audit</li>
+              <li>Supply Chain Integrity (SHA256 + injection detection)</li>
+              <li>Agent Firewall (3-layer LlamaFirewall-style)</li>
+            </ul>
+          </div>
+
+          <div class="phase-card reveal">
+            <div class="phase-tag">Phase 2</div>
+            <h3>Cost Control &amp; Agent Behavior</h3>
+            <p>Your AI should work for you, not burn your wallet.</p>
+            <ul class="module-list">
+              <li>Token Budget Engine (per-session/hour/day caps)</li>
+              <li>Smart Model Router (complexity-based routing)</li>
+              <li>Semantic Cache (hash + trigram similarity)</li>
+              <li>Loop Detection v2 (3-state circuit breaker)</li>
+              <li>Autonomy Governor (progressive trust system)</li>
+              <li>Task Verification (structured completion checks)</li>
+            </ul>
+          </div>
+
+          <div class="phase-card reveal">
+            <div class="phase-tag">Phase 3</div>
+            <h3>Memory, Context &amp; Permissions</h3>
+            <p>An AI that forgets what you told it is an AI that wastes your time.</p>
+            <ul class="module-list">
+              <li>Context Health Monitor (real-time token tracking)</li>
+              <li>Pinned Memory (Mem0-style persistent facts)</li>
+              <li>Structured Compaction (Factory.ai-style JSON)</li>
+              <li>Session Checkpointing (save/resume/time-travel)</li>
+              <li>Permission Profiles (OWASP-aligned presets)</li>
+              <li>Permission Audit Trail (5-layer + secret redaction)</li>
+            </ul>
+          </div>
+
+          <div class="phase-card reveal">
+            <div class="phase-tag">Phase 4</div>
+            <h3>Beginner Experience &amp; Diagnostics</h3>
+            <p>If your grandma can't set it up, your onboarding is broken.</p>
+            <ul class="module-list">
+              <li>Quickstart Command (one-command wizard)</li>
+              <li>Elm-Style Friendly Errors (E001-E010)</li>
+              <li>Agent Templates (6 ready-to-use configs)</li>
+              <li>Interactive Tutorial (7-step walkthrough)</li>
+              <li>Channel Diagnostics (per-channel health checks)</li>
+              <li>Unified Auth Error Handler</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Channels -->
+    <section class="channels" id="channels">
+      <div class="container">
+        <div class="section-label reveal">// CHANNELS</div>
+        <h2 class="section-title reveal" style="text-align: center">25+ channels. One brain.</h2>
+        <p
+          class="section-desc reveal"
+          style="text-align: center; margin-left: auto; margin-right: auto"
+        >
+          Every channel gets per-channel diagnostics, auto-fix hints, and unified auth error
+          handling.
+        </p>
+        <div class="channel-logos reveal">
+          <span class="channel-chip">WhatsApp</span>
+          <span class="channel-chip">Telegram</span>
+          <span class="channel-chip">Discord</span>
+          <span class="channel-chip">Slack</span>
+          <span class="channel-chip">Signal</span>
+          <span class="channel-chip">iMessage</span>
+          <span class="channel-chip">MS Teams</span>
+          <span class="channel-chip">Matrix</span>
+          <span class="channel-chip">Google Chat</span>
+          <span class="channel-chip">LINE</span>
+          <span class="channel-chip">Mattermost</span>
+          <span class="channel-chip">IRC</span>
+          <span class="channel-chip">Feishu</span>
+          <span class="channel-chip">Nostr</span>
+          <span class="channel-chip">Twitch</span>
+          <span class="channel-chip">Zalo</span>
+          <span class="channel-chip">WeChat</span>
+          <span class="channel-chip">WebChat</span>
+          <span class="channel-chip">macOS</span>
+          <span class="channel-chip">iOS</span>
+          <span class="channel-chip">Android</span>
+          <span class="channel-chip">Voice Call</span>
+          <span class="channel-chip">Nextcloud Talk</span>
+          <span class="channel-chip">Synology Chat</span>
+          <span class="channel-chip">Tlon</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="container">
+        <div class="section-label reveal">// CAPABILITIES</div>
+        <h2 class="section-title reveal">Everything built in. Nothing bolted on.</h2>
+        <p class="section-desc reveal">
+          A complete AI gateway with creative tools, voice, and cross-platform apps.
+        </p>
         <div class="features-grid">
           <div class="feature-card reveal">
-            <div class="feature-icon coral">&#x1F4AC;</div>
-            <h3>Multi-Channel</h3>
-            <p>
-              WhatsApp, Telegram, Discord, Slack, iMessage, Signal, Matrix, MS Teams, and more
-              through the plugin system.
-            </p>
-          </div>
-          <div class="feature-card reveal">
-            <div class="feature-icon cyan">&#x1F9E0;</div>
+            <div class="feature-icon">&#x1F9E0;</div>
             <h3>Single Brain Architecture</h3>
             <p>
-              One AI instance with unified memory and context, accessible from any channel. Your
-              assistant remembers everything.
+              One AI with unified memory across every channel. Your assistant remembers everything,
+              everywhere.
             </p>
           </div>
           <div class="feature-card reveal">
-            <div class="feature-icon coral">&#x1F511;</div>
-            <h3>BYOK &mdash; Bring Your Own Keys</h3>
+            <div class="feature-icon">&#x1F511;</div>
+            <h3>BYOK &mdash; Your Keys, Your Control</h3>
             <p>
-              Use your own API keys from OpenAI, Anthropic, Google, or any provider. No middleman,
-              no markup.
+              Use your own API keys from OpenAI, Anthropic, Google. No middleman, no markup, no
+              vendor lock-in.
             </p>
           </div>
           <div class="feature-card reveal">
-            <div class="feature-icon cyan">&#x1F3A8;</div>
+            <div class="feature-icon">&#x1F3A8;</div>
             <h3>Gods Eye Studio</h3>
             <p>
-              Generate images, videos, and creative content with built-in media pipelines and brand
-              intelligence tools.
+              Image gen, video gen, brand DNA scanning, content calendars. Creative tools built into
+              the gateway.
             </p>
           </div>
           <div class="feature-card reveal">
-            <div class="feature-icon coral">&#x1F50A;</div>
+            <div class="feature-icon">&#x1F50A;</div>
             <h3>Voice + Canvas</h3>
             <p>
               Voice transcription, text-to-speech, and a rich canvas for interactive AI-powered
@@ -737,58 +1375,19 @@
             </p>
           </div>
           <div class="feature-card reveal">
-            <div class="feature-icon cyan">&#x1F512;</div>
+            <div class="feature-icon">&#x1F512;</div>
             <h3>Privacy-First</h3>
             <p>
-              Self-hosted and local-first. Your data never leaves your machine. No cloud dependency,
-              full control.
+              Self-hosted, local-first. Your data never leaves your machine. Full sovereignty over
+              your AI.
             </p>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Studio -->
-    <section class="studio" id="studio">
-      <div class="container">
-        <div class="section-label reveal">Gods Eye Studio</div>
-        <h2 class="section-title reveal">Creative tools, built in</h2>
-        <p class="section-desc reveal">
-          Professional-grade AI media generation and brand intelligence, integrated directly into
-          your assistant.
-        </p>
-
-        <div class="studio-grid">
-          <div class="studio-card reveal">
-            <span class="tag tag-coral">Image Generation</span>
-            <h3>Text to Image</h3>
+          <div class="feature-card reveal">
+            <div class="feature-icon">&#x1F9E9;</div>
+            <h3>Plugin SDK</h3>
             <p>
-              Generate stunning visuals from natural language prompts. Supports DALL-E, Stable
-              Diffusion, Flux, and more through configurable providers.
-            </p>
-          </div>
-          <div class="studio-card reveal">
-            <span class="tag tag-cyan">Video Generation</span>
-            <h3>AI Video Pipeline</h3>
-            <p>
-              Create short-form video content with AI. Script generation, scene composition, and
-              rendering in a single workflow.
-            </p>
-          </div>
-          <div class="studio-card reveal">
-            <span class="tag tag-coral">Brand Intel</span>
-            <h3>Brand Intelligence</h3>
-            <p>
-              Analyze and maintain brand consistency across generated content. Style guides, tone
-              matching, and visual coherence.
-            </p>
-          </div>
-          <div class="studio-card reveal">
-            <span class="tag tag-cyan">Plugins</span>
-            <h3>Extensible Architecture</h3>
-            <p>
-              Build custom plugins to extend Studio capabilities. Open plugin SDK with
-              TypeScript-first developer experience.
+              TypeScript-first plugin system. Build custom channels, providers, and tools with the
+              open SDK.
             </p>
           </div>
         </div>
@@ -798,8 +1397,8 @@
     <!-- CTA -->
     <section class="cta-section">
       <div class="container">
-        <h2 class="reveal">Ready to get started?</h2>
-        <p class="reveal">Set up Gods Eye in under five minutes. One command, full power.</p>
+        <h2 class="reveal">Ready to see everything?</h2>
+        <p class="reveal">One command. Full power. Every channel.</p>
         <div class="cta-buttons reveal">
           <a href="https://docs.gods-eye.org" target="_blank" class="btn btn-primary"
             >Read the Docs</a
@@ -816,13 +1415,25 @@
       </div>
     </section>
 
+    <!-- Made in India -->
+    <div class="india-banner">
+      <div class="container">
+        <div class="india-text">PROUDLY <strong>MADE IN INDIA</strong></div>
+        <div class="india-tagline">Built with intensity. Built to be unstoppable.</div>
+      </div>
+    </div>
+
     <!-- Footer -->
     <footer>
       <div class="container">
-        <div>&copy; 2026 Gods Eye. Open source under MIT License.</div>
+        <div>
+          <span class="footer-brand">GODS <span>EYE</span></span>
+          &nbsp;&middot;&nbsp; 24 modules &middot; 635+ tests &middot; MIT License
+        </div>
         <div class="footer-links">
           <a href="https://github.com/bitan-del/gods-eye" target="_blank">GitHub</a>
-          <a href="https://docs.gods-eye.org" target="_blank">Documentation</a>
+          <a href="https://docs.gods-eye.org" target="_blank">Docs</a>
+          <a href="https://discord.gg/clawd" target="_blank">Discord</a>
         </div>
       </div>
     </footer>
