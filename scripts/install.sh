@@ -313,7 +313,7 @@ INSTALL_STAGE_CURRENT=0
 ui_section() {
     local title="$1"
     if [[ -n "$GUM" ]]; then
-        "$GUM" style --bold --foreground "#ff4d4d" --padding "1 0" "$title"
+        "$GUM" style --bold --foreground "#1a56db" --padding "1 0" "$title"
     else
         echo ""
         echo -e "${ACCENT}${BOLD}${title}${NC}"
@@ -2036,7 +2036,7 @@ auto_start_gateway_after_setup() {
     fi
 
     echo ""
-    ui_stage "Starting Gods Eye Gateway"
+    ui_section "Step 3: Starting Gods Eye Gateway"
 
     # Ensure gateway.mode is set
     local current_mode
@@ -2101,22 +2101,28 @@ wizard_select_provider() {
     local result=""
 
     if [[ -n "$GUM" ]]; then
-        result="$("$GUM" choose --header "$prompt_msg" "anthropic (Claude)" "openai (GPT)" "gemini (Google)" "Skip for now" </dev/tty)" || true
+        result="$("$GUM" choose --header "$prompt_msg" "anthropic (Claude)" "openai (GPT)" "gemini (Google)" "Skip for now" </dev/tty 2>/dev/tty)" || true
     else
-        echo ""
-        echo -e "${ACCENT}${prompt_msg}${NC}"
-        echo -e "  ${SUCCESS}1${NC}) anthropic (Claude)"
-        echo -e "  ${SUCCESS}2${NC}) openai (GPT)"
-        echo -e "  ${SUCCESS}3${NC}) gemini (Google)"
-        echo -e "  ${MUTED}4${NC}) Skip for now"
-        echo ""
-        read -r -p "Enter choice [1-4]: " choice </dev/tty
+        # Print menu to /dev/tty so it shows even inside $(...) subshell
+        {
+            echo ""
+            echo -e "${ACCENT}${prompt_msg}${NC}"
+            echo ""
+            echo -e "  ${SUCCESS}1${NC})  anthropic  — Claude (Opus, Sonnet, Haiku)"
+            echo -e "  ${SUCCESS}2${NC})  openai     — GPT (GPT-4o, GPT-5, o1)"
+            echo -e "  ${SUCCESS}3${NC})  gemini     — Google (Gemini Pro, Flash)"
+            echo ""
+            echo -e "  ${MUTED}s${NC})  Skip for now"
+            echo ""
+        } >/dev/tty
+        echo -n "  Enter choice [1-3 or s to skip]: " >/dev/tty
+        read -r choice </dev/tty
         case "$choice" in
-            1) result="anthropic (Claude)" ;;
-            2) result="openai (GPT)" ;;
-            3) result="gemini (Google)" ;;
-            4|"") result="Skip for now" ;;
-            *) result="Skip for now" ;;
+            1) result="anthropic" ;;
+            2) result="openai" ;;
+            3) result="gemini" ;;
+            s|S|"") result="skip" ;;
+            *) result="skip" ;;
         esac
     fi
 
@@ -2135,21 +2141,36 @@ wizard_prompt_api_key() {
     local key=""
 
     local hint=""
+    local example=""
     case "$provider" in
-        anthropic) hint="Get your key at: https://console.anthropic.com/settings/keys (starts with sk-ant-api03-...)" ;;
-        openai)    hint="Get your key at: https://platform.openai.com/api-keys (starts with sk-...)" ;;
-        gemini)    hint="Get your key at: https://aistudio.google.com/apikey (starts with AI...)" ;;
+        anthropic)
+            hint="Get your key at: https://console.anthropic.com/settings/keys"
+            example="Starts with sk-ant-api03-..."
+            ;;
+        openai)
+            hint="Get your key at: https://platform.openai.com/api-keys"
+            example="Starts with sk-..."
+            ;;
+        gemini)
+            hint="Get your key at: https://aistudio.google.com/apikey"
+            example="Starts with AI..."
+            ;;
     esac
 
-    echo ""
-    echo -e "${INFO}${hint}${NC}"
-    echo ""
+    # Print to /dev/tty so it shows even inside $(...) subshell
+    {
+        echo ""
+        echo -e "  ${INFO}${hint}${NC}"
+        echo -e "  ${MUTED}${example}${NC}"
+        echo ""
+    } >/dev/tty
 
     if [[ -n "$GUM" ]]; then
-        key="$("$GUM" input --header "Paste your ${provider} API key:" --placeholder "sk-..." --password </dev/tty)" || true
+        key="$("$GUM" input --header "Paste your ${provider} API key:" --placeholder "${example}" --password </dev/tty 2>/dev/tty)" || true
     else
-        read -r -s -p "Paste your ${provider} API key: " key </dev/tty
-        echo ""
+        echo -n "  Paste your ${provider} API key: " >/dev/tty
+        read -r -s key </dev/tty
+        echo "" >/dev/tty
     fi
 
     echo "$key"
@@ -2242,13 +2263,15 @@ wizard_confirm() {
     local result=""
 
     if [[ -n "$GUM" ]]; then
-        if "$GUM" confirm "$msg" </dev/tty 2>/dev/null; then
+        if "$GUM" confirm "$msg" </dev/tty 2>/dev/tty; then
             echo "yes"
         else
             echo "no"
         fi
     else
-        read -r -p "$msg [y/N]: " result </dev/tty
+        echo "" >/dev/tty
+        echo -n "  $msg [y/N]: " >/dev/tty
+        read -r result </dev/tty
         case "$result" in
             [yY]|[yY][eE][sS]) echo "yes" ;;
             *) echo "no" ;;
@@ -2269,7 +2292,7 @@ run_quickstart() {
     fi
 
     echo ""
-    ui_stage "Gods Eye Setup Wizard"
+    ui_section "Gods Eye Setup Wizard"
     echo ""
     echo -e "${INFO}Let's configure your AI gateway step by step.${NC}"
     echo -e "${INFO}You'll need at least one API key from a provider.${NC}"
@@ -2279,7 +2302,7 @@ run_quickstart() {
 
     # ── Step 1: Primary provider ──
     echo ""
-    ui_stage "Step 1: Primary AI Provider"
+    ui_section "Step 1: Primary AI Provider"
     primary_provider="$(wizard_select_provider "Choose your primary AI provider:")"
 
     if [[ "$primary_provider" == "skip" ]]; then
@@ -2309,7 +2332,7 @@ run_quickstart() {
 
     # ── Step 2: Fallback providers ──
     echo ""
-    ui_stage "Step 2: Fallback Providers (Optional)"
+    ui_section "Step 2: Fallback Providers (Optional)"
     echo -e "${INFO}Fallback providers are used when your primary provider is unavailable${NC}"
     echo -e "${INFO}or for smart model routing (cheap models for simple tasks).${NC}"
     echo ""
@@ -2355,7 +2378,7 @@ run_quickstart() {
 
     # ── Summary ──
     echo ""
-    ui_stage "Configuration Summary"
+    ui_section "Configuration Summary"
     echo ""
     echo -e "  ${SUCCESS}Primary${NC}    ${primary_provider}"
     if (( ${#configured_providers[@]} > 1 )); then
