@@ -377,11 +377,22 @@ show_footer_links() {
     local faq_url="https://docs.gods-eye.org/start/faq"
     if [[ -n "$GUM" ]]; then
         local content
-        content="$(printf '%s\n%s' "Need help?" "FAQ: ${faq_url}")"
+        content="$(printf '%s\n%s\n\n%s\n%s\n%s\n%s' \
+            "Need help?" \
+            "FAQ: ${faq_url}" \
+            "Quick commands:" \
+            "  godseye quickstart    — guided setup wizard" \
+            "  godseye doctor        — check system health" \
+            "  godseye tutorial      — interactive walkthrough")"
         ui_panel "$content"
     else
         echo ""
         echo -e "FAQ: ${INFO}${faq_url}${NC}"
+        echo ""
+        echo -e "${MUTED}Quick commands:${NC}"
+        echo -e "  ${SUCCESS}godseye quickstart${NC}    — guided setup wizard"
+        echo -e "  ${SUCCESS}godseye doctor${NC}        — check system health"
+        echo -e "  ${SUCCESS}godseye tutorial${NC}      — interactive walkthrough"
     fi
 }
 
@@ -993,7 +1004,7 @@ Options:
   --beta                               Use beta if available, else latest
   --git-dir, --dir <path>             Checkout directory (default: ~/godseye)
   --no-git-update                      Skip git pull for existing checkout
-  --no-onboard                          Skip onboarding (non-interactive)
+  --no-onboard                          Skip onboarding/quickstart (non-interactive)
   --no-prompt                           Disable prompts (required in CI/automation)
   --verify                              Run a post-install smoke verify
   --dry-run                             Print what would happen (no changes)
@@ -1013,6 +1024,11 @@ Environment variables:
   GODSEYE_VERBOSE=1
   GODSEYE_NPM_LOGLEVEL=error|warn|notice  Default: error (hide npm deprecation noise)
   SHARP_IGNORE_GLOBAL_LIBVIPS=0|1    Default: 1 (avoid sharp building against global libvips)
+
+Post-install commands:
+  godseye quickstart    Guided setup wizard (provider selection, API key, gateway start)
+  godseye doctor        System health checks (Node, ports, config, Docker, disk)
+  godseye tutorial      Interactive walkthrough for new users
 
 Examples:
   curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash
@@ -2041,9 +2057,9 @@ install_godseye() {
     ui_success "GodsEye installed"
 }
 
-# Run doctor for migrations (safe, non-interactive)
+# Run doctor for migrations and health checks (safe, non-interactive)
 run_doctor() {
-    ui_info "Running doctor to migrate settings"
+    ui_info "Running doctor to check system health"
     local claw="${GODSEYE_BIN:-}"
     if [[ -z "$claw" ]]; then
         claw="$(resolve_godseye_bin || true)"
@@ -2054,7 +2070,33 @@ run_doctor() {
         return 0
     fi
     run_quiet_step "Running doctor" "$claw" doctor --non-interactive || true
-    ui_success "Doctor complete"
+    ui_success "Doctor complete — system health verified"
+}
+
+# Run quickstart wizard for fresh installs (interactive)
+run_quickstart() {
+    local claw="${GODSEYE_BIN:-}"
+    if [[ -z "$claw" ]]; then
+        claw="$(resolve_godseye_bin || true)"
+    fi
+    if [[ -z "$claw" ]]; then
+        ui_info "Skipping quickstart (godseye not on PATH yet)"
+        warn_godseye_not_found
+        return 0
+    fi
+    # Check if quickstart command exists in this version
+    if "$claw" quickstart --help >/dev/null 2>&1; then
+        ui_info "Starting quickstart wizard"
+        exec </dev/tty
+        "$claw" quickstart || {
+            ui_warn "Quickstart wizard exited; you can run it later with: godseye quickstart"
+        }
+    else
+        # Fall back to onboard if quickstart not available
+        ui_info "Starting setup"
+        exec </dev/tty
+        exec "$claw" onboard
+    fi
 }
 
 maybe_open_dashboard() {
@@ -2392,13 +2434,9 @@ main() {
 
     refresh_gateway_service_if_loaded
 
-    # Step 6: Run doctor for migrations on upgrades and git installs
-    local run_doctor_after=false
+    # Step 6: Run doctor for health checks (all installs — fresh and upgrades)
+    run_doctor
     if [[ "$is_upgrade" == "true" || "$INSTALL_METHOD" == "git" ]]; then
-        run_doctor_after=true
-    fi
-    if [[ "$run_doctor_after" == "true" ]]; then
-        run_doctor
         should_open_dashboard=true
     fi
 
@@ -2466,23 +2504,14 @@ main() {
         ui_kv "Update command" "godseye update --restart"
         ui_kv "Switch to npm" "curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash -s -- --install-method npm"
 
-        # Auto-run onboard on fresh git installs
+        # Auto-run quickstart on fresh git installs
         local config_path="${GODSEYE_CONFIG_PATH:-$HOME/.godseye/godseye.json}"
         if [[ "$NO_ONBOARD" != "1" && "$skip_onboard" != "true" && ! -f "${config_path}" ]]; then
             if [[ -r /dev/tty && -w /dev/tty ]]; then
-                local claw="${GODSEYE_BIN:-}"
-                if [[ -z "$claw" ]]; then
-                    claw="$(resolve_godseye_bin || true)"
-                fi
-                if [[ -z "$claw" && -x "$HOME/.local/bin/godseye" ]]; then
-                    claw="$HOME/.local/bin/godseye"
-                fi
-                if [[ -n "$claw" ]]; then
-                    echo ""
-                    ui_info "Starting setup"
-                    exec </dev/tty
-                    exec "$claw" onboard
-                fi
+                echo ""
+                run_quickstart
+            else
+                ui_info "No TTY; run godseye quickstart to finish setup"
             fi
         fi
     elif [[ "$is_upgrade" == "true" ]]; then
@@ -2521,38 +2550,23 @@ main() {
         fi
     else
         if [[ "$NO_ONBOARD" == "1" || "$skip_onboard" == "true" ]]; then
-            ui_info "Skipping onboard (requested); run godseye onboard later"
+            ui_info "Skipping setup wizard; run later with:"
+            ui_info "  godseye quickstart    (recommended for new users)"
+            ui_info "  godseye onboard       (full onboarding flow)"
         else
             local config_path="${GODSEYE_CONFIG_PATH:-$HOME/.godseye/godseye.json}"
             if [[ -f "${config_path}" || -f "$HOME/.clawdbot/clawdbot.json" || -f "$HOME/.moltbot/moltbot.json" || -f "$HOME/.moldbot/moldbot.json" ]]; then
-                ui_info "Config already present; running doctor"
-                run_doctor
+                ui_info "Config already present; skipping quickstart"
                 should_open_dashboard=true
                 skip_onboard=true
             fi
             if [[ "$skip_onboard" != "true" ]]; then
-                ui_info "Starting setup"
                 echo ""
                 if [[ -r /dev/tty && -w /dev/tty ]]; then
-                    local claw="${GODSEYE_BIN:-}"
-                    if [[ -z "$claw" ]]; then
-                        claw="$(resolve_godseye_bin || true)"
-                    fi
-                    if [[ -z "$claw" ]]; then
-                        # Try direct path as fallback
-                        if [[ -x "$HOME/.local/bin/godseye" ]]; then
-                            claw="$HOME/.local/bin/godseye"
-                        fi
-                    fi
-                    if [[ -z "$claw" ]]; then
-                        ui_info "Skipping onboarding (godseye not on PATH yet)"
-                        warn_godseye_not_found
-                        return 0
-                    fi
-                    exec </dev/tty
-                    exec "$claw" onboard
+                    run_quickstart
+                else
+                    ui_info "No TTY; run godseye quickstart to finish setup"
                 fi
-                ui_info "No TTY; run godseye onboard to finish setup"
                 return 0
             fi
         fi
