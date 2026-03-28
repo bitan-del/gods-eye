@@ -3,3 +3,5 @@
 @import "./chat/grouped.css";
 @import "./chat/tool-cards.css";
 @import "./chat/sidebar.css";
+@import "./chat/dropdowns.css";
+@import "./chat/agents-sidebar.css";
