@@ -1,28 +1,22 @@
-<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="eye-g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00e5cc"/>
-      <stop offset="100%" stop-color="#0088ff"/>
-    </linearGradient>
-    <radialGradient id="iris-g" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00ffcc"/>
-      <stop offset="60%" stop-color="#0088ff"/>
-      <stop offset="100%" stop-color="#003366"/>
-    </radialGradient>
-  </defs>
-  <!-- Outer glow -->
-  <ellipse cx="60" cy="60" rx="52" ry="32" fill="url(#eye-g)" opacity="0.15"/>
-  <!-- Eye shape -->
-  <path d="M8 60 Q60 15 112 60 Q60 105 8 60Z" fill="url(#eye-g)" opacity="0.25"/>
-  <path d="M8 60 Q60 15 112 60 Q60 105 8 60Z" stroke="url(#eye-g)" stroke-width="2.5" fill="none"/>
-  <!-- Iris -->
-  <circle cx="60" cy="60" r="22" fill="url(#iris-g)"/>
-  <circle cx="60" cy="60" r="22" stroke="#00e5cc" stroke-width="1.5" fill="none" opacity="0.6"/>
+<svg viewBox="0 0 150 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Gods Eye Logo - Icon only -->
+  <!-- Outer eye shape -->
+  <path d="M50 50 Q25 20 50 10 Q75 0 100 10 Q125 20 100 50 Q125 80 100 90 Q75 100 50 90 Q25 80 50 50Z" fill="none" stroke="#1A56DB" stroke-width="4"/>
+  <!-- Inner iris -->
+  <circle cx="75" cy="50" r="22" fill="none" stroke="#1A56DB" stroke-width="3"/>
   <!-- Pupil -->
-  <circle cx="60" cy="60" r="10" fill="#050810"/>
-  <!-- Light reflections -->
-  <circle cx="53" cy="54" r="4" fill="white" opacity="0.7"/>
-  <circle cx="66" cy="52" r="2" fill="white" opacity="0.4"/>
-  <!-- Inner ring detail -->
-  <circle cx="60" cy="60" r="16" stroke="#00e5cc" stroke-width="0.8" fill="none" opacity="0.3"/>
+  <circle cx="75" cy="50" r="10" fill="#1A56DB"/>
+  <!-- Digital scan lines -->
+  <line x1="30" y1="50" x2="45" y2="50" stroke="#1A56DB" stroke-width="2" opacity="0.6"/>
+  <line x1="105" y1="50" x2="120" y2="50" stroke="#1A56DB" stroke-width="2" opacity="0.6"/>
+  <!-- Corner brackets - tech frame -->
+  <path d="M20 15 L20 5 L30 5" fill="none" stroke="#1A56DB" stroke-width="2.5" opacity="0.5"/>
+  <path d="M120 5 L130 5 L130 15" fill="none" stroke="#1A56DB" stroke-width="2.5" opacity="0.5"/>
+  <path d="M20 85 L20 95 L30 95" fill="none" stroke="#1A56DB" stroke-width="2.5" opacity="0.5"/>
+  <path d="M120 95 L130 95 L130 85" fill="none" stroke="#1A56DB" stroke-width="2.5" opacity="0.5"/>
+  <!-- Radial spokes from pupil -->
+  <line x1="75" y1="28" x2="75" y2="18" stroke="#1A56DB" stroke-width="1.5" opacity="0.4"/>
+  <line x1="75" y1="82" x2="75" y2="72" stroke="#1A56DB" stroke-width="1.5" opacity="0.4"/>
+  <line x1="53" y1="50" x2="58" y2="50" stroke="#1A56DB" stroke-width="1.5" opacity="0.4"/>
+  <line x1="92" y1="50" x2="97" y2="50" stroke="#1A56DB" stroke-width="1.5" opacity="0.4"/>
 </svg>
