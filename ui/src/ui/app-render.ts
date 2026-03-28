@@ -1501,7 +1501,28 @@ export function renderApp(state: AppViewState) {
                 canAbort: Boolean(state.chatRunId),
                 onAbort: () => void state.handleAbortChat(),
                 onQueueRemove: (id) => state.removeQueuedMessage(id),
-                onNewSession: () => state.handleSendChat("/new", { restoreDraft: true }),
+                onNewSession: () => {
+                  // Create a new distinct chat session with a unique key
+                  const agentId = resolveAgentIdFromSessionKey(state.sessionKey) ?? "main";
+                  const suffix = `chat-${Date.now().toString(36)}`;
+                  const newKey = `agent:${agentId}:${suffix}`;
+                  state.sessionKey = newKey;
+                  state.chatMessage = "";
+                  state.chatAttachments = [];
+                  state.chatStream = null;
+                  state.chatStreamStartedAt = null;
+                  state.chatRunId = null;
+                  state.chatQueue = [];
+                  state.chatMessages = [];
+                  state.resetToolStream();
+                  state.resetChatScroll();
+                  state.applySettings({
+                    ...state.settings,
+                    sessionKey: newKey,
+                    lastActiveSessionKey: newKey,
+                  });
+                  void state.loadAssistantIdentity();
+                },
                 onClearHistory: async () => {
                   if (!state.client || !state.connected) {
                     return;
