@@ -1644,6 +1644,19 @@ export function renderApp(state: AppViewState) {
                 onSessionSwitch: (key: string) => {
                   switchChatSession(state, key);
                 },
+                onSessionRename: (key: string, newLabel: string) => {
+                  void patchSession(state, key, { label: newLabel });
+                },
+                onSessionDelete: (key: string) => {
+                  void deleteSessionsAndRefresh(state, [key]).then((deleted) => {
+                    if (deleted.length > 0 && key === state.sessionKey) {
+                      // Switched away from deleted session — go to default
+                      const agentId = resolveAgentIdFromSessionKey(state.sessionKey) ?? "main";
+                      const fallbackKey = `agent:${agentId}:main`;
+                      switchChatSession(state, fallbackKey);
+                    }
+                  });
+                },
                 onSessionSelect: (key: string) => {
                   switchChatSession(state, key);
                 },

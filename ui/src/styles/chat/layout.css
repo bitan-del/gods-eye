@@ -1026,10 +1026,13 @@
   border-right: 1px solid var(--border, #e5e7eb);
   height: 100%;
   overflow: hidden;
+  border-radius: 16px 0 0 16px;
+  margin: 8px 0 8px 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .ge-sidebar__section {
-  padding: 12px 12px 0;
+  padding: 16px 14px 0;
 }
 
 .ge-sidebar__section--history {
@@ -1197,6 +1200,7 @@
   text-align: left;
   border-radius: 10px;
   transition: background 0.12s ease;
+  position: relative;
 }
 
 .ge-sidebar__history-item:hover {
@@ -1206,6 +1210,49 @@
 .ge-sidebar__history-item--active {
   background: rgba(26, 86, 219, 0.06);
   font-weight: 500;
+}
+
+/* Hover action buttons for rename/delete */
+.ge-sidebar__history-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.ge-sidebar__history-item:hover .ge-sidebar__history-actions {
+  display: flex;
+}
+
+.ge-sidebar__history-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--txt-muted, #888);
+  padding: 0;
+  transition: all 0.12s ease;
+}
+
+.ge-sidebar__history-action:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--foreground, #333);
+}
+
+.ge-sidebar__history-action--delete:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.ge-sidebar__history-action svg {
+  width: 14px;
+  height: 14px;
 }
 
 .ge-sidebar__history-icon {
@@ -1334,6 +1381,16 @@
 
 :root[data-theme-mode="dark"] .ge-sidebar__history-item--active {
   background: rgba(26, 86, 219, 0.12);
+}
+
+:root[data-theme-mode="dark"] .ge-sidebar__history-action:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--foreground, #eee);
+}
+
+:root[data-theme-mode="dark"] .ge-sidebar__history-action--delete:hover {
+  background: rgba(220, 38, 38, 0.2);
+  color: #f87171;
 }
 
 :root[data-theme-mode="dark"] .ge-chat-topbar {
