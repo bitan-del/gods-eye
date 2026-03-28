@@ -1,0 +1,24 @@
+{
+  "name": "@godseye/gods-eye-online",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP connector bridging Gods Eye fork (local brain) to Gods Eye Online (web platform)",
+  "keywords": [
+    "bridge",
+    "connector",
+    "gods-eye-online",
+    "godseye",
+    "mcp"
+  ],
+  "bin": {
+    "gods-eye-online-mcp": "./src/mcp-server.ts"
+  },
+  "type": "module",
+  "main": "index.ts",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  },
+  "devDependencies": {
+    "godseye": "workspace:*"
+  }
+}

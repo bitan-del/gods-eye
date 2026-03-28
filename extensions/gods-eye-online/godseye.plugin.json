@@ -1,0 +1,46 @@
+{
+  "id": "gods-eye-online",
+  "name": "Gods Eye Online Connector",
+  "description": "MCP bridge between local Gods Eye fork (brain) and Gods Eye Online web platform. Exposes local AI capabilities as MCP tools.",
+  "mcpServers": {
+    "gods-eye-online": {
+      "command": "bun",
+      "args": ["./src/mcp-server.ts"],
+      "env": {}
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "onlineRepoUrl": {
+        "type": "string",
+        "description": "URL of the Gods Eye Online repository"
+      },
+      "bridgePort": {
+        "type": "number",
+        "description": "Port for the HTTP-SSE MCP bridge (default: 18790)"
+      },
+      "autoConnect": {
+        "type": "boolean",
+        "description": "Auto-connect to Gods Eye Online on gateway start"
+      }
+    }
+  },
+  "uiHints": {
+    "onlineRepoUrl": {
+      "label": "Gods Eye Online URL",
+      "placeholder": "https://github.com/godseyeautomation-sketch/Gods-eye-online",
+      "help": "Repository URL for Gods Eye Online web platform"
+    },
+    "bridgePort": {
+      "label": "Bridge Port",
+      "placeholder": "18790",
+      "help": "Local port for the MCP bridge server"
+    },
+    "autoConnect": {
+      "label": "Auto-Connect",
+      "help": "Automatically establish connection when gateway starts"
+    }
+  }
+}
