@@ -1009,11 +1009,19 @@
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  padding: 10px;
+  gap: 10px;
+  box-sizing: border-box;
+  background: var(--background, #f0f2f5);
 }
 
 .chat-with-sidebar > .chat {
   flex: 1 1 0;
   min-width: 0;
+  background: var(--panel, #fff);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .ge-sidebar {
@@ -1022,13 +1030,12 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--panel, #fafafa);
-  border-right: 1px solid var(--border, #e5e7eb);
+  background: var(--panel, #fff);
+  border: none;
   height: 100%;
   overflow: hidden;
-  border-radius: 16px 0 0 16px;
-  margin: 8px 0 8px 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .ge-sidebar__section {
@@ -1358,9 +1365,18 @@
 }
 
 /* Dark theme */
+:root[data-theme-mode="dark"] .chat-with-sidebar {
+  background: var(--background, #0d0d0d);
+}
+
+:root[data-theme-mode="dark"] .chat-with-sidebar > .chat {
+  background: var(--panel, #1a1a1a);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
 :root[data-theme-mode="dark"] .ge-sidebar {
   background: var(--panel, #1a1a1a);
-  border-right-color: var(--border, #333);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-theme-mode="dark"] .ge-sidebar__agent:hover {
