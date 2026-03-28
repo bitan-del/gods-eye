@@ -1248,6 +1248,7 @@ export const chatHandlers: GatewayRequestHandlers = {
       timeoutMs?: number;
       systemInputProvenance?: InputProvenance;
       systemProvenanceReceipt?: string;
+      mentionedAgents?: string[];
       idempotencyKey: string;
     };
     if ((p.systemInputProvenance || p.systemProvenanceReceipt) && !isAcpBridgeClient(client)) {
@@ -1436,6 +1437,17 @@ export const chatHandlers: GatewayRequestHandlers = {
         SenderUsername: clientInfo?.displayName,
         GatewayClientScopes: client?.connect?.scopes,
       };
+
+      // Handle @mentions: log and mark for subagent dispatch
+      if (Array.isArray(p.mentionedAgents) && p.mentionedAgents.length > 0) {
+        for (const mentionedId of p.mentionedAgents) {
+          context.logGateway.info?.(`@mention: spawning task for agent ${mentionedId}`);
+        }
+        // TODO: dispatch subagent tasks for each mentioned agent via subagent-spawn.
+        // Each mentioned agent should receive the user message as context and run
+        // in its own session. Wire this through the existing subagent spawn system
+        // in ../../agents/subagent-spawn.js once the UI handshake is finalized.
+      }
 
       const agentId = resolveSessionAgentId({
         sessionKey,
