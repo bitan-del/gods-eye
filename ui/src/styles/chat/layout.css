@@ -1254,7 +1254,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border: 1px solid var(--border, #e0e0e0);
   border-radius: 8px;
   background: var(--panel, #fff);
@@ -1274,6 +1274,7 @@
 .ge-chat-topbar__new:hover {
   border-color: var(--accent, #1a56db);
   color: var(--accent, #1a56db);
+  background: rgba(26, 86, 219, 0.03);
 }
 
 .ge-chat-topbar__right {
@@ -1286,25 +1287,27 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 7px 16px;
   border: 1px solid var(--border, #e0e0e0);
   border-radius: 8px;
   background: none;
   cursor: pointer;
-  color: var(--txt-muted, #666);
+  color: var(--accent, #1a56db);
   font-size: 12px;
   font-family: inherit;
+  font-weight: 500;
   transition: all 0.15s ease;
 }
 
 .ge-chat-topbar__action svg {
   width: 14px;
   height: 14px;
+  color: var(--accent, #1a56db);
 }
 
 .ge-chat-topbar__action:hover {
   border-color: var(--accent, #1a56db);
-  color: var(--accent, #1a56db);
+  background: rgba(26, 86, 219, 0.03);
 }
 
 /* Dark theme */
