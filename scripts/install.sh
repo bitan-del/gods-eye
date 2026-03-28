@@ -1932,7 +1932,7 @@ install_godseye_from_git() {
     fi
 
     if [[ "$GIT_UPDATE" == "1" ]]; then
-        if [[ -z "$(git -C "$repo_dir" status --porcelain 2>/dev/null || true)" ]]; then
+        if [[ -z "$(git -C "$repo_dir" status --porcelain -uno 2>/dev/null || true)" ]]; then
             run_quiet_step "Updating repository" git -C "$repo_dir" pull --rebase || true
         else
             ui_info "Repo has local changes; skipping git pull"
