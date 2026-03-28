@@ -15,6 +15,7 @@ import {
   renderTab,
   renderSidebarConnectionStatus,
   renderTopbarThemeModeToggle,
+  resolveSessionOptionGroups,
   switchChatSession,
 } from "./app-render.helpers.ts";
 import type { AppViewState } from "./app-view-state.ts";
@@ -1580,6 +1581,16 @@ export function renderApp(state: AppViewState) {
                 },
                 // Agent @ mention (text insertion handled in chat.ts)
                 onMentionAgent: (_agentId: string) => {},
+                // Chat history sidebar
+                sessionGroups: resolveSessionOptionGroups(
+                  state,
+                  state.sessionKey,
+                  state.sessionsResult,
+                ),
+                currentSessionKey: state.sessionKey,
+                onSessionSwitch: (key: string) => {
+                  switchChatSession(state, key);
+                },
                 onSessionSelect: (key: string) => {
                   switchChatSession(state, key);
                 },

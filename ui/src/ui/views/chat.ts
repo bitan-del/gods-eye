@@ -129,6 +129,14 @@ export type ChatProps = {
   // Agent @ mention
   onMentionAgent?: (agentId: string) => void;
 
+  sessionGroups?: Array<{
+    id: string;
+    label: string;
+    options: Array<{ key: string; label: string; title: string }>;
+  }>;
+  currentSessionKey?: string;
+  onSessionSwitch?: (key: string) => void;
+
   onSessionSelect?: (sessionKey: string) => void;
   onOpenSidebar?: (content: string) => void;
   onCloseSidebar?: () => void;
@@ -1122,6 +1130,63 @@ function renderMentionDropdown(
   `;
 }
 
+function renderChatHistory(props: ChatProps) {
+  const groups = props.sessionGroups ?? [];
+  const currentKey = props.currentSessionKey ?? props.sessionKey;
+  const allEmpty = groups.every((g) => g.options.length === 0);
+
+  return html`
+    <aside class="chat-history-sidebar">
+      <div class="chat-history-sidebar__header">
+        <h3 class="chat-history-sidebar__title">Chat History</h3>
+        <button
+          class="chat-history-sidebar__new-btn"
+          type="button"
+          title="New Chat"
+          aria-label="New Chat"
+          @click=${props.onNewSession}
+        >
+          ${icons.edit}
+        </button>
+      </div>
+      <div class="chat-history-sidebar__list">
+        ${
+          allEmpty
+            ? html`
+                <div class="chat-history-sidebar__empty">No conversations yet</div>
+              `
+            : groups.map(
+                (group) => html`
+                  ${
+                    group.options.length > 0
+                      ? html`
+                      <div class="chat-history-sidebar__group-label">${group.label}</div>
+                      ${group.options.map(
+                        (option) => html`
+                          <button
+                            class="chat-history-sidebar__item ${option.key === currentKey ? "chat-history-sidebar__item--active" : ""}"
+                            type="button"
+                            title=${option.title}
+                            @click=${() => props.onSessionSwitch?.(option.key)}
+                          >
+                            <span class="chat-history-sidebar__item-icon">
+                              ${icons.messageSquare}
+                            </span>
+                            <span class="chat-history-sidebar__item-label">${option.label}</span>
+                          </button>
+                        `,
+                      )}
+                    `
+                      : nothing
+                  }
+                `,
+              )
+        }
+      </div>
+    </aside>
+  `;
+}
+
 export function renderChat(props: ChatProps) {
   const canCompose = props.connected;
   const isBusy = props.sending || props.stream !== null;
@@ -1393,7 +1458,11 @@ export function renderChat(props: ChatProps) {
     props.onDraftChange(target.value);
   };
 
+  const hasHistorySidebar = (props.sessionGroups?.length ?? 0) > 0;
+
   return html`
+    <div class="chat-with-history">
+      ${hasHistorySidebar ? renderChatHistory(props) : nothing}
     <section
       class="card chat"
       @drop=${(e: DragEvent) => handleDrop(e, props)}
@@ -1713,6 +1782,7 @@ export function renderChat(props: ChatProps) {
         </div>
       </div>
     </section>
+    </div>
   `;
 }
 
