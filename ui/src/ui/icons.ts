@@ -368,31 +368,21 @@ export const icons = {
   `,
   lobster: html`
     <svg viewBox="0 0 120 120" fill="none">
-      <defs>
-        <linearGradient id="lob-eye-g" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#00e5cc" />
-          <stop offset="100%" stop-color="#0088ff" />
-        </linearGradient>
-        <radialGradient id="lob-iris-g" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#00ffcc" />
-          <stop offset="60%" stop-color="#0088ff" />
-          <stop offset="100%" stop-color="#003366" />
-        </radialGradient>
-      </defs>
-      <ellipse cx="60" cy="60" rx="52" ry="32" fill="url(#lob-eye-g)" opacity="0.15" />
-      <path d="M8 60Q60 15 112 60Q60 105 8 60Z" fill="url(#lob-eye-g)" opacity="0.25" />
-      <path
-        d="M8 60Q60 15 112 60Q60 105 8 60Z"
-        stroke="url(#lob-eye-g)"
-        stroke-width="2.5"
-        fill="none"
-      />
-      <circle cx="60" cy="60" r="22" fill="url(#lob-iris-g)" />
-      <circle cx="60" cy="60" r="22" stroke="#00e5cc" stroke-width="1.5" fill="none" opacity="0.6" />
-      <circle cx="60" cy="60" r="10" fill="#050810" />
+      <path d="M10 25 L10 10 L25 10" fill="none" stroke="#1A56DB" stroke-width="3" opacity="0.5" />
+      <path d="M95 10 L110 10 L110 25" fill="none" stroke="#1A56DB" stroke-width="3" opacity="0.5" />
+      <path d="M10 95 L10 110 L25 110" fill="none" stroke="#1A56DB" stroke-width="3" opacity="0.5" />
+      <path d="M95 110 L110 110 L110 95" fill="none" stroke="#1A56DB" stroke-width="3" opacity="0.5" />
+      <path d="M8 60Q60 15 112 60Q60 105 8 60Z" fill="#1A56DB" opacity="0.08" />
+      <path d="M8 60Q60 15 112 60Q60 105 8 60Z" stroke="#1A56DB" stroke-width="2.5" fill="none" />
+      <circle cx="60" cy="60" r="22" fill="#1A56DB" opacity="0.15" />
+      <circle cx="60" cy="60" r="22" stroke="#1A56DB" stroke-width="2" fill="none" />
+      <circle cx="60" cy="60" r="10" fill="#1A56DB" />
       <circle cx="53" cy="54" r="4" fill="white" opacity="0.7" />
       <circle cx="66" cy="52" r="2" fill="white" opacity="0.4" />
-      <circle cx="60" cy="60" r="16" stroke="#00e5cc" stroke-width="0.8" fill="none" opacity="0.3" />
+      <line x1="15" y1="60" x2="30" y2="60" stroke="#1A56DB" stroke-width="1.5" opacity="0.4" />
+      <line x1="90" y1="60" x2="105" y2="60" stroke="#1A56DB" stroke-width="1.5" opacity="0.4" />
+      <line x1="60" y1="28" x2="60" y2="18" stroke="#1A56DB" stroke-width="1.5" opacity="0.4" />
+      <line x1="60" y1="102" x2="60" y2="92" stroke="#1A56DB" stroke-width="1.5" opacity="0.4" />
     </svg>
   `,
   refresh: html`
