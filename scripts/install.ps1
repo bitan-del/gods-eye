@@ -352,58 +352,117 @@ function Main {
         Write-Host ""
         Write-Host "${ACCENT}━━━ Gods Eye Setup Wizard ━━━$NC" -Level info
         Write-Host "Let's configure your AI gateway step by step." -Level info
+        Write-Host "You'll need at least one API key from a provider." -Level info
         Write-Host ""
 
-        # Run the full interactive onboarding wizard
+        $configuredProviders = @()
+
+        # Step 1: Primary provider
+        Write-Host "${ACCENT}Step 1: Primary AI Provider$NC" -Level info
+        Write-Host "  1) anthropic (Claude)" -Level info
+        Write-Host "  2) openai (GPT)" -Level info
+        Write-Host "  3) gemini (Google)" -Level info
+        Write-Host "  4) Skip for now" -Level info
+        $choice = Read-Host "Enter choice [1-4]"
+        $provider = switch ($choice) {
+            "1" { "anthropic" }
+            "2" { "openai" }
+            "3" { "gemini" }
+            default { "skip" }
+        }
+
+        if ($provider -ne "skip") {
+            $hints = @{
+                "anthropic" = "Get your key at: https://console.anthropic.com/settings/keys (starts with sk-ant-api03-...)"
+                "openai" = "Get your key at: https://platform.openai.com/api-keys (starts with sk-...)"
+                "gemini" = "Get your key at: https://aistudio.google.com/apikey (starts with AI...)"
+            }
+            Write-Host $hints[$provider] -Level info
+            $apiKey = Read-Host "Paste your $provider API key"
+
+            if ($apiKey.Length -gt 10) {
+                # Store the key
+                $agentDir = "$env:USERPROFILE\.godseye\agents\main\agent"
+                if (!(Test-Path $agentDir)) { New-Item -ItemType Directory -Path $agentDir -Force | Out-Null }
+                $authFile = "$agentDir\auth-profiles.json"
+                $profileId = "${provider}:manual"
+
+                $authData = @{ profiles = @{} }
+                if (Test-Path $authFile) {
+                    try { $authData = Get-Content $authFile -Raw | ConvertFrom-Json -AsHashtable } catch { $authData = @{ profiles = @{} } }
+                }
+                if (!$authData.profiles) { $authData.profiles = @{} }
+                $authData.profiles[$profileId] = @{ provider = $provider; token = $apiKey }
+                $authData | ConvertTo-Json -Depth 5 | Out-File -FilePath $authFile -Encoding UTF8 -Force
+                Write-Host "$provider API key saved" -Level success
+                $configuredProviders += $provider
+            } else {
+                Write-Host "Invalid key; skipping" -Level warn
+            }
+
+            # Step 2: Fallback providers
+            Write-Host ""
+            Write-Host "${ACCENT}Step 2: Fallback Providers (Optional)$NC" -Level info
+            Write-Host "Fallback providers are used when your primary is unavailable." -Level info
+
+            $addMore = Read-Host "Add a fallback provider? [y/N]"
+            while ($addMore -match "^[yY]") {
+                Write-Host "  1) anthropic  2) openai  3) gemini  4) Done" -Level info
+                $fc = Read-Host "Choose"
+                $fp = switch ($fc) { "1" { "anthropic" } "2" { "openai" } "3" { "gemini" } default { "done" } }
+                if ($fp -eq "done" -or $configuredProviders -contains $fp) {
+                    if ($configuredProviders -contains $fp) { Write-Host "$fp already configured" -Level warn }
+                    break
+                }
+                Write-Host $hints[$fp] -Level info
+                $fk = Read-Host "Paste your $fp API key"
+                if ($fk.Length -gt 10) {
+                    $fpId = "${fp}:manual"
+                    $authData.profiles[$fpId] = @{ provider = $fp; token = $fk }
+                    $authData | ConvertTo-Json -Depth 5 | Out-File -FilePath $authFile -Encoding UTF8 -Force
+                    Write-Host "$fp API key saved" -Level success
+                    $configuredProviders += $fp
+                }
+                $addMore = Read-Host "Add another fallback? [y/N]"
+            }
+        }
+
+        # Ensure gateway.mode is set
         try {
             $godseyeCmd = Get-Command godseye -ErrorAction SilentlyContinue
             if ($godseyeCmd) {
-                godseye onboard
-
-                # After onboarding, ensure gateway.mode is set
-                try {
-                    $currentMode = godseye config get gateway.mode 2>$null
-                    if ([string]::IsNullOrWhiteSpace($currentMode) -or $currentMode -eq "null") {
-                        godseye config set gateway.mode local 2>$null
-                        Write-Host "Gateway mode set to local" -Level success
-                    }
-                } catch { }
-
-                # Auto-start the gateway
-                Write-Host "" -Level info
-                Write-Host "Starting Gods Eye Gateway..." -Level info
-                try {
-                    Start-Process -NoNewWindow -FilePath "godseye" -ArgumentList "gateway", "run", "--bind", "loopback", "--port", "18789", "--force" -RedirectStandardOutput "$env:TEMP\godseye-gateway.log" -RedirectStandardError "$env:TEMP\godseye-gateway-err.log"
-                    Start-Sleep -Seconds 5
-
-                    # Check if gateway is responding
-                    try {
-                        $response = Invoke-WebRequest -Uri "http://127.0.0.1:18789" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
-                        if ($response.StatusCode -eq 200) {
-                            Write-Host "Gateway is running on http://127.0.0.1:18789" -Level success
-                        }
-                    } catch {
-                        Write-Host "Gateway may still be starting. Check: http://127.0.0.1:18789" -Level warn
-                    }
-
-                    # Open the dashboard
-                    Write-Host "Opening Gods Eye dashboard..." -Level info
-                    Start-Process "http://127.0.0.1:18789"
-
-                    Write-Host ""
-                    Write-Host "${SUCCESS}👁 Gods Eye is live!$NC" -Level success
-                    Write-Host ""
-                    Write-Host "  Dashboard: http://127.0.0.1:18789" -Level info
-                    Write-Host "  Docs:      https://docs.gods-eye.org" -Level info
-                    Write-Host "  Discord:   https://discord.gg/clawd" -Level info
-                } catch {
-                    Write-Host "Could not auto-start gateway. Run: godseye gateway run --bind loopback --port 18789" -Level warn
-                }
-            } else {
-                Write-Host "godseye command not found in PATH. Run 'godseye onboard' to complete setup." -Level warn
+                godseye config set gateway.mode local 2>$null
             }
-        } catch {
-            Write-Host "Setup wizard exited. Run 'godseye onboard' to complete setup later." -Level warn
+        } catch { }
+
+        # Auto-start gateway if we configured at least one provider
+        if ($configuredProviders.Count -gt 0) {
+            Write-Host ""
+            Write-Host "Starting Gods Eye Gateway..." -Level info
+            try {
+                Start-Process -NoNewWindow -FilePath "godseye" -ArgumentList "gateway", "run", "--bind", "loopback", "--port", "18789", "--force" -RedirectStandardOutput "$env:TEMP\godseye-gateway.log" -RedirectStandardError "$env:TEMP\godseye-gateway-err.log"
+                Start-Sleep -Seconds 5
+                try {
+                    $response = Invoke-WebRequest -Uri "http://127.0.0.1:18789" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+                    if ($response.StatusCode -eq 200) {
+                        Write-Host "Gateway is running on http://127.0.0.1:18789" -Level success
+                    }
+                } catch {
+                    Write-Host "Gateway may still be starting. Check: http://127.0.0.1:18789" -Level warn
+                }
+                Start-Process "http://127.0.0.1:18789"
+                Write-Host ""
+                Write-Host "${SUCCESS}👁 Gods Eye is live!$NC" -Level success
+                Write-Host ""
+                Write-Host "  Dashboard: http://127.0.0.1:18789" -Level info
+                Write-Host "  Docs:      https://docs.gods-eye.org" -Level info
+                Write-Host "  Configured: $($configuredProviders -join ', ')" -Level info
+            } catch {
+                Write-Host "Could not auto-start gateway. Run: godseye gateway run --bind loopback --port 18789" -Level warn
+            }
+        } else {
+            Write-Host ""
+            Write-Host "👁 Gods Eye installed. Run 'godseye onboard' to configure API keys." -Level info
         }
     } else {
         Write-Host ""
@@ -411,5 +470,7 @@ function Main {
         Write-Host "Run 'godseye onboard' to configure your AI gateway." -Level info
     }
 }
+
+Main
 
 Main
