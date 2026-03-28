@@ -18,6 +18,8 @@ import {
   switchChatSession,
 } from "./app-render.helpers.ts";
 import type { AppViewState } from "./app-view-state.ts";
+import { createChatModelOverride } from "./chat-model-ref.ts";
+import { resolveChatModelOverrideValue } from "./chat-model-select-state.ts";
 import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controllers/agent-files.ts";
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
@@ -1539,6 +1541,45 @@ export function renderApp(state: AppViewState) {
                   state.agentsSelectedId = resolvedAgentId;
                   state.setTab("agents" as import("./navigation.ts").Tab);
                 },
+                onCreateAgent: (_name: string) => {
+                  state.agentsSelectedId = null;
+                  state.setTab("agents" as import("./navigation.ts").Tab);
+                },
+                onNavigateToAgentStore: () => {
+                  state.setTab("skills" as import("./navigation.ts").Tab);
+                },
+                // Model selector
+                modelCatalog: state.chatModelCatalog,
+                currentModelId:
+                  resolveChatModelOverrideValue(state) || (state.chatModelCatalog?.[0]?.id ?? ""),
+                onModelChange: (modelId: string) => {
+                  const override = createChatModelOverride(modelId);
+                  if (override) {
+                    state.chatModelOverrides = {
+                      ...state.chatModelOverrides,
+                      [state.sessionKey]: override,
+                    };
+                  }
+                },
+                // Skills
+                skillsList: (state.skillsReport?.skills ?? []).map((s) => ({
+                  id: s.skillKey,
+                  name: s.name,
+                  description: s.description,
+                })),
+                onSkillSelect: (skillId: string) => {
+                  const skill = state.skillsReport?.skills?.find((s) => s.skillKey === skillId);
+                  if (skill) {
+                    const currentDraft = state.chatMessage;
+                    const sep = currentDraft && !currentDraft.endsWith(" ") ? " " : "";
+                    state.chatMessage = currentDraft + sep + "/" + skill.name + " ";
+                  }
+                },
+                onNavigateToSkillStore: () => {
+                  state.setTab("skills" as import("./navigation.ts").Tab);
+                },
+                // Agent @ mention (text insertion handled in chat.ts)
+                onMentionAgent: (_agentId: string) => {},
                 onSessionSelect: (key: string) => {
                   switchChatSession(state, key);
                 },
