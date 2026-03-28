@@ -162,7 +162,6 @@ function renderCronFilterIcon(hiddenCount: number) {
 
 export function renderChatSessionSelect(state: AppViewState) {
   const sessionGroups = resolveSessionOptionGroups(state, state.sessionKey, state.sessionsResult);
-  const modelSelect = renderChatModelSelect(state);
   return html`
     <div class="chat-controls__session-row">
       <label class="field chat-controls__session">
@@ -194,7 +193,7 @@ export function renderChatSessionSelect(state: AppViewState) {
           )}
         </select>
       </label>
-      ${modelSelect}
+      ${nothing /* model selector moved to chat bar */}
     </div>
   `;
 }
@@ -548,7 +547,7 @@ async function refreshSessionOptions(state: AppViewState) {
   });
 }
 
-function renderChatModelSelect(state: AppViewState) {
+function _renderChatModelSelect(state: AppViewState) {
   const { currentOverride, defaultLabel, options } = resolveChatModelSelectState(state);
   const busy =
     state.chatLoading || state.chatSending || Boolean(state.chatRunId) || state.chatStream !== null;

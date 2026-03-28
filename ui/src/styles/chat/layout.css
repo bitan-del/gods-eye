@@ -493,13 +493,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   border: none;
-  background: var(--muted-strong);
-  color: var(--text-strong);
+  background: var(--accent, #1a56db);
+  color: #fff;
   cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(26, 86, 219, 0.3);
   flex-shrink: 0;
   transition:
     background var(--duration-fast) ease,
@@ -508,18 +510,19 @@
 }
 
 .chat-send-btn svg {
-  width: 15px;
-  height: 15px;
-  stroke: currentColor;
+  width: 16px;
+  height: 16px;
+  stroke: #fff;
   fill: none;
-  stroke-width: 1.5px;
+  stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
 .chat-send-btn:hover:not(:disabled) {
-  background: var(--muted);
-  box-shadow: none;
+  background: var(--accent-bright, #3b82f6);
+  box-shadow: 0 4px 12px rgba(26, 86, 219, 0.4);
+  transform: scale(1.05);
 }
 
 .chat-send-btn:disabled {
@@ -1032,38 +1035,46 @@
 .chat-agents-sidebar__item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
+  margin: 2px 6px;
+  width: calc(100% - 12px);
   border: none;
   background: none;
   cursor: pointer;
   color: var(--foreground);
   font-size: 13px;
+  font-family: inherit;
   text-align: left;
-  transition: background 0.15s;
+  border-radius: 10px;
+  transition: all 0.15s ease;
 }
 
 .chat-agents-sidebar__item:hover {
-  background: var(--panel-strong);
+  background: var(--panel-strong, #f5f5f5);
 }
 
 .chat-agents-sidebar__item--active {
-  background: var(--accent-muted, rgba(59, 130, 246, 0.1));
-  color: var(--accent);
-  font-weight: 500;
+  background: linear-gradient(135deg, rgba(26, 86, 219, 0.08), rgba(59, 130, 246, 0.05));
+  border: 1px solid rgba(26, 86, 219, 0.15);
 }
 
 .chat-agents-sidebar__avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--panel-strong);
-  font-size: 14px;
+  background: linear-gradient(135deg, #e8f0fe, #dbeafe);
+  font-size: 15px;
   flex-shrink: 0;
+}
+
+.chat-agents-sidebar__item--active .chat-agents-sidebar__avatar {
+  background: linear-gradient(135deg, var(--accent, #1a56db), #3b82f6);
+  color: #fff;
 }
 
 .chat-agents-sidebar__emoji {
@@ -1072,13 +1083,19 @@
 
 .chat-agents-sidebar__initial {
   font-weight: 600;
-  color: var(--accent);
+  font-size: 14px;
+  color: var(--accent, #1a56db);
+}
+
+.chat-agents-sidebar__item--active .chat-agents-sidebar__initial {
+  color: #fff;
 }
 
 .chat-agents-sidebar__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .chat-agents-sidebar__footer {
@@ -1149,83 +1166,104 @@
 }
 
 .agent-chat__model-btn {
-  background: var(--bg-hover, #f5f5f5);
+  background: var(--panel, #fff);
   border: 1px solid var(--border, #e0e0e0);
-  border-radius: 8px;
-  padding: 4px 12px;
+  border-radius: 20px;
+  padding: 5px 14px 5px 10px;
   font-size: 12px;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: var(--txt, #333);
+  gap: 6px;
+  color: var(--foreground, #333);
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  line-height: 1.4;
 }
 
 .agent-chat__model-btn:hover {
-  background: var(--accent-lt, #e8f0fe);
+  border-color: var(--accent, #1a56db);
+  background: var(--panel, #fff);
+  box-shadow: 0 0 0 1px var(--accent, #1a56db);
 }
 
 .agent-chat__model-dropdown {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + 8px);
   right: 0;
-  min-width: 220px;
-  max-height: 300px;
+  min-width: 280px;
+  max-width: 340px;
+  max-height: 360px;
   overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
-  z-index: 20;
-  margin-bottom: 4px;
-  padding: 4px 0;
+  background: var(--panel, #fff);
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 100;
+  padding: 6px;
+  scrollbar-width: thin;
 }
 
 .agent-chat__model-option {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: none;
   background: none;
   cursor: pointer;
   text-align: left;
   color: var(--foreground);
   font-size: 13px;
-  transition: background 0.15s;
-  gap: 2px;
+  font-family: inherit;
+  transition: background 0.12s ease;
+  gap: 10px;
+  border-radius: 8px;
 }
 
 .agent-chat__model-option:hover {
-  background: var(--panel-strong);
+  background: var(--panel-strong, #f5f5f5);
 }
 
 .agent-chat__model-option--active {
-  background: var(--accent-muted, rgba(59, 130, 246, 0.1));
+  background: var(--accent-muted, rgba(26, 86, 219, 0.08));
 }
 
 .agent-chat__model-option-name {
   font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-chat__model-option-provider {
   font-size: 11px;
-  color: var(--txt-muted, #888);
+  color: var(--txt-muted, #999);
+  flex-shrink: 0;
 }
 
 .agent-chat__model-option-badge {
-  display: inline-block;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: var(--accent-muted, rgba(59, 130, 246, 0.1));
-  color: var(--accent);
-  margin-top: 2px;
-  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(26, 86, 219, 0.1), rgba(59, 130, 246, 0.1));
+  color: var(--accent, #1a56db);
+  flex-shrink: 0;
+  line-height: 1.3;
 }
 
 /* ── Toolbar buttons (skill picker, @ mention) ── */
@@ -1233,25 +1271,28 @@
 .agent-chat__toolbar-btn {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 50%;
   border: none;
   background: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  color: var(--txt-muted, #666);
-  transition: background 0.15s;
+  font-size: 15px;
+  color: var(--txt-muted, #888);
+  transition: all 0.15s ease;
+  font-family: inherit;
 }
 
 .agent-chat__toolbar-btn:hover {
-  background: var(--bg-hover, #f0f0f0);
+  background: var(--panel-strong, #f0f0f0);
+  color: var(--accent, #1a56db);
 }
 
 .agent-chat__toolbar-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.3;
   cursor: default;
+  pointer-events: none;
 }
 
 /* ── Skill / mention picker wrappers ── */
