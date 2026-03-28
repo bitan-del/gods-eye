@@ -1607,6 +1607,13 @@ export function renderApp(state: AppViewState) {
                       [state.sessionKey]: override,
                     };
                   }
+                  // Persist the model override to the server so it actually takes effect
+                  if (state.client && state.connected) {
+                    void state.client.request("sessions.patch", {
+                      key: state.sessionKey,
+                      model: modelId || null,
+                    });
+                  }
                 },
                 // Skills
                 skillsList: (state.skillsReport?.skills ?? []).map((s) => ({
