@@ -1012,7 +1012,7 @@
   padding: 10px;
   gap: 10px;
   box-sizing: border-box;
-  background: var(--background, #f0f2f5);
+  background: transparent;
 }
 
 .chat-with-sidebar > .chat {
@@ -1365,10 +1365,6 @@
 }
 
 /* Dark theme */
-:root[data-theme-mode="dark"] .chat-with-sidebar {
-  background: var(--background, #0d0d0d);
-}
-
 :root[data-theme-mode="dark"] .chat-with-sidebar > .chat {
   background: var(--panel, #1a1a1a);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
