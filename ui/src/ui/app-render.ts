@@ -1501,27 +1501,59 @@ export function renderApp(state: AppViewState) {
                 canAbort: Boolean(state.chatRunId),
                 onAbort: () => void state.handleAbortChat(),
                 onQueueRemove: (id) => state.removeQueuedMessage(id),
-                onNewSession: () => {
-                  // Create a new distinct chat session with a unique key
+                onNewSession: async () => {
+                  // Create a new distinct chat session via the server
                   const agentId = resolveAgentIdFromSessionKey(state.sessionKey) ?? "main";
-                  const suffix = `chat-${Date.now().toString(36)}`;
-                  const newKey = `agent:${agentId}:${suffix}`;
-                  state.sessionKey = newKey;
-                  state.chatMessage = "";
-                  state.chatAttachments = [];
-                  state.chatStream = null;
-                  state.chatStreamStartedAt = null;
-                  state.chatRunId = null;
-                  state.chatQueue = [];
-                  state.chatMessages = [];
-                  state.resetToolStream();
-                  state.resetChatScroll();
-                  state.applySettings({
-                    ...state.settings,
-                    sessionKey: newKey,
-                    lastActiveSessionKey: newKey,
-                  });
-                  void state.loadAssistantIdentity();
+                  if (!state.client || !state.connected) {
+                    return;
+                  }
+                  try {
+                    const result = await state.client.request("sessions.create", {
+                      agentId,
+                    });
+                    const newKey = (result as { key?: string })?.key;
+                    if (!newKey) {
+                      return;
+                    }
+                    state.sessionKey = newKey;
+                    state.chatMessage = "";
+                    state.chatAttachments = [];
+                    state.chatStream = null;
+                    state.chatStreamStartedAt = null;
+                    state.chatRunId = null;
+                    state.chatQueue = [];
+                    state.chatMessages = [];
+                    state.resetToolStream();
+                    state.resetChatScroll();
+                    state.applySettings({
+                      ...state.settings,
+                      sessionKey: newKey,
+                      lastActiveSessionKey: newKey,
+                    });
+                    void state.loadAssistantIdentity();
+                    // Refresh session list so the new session appears in sidebar
+                    void loadSessions(state, { activeMinutes: 10080 });
+                  } catch {
+                    // Fallback: use client-side key generation
+                    const suffix = `chat-${Date.now().toString(36)}`;
+                    const newKey = `agent:${agentId}:${suffix}`;
+                    state.sessionKey = newKey;
+                    state.chatMessage = "";
+                    state.chatAttachments = [];
+                    state.chatStream = null;
+                    state.chatStreamStartedAt = null;
+                    state.chatRunId = null;
+                    state.chatQueue = [];
+                    state.chatMessages = [];
+                    state.resetToolStream();
+                    state.resetChatScroll();
+                    state.applySettings({
+                      ...state.settings,
+                      sessionKey: newKey,
+                      lastActiveSessionKey: newKey,
+                    });
+                    void state.loadAssistantIdentity();
+                  }
                 },
                 onClearHistory: async () => {
                   if (!state.client || !state.connected) {
