@@ -2475,7 +2475,7 @@ main() {
 
     # Step 6: Run doctor for health checks (all installs — fresh and upgrades)
     run_doctor
-    if [[ "$is_upgrade" == "true" || "$INSTALL_METHOD" == "git" ]]; then
+    if [[ "$is_upgrade" == "true" ]]; then
         should_open_dashboard=true
     fi
 
@@ -2531,14 +2531,28 @@ main() {
         ui_kv "Update command" "godseye update --restart"
         ui_kv "Switch to npm" "curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash -s -- --install-method npm"
 
-        # Auto-run quickstart on fresh git installs
-        local config_path="${GODSEYE_CONFIG_PATH:-$HOME/.godseye/godseye.json}"
-        if [[ "$NO_ONBOARD" != "1" && "$skip_onboard" != "true" && ! -f "${config_path}" ]]; then
-            if [[ -r /dev/tty && -w /dev/tty ]]; then
-                echo ""
-                run_quickstart
+        # Always run onboarding on fresh git installs unless API keys are already configured
+        if [[ "$NO_ONBOARD" != "1" && "$skip_onboard" != "true" ]]; then
+            local auth_profiles_path="$HOME/.godseye/agents/main/agent/auth-profiles.json"
+            local models_path="$HOME/.godseye/agents/main/agent/models.json"
+            local has_api_keys=false
+
+            if [[ -f "$auth_profiles_path" ]] && node -e 'const d=require(process.argv[1]);const p=d.profiles||{};process.exit(Object.values(p).some(v=>v.token&&v.token.length>10)?0:1)' "$auth_profiles_path" 2>/dev/null; then
+                has_api_keys=true
+            fi
+            if [[ "$has_api_keys" != "true" && -f "$models_path" ]] && node -e 'const d=require(process.argv[1]);const p=d.providers||{};process.exit(Object.values(p).some(v=>v.apiKey&&v.apiKey!=="ollama-local"&&v.apiKey.length>10)?0:1)' "$models_path" 2>/dev/null; then
+                has_api_keys=true
+            fi
+
+            if [[ "$has_api_keys" != "true" ]]; then
+                if [[ -r /dev/tty && -w /dev/tty ]]; then
+                    echo ""
+                    run_quickstart
+                else
+                    ui_info "No TTY; run godseye onboard to configure API keys"
+                fi
             else
-                ui_info "No TTY; run godseye quickstart to finish setup"
+                ui_info "API keys already configured; skipping setup wizard"
             fi
         fi
     elif [[ "$is_upgrade" == "true" ]]; then
