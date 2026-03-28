@@ -891,56 +891,55 @@ function renderSlashMenu(
 
 // ── Agents Right Sidebar ──
 
-function renderAgentsSidebar(
-  props: ChatProps,
-  requestUpdate: () => void,
-): TemplateResult | typeof nothing {
+function renderUnifiedSidebar(props: ChatProps, requestUpdate: () => void): TemplateResult {
   const agents = props.agentsList?.agents ?? [];
-  if (agents.length === 0) {
-    return nothing;
-  }
+  const groups = props.sessionGroups ?? [];
+  const currentKey = props.currentSessionKey ?? props.sessionKey;
+  const allEmpty = groups.every((g) => g.options.length === 0);
+
   return html`
-    <div class="chat-agents-sidebar">
-      <div class="chat-agents-sidebar__header">
-        <h3 class="chat-agents-sidebar__title">My Agents</h3>
-      </div>
-      <div class="chat-agents-sidebar__list">
-        ${agents.map(
-          (agent) => html`
-            <button
-              class="chat-agents-sidebar__item ${agent.id === props.currentAgentId ? "chat-agents-sidebar__item--active" : ""}"
-              type="button"
-              @click=${() => props.onAgentChange(agent.id)}
-              title=${agent.identity?.name ?? agent.name ?? agent.id}
-            >
-              <span class="chat-agents-sidebar__avatar">
-                ${
-                  agent.identity?.emoji
-                    ? html`<span class="chat-agents-sidebar__emoji">${agent.identity.emoji}</span>`
-                    : html`<span class="chat-agents-sidebar__initial">${(agent.identity?.name ?? agent.name ?? agent.id).charAt(0).toUpperCase()}</span>`
-                }
-              </span>
-              <span class="chat-agents-sidebar__name">${agent.identity?.name ?? agent.name ?? agent.id}</span>
-            </button>
-          `,
-        )}
-      </div>
-      <div class="chat-agents-sidebar__footer">
-        <div class="chat-agents-sidebar__create-wrap">
+    <aside class="ge-sidebar">
+      <!-- My Agent section -->
+      <div class="ge-sidebar__section">
+        <div class="ge-sidebar__section-label">My Agent</div>
+        <div class="ge-sidebar__agents">
+          ${agents.map(
+            (agent) => html`
+              <button
+                class="ge-sidebar__agent ${agent.id === props.currentAgentId ? "ge-sidebar__agent--active" : ""}"
+                type="button"
+                @click=${() => props.onAgentChange(agent.id)}
+                title=${agent.identity?.name ?? agent.name ?? agent.id}
+              >
+                <span class="ge-sidebar__agent-avatar">
+                  ${
+                    agent.identity?.emoji
+                      ? html`<span>${agent.identity.emoji}</span>`
+                      : html`<span>${(agent.identity?.name ?? agent.name ?? agent.id).charAt(0).toUpperCase()}</span>`
+                  }
+                </span>
+                <span class="ge-sidebar__agent-name">${agent.identity?.name ?? agent.name ?? agent.id}</span>
+              </button>
+            `,
+          )}
+        </div>
+        <div class="ge-sidebar__create-wrap">
           <button
-            class="chat-agents-sidebar__create-btn"
+            class="ge-sidebar__create-btn"
             type="button"
             @click=${() => {
               vs.agentDropdownOpen = !vs.agentDropdownOpen;
               requestUpdate();
             }}
-          >+ Create Agent</button>
+          >
+            <span class="ge-sidebar__create-icon">+</span> Create Agent
+          </button>
           ${
             vs.agentDropdownOpen
               ? html`
-              <div class="chat-agents-sidebar__create-dropdown">
+              <div class="ge-sidebar__create-dropdown">
                 <button
-                  class="chat-agents-sidebar__create-option"
+                  class="ge-sidebar__create-option"
                   type="button"
                   @click=${() => {
                     vs.agentDropdownOpen = false;
@@ -952,7 +951,7 @@ function renderAgentsSidebar(
                   }}
                 >Custom Create</button>
                 <button
-                  class="chat-agents-sidebar__create-option"
+                  class="ge-sidebar__create-option"
                   type="button"
                   @click=${() => {
                     vs.agentDropdownOpen = false;
@@ -966,7 +965,43 @@ function renderAgentsSidebar(
           }
         </div>
       </div>
-    </div>
+
+      <!-- Chat History section -->
+      <div class="ge-sidebar__section ge-sidebar__section--history">
+        <div class="ge-sidebar__section-label">Chat History</div>
+        <div class="ge-sidebar__history-list">
+          ${
+            allEmpty
+              ? html`
+                  <div class="ge-sidebar__empty">No conversations yet</div>
+                `
+              : groups.map(
+                  (group) => html`
+                    ${
+                      group.options.length > 0
+                        ? html`
+                        ${group.options.map(
+                          (option) => html`
+                            <button
+                              class="ge-sidebar__history-item ${option.key === currentKey ? "ge-sidebar__history-item--active" : ""}"
+                              type="button"
+                              title=${option.title}
+                              @click=${() => props.onSessionSwitch?.(option.key)}
+                            >
+                              <span class="ge-sidebar__history-icon">${icons.messageSquare}</span>
+                              <span class="ge-sidebar__history-label">${option.label}</span>
+                            </button>
+                          `,
+                        )}
+                      `
+                        : nothing
+                    }
+                  `,
+                )
+          }
+        </div>
+      </div>
+    </aside>
   `;
 }
 
@@ -1130,62 +1165,7 @@ function renderMentionDropdown(
   `;
 }
 
-function renderChatHistory(props: ChatProps) {
-  const groups = props.sessionGroups ?? [];
-  const currentKey = props.currentSessionKey ?? props.sessionKey;
-  const allEmpty = groups.every((g) => g.options.length === 0);
-
-  return html`
-    <aside class="chat-history-sidebar">
-      <div class="chat-history-sidebar__header">
-        <h3 class="chat-history-sidebar__title">Chat History</h3>
-        <button
-          class="chat-history-sidebar__new-btn"
-          type="button"
-          title="New Chat"
-          aria-label="New Chat"
-          @click=${props.onNewSession}
-        >
-          ${icons.edit}
-        </button>
-      </div>
-      <div class="chat-history-sidebar__list">
-        ${
-          allEmpty
-            ? html`
-                <div class="chat-history-sidebar__empty">No conversations yet</div>
-              `
-            : groups.map(
-                (group) => html`
-                  ${
-                    group.options.length > 0
-                      ? html`
-                      <div class="chat-history-sidebar__group-label">${group.label}</div>
-                      ${group.options.map(
-                        (option) => html`
-                          <button
-                            class="chat-history-sidebar__item ${option.key === currentKey ? "chat-history-sidebar__item--active" : ""}"
-                            type="button"
-                            title=${option.title}
-                            @click=${() => props.onSessionSwitch?.(option.key)}
-                          >
-                            <span class="chat-history-sidebar__item-icon">
-                              ${icons.messageSquare}
-                            </span>
-                            <span class="chat-history-sidebar__item-label">${option.label}</span>
-                          </button>
-                        `,
-                      )}
-                    `
-                      : nothing
-                  }
-                `,
-              )
-        }
-      </div>
-    </aside>
-  `;
-}
+// renderChatHistory merged into renderUnifiedSidebar above
 
 export function renderChat(props: ChatProps) {
   const canCompose = props.connected;
@@ -1458,16 +1438,26 @@ export function renderChat(props: ChatProps) {
     props.onDraftChange(target.value);
   };
 
-  const hasHistorySidebar = (props.sessionGroups?.length ?? 0) > 0;
-
   return html`
-    <div class="chat-with-history">
-      ${hasHistorySidebar ? renderChatHistory(props) : nothing}
+    <div class="chat-with-sidebar">
+      ${renderUnifiedSidebar(props, requestUpdate)}
     <section
       class="card chat"
       @drop=${(e: DragEvent) => handleDrop(e, props)}
       @dragover=${(e: DragEvent) => e.preventDefault()}
     >
+      <!-- Top action bar -->
+      <div class="ge-chat-topbar">
+        <button class="ge-chat-topbar__new" type="button" @click=${props.onNewSession}>
+          ${icons.edit} New Chat
+        </button>
+        <div class="ge-chat-topbar__right">
+          <button class="ge-chat-topbar__action" type="button" @click=${() => props.onNavigateToAgent?.()}>
+            ${icons.settings} Agent Settings
+          </button>
+        </div>
+      </div>
+
       ${props.disabledReason ? html`<div class="callout">${props.disabledReason}</div>` : nothing}
       ${props.error ? html`<div class="callout danger">${props.error}</div>` : nothing}
 
@@ -1525,7 +1515,6 @@ export function renderChat(props: ChatProps) {
             }
           </div>
         </div>
-        ${renderAgentsSidebar(props, requestUpdate)}
       </div>
 
       ${
