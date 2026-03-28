@@ -7,7 +7,7 @@ Gods Eye Online (web app)
         |
         | HTTP-SSE (MCP protocol)
         v
-Gods Eye Fork (local brain)
+Gods Eye Gateway (local brain)
         |
         |-- fal.ai (image/video gen)
         |-- AI agent (chat, reasoning)
@@ -15,7 +15,7 @@ Gods Eye Fork (local brain)
         |-- Brand analysis
 ```
 
-The local Gods Eye fork acts as the **brain** — it holds all API keys,
+The local Gods Eye Gateway acts as the **brain** — it holds all API keys,
 runs the AI agent, and executes tool calls. Gods Eye Online sends
 requests via MCP and receives results.
 
