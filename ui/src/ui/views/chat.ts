@@ -1023,10 +1023,11 @@ function renderModelDropdown(
       ${catalog.map(
         (model) => html`
           <button
-            class="agent-chat__model-option ${model.id === props.currentModelId ? "agent-chat__model-option--active" : ""}"
+            class="agent-chat__model-option ${(model.provider ? `${model.provider}/${model.id}` : model.id) === props.currentModelId ? "agent-chat__model-option--active" : ""}"
             type="button"
             @click=${() => {
-              props.onModelChange?.(model.id);
+              const qualifiedId = model.provider ? `${model.provider}/${model.id}` : model.id;
+              props.onModelChange?.(qualifiedId);
               vs.modelDropdownOpen = false;
               requestUpdate();
             }}
@@ -1719,7 +1720,7 @@ export function renderChat(props: ChatProps) {
                       requestUpdate();
                     }}
                   >
-                    ${props.modelCatalog?.find((m) => m.id === props.currentModelId)?.name ?? props.currentModelId ?? "Model"}
+                    ${props.modelCatalog?.find((m) => (m.provider ? `${m.provider}/${m.id}` : m.id) === props.currentModelId)?.name ?? props.currentModelId ?? "Model"}
                     <span style="font-size:10px">&#9660;</span>
                   </button>
                   ${renderModelDropdown(props, requestUpdate)}
