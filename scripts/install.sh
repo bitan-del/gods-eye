@@ -2432,6 +2432,15 @@ main() {
         fi
     fi
 
+    # Ensure gateway.mode is set so the gateway can start without --allow-unconfigured
+    if [[ -n "$GODSEYE_BIN" ]] && "$GODSEYE_BIN" --help >/dev/null 2>&1; then
+        local current_mode
+        current_mode="$("$GODSEYE_BIN" config get gateway.mode 2>/dev/null || true)"
+        if [[ -z "$current_mode" || "$current_mode" == "null" || "$current_mode" == "undefined" ]]; then
+            run_quiet_step "Setting gateway mode to local" "$GODSEYE_BIN" config set gateway.mode local
+        fi
+    fi
+
     refresh_gateway_service_if_loaded
 
     # Step 6: Run doctor for health checks (all installs — fresh and upgrades)
