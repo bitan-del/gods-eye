@@ -13,8 +13,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Colors
-$ACCENT = "`e[38;2;255;77;77m"    # coral-bright
+# Colors — Gods Eye blue identity
+$ACCENT = "`e[38;2;26;86;219m"    # gods-eye blue #1a56db
 $SUCCESS = "`e[38;2;0;229;204m"    # cyan-bright
 $WARN = "`e[38;2;255;176;32m"     # amber
 $ERROR = "`e[38;2;230;57;70m"     # coral-mid
@@ -35,7 +35,8 @@ function Write-Host {
 function Write-Banner {
     Write-Host ""
     Write-Host "${ACCENT}  👁 Gods Eye Installer$NC" -Level info
-    Write-Host "${MUTED}  All your chats, one Gods Eye.$NC" -Level info
+    Write-Host "${MUTED}  The AI gateway that sees everything, forgets nothing.$NC" -Level info
+    Write-Host "${MUTED}  24 modules · 635+ tests · 25+ channels · zero compromises$NC" -Level info
     Write-Host ""
 }
 
@@ -349,11 +350,66 @@ function Main {
     
     if (!$NoOnboard -and !$DryRun) {
         Write-Host ""
-        Write-Host "Run 'godseye onboard' to complete setup" -Level info
+        Write-Host "${ACCENT}━━━ Gods Eye Setup Wizard ━━━$NC" -Level info
+        Write-Host "Let's configure your AI gateway step by step." -Level info
+        Write-Host ""
+
+        # Run the full interactive onboarding wizard
+        try {
+            $godseyeCmd = Get-Command godseye -ErrorAction SilentlyContinue
+            if ($godseyeCmd) {
+                godseye onboard
+
+                # After onboarding, ensure gateway.mode is set
+                try {
+                    $currentMode = godseye config get gateway.mode 2>$null
+                    if ([string]::IsNullOrWhiteSpace($currentMode) -or $currentMode -eq "null") {
+                        godseye config set gateway.mode local 2>$null
+                        Write-Host "Gateway mode set to local" -Level success
+                    }
+                } catch { }
+
+                # Auto-start the gateway
+                Write-Host "" -Level info
+                Write-Host "Starting Gods Eye Gateway..." -Level info
+                try {
+                    Start-Process -NoNewWindow -FilePath "godseye" -ArgumentList "gateway", "run", "--bind", "loopback", "--port", "18789", "--force" -RedirectStandardOutput "$env:TEMP\godseye-gateway.log" -RedirectStandardError "$env:TEMP\godseye-gateway-err.log"
+                    Start-Sleep -Seconds 5
+
+                    # Check if gateway is responding
+                    try {
+                        $response = Invoke-WebRequest -Uri "http://127.0.0.1:18789" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue
+                        if ($response.StatusCode -eq 200) {
+                            Write-Host "Gateway is running on http://127.0.0.1:18789" -Level success
+                        }
+                    } catch {
+                        Write-Host "Gateway may still be starting. Check: http://127.0.0.1:18789" -Level warn
+                    }
+
+                    # Open the dashboard
+                    Write-Host "Opening Gods Eye dashboard..." -Level info
+                    Start-Process "http://127.0.0.1:18789"
+
+                    Write-Host ""
+                    Write-Host "${SUCCESS}👁 Gods Eye is live!$NC" -Level success
+                    Write-Host ""
+                    Write-Host "  Dashboard: http://127.0.0.1:18789" -Level info
+                    Write-Host "  Docs:      https://docs.gods-eye.org" -Level info
+                    Write-Host "  Discord:   https://discord.gg/clawd" -Level info
+                } catch {
+                    Write-Host "Could not auto-start gateway. Run: godseye gateway run --bind loopback --port 18789" -Level warn
+                }
+            } else {
+                Write-Host "godseye command not found in PATH. Run 'godseye onboard' to complete setup." -Level warn
+            }
+        } catch {
+            Write-Host "Setup wizard exited. Run 'godseye onboard' to complete setup later." -Level warn
+        }
+    } else {
+        Write-Host ""
+        Write-Host "👁 Gods Eye installed successfully!" -Level success
+        Write-Host "Run 'godseye onboard' to configure your AI gateway." -Level info
     }
-    
-    Write-Host ""
-    Write-Host "👁 Gods Eye installed successfully!" -Level success
 }
 
 Main

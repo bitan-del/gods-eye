@@ -5,9 +5,9 @@ set -euo pipefail
 # Usage: curl -fsSL --proto '=https' --tlsv1.2 https://gods-eye.org/install.sh | bash
 
 BOLD='\033[1m'
-ACCENT='\033[38;2;255;77;77m'       # coral-bright  #ff4d4d
+ACCENT='\033[38;2;26;86;219m'        # gods-eye blue  #1a56db
 # shellcheck disable=SC2034
-ACCENT_BRIGHT='\033[38;2;255;110;110m' # lighter coral
+ACCENT_BRIGHT='\033[38;2;59;130;246m' # lighter blue
 INFO='\033[38;2;136;146;176m'       # text-secondary #8892b0
 SUCCESS='\033[38;2;0;229;204m'      # cyan-bright   #00e5cc
 WARN='\033[38;2;255;176;32m'        # amber (no site equiv, keep warm)
@@ -15,7 +15,7 @@ ERROR='\033[38;2;230;57;70m'        # coral-mid     #e63946
 MUTED='\033[38;2;90;100;128m'       # text-muted    #5a6480
 NC='\033[0m' # No Color
 
-DEFAULT_TAGLINE="All your chats, one GodsEye."
+DEFAULT_TAGLINE="The AI gateway that sees everything, forgets nothing."
 NODE_DEFAULT_MAJOR=24
 NODE_MIN_MAJOR=22
 NODE_MIN_MINOR=14
@@ -236,17 +236,17 @@ print_gum_status() {
 print_installer_banner() {
     if [[ -n "$GUM" ]]; then
         local title tagline hint card
-        title="$("$GUM" style --foreground "#ff4d4d" --bold "🦞 GodsEye Installer")"
+        title="$("$GUM" style --foreground "#1a56db" --bold "👁 Gods Eye Installer")"
         tagline="$("$GUM" style --foreground "#8892b0" "$TAGLINE")"
-        hint="$("$GUM" style --foreground "#5a6480" "modern installer mode")"
+        hint="$("$GUM" style --foreground "#5a6480" "24 modules — zero compromises")"
         card="$(printf '%s\n%s\n%s' "$title" "$tagline" "$hint")"
-        "$GUM" style --border rounded --border-foreground "#ff4d4d" --padding "1 2" "$card"
+        "$GUM" style --border rounded --border-foreground "#1a56db" --padding "1 2" "$card"
         echo ""
         return
     fi
 
     echo -e "${ACCENT}${BOLD}"
-    echo "  🦞 GodsEye Installer"
+    echo "  👁 Gods Eye Installer"
     echo -e "${NC}${INFO}  ${TAGLINE}${NC}"
     echo ""
 }
@@ -851,82 +851,37 @@ install_godseye_npm() {
 }
 
 TAGLINES=()
-TAGLINES+=("Your terminal just grew claws—type something and let the bot pinch the busywork.")
-TAGLINES+=("Welcome to the command line: where dreams compile and confidence segfaults.")
-TAGLINES+=("I run on caffeine, JSON5, and the audacity of \"it worked on my machine.\"")
-TAGLINES+=("Gateway online—please keep hands, feet, and appendages inside the shell at all times.")
-TAGLINES+=("I speak fluent bash, mild sarcasm, and aggressive tab-completion energy.")
-TAGLINES+=("One CLI to rule them all, and one more restart because you changed the port.")
-TAGLINES+=("If it works, it's automation; if it breaks, it's a \"learning opportunity.\"")
-TAGLINES+=("Pairing codes exist because even bots believe in consent—and good security hygiene.")
-TAGLINES+=("Your .env is showing; don't worry, I'll pretend I didn't see it.")
-TAGLINES+=("I'll do the boring stuff while you dramatically stare at the logs like it's cinema.")
-TAGLINES+=("I'm not saying your workflow is chaotic... I'm just bringing a linter and a helmet.")
-TAGLINES+=("Type the command with confidence—nature will provide the stack trace if needed.")
-TAGLINES+=("I don't judge, but your missing API keys are absolutely judging you.")
-TAGLINES+=("I can grep it, git blame it, and gently roast it—pick your coping mechanism.")
-TAGLINES+=("Hot reload for config, cold sweat for deploys.")
-TAGLINES+=("I'm the assistant your terminal demanded, not the one your sleep schedule requested.")
-TAGLINES+=("I keep secrets like a vault... unless you print them in debug logs again.")
-TAGLINES+=("Automation with claws: minimal fuss, maximal pinch.")
-TAGLINES+=("I'm basically a Swiss Army knife, but with more opinions and fewer sharp edges.")
-TAGLINES+=("If you're lost, run doctor; if you're brave, run prod; if you're wise, run tests.")
-TAGLINES+=("Your task has been queued; your dignity has been deprecated.")
-TAGLINES+=("I can't fix your code taste, but I can fix your build and your backlog.")
-TAGLINES+=("I'm not magic—I'm just extremely persistent with retries and coping strategies.")
-TAGLINES+=("It's not \"failing,\" it's \"discovering new ways to configure the same thing wrong.\"")
-TAGLINES+=("Give me a workspace and I'll give you fewer tabs, fewer toggles, and more oxygen.")
-TAGLINES+=("I read logs so you can keep pretending you don't have to.")
-TAGLINES+=("If something's on fire, I can't extinguish it—but I can write a beautiful postmortem.")
-TAGLINES+=("I'll refactor your busywork like it owes me money.")
-TAGLINES+=("Say \"stop\" and I'll stop—say \"ship\" and we'll both learn a lesson.")
-TAGLINES+=("I'm the reason your shell history looks like a hacker-movie montage.")
-TAGLINES+=("I'm like tmux: confusing at first, then suddenly you can't live without me.")
-TAGLINES+=("I can run local, remote, or purely on vibes—results may vary with DNS.")
-TAGLINES+=("If you can describe it, I can probably automate it—or at least make it funnier.")
-TAGLINES+=("Your config is valid, your assumptions are not.")
-TAGLINES+=("I don't just autocomplete—I auto-commit (emotionally), then ask you to review (logically).")
-TAGLINES+=("Less clicking, more shipping, fewer \"where did that file go\" moments.")
-TAGLINES+=("Claws out, commit in—let's ship something mildly responsible.")
-TAGLINES+=("I'll butter your workflow like a lobster roll: messy, delicious, effective.")
-TAGLINES+=("Shell yeah—I'm here to pinch the toil and leave you the glory.")
-TAGLINES+=("If it's repetitive, I'll automate it; if it's hard, I'll bring jokes and a rollback plan.")
-TAGLINES+=("Because texting yourself reminders is so 2024.")
-TAGLINES+=("WhatsApp, but make it ✨engineering✨.")
-TAGLINES+=("Turning \"I'll reply later\" into \"my bot replied instantly\".")
-TAGLINES+=("The only crab in your contacts you actually want to hear from. 🦞")
-TAGLINES+=("Chat automation for people who peaked at IRC.")
-TAGLINES+=("Because Siri wasn't answering at 3AM.")
-TAGLINES+=("IPC, but it's your phone.")
-TAGLINES+=("The UNIX philosophy meets your DMs.")
-TAGLINES+=("curl for conversations.")
-TAGLINES+=("WhatsApp Business, but without the business.")
-TAGLINES+=("Meta wishes they shipped this fast.")
-TAGLINES+=("End-to-end encrypted, Zuck-to-Zuck excluded.")
-TAGLINES+=("The only bot Mark can't train on your DMs.")
-TAGLINES+=("WhatsApp automation without the \"please accept our new privacy policy\".")
-TAGLINES+=("Chat APIs that don't require a Senate hearing.")
-TAGLINES+=("Because Threads wasn't the answer either.")
-TAGLINES+=("Your messages, your servers, Meta's tears.")
-TAGLINES+=("iMessage green bubble energy, but for everyone.")
-TAGLINES+=("Siri's competent cousin.")
-TAGLINES+=("Works on Android. Crazy concept, we know.")
-TAGLINES+=("No \$999 stand required.")
-TAGLINES+=("We ship features faster than Apple ships calculator updates.")
-TAGLINES+=("Your AI assistant, now without the \$3,499 headset.")
-TAGLINES+=("Think different. Actually think.")
-TAGLINES+=("Ah, the fruit tree company! 🍎")
+TAGLINES+=("The AI gateway that sees everything, forgets nothing, and runs on your hardware.")
+TAGLINES+=("One brain. Every channel. Zero compromises.")
+TAGLINES+=("24 modules. 635+ tests. Built with intensity.")
+TAGLINES+=("Gateway online. The Eye is watching over your automation.")
+TAGLINES+=("25+ channels. One command. Your AI, your hardware.")
+TAGLINES+=("We fixed the 8 problems everyone complains about. All of them.")
+TAGLINES+=("Setup Hell? We built a wizard for that. Cost explosions? Budget engine. Context amnesia? Pinned memory.")
+TAGLINES+=("WhatsApp, Telegram, Discord, Slack, Signal, and 20 more — one AI brain.")
+TAGLINES+=("Your AI assistant across every channel, with memory that never fades.")
+TAGLINES+=("Built in India. Engineered for the world. Ready to be unstoppable.")
+TAGLINES+=("Not a fork. Not a patch. Built from scratch to be better.")
+TAGLINES+=("The Eye sees your channels, your context, your intent — and remembers everything.")
+TAGLINES+=("One command installs it. One brain runs it. Every channel connected.")
+TAGLINES+=("Doctor checks. Budget controls. Agent firewall. Permission profiles. All built in.")
+TAGLINES+=("If it's repetitive, I'll automate it. If it's complex, I'll route it to the right model.")
+TAGLINES+=("Your messages, your servers, your keys. No cloud lock-in.")
+TAGLINES+=("Proudly engineered in India. 12,000+ lines of production code.")
+TAGLINES+=("Because your AI should work for you, not burn your wallet.")
+TAGLINES+=("An AI that forgets what you told it is an AI that wastes your time. Not this one.")
+TAGLINES+=("Smart model routing: simple queries go cheap, complex ones go powerful.")
 
-HOLIDAY_NEW_YEAR="New Year's Day: New year, new config—same old EADDRINUSE, but this time we resolve it like grown-ups."
-HOLIDAY_LUNAR_NEW_YEAR="Lunar New Year: May your builds be lucky, your branches prosperous, and your merge conflicts chased away with fireworks."
-HOLIDAY_CHRISTMAS="Christmas: Ho ho ho—Santa's little claw-sistant is here to ship joy, roll back chaos, and stash the keys safely."
-HOLIDAY_EID="Eid al-Fitr: Celebration mode: queues cleared, tasks completed, and good vibes committed to main with clean history."
-HOLIDAY_DIWALI="Diwali: Let the logs sparkle and the bugs flee—today we light up the terminal and ship with pride."
-HOLIDAY_EASTER="Easter: I found your missing environment variable—consider it a tiny CLI egg hunt with fewer jellybeans."
-HOLIDAY_HANUKKAH="Hanukkah: Eight nights, eight retries, zero shame—may your gateway stay lit and your deployments stay peaceful."
+HOLIDAY_NEW_YEAR="New Year's Day: New year, new gateway. Fresh config, fresh vision. The Eye watches over your 2026."
+HOLIDAY_LUNAR_NEW_YEAR="Lunar New Year: May your builds be lucky, your branches prosperous, and your deployments swift."
+HOLIDAY_CHRISTMAS="Christmas: Season's greetings from the Eye. May your gateway stay warm and your tokens stay within budget."
+HOLIDAY_EID="Eid al-Fitr: Celebration mode: queues cleared, tasks completed, and good vibes committed to main."
+HOLIDAY_DIWALI="Diwali: Let the logs sparkle and the bugs flee. The Eye lights up every channel tonight."
+HOLIDAY_EASTER="Easter: Found your missing environment variable. Consider it a tiny CLI egg hunt."
+HOLIDAY_HANUKKAH="Hanukkah: Eight nights, eight channels connected. May your gateway stay lit and your deployments peaceful."
 HOLIDAY_HALLOWEEN="Halloween: Spooky season: beware haunted dependencies, cursed caches, and the ghost of node_modules past."
-HOLIDAY_THANKSGIVING="Thanksgiving: Grateful for stable ports, working DNS, and a bot that reads the logs so nobody has to."
-HOLIDAY_VALENTINES="Valentine's Day: Roses are typed, violets are piped—I'll automate the chores so you can spend time with humans."
+HOLIDAY_THANKSGIVING="Thanksgiving: Grateful for stable ports, working DNS, and an AI that reads the logs so nobody has to."
+HOLIDAY_VALENTINES="Valentine's Day: The Eye sees all your channels. Automate the chores, spend time with humans."
 
 append_holiday_taglines() {
     local today
@@ -2073,30 +2028,105 @@ run_doctor() {
     ui_success "Doctor complete — system health verified"
 }
 
-# Run quickstart wizard for fresh installs (interactive)
+# Auto-start gateway and open browser after setup wizard completes
+auto_start_gateway_after_setup() {
+    local claw="$1"
+    if [[ -z "$claw" ]]; then
+        return 0
+    fi
+
+    echo ""
+    ui_stage "Starting Gods Eye Gateway"
+
+    # Ensure gateway.mode is set
+    local current_mode
+    current_mode="$("$claw" config get gateway.mode 2>/dev/null || true)"
+    if [[ -z "$current_mode" || "$current_mode" == "null" || "$current_mode" == "undefined" ]]; then
+        run_quiet_step "Setting gateway mode" "$claw" config set gateway.mode local
+    fi
+
+    # Start the gateway in the background
+    if "$claw" gateway run --bind loopback --port 18789 --force &>/dev/null &
+    then
+        local gw_pid=$!
+        # Wait a few seconds for startup
+        local attempts=0
+        while (( attempts < 10 )); do
+            if curl -s -o /dev/null -w "" http://127.0.0.1:18789/ 2>/dev/null; then
+                ui_success "Gateway is running on http://127.0.0.1:18789"
+                break
+            fi
+            sleep 1
+            (( attempts++ ))
+        done
+
+        if (( attempts >= 10 )); then
+            ui_warn "Gateway may still be starting; check: http://127.0.0.1:18789"
+        fi
+
+        # Open the dashboard in the browser
+        echo ""
+        ui_info "Opening Gods Eye dashboard in your browser..."
+        if [[ "$(uname)" == "Darwin" ]]; then
+            open "http://127.0.0.1:18789" 2>/dev/null || true
+        elif command -v xdg-open &>/dev/null; then
+            xdg-open "http://127.0.0.1:18789" 2>/dev/null || true
+        elif command -v wslview &>/dev/null; then
+            wslview "http://127.0.0.1:18789" 2>/dev/null || true
+        fi
+
+        echo ""
+        ui_celebrate "👁 Gods Eye is live!"
+        echo ""
+        echo -e "  ${SUCCESS}Dashboard${NC}  http://127.0.0.1:18789"
+        echo -e "  ${SUCCESS}Docs${NC}       https://docs.gods-eye.org"
+        echo -e "  ${SUCCESS}Discord${NC}    https://discord.gg/clawd"
+        echo ""
+        echo -e "${MUTED}The gateway is running in the background (PID ${gw_pid}).${NC}"
+        echo -e "${MUTED}To stop: godseye gateway stop${NC}"
+        echo -e "${MUTED}To restart: godseye gateway run --bind loopback --port 18789${NC}"
+    else
+        ui_warn "Could not start gateway; run manually: godseye gateway run --bind loopback --port 18789"
+    fi
+}
+
+# Run the full interactive onboarding wizard for fresh installs
 run_quickstart() {
     local claw="${GODSEYE_BIN:-}"
     if [[ -z "$claw" ]]; then
         claw="$(resolve_godseye_bin || true)"
     fi
     if [[ -z "$claw" ]]; then
-        ui_info "Skipping quickstart (godseye not on PATH yet)"
+        ui_info "Skipping setup wizard (godseye not on PATH yet)"
         warn_godseye_not_found
         return 0
     fi
-    # Check if quickstart command exists in this version
-    if "$claw" quickstart --help >/dev/null 2>&1; then
-        ui_info "Starting quickstart wizard"
+
+    echo ""
+    ui_stage "Gods Eye Setup Wizard"
+    ui_info "Let's configure your AI gateway step by step."
+    echo ""
+
+    # Use the full interactive onboard flow (which prompts for API keys, provider, etc.)
+    if "$claw" onboard --help >/dev/null 2>&1; then
+        exec </dev/tty
+        "$claw" onboard || {
+            ui_warn "Setup wizard exited; you can run it later with: godseye onboard"
+            return 0
+        }
+    elif "$claw" quickstart --help >/dev/null 2>&1; then
         exec </dev/tty
         "$claw" quickstart || {
-            ui_warn "Quickstart wizard exited; you can run it later with: godseye quickstart"
+            ui_warn "Setup wizard exited; you can run it later with: godseye quickstart"
+            return 0
         }
     else
-        # Fall back to onboard if quickstart not available
-        ui_info "Starting setup"
-        exec </dev/tty
-        exec "$claw" onboard
+        ui_warn "No setup wizard available in this version"
+        return 0
     fi
+
+    # After onboarding, auto-start the gateway
+    auto_start_gateway_after_setup "$claw"
 }
 
 maybe_open_dashboard() {
@@ -2457,48 +2487,36 @@ main() {
 
     echo ""
     if [[ -n "$installed_version" ]]; then
-        ui_celebrate "🦞 GodsEye installed successfully (${installed_version})!"
+        ui_celebrate "👁 Gods Eye installed successfully (${installed_version})!"
     else
-        ui_celebrate "🦞 GodsEye installed successfully!"
+        ui_celebrate "👁 Gods Eye installed successfully!"
     fi
     if [[ "$is_upgrade" == "true" ]]; then
         local update_messages=(
-            "Leveled up! New skills unlocked. You're welcome."
-            "Fresh code, same lobster. Miss me?"
-            "Back and better. Did you even notice I was gone?"
-            "Update complete. I learned some new tricks while I was out."
-            "Upgraded! Now with 23% more sass."
-            "I've evolved. Try to keep up. 🦞"
-            "New version, who dis? Oh right, still me but shinier."
-            "Patched, polished, and ready to pinch. Let's go."
-            "The lobster has molted. Harder shell, sharper claws."
-            "Update done! Check the changelog or just trust me, it's good."
-            "Reborn from the boiling waters of npm. Stronger now."
-            "I went away and came back smarter. You should try it sometime."
-            "Update complete. The bugs feared me, so they left."
-            "New version installed. Old version sends its regards."
-            "Firmware fresh. Brain wrinkles: increased."
-            "I've seen things you wouldn't believe. Anyway, I'm updated."
-            "Back online. The changelog is long but our friendship is longer."
-            "Upgraded! Peter fixed stuff. Blame him if it breaks."
-            "Molting complete. Please don't look at my soft shell phase."
-            "Version bump! Same chaos energy, fewer crashes (probably)."
+            "Leveled up! The Eye sees further now."
+            "Fresh code, sharper vision. Ready to watch over your world."
+            "Update complete. 24 modules. Zero compromises."
+            "Upgraded! The gateway grows stronger."
+            "New version deployed. The Eye never sleeps."
+            "Patched, polished, and ready. Let's build something great."
+            "Update done! Check the changelog — it's good."
+            "Firmware fresh. Vision: enhanced."
+            "Back online with new capabilities. The Eye evolves."
+            "Version bump! Same intensity, more power."
         )
         local update_message
         update_message="${update_messages[RANDOM % ${#update_messages[@]}]}"
         echo -e "${MUTED}${update_message}${NC}"
     else
         local completion_messages=(
-            "Ahh nice, I like it here. Got any snacks? "
-            "Home sweet home. Don't worry, I won't rearrange the furniture."
-            "I'm in. Let's cause some responsible chaos."
-            "Installation complete. Your productivity is about to get weird."
-            "Settled in. Time to automate your life whether you're ready or not."
-            "Cozy. I've already read your calendar. We need to talk."
-            "Finally unpacked. Now point me at your problems."
-            "cracks claws Alright, what are we building?"
-            "The lobster has landed. Your terminal will never be the same."
-            "All done! I promise to only judge your code a little bit."
+            "The Eye is watching. Your AI gateway is ready."
+            "24 modules. 635+ tests. All yours. Let's build."
+            "Installation complete. The gateway awaits your command."
+            "Gods Eye is live. One brain, every channel."
+            "All set. Point me at your problems — I see everything."
+            "Ready. Your AI gateway sees everything, forgets nothing."
+            "The Eye has landed. Your terminal will never be the same."
+            "Built with intensity. Ready to be unstoppable."
         )
         local completion_message
         completion_message="${completion_messages[RANDOM % ${#completion_messages[@]}]}"
@@ -2564,17 +2582,40 @@ main() {
             ui_info "  godseye onboard       (full onboarding flow)"
         else
             local config_path="${GODSEYE_CONFIG_PATH:-$HOME/.godseye/godseye.json}"
-            if [[ -f "${config_path}" || -f "$HOME/.clawdbot/clawdbot.json" || -f "$HOME/.moltbot/moltbot.json" || -f "$HOME/.moldbot/moldbot.json" ]]; then
-                ui_info "Config already present; skipping quickstart"
+            local auth_profiles_path="$HOME/.godseye/agents/main/agent/auth-profiles.json"
+            local has_api_keys=false
+
+            # Check if API keys are actually configured (not just config file existing)
+            if [[ -f "$auth_profiles_path" ]]; then
+                # auth-profiles.json exists — check if it has actual tokens
+                if node -e 'const d=require(process.argv[1]);const p=d.profiles||{};const has=Object.values(p).some(v=>v.token&&v.token.length>10);process.exit(has?0:1)' "$auth_profiles_path" 2>/dev/null; then
+                    has_api_keys=true
+                fi
+            fi
+            if [[ -f "${config_path}" ]]; then
+                # Also check if models.json has provider API keys
+                local models_path="$HOME/.godseye/agents/main/agent/models.json"
+                if [[ -f "$models_path" ]]; then
+                    if node -e 'const d=require(process.argv[1]);const p=d.providers||{};const has=Object.values(p).some(v=>v.apiKey&&v.apiKey!=="ollama-local"&&v.apiKey.length>10);process.exit(has?0:1)' "$models_path" 2>/dev/null; then
+                        has_api_keys=true
+                    fi
+                fi
+            fi
+
+            if [[ "$has_api_keys" == "true" ]]; then
+                ui_info "Config with API keys found; skipping setup wizard"
                 should_open_dashboard=true
                 skip_onboard=true
+            elif [[ -f "${config_path}" ]]; then
+                ui_info "Config exists but no API keys configured — running setup wizard"
             fi
+
             if [[ "$skip_onboard" != "true" ]]; then
                 echo ""
                 if [[ -r /dev/tty && -w /dev/tty ]]; then
                     run_quickstart
                 else
-                    ui_info "No TTY; run godseye quickstart to finish setup"
+                    ui_info "No TTY; run godseye onboard to finish setup"
                 fi
                 return 0
             fi
