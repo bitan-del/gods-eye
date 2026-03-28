@@ -97,12 +97,38 @@ export type ChatProps = {
   onNewSession: () => void;
   onClearHistory?: () => void;
   agentsList: {
-    agents: Array<{ id: string; name?: string; identity?: { name?: string; avatarUrl?: string } }>;
+    agents: Array<{
+      id: string;
+      name?: string;
+      identity?: { name?: string; avatarUrl?: string; emoji?: string; avatar?: string };
+    }>;
     defaultId?: string;
   } | null;
   currentAgentId: string;
   onAgentChange: (agentId: string) => void;
   onNavigateToAgent?: () => void;
+  onCreateAgent?: (name: string) => void;
+  onNavigateToAgentStore?: () => void;
+
+  // Model selector in chat bar
+  modelCatalog?: Array<{
+    id: string;
+    name?: string;
+    provider?: string;
+    contextWindow?: number;
+    reasoning?: boolean;
+  }>;
+  currentModelId?: string;
+  onModelChange?: (modelId: string) => void;
+
+  // Skills picker
+  skillsList?: Array<{ id: string; name: string; description?: string; commands?: string[] }>;
+  onSkillSelect?: (skillId: string) => void;
+  onNavigateToSkillStore?: () => void;
+
+  // Agent @ mention
+  onMentionAgent?: (agentId: string) => void;
+
   onSessionSelect?: (sessionKey: string) => void;
   onOpenSidebar?: (content: string) => void;
   onCloseSidebar?: () => void;
@@ -151,6 +177,11 @@ interface ChatEphemeralState {
   searchOpen: boolean;
   searchQuery: string;
   pinnedExpanded: boolean;
+  agentDropdownOpen: boolean;
+  modelDropdownOpen: boolean;
+  skillDropdownOpen: boolean;
+  skillSearchQuery: string;
+  mentionDropdownOpen: boolean;
 }
 
 function createChatEphemeralState(): ChatEphemeralState {
@@ -166,6 +197,11 @@ function createChatEphemeralState(): ChatEphemeralState {
     searchOpen: false,
     searchQuery: "",
     pinnedExpanded: false,
+    agentDropdownOpen: false,
+    modelDropdownOpen: false,
+    skillDropdownOpen: false,
+    skillSearchQuery: "",
+    mentionDropdownOpen: false,
   };
 }
 
@@ -613,21 +649,24 @@ function renderWelcomeState(props: ChatProps): TemplateResult {
   });
   const logoUrl = agentLogoUrl(props.basePath ?? "");
 
+  // Find current agent emoji for the centered avatar
+  const currentAgent = props.agentsList?.agents?.find((a) => a.id === props.currentAgentId);
+  const agentEmoji = currentAgent?.identity?.emoji;
+
   return html`
     <div class="agent-chat__welcome" style="--agent-color: var(--accent)">
       <div class="agent-chat__welcome-glow"></div>
-      ${
-        avatar
-          ? html`<img src=${avatar} alt=${name} style="width:56px; height:56px; border-radius:50%; object-fit:cover;" />`
-          : html`<div class="agent-chat__avatar agent-chat__avatar--logo"><img src=${logoUrl} alt="Gods Eye" /></div>`
-      }
-      <h2>${name}</h2>
-      <div class="agent-chat__badges">
-        <span class="agent-chat__badge"><img src=${logoUrl} alt="" /> Ready to chat</span>
+      <div class="agent-chat__welcome-avatar">
+        ${
+          agentEmoji
+            ? html`<span class="agent-chat__welcome-emoji">${agentEmoji}</span>`
+            : avatar
+              ? html`<img src=${avatar} alt=${name} class="agent-chat__welcome-img" />`
+              : html`<div class="agent-chat__avatar agent-chat__avatar--logo"><img src=${logoUrl} alt="Gods Eye" /></div>`
+        }
       </div>
-      <p class="agent-chat__hint">
-        Type a message below &middot; <kbd>/</kbd> for commands
-      </p>
+      <h2 class="agent-chat__welcome-heading">Hi, I'm ${name}</h2>
+      <p class="agent-chat__welcome-subtitle">I'm on standby 24/7 to assist with any issue.</p>
       <div class="agent-chat__suggestions">
         ${WELCOME_SUGGESTIONS.map(
           (text) => html`
@@ -838,6 +877,247 @@ function renderSlashMenu(
         <kbd>Enter</kbd> select
         <kbd>Esc</kbd> close
       </div>
+    </div>
+  `;
+}
+
+// ── Agents Right Sidebar ──
+
+function renderAgentsSidebar(
+  props: ChatProps,
+  requestUpdate: () => void,
+): TemplateResult | typeof nothing {
+  const agents = props.agentsList?.agents ?? [];
+  if (agents.length === 0) {
+    return nothing;
+  }
+  return html`
+    <div class="chat-agents-sidebar">
+      <div class="chat-agents-sidebar__header">
+        <h3 class="chat-agents-sidebar__title">My Agents</h3>
+      </div>
+      <div class="chat-agents-sidebar__list">
+        ${agents.map(
+          (agent) => html`
+            <button
+              class="chat-agents-sidebar__item ${agent.id === props.currentAgentId ? "chat-agents-sidebar__item--active" : ""}"
+              type="button"
+              @click=${() => props.onAgentChange(agent.id)}
+              title=${agent.identity?.name ?? agent.name ?? agent.id}
+            >
+              <span class="chat-agents-sidebar__avatar">
+                ${
+                  agent.identity?.emoji
+                    ? html`<span class="chat-agents-sidebar__emoji">${agent.identity.emoji}</span>`
+                    : html`<span class="chat-agents-sidebar__initial">${(agent.identity?.name ?? agent.name ?? agent.id).charAt(0).toUpperCase()}</span>`
+                }
+              </span>
+              <span class="chat-agents-sidebar__name">${agent.identity?.name ?? agent.name ?? agent.id}</span>
+            </button>
+          `,
+        )}
+      </div>
+      <div class="chat-agents-sidebar__footer">
+        <div class="chat-agents-sidebar__create-wrap">
+          <button
+            class="chat-agents-sidebar__create-btn"
+            type="button"
+            @click=${() => {
+              vs.agentDropdownOpen = !vs.agentDropdownOpen;
+              requestUpdate();
+            }}
+          >+ Create Agent</button>
+          ${
+            vs.agentDropdownOpen
+              ? html`
+              <div class="chat-agents-sidebar__create-dropdown">
+                <button
+                  class="chat-agents-sidebar__create-option"
+                  type="button"
+                  @click=${() => {
+                    vs.agentDropdownOpen = false;
+                    requestUpdate();
+                    const name = prompt("Enter agent name:");
+                    if (name?.trim()) {
+                      props.onCreateAgent?.(name.trim());
+                    }
+                  }}
+                >Custom Create</button>
+                <button
+                  class="chat-agents-sidebar__create-option"
+                  type="button"
+                  @click=${() => {
+                    vs.agentDropdownOpen = false;
+                    requestUpdate();
+                    props.onNavigateToAgentStore?.();
+                  }}
+                >Choose from Agent Store</button>
+              </div>
+            `
+              : nothing
+          }
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Model Selector Dropdown ──
+
+function renderModelDropdown(
+  props: ChatProps,
+  requestUpdate: () => void,
+): TemplateResult | typeof nothing {
+  if (!vs.modelDropdownOpen) {
+    return nothing;
+  }
+  const catalog = props.modelCatalog ?? [];
+  if (catalog.length === 0) {
+    return nothing;
+  }
+  return html`
+    <div class="agent-chat__model-dropdown">
+      ${catalog.map(
+        (model) => html`
+          <button
+            class="agent-chat__model-option ${model.id === props.currentModelId ? "agent-chat__model-option--active" : ""}"
+            type="button"
+            @click=${() => {
+              props.onModelChange?.(model.id);
+              vs.modelDropdownOpen = false;
+              requestUpdate();
+            }}
+          >
+            <span class="agent-chat__model-option-name">${model.name ?? model.id}</span>
+            ${model.provider ? html`<span class="agent-chat__model-option-provider">${model.provider}</span>` : nothing}
+            ${
+              model.reasoning
+                ? html`
+                    <span class="agent-chat__model-option-badge">reasoning</span>
+                  `
+                : nothing
+            }
+          </button>
+        `,
+      )}
+    </div>
+  `;
+}
+
+// ── Skill Picker Dropdown ──
+
+function renderSkillDropdown(
+  props: ChatProps,
+  requestUpdate: () => void,
+): TemplateResult | typeof nothing {
+  if (!vs.skillDropdownOpen) {
+    return nothing;
+  }
+  const skills = props.skillsList ?? [];
+  const query = vs.skillSearchQuery.toLowerCase();
+  const filtered = query
+    ? skills.filter(
+        (s) =>
+          s.name.toLowerCase().includes(query) ||
+          (s.description?.toLowerCase().includes(query) ?? false),
+      )
+    : skills;
+
+  return html`
+    <div class="agent-chat__skill-dropdown">
+      <div class="agent-chat__skill-search">
+        <input
+          type="text"
+          placeholder="Search skills..."
+          .value=${vs.skillSearchQuery}
+          @input=${(e: Event) => {
+            vs.skillSearchQuery = (e.target as HTMLInputElement).value;
+            requestUpdate();
+          }}
+        />
+      </div>
+      <div class="agent-chat__skill-list">
+        ${
+          filtered.length === 0
+            ? html`
+                <div class="agent-chat__skill-empty">No skills found</div>
+              `
+            : filtered.map(
+                (skill) => html`
+                <button
+                  class="agent-chat__skill-option"
+                  type="button"
+                  @click=${() => {
+                    props.onSkillSelect?.(skill.id);
+                    vs.skillDropdownOpen = false;
+                    vs.skillSearchQuery = "";
+                    requestUpdate();
+                  }}
+                >
+                  <span class="agent-chat__skill-option-name">${skill.name}</span>
+                  ${skill.description ? html`<span class="agent-chat__skill-option-desc">${skill.description}</span>` : nothing}
+                </button>
+              `,
+              )
+        }
+      </div>
+      ${
+        props.onNavigateToSkillStore
+          ? html`
+          <button
+            class="agent-chat__skill-store-link"
+            type="button"
+            @click=${() => {
+              vs.skillDropdownOpen = false;
+              vs.skillSearchQuery = "";
+              requestUpdate();
+              props.onNavigateToSkillStore?.();
+            }}
+          >Browse Skill Store</button>
+        `
+          : nothing
+      }
+    </div>
+  `;
+}
+
+// ── Agent @ Mention Dropdown ──
+
+function renderMentionDropdown(
+  props: ChatProps,
+  requestUpdate: () => void,
+): TemplateResult | typeof nothing {
+  if (!vs.mentionDropdownOpen) {
+    return nothing;
+  }
+  const agents = props.agentsList?.agents ?? [];
+  if (agents.length === 0) {
+    return nothing;
+  }
+  return html`
+    <div class="agent-chat__mention-dropdown">
+      ${agents.map(
+        (agent) => html`
+          <button
+            class="agent-chat__mention-option"
+            type="button"
+            @click=${() => {
+              const agentName = agent.identity?.name ?? agent.name ?? agent.id;
+              const currentDraft = props.getDraft?.() ?? props.draft;
+              const sep = currentDraft && !currentDraft.endsWith(" ") ? " " : "";
+              props.onDraftChange(currentDraft + sep + "@" + agentName + " ");
+              props.onMentionAgent?.(agent.id);
+              vs.mentionDropdownOpen = false;
+              requestUpdate();
+            }}
+          >
+            <span class="agent-chat__mention-avatar">
+              ${agent.identity?.emoji ?? (agent.identity?.name ?? agent.name ?? agent.id).charAt(0).toUpperCase()}
+            </span>
+            <span class="agent-chat__mention-name">${agent.identity?.name ?? agent.name ?? agent.id}</span>
+          </button>
+        `,
+      )}
     </div>
   `;
 }
@@ -1141,37 +1421,42 @@ export function renderChat(props: ChatProps) {
       ${renderSearchBar(requestUpdate)}
       ${renderPinnedSection(props, pinned, requestUpdate)}
 
-      <div class="chat-split-container ${sidebarOpen ? "chat-split-container--open" : ""}">
-        <div
-          class="chat-main"
-          style="flex: ${sidebarOpen ? `0 0 ${splitRatio * 100}%` : "1 1 100%"}"
-        >
-          ${thread}
-        </div>
+      <div class="chat-layout-row">
+        <div class="chat-layout-main">
+          <div class="chat-split-container ${sidebarOpen ? "chat-split-container--open" : ""}">
+            <div
+              class="chat-main"
+              style="flex: ${sidebarOpen ? `0 0 ${splitRatio * 100}%` : "1 1 100%"}"
+            >
+              ${thread}
+            </div>
 
-        ${
-          sidebarOpen
-            ? html`
-              <resizable-divider
-                .splitRatio=${splitRatio}
-                @resize=${(e: CustomEvent) => props.onSplitRatioChange?.(e.detail.splitRatio)}
-              ></resizable-divider>
-              <div class="chat-sidebar">
-                ${renderMarkdownSidebar({
-                  content: props.sidebarContent ?? null,
-                  error: props.sidebarError ?? null,
-                  onClose: props.onCloseSidebar!,
-                  onViewRawText: () => {
-                    if (!props.sidebarContent || !props.onOpenSidebar) {
-                      return;
-                    }
-                    props.onOpenSidebar(`\`\`\`\n${props.sidebarContent}\n\`\`\``);
-                  },
-                })}
-              </div>
-            `
-            : nothing
-        }
+            ${
+              sidebarOpen
+                ? html`
+                  <resizable-divider
+                    .splitRatio=${splitRatio}
+                    @resize=${(e: CustomEvent) => props.onSplitRatioChange?.(e.detail.splitRatio)}
+                  ></resizable-divider>
+                  <div class="chat-sidebar">
+                    ${renderMarkdownSidebar({
+                      content: props.sidebarContent ?? null,
+                      error: props.sidebarError ?? null,
+                      onClose: props.onCloseSidebar!,
+                      onViewRawText: () => {
+                        if (!props.sidebarContent || !props.onOpenSidebar) {
+                          return;
+                        }
+                        props.onOpenSidebar(`\`\`\`\n${props.sidebarContent}\n\`\`\``);
+                      },
+                    })}
+                  </div>
+                `
+                : nothing
+            }
+          </div>
+        </div>
+        ${renderAgentsSidebar(props, requestUpdate)}
       </div>
 
       ${
@@ -1265,6 +1550,40 @@ export function renderChat(props: ChatProps) {
               ${icons.paperclip}
             </button>
 
+            <!-- Skill picker -->
+            <div class="agent-chat__skill-picker">
+              <button
+                class="agent-chat__toolbar-btn"
+                title="Skills"
+                aria-label="Skills"
+                ?disabled=${!props.connected}
+                @click=${() => {
+                  vs.skillDropdownOpen = !vs.skillDropdownOpen;
+                  vs.mentionDropdownOpen = false;
+                  vs.modelDropdownOpen = false;
+                  requestUpdate();
+                }}
+              >&#9889;</button>
+              ${renderSkillDropdown(props, requestUpdate)}
+            </div>
+
+            <!-- Agent @ mention -->
+            <div class="agent-chat__mention-picker">
+              <button
+                class="agent-chat__toolbar-btn"
+                title="Mention Agent"
+                aria-label="Mention Agent"
+                ?disabled=${!props.connected}
+                @click=${() => {
+                  vs.mentionDropdownOpen = !vs.mentionDropdownOpen;
+                  vs.skillDropdownOpen = false;
+                  vs.modelDropdownOpen = false;
+                  requestUpdate();
+                }}
+              >@</button>
+              ${renderMentionDropdown(props, requestUpdate)}
+            </div>
+
             ${
               isSttSupported()
                 ? html`
@@ -1323,6 +1642,30 @@ export function renderChat(props: ChatProps) {
           </div>
 
           <div class="agent-chat__toolbar-right">
+            <!-- Model selector -->
+            ${
+              (props.modelCatalog?.length ?? 0) > 0
+                ? html`
+                <div class="agent-chat__model-select">
+                  <button
+                    class="agent-chat__model-btn"
+                    type="button"
+                    @click=${() => {
+                      vs.modelDropdownOpen = !vs.modelDropdownOpen;
+                      vs.skillDropdownOpen = false;
+                      vs.mentionDropdownOpen = false;
+                      requestUpdate();
+                    }}
+                  >
+                    ${props.modelCatalog?.find((m) => m.id === props.currentModelId)?.name ?? props.currentModelId ?? "Model"}
+                    <span style="font-size:10px">&#9660;</span>
+                  </button>
+                  ${renderModelDropdown(props, requestUpdate)}
+                </div>
+              `
+                : nothing
+            }
+
             ${nothing /* search hidden for now */}
             ${
               canAbort
