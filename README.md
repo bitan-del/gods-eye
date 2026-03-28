@@ -1,5 +1,3 @@
-# Gods Eye — The AI Gateway That Fixes Everything OpenClaw Got Wrong
-
 <p align="center">
     <picture>
         <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/bitan-del/gods-eye/main/docs/assets/godseye-logo-text-dark.svg">
@@ -7,24 +5,37 @@
     </picture>
 </p>
 
-<p align="center">
-  <strong>Built in India. Built to be unstoppable.</strong>
-</p>
+<h3 align="center">The AI gateway that sees everything, forgets nothing, and runs on your hardware.</h3>
 
 <p align="center">
   <a href="https://github.com/bitan-del/gods-eye/actions/workflows/ci.yml?branch=main"><img src="https://img.shields.io/github/actions/workflow/status/bitan-del/gods-eye/ci.yml?branch=main&style=for-the-badge" alt="CI status"></a>
-  <a href="https://github.com/bitan-del/gods-eye/releases"><img src="https://img.shields.io/github/v/release/bitan-del/gods-eye?include_prereleases&style=for-the-badge" alt="GitHub release"></a>
+  <img src="https://img.shields.io/badge/Modules-24-00FFAA?style=for-the-badge" alt="24 modules">
+  <img src="https://img.shields.io/badge/Tests-635+-00FFAA?style=for-the-badge" alt="635+ tests">
+  <img src="https://img.shields.io/badge/Channels-25+-00FFAA?style=for-the-badge" alt="25+ channels">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/Made_in-India-FF9933?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI0IiBmaWxsPSIjMDAwMDgwIi8+PC9zdmc+" alt="Made in India">
 </p>
 
+<br/>
+
+<p align="center">
+<code>curl -fsSL https://raw.githubusercontent.com/bitan-del/gods-eye/main/scripts/install.sh | bash</code>
+</p>
+
+<br/>
+
 ---
 
-**Gods Eye** is a personal AI gateway you run on your own hardware. It connects to 25+ messaging channels, speaks and listens across macOS/iOS/Android, and gives you a single AI assistant that actually works — without the chaos, cost explosions, and security nightmares of alternatives like OpenClaw.
+**Gods Eye** is a personal AI gateway you run on your own hardware. One command installs it. It connects to 25+ messaging channels (WhatsApp, Telegram, Discord, Slack, Signal, Teams, Matrix, and more), speaks and listens across macOS/iOS/Android, and gives you a single AI brain that remembers everything across every channel.
 
-We studied every complaint users had about OpenClaw and competitors, researched the best solutions from LiteLLM, RouteLLM, Mem0, LlamaFirewall, and Flutter Doctor, then built **24 production modules with 635+ tests** to solve all 8 major pain points.
+We studied every pain point users face with other AI tools, researched the best solutions from LiteLLM, RouteLLM, Mem0, LlamaFirewall, Flutter Doctor, Elm, and Factory.ai — then built **24 production modules with 635+ tests** to solve all 8 major problems.
 
-[Website](https://gods-eye.org) · [Docs](https://docs.gods-eye.org) · [Getting Started](https://docs.gods-eye.org/start/getting-started) · [Discord](https://discord.gg/clawd)
+<p align="center">
+  <a href="https://gods-eye.org"><strong>Website</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://docs.gods-eye.org"><strong>Docs</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://docs.gods-eye.org/start/getting-started"><strong>Getting Started</strong></a> &nbsp;&middot;&nbsp;
+  <a href="https://discord.gg/clawd"><strong>Discord</strong></a>
+</p>
 
 ---
 
@@ -251,9 +262,13 @@ Full security guide: [Security](https://docs.gods-eye.org/gateway/security)
 
 ## Made in India
 
-Gods Eye is proudly built in India. We believe the next generation of AI infrastructure should come from everywhere, not just Silicon Valley. This project represents Indian engineering at its finest — solving real problems with world-class solutions, backed by rigorous testing and research from the best open-source projects globally.
+> _"The best AI infrastructure doesn't have to come from Silicon Valley."_
 
-**24 modules. 635+ tests. 12,000+ lines of production code. Zero compromises.**
+Gods Eye is proudly engineered in India. 24 modules, 635+ tests, 12,000+ lines of production code — every line written with the conviction that world-class AI tooling can come from anywhere.
+
+We didn't fork. We didn't patch. We studied the problems, researched the best solutions from across the industry, and built something better from scratch.
+
+**Built with intensity. Built to be unstoppable.**
 
 ---
 
@@ -268,5 +283,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 <p align="center">
-  <sub>Built with intensity in India by <a href="https://github.com/bitan-del">@bitan-del</a></sub>
+  <strong>GODS EYE</strong><br/>
+  <sub>Built with intensity in India by <a href="https://github.com/bitan-del">@bitan-del</a></sub><br/>
+  <sub>24 modules &middot; 635+ tests &middot; 25+ channels &middot; zero compromises</sub>
 </p>
