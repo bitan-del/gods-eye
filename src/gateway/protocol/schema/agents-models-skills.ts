@@ -230,6 +230,22 @@ export const SkillsUpdateParamsSchema = Type.Union([
   ),
 ]);
 
+export const SkillsStoreListParamsSchema = Type.Object(
+  {
+    query: Type.Optional(Type.String()),
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+  },
+  { additionalProperties: false },
+);
+
+export const SkillsStoreSearchParamsSchema = Type.Object(
+  {
+    query: NonEmptyString,
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+  },
+  { additionalProperties: false },
+);
+
 export const ToolsCatalogParamsSchema = Type.Object(
   {
     agentId: Type.Optional(NonEmptyString),

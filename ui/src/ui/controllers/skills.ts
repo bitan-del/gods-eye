@@ -1,6 +1,14 @@
 import type { GatewayBrowserClient } from "../gateway.ts";
 import type { SkillStatusReport } from "../types.ts";
 
+export type StoreSkillItem = {
+  slug: string;
+  displayName: string;
+  summary: string;
+  tags?: Record<string, string>;
+  score?: number;
+};
+
 export type SkillsState = {
   client: GatewayBrowserClient | null;
   connected: boolean;
@@ -10,6 +18,9 @@ export type SkillsState = {
   skillsBusyKey: string | null;
   skillEdits: Record<string, string>;
   skillMessages: SkillMessageMap;
+  skillsStoreItems: StoreSkillItem[];
+  skillsStoreLoading: boolean;
+  skillsStoreError: string | null;
 };
 
 export type SkillMessage = {
@@ -150,6 +161,57 @@ export async function installSkill(
     setSkillMessage(state, skillKey, {
       kind: "error",
       message,
+    });
+  } finally {
+    state.skillsBusyKey = null;
+  }
+}
+
+export async function loadStoreSkills(state: SkillsState, query?: string) {
+  if (!state.client || !state.connected) {
+    return;
+  }
+  if (state.skillsStoreLoading) {
+    return;
+  }
+  state.skillsStoreLoading = true;
+  state.skillsStoreError = null;
+  try {
+    const params: Record<string, unknown> = { limit: 50 };
+    if (query?.trim()) {
+      params.query = query.trim();
+    }
+    const res = await state.client.request<{ items: StoreSkillItem[] }>(
+      "skills.store.list",
+      params,
+    );
+    state.skillsStoreItems = res?.items ?? [];
+  } catch (err) {
+    state.skillsStoreError = getErrorMessage(err);
+  } finally {
+    state.skillsStoreLoading = false;
+  }
+}
+
+export async function installStoreSkill(state: SkillsState, slug: string) {
+  if (!state.client || !state.connected) {
+    return;
+  }
+  state.skillsBusyKey = slug;
+  try {
+    await state.client.request("skills.install", {
+      source: "clawhub",
+      slug,
+    });
+    await loadSkills(state);
+    setSkillMessage(state, slug, {
+      kind: "success",
+      message: `Installed ${slug} from store`,
+    });
+  } catch (err) {
+    setSkillMessage(state, slug, {
+      kind: "error",
+      message: getErrorMessage(err),
     });
   } finally {
     state.skillsBusyKey = null;

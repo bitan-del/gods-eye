@@ -277,6 +277,19 @@ export type AppViewState = {
     skillMessages: Record<string, SkillMessage>;
     skillsBusyKey: string | null;
     skillsDetailKey: string | null;
+    skillsViewTab: "my-skills" | "store";
+    skillsStoreItems: Array<{
+      slug: string;
+      displayName: string;
+      summary: string;
+      tags?: Record<string, string>;
+      score?: number;
+    }>;
+    skillsStoreLoading: boolean;
+    skillsStoreError: string | null;
+    skillsStoreQuery: string;
+    skillsStoreDetailSlug: string | null;
+    skillsCreateDropdownOpen: boolean;
     healthLoading: boolean;
     healthResult: HealthSummary | null;
     healthError: string | null;

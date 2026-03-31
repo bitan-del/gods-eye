@@ -19,6 +19,7 @@ export const en: TranslationMap = {
   },
   nav: {
     chat: "Chat",
+    skills: "Skills",
     control: "Control",
     agent: "Agent",
     studio: "Studio",

@@ -10,6 +10,7 @@ import { loadWorkspaceSkillEntries, type SkillEntry } from "../../agents/skills.
 import { listAgentWorkspaceDirs } from "../../agents/workspace-dirs.js";
 import type { GodsEyeConfig } from "../../config/config.js";
 import { loadConfig, writeConfigFile } from "../../config/config.js";
+import { listClawHubSkills, searchClawHubSkills } from "../../infra/clawhub.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
@@ -20,6 +21,7 @@ import {
   validateSkillsBinsParams,
   validateSkillsInstallParams,
   validateSkillsStatusParams,
+  validateSkillsStoreListParams,
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
@@ -280,5 +282,55 @@ export const skillsHandlers: GatewayRequestHandlers = {
     };
     await writeConfigFile(nextConfig);
     respond(true, { ok: true, skillKey: p.skillKey, config: current }, undefined);
+  },
+  "skills.store.list": async ({ params, respond }) => {
+    if (!validateSkillsStoreListParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid skills.store.list params: ${formatValidationErrors(validateSkillsStoreListParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    try {
+      const p = (params ?? {}) as { query?: string; limit?: number };
+      if (p.query?.trim()) {
+        const results = await searchClawHubSkills({
+          query: p.query.trim(),
+          limit: p.limit ?? 50,
+        });
+        respond(
+          true,
+          {
+            items: results.map((r) => ({
+              slug: r.slug,
+              displayName: r.displayName,
+              summary: r.summary ?? "",
+              score: r.score,
+            })),
+          },
+          undefined,
+        );
+      } else {
+        const result = await listClawHubSkills({ limit: p.limit ?? 50 });
+        respond(
+          true,
+          {
+            items: result.items.map((item) => ({
+              slug: item.slug,
+              displayName: item.displayName,
+              summary: item.summary ?? "",
+              tags: item.tags,
+            })),
+          },
+          undefined,
+        );
+      }
+    } catch (err) {
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
+    }
   },
 };
