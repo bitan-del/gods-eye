@@ -1,5 +1,5 @@
 import { html, nothing } from "lit";
-import type { SkillMessageMap, StoreSkillItem } from "../controllers/skills.ts";
+import type { SkillMessageMap, StoreSkillDetail, StoreSkillItem } from "../controllers/skills.ts";
 import { clampText } from "../format.ts";
 import { resolveSafeExternalUrl } from "../open-external-url.ts";
 import type { SkillStatusEntry, SkillStatusReport } from "../types.ts";
@@ -17,6 +17,19 @@ function safeExternalHref(raw?: string): string | null {
 }
 
 export type SkillsStatusFilter = "all" | "ready" | "needs-setup" | "disabled";
+export type StoreSort = "newest" | "downloads" | "name";
+
+const STORE_CATEGORIES = [
+  "All",
+  "General",
+  "Creative",
+  "Academic",
+  "Development",
+  "Legal",
+  "Lifestyle",
+  "Marketing",
+  "Finance",
+] as const;
 
 export type SkillsProps = {
   connected: boolean;
@@ -49,8 +62,15 @@ export type SkillsProps = {
   onStoreSearch: () => void;
   onStoreInstall: (slug: string) => void;
   storeDetailSlug: string | null;
+  storeDetail: StoreSkillDetail | null;
+  storeDetailLoading: boolean;
   onStoreDetailOpen: (slug: string) => void;
   onStoreDetailClose: () => void;
+  // Sort & category
+  storeSort: StoreSort;
+  onStoreSortChange: (sort: StoreSort) => void;
+  storeCategory: string;
+  onStoreCategoryChange: (cat: string) => void;
   // Create
   createDropdownOpen: boolean;
   onCreateDropdownToggle: () => void;
@@ -275,11 +295,148 @@ function renderStore(props: SkillsProps) {
     `;
   }
 
+  // Category filter: match against slug + displayName + summary with expanded keywords
+  const categoryKeywords: Record<string, string[]> = {
+    general: [
+      "general",
+      "utility",
+      "tool",
+      "helper",
+      "assistant",
+      "agent",
+      "monitor",
+      "checker",
+      "scanner",
+    ],
+    creative: [
+      "creative",
+      "image",
+      "art",
+      "design",
+      "video",
+      "photo",
+      "music",
+      "draw",
+      "generation",
+      "edit",
+      "media",
+    ],
+    academic: [
+      "academic",
+      "research",
+      "study",
+      "paper",
+      "science",
+      "education",
+      "learn",
+      "university",
+      "math",
+    ],
+    development: [
+      "development",
+      "code",
+      "coding",
+      "programming",
+      "api",
+      "debug",
+      "git",
+      "deploy",
+      "devops",
+      "cli",
+      "sdk",
+      "compiler",
+      "docker",
+      "kubernetes",
+    ],
+    legal: ["legal", "law", "compliance", "regulation", "contract", "privacy", "policy", "gdpr"],
+    lifestyle: [
+      "lifestyle",
+      "health",
+      "fitness",
+      "recipe",
+      "travel",
+      "weather",
+      "personal",
+      "productivity",
+    ],
+    marketing: [
+      "marketing",
+      "seo",
+      "ads",
+      "campaign",
+      "social",
+      "content",
+      "analytics",
+      "brand",
+      "email",
+    ],
+    finance: [
+      "finance",
+      "trading",
+      "stock",
+      "crypto",
+      "investment",
+      "budget",
+      "accounting",
+      "payment",
+      "financial",
+    ],
+  };
+
+  const catLower = props.storeCategory.toLowerCase();
+  const keywords = categoryKeywords[catLower] ?? [];
+  let filtered =
+    catLower === "all"
+      ? [...props.storeItems]
+      : props.storeItems.filter((item) => {
+          const text = `${item.slug} ${item.displayName} ${item.summary}`.toLowerCase();
+          return keywords.some((kw) => text.includes(kw));
+        });
+
+  // Sort
+  if (props.storeSort === "name") {
+    filtered = [...filtered].toSorted((a, b) => a.displayName.localeCompare(b.displayName));
+  } else if (props.storeSort === "downloads") {
+    // Sort by score (search relevance) or updatedAt as proxy for popularity
+    filtered = [...filtered].toSorted(
+      (a, b) => (b.score ?? b.updatedAt ?? 0) - (a.score ?? a.updatedAt ?? 0),
+    );
+  }
+  // "newest" keeps API order (already sorted by updatedAt desc)
+
   return html`
-    <div class="sk-store-info">Featured professional skills, safe and reliable.</div>
-    <div class="sk-grid">
-      ${props.storeItems.map((item) => renderStoreCard(item, props))}
+    <!-- Sort dropdown -->
+    <div class="sk-sort-row">
+      <div class="sk-categories">
+        ${STORE_CATEGORIES.map(
+          (cat) => html`
+            <button
+              class="sk-cat-tag ${props.storeCategory === cat ? "sk-cat-tag--active" : ""}"
+              @click=${() => props.onStoreCategoryChange(cat)}
+            >${cat}</button>
+          `,
+        )}
+      </div>
+      <select
+        class="sk-sort-select"
+        .value=${props.storeSort}
+        @change=${(e: Event) => props.onStoreSortChange((e.target as HTMLSelectElement).value as StoreSort)}
+      >
+        <option value="newest">Newest</option>
+        <option value="downloads">Most Downloaded</option>
+        <option value="name">A-Z</option>
+      </select>
     </div>
+    <div class="sk-grid">
+      ${filtered.map((item) => renderStoreCard(item, props))}
+    </div>
+    ${
+      filtered.length === 0
+        ? html`
+            <div class="sk-empty">No skills found in this category.</div>
+          `
+        : nothing
+    }
     ${props.storeDetailSlug ? renderStoreDetail(props.storeItems.find((i) => i.slug === props.storeDetailSlug) ?? null, props) : nothing}
   `;
 }
@@ -307,6 +464,7 @@ function renderStoreCard(item: StoreSkillItem, props: SkillsProps) {
       </div>
       <div class="sk-card-name">${item.displayName}</div>
       <div class="sk-card-desc">${clampText(item.summary, 80)}</div>
+      ${item.owner ? html`<div class="sk-card-owner">by ${item.owner}</div>` : nothing}
       <div class="sk-card-footer">
         ${
           installed
@@ -337,6 +495,24 @@ function renderStoreCard(item: StoreSkillItem, props: SkillsProps) {
   `;
 }
 
+function formatNumber(n: number): string {
+  if (n >= 1000) {
+    return `${(n / 1000).toFixed(1)}k`;
+  }
+  return String(n);
+}
+
+function formatDate(ts: number): string {
+  if (!ts) {
+    return "";
+  }
+  return new Date(ts).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function renderStoreDetail(item: StoreSkillItem | null, props: SkillsProps) {
   if (!item) {
     return nothing;
@@ -345,6 +521,8 @@ function renderStoreDetail(item: StoreSkillItem | null, props: SkillsProps) {
   const installed = props.report?.skills.some(
     (s) => s.name.toLowerCase() === item.slug.toLowerCase() || s.skillKey.includes(item.slug),
   );
+  const detail = props.storeDetail;
+  const loading = props.storeDetailLoading;
 
   return html`
     <dialog class="sk-detail-dialog" open @click=${(e: Event) => {
@@ -356,30 +534,131 @@ function renderStoreDetail(item: StoreSkillItem | null, props: SkillsProps) {
         <button class="sk-detail-close" @click=${props.onStoreDetailClose}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
-        <div class="sk-detail-header">
-          <div class="sk-detail-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+
+        ${
+          loading
+            ? html`
+                <div class="sk-detail-loading">Loading skill details...</div>
+              `
+            : html`
+          <!-- Header with icon + name + author -->
+          <div class="sk-detail-header">
+            <div class="sk-detail-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <div class="sk-detail-header-text">
+              <div class="sk-detail-name">${detail?.displayName ?? item.displayName}</div>
+              ${
+                detail?.owner?.handle
+                  ? html`
+                <div class="sk-detail-author">
+                  ${detail.owner.image ? html`<img class="sk-detail-avatar" src="${detail.owner.image}" alt="" />` : nothing}
+                  <span>by ${detail.owner.displayName || detail.owner.handle}</span>
+                </div>
+              `
+                  : item.owner
+                    ? html`<div class="sk-detail-author"><span>by ${item.owner}</span></div>`
+                    : nothing
+              }
+            </div>
           </div>
-          <div class="sk-detail-name">${item.displayName}</div>
-        </div>
-        <div class="sk-detail-section">
-          <div class="sk-detail-section-title">Skill Description</div>
-          <div class="sk-detail-desc">${item.summary}</div>
-        </div>
-        <div class="sk-detail-actions">
+
+          <!-- Stats row -->
           ${
-            installed
+            detail
               ? html`
-                  <button class="sk-detail-use-btn sk-detail-use-btn--installed" disabled>Already Installed</button>
-                `
-              : html`<button
-                  class="sk-detail-use-btn"
-                  ?disabled=${busy}
-                  @click=${() => props.onStoreInstall(item.slug)}
-                >${busy ? "Installing..." : "Use"}</button>`
+            <div class="sk-detail-stats">
+              ${
+                detail.downloads
+                  ? html`
+                <div class="sk-detail-stat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span>${formatNumber(detail.downloads)} downloads</span>
+                </div>
+              `
+                  : nothing
+              }
+              ${
+                detail.stars
+                  ? html`
+                <div class="sk-detail-stat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  <span>${detail.stars} stars</span>
+                </div>
+              `
+                  : nothing
+              }
+              ${
+                detail.installs
+                  ? html`
+                <div class="sk-detail-stat">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span>${formatNumber(detail.installs)} active</span>
+                </div>
+              `
+                  : nothing
+              }
+              ${
+                detail.version
+                  ? html`
+                <div class="sk-detail-stat">
+                  <span class="sk-detail-version-badge">v${detail.version}</span>
+                </div>
+              `
+                  : nothing
+              }
+            </div>
+          `
+              : nothing
           }
-        </div>
-        <div class="sk-detail-verified">Verified for security and compliance. No malicious code or data leak risks.</div>
+
+          <!-- Description -->
+          <div class="sk-detail-section">
+            <div class="sk-detail-section-title">Description</div>
+            <div class="sk-detail-desc">${detail?.summary ?? item.summary}</div>
+          </div>
+
+          <!-- Changelog -->
+          ${
+            detail?.changelog
+              ? html`
+            <div class="sk-detail-section">
+              <div class="sk-detail-section-title">Changelog</div>
+              <div class="sk-detail-changelog">${detail.changelog}</div>
+            </div>
+          `
+              : nothing
+          }
+
+          <!-- Meta info -->
+          ${
+            detail
+              ? html`
+            <div class="sk-detail-meta">
+              ${detail.license ? html`<span class="sk-detail-meta-item">License: ${detail.license}</span>` : nothing}
+              ${detail.os.length > 0 ? html`<span class="sk-detail-meta-item">OS: ${detail.os.join(", ")}</span>` : nothing}
+              ${detail.updatedAt ? html`<span class="sk-detail-meta-item">Updated: ${formatDate(detail.updatedAt)}</span>` : nothing}
+            </div>
+          `
+              : nothing
+          }
+
+          <!-- Action button -->
+          <div class="sk-detail-actions">
+            ${
+              installed
+                ? html`
+                    <button class="sk-detail-use-btn sk-detail-use-btn--installed" disabled>Already Installed</button>
+                  `
+                : html`<button
+                    class="sk-detail-use-btn"
+                    ?disabled=${busy}
+                    @click=${() => props.onStoreInstall(item.slug)}
+                  >${busy ? "Installing..." : "Install Skill"}</button>`
+            }
+          </div>
+        `
+        }
       </div>
     </dialog>
   `;

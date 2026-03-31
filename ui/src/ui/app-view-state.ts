@@ -289,6 +289,10 @@ export type AppViewState = {
     skillsStoreError: string | null;
     skillsStoreQuery: string;
     skillsStoreDetailSlug: string | null;
+    skillsStoreDetail: import("./controllers/skills.ts").StoreSkillDetail | null;
+    skillsStoreDetailLoading: boolean;
+    skillsStoreSort: "newest" | "downloads" | "name";
+    skillsStoreCategory: string;
     skillsCreateDropdownOpen: boolean;
     healthLoading: boolean;
     healthResult: HealthSummary | null;

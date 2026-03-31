@@ -413,7 +413,7 @@ export class GodsEyeApp extends LitElement {
   @state() skillsBusyKey: string | null = null;
   @state() skillMessages: Record<string, SkillMessage> = {};
   @state() skillsDetailKey: string | null = null;
-  @state() skillsViewTab: "my-skills" | "store" = "my-skills";
+  @state() skillsViewTab: "my-skills" | "store" = "store";
   @state() skillsStoreItems: Array<{
     slug: string;
     displayName: string;
@@ -425,6 +425,10 @@ export class GodsEyeApp extends LitElement {
   @state() skillsStoreError: string | null = null;
   @state() skillsStoreQuery = "";
   @state() skillsStoreDetailSlug: string | null = null;
+  @state() skillsStoreDetail: import("./controllers/skills.ts").StoreSkillDetail | null = null;
+  @state() skillsStoreDetailLoading = false;
+  @state() skillsStoreSort: "newest" | "downloads" | "name" = "newest";
+  @state() skillsStoreCategory = "All";
   @state() skillsCreateDropdownOpen = false;
 
   @state() healthLoading = false;

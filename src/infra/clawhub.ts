@@ -549,6 +549,32 @@ export async function listClawHubSkills(params: {
   });
 }
 
+export type ClawHubPackageListResponse = {
+  items: ClawHubPackageListItem[];
+  nextCursor?: string | null;
+};
+
+export async function listClawHubPackages(params: {
+  family?: ClawHubPackageFamily;
+  baseUrl?: string;
+  token?: string;
+  timeoutMs?: number;
+  fetchImpl?: FetchLike;
+  limit?: number;
+}): Promise<ClawHubPackageListResponse> {
+  return await fetchJson<ClawHubPackageListResponse>({
+    baseUrl: params.baseUrl,
+    path: "/api/v1/packages",
+    token: params.token,
+    timeoutMs: params.timeoutMs,
+    fetchImpl: params.fetchImpl,
+    search: {
+      family: params.family,
+      limit: params.limit ? String(params.limit) : undefined,
+    },
+  });
+}
+
 export async function downloadClawHubPackageArchive(params: {
   name: string;
   version?: string;

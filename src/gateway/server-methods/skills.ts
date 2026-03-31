@@ -10,7 +10,11 @@ import { loadWorkspaceSkillEntries, type SkillEntry } from "../../agents/skills.
 import { listAgentWorkspaceDirs } from "../../agents/workspace-dirs.js";
 import type { GodsEyeConfig } from "../../config/config.js";
 import { loadConfig, writeConfigFile } from "../../config/config.js";
-import { listClawHubSkills, searchClawHubSkills } from "../../infra/clawhub.js";
+import {
+  fetchClawHubSkillDetail,
+  listClawHubPackages,
+  searchClawHubSkills,
+} from "../../infra/clawhub.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
@@ -25,6 +29,62 @@ import {
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
+
+// CJK character detection regex
+const CJK_RE = /[\u2E80-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/;
+
+/** Translate a single text string from auto-detected language to English via Google Translate. */
+async function translateToEnglish(text: string): Promise<string> {
+  if (!text || !CJK_RE.test(text)) {
+    return text;
+  }
+  try {
+    const url = new URL("https://translate.googleapis.com/translate_a/single");
+    url.searchParams.set("client", "gtx");
+    url.searchParams.set("sl", "auto");
+    url.searchParams.set("tl", "en");
+    url.searchParams.set("dt", "t");
+    url.searchParams.set("q", text);
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) {
+      return text;
+    }
+    const data = (await res.json()) as [Array<[string]>];
+    // Response is [[["translated", "original", ...], ...], ...]
+    const translated = data?.[0]?.map((seg) => seg[0]).join("") ?? text;
+    return translated || text;
+  } catch {
+    return text;
+  }
+}
+
+type StoreItem = {
+  slug: string;
+  displayName: string;
+  summary: string;
+  score?: number;
+  owner?: string;
+  updatedAt?: number;
+};
+
+/** Auto-translate CJK fields in store items to English, in parallel. */
+async function translateStoreItems(items: StoreItem[]): Promise<StoreItem[]> {
+  const tasks = items.map(async (item) => {
+    const needsNameTranslation = CJK_RE.test(item.displayName);
+    const needsSummaryTranslation = CJK_RE.test(item.summary);
+    if (!needsNameTranslation && !needsSummaryTranslation) {
+      return item;
+    }
+    const [translatedName, translatedSummary] = await Promise.all([
+      needsNameTranslation
+        ? translateToEnglish(item.displayName)
+        : Promise.resolve(item.displayName),
+      needsSummaryTranslation ? translateToEnglish(item.summary) : Promise.resolve(item.summary),
+    ]);
+    return { ...item, displayName: translatedName, summary: translatedSummary };
+  });
+  return Promise.all(tasks);
+}
 
 function collectSkillBins(entries: SkillEntry[]): string[] {
   const bins = new Set<string>();
@@ -302,33 +362,63 @@ export const skillsHandlers: GatewayRequestHandlers = {
           query: p.query.trim(),
           limit: p.limit ?? 50,
         });
-        respond(
-          true,
-          {
-            items: results.map((r) => ({
-              slug: r.slug,
-              displayName: r.displayName,
-              summary: r.summary ?? "",
-              score: r.score,
-            })),
-          },
-          undefined,
-        );
+        const items = results.map((r) => ({
+          slug: r.slug,
+          displayName: r.displayName,
+          summary: r.summary ?? "",
+          score: r.score,
+          updatedAt: r.updatedAt,
+        }));
+        const translated = await translateStoreItems(items);
+        respond(true, { items: translated }, undefined);
       } else {
-        const result = await listClawHubSkills({ limit: p.limit ?? 50 });
-        respond(
-          true,
-          {
-            items: result.items.map((item) => ({
-              slug: item.slug,
-              displayName: item.displayName,
-              summary: item.summary ?? "",
-              tags: item.tags,
-            })),
-          },
-          undefined,
-        );
+        const result = await listClawHubPackages({ family: "skill", limit: p.limit ?? 50 });
+        const items = result.items.map((item) => ({
+          slug: item.name,
+          displayName: item.displayName,
+          summary: item.summary ?? "",
+          owner: item.ownerHandle ?? undefined,
+          updatedAt: item.updatedAt,
+        }));
+        const translated = await translateStoreItems(items);
+        respond(true, { items: translated }, undefined);
       }
+    } catch (err) {
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
+    }
+  },
+  "skills.store.detail": async ({ params, respond }) => {
+    const slug = (params as { slug?: string })?.slug?.trim();
+    if (!slug) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "slug is required"));
+      return;
+    }
+    try {
+      const detail = await fetchClawHubSkillDetail({ slug });
+      respond(
+        true,
+        {
+          slug: detail.skill?.slug ?? slug,
+          displayName: await translateToEnglish(detail.skill?.displayName ?? slug),
+          summary: await translateToEnglish(detail.skill?.summary ?? ""),
+          version: detail.latestVersion?.version ?? "",
+          changelog: await translateToEnglish(detail.latestVersion?.changelog ?? ""),
+          license: (detail.latestVersion as { license?: string })?.license ?? "",
+          downloads: (detail.skill as { stats?: { downloads?: number } })?.stats?.downloads ?? 0,
+          stars: (detail.skill as { stats?: { stars?: number } })?.stats?.stars ?? 0,
+          installs:
+            (detail.skill as { stats?: { installsCurrent?: number } })?.stats?.installsCurrent ?? 0,
+          os: detail.metadata?.os ?? [],
+          owner: {
+            handle: detail.owner?.handle ?? "",
+            displayName: detail.owner?.displayName ?? "",
+            image: detail.owner?.image ?? "",
+          },
+          createdAt: detail.skill?.createdAt ?? 0,
+          updatedAt: detail.skill?.updatedAt ?? 0,
+        },
+        undefined,
+      );
     } catch (err) {
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
     }

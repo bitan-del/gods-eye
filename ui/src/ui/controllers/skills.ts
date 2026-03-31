@@ -7,6 +7,25 @@ export type StoreSkillItem = {
   summary: string;
   tags?: Record<string, string>;
   score?: number;
+  owner?: string;
+  downloads?: number;
+  updatedAt?: number;
+};
+
+export type StoreSkillDetail = {
+  slug: string;
+  displayName: string;
+  summary: string;
+  version: string;
+  changelog: string;
+  license: string;
+  downloads: number;
+  stars: number;
+  installs: number;
+  os: string[];
+  owner: { handle: string; displayName: string; image: string };
+  createdAt: number;
+  updatedAt: number;
 };
 
 export type SkillsState = {
@@ -21,6 +40,8 @@ export type SkillsState = {
   skillsStoreItems: StoreSkillItem[];
   skillsStoreLoading: boolean;
   skillsStoreError: string | null;
+  skillsStoreDetail: StoreSkillDetail | null;
+  skillsStoreDetailLoading: boolean;
 };
 
 export type SkillMessage = {
@@ -177,7 +198,7 @@ export async function loadStoreSkills(state: SkillsState, query?: string) {
   state.skillsStoreLoading = true;
   state.skillsStoreError = null;
   try {
-    const params: Record<string, unknown> = { limit: 50 };
+    const params: Record<string, unknown> = { limit: 100 };
     if (query?.trim()) {
       params.query = query.trim();
     }
@@ -190,6 +211,22 @@ export async function loadStoreSkills(state: SkillsState, query?: string) {
     state.skillsStoreError = getErrorMessage(err);
   } finally {
     state.skillsStoreLoading = false;
+  }
+}
+
+export async function loadStoreSkillDetail(state: SkillsState, slug: string) {
+  if (!state.client || !state.connected) {
+    return;
+  }
+  state.skillsStoreDetailLoading = true;
+  state.skillsStoreDetail = null;
+  try {
+    const res = await state.client.request<StoreSkillDetail>("skills.store.detail", { slug });
+    state.skillsStoreDetail = res;
+  } catch {
+    state.skillsStoreDetail = null;
+  } finally {
+    state.skillsStoreDetailLoading = false;
   }
 }
 

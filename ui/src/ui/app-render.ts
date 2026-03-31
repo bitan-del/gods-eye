@@ -84,6 +84,7 @@ import {
   installSkill,
   installStoreSkill,
   loadSkills,
+  loadStoreSkillDetail,
   loadStoreSkills,
   saveSkillApiKey,
   updateSkillEdit,
@@ -1328,71 +1329,95 @@ export function renderApp(state: AppViewState) {
 
         ${
           state.tab === "skills"
-            ? lazyRender(lazySkills, (m) =>
-                m.renderSkills({
-                  connected: state.connected,
-                  loading: state.skillsLoading,
-                  report: state.skillsReport,
-                  error: state.skillsError,
-                  filter: state.skillsFilter,
-                  statusFilter: state.skillsStatusFilter,
-                  edits: state.skillEdits,
-                  messages: state.skillMessages,
-                  busyKey: state.skillsBusyKey,
-                  detailKey: state.skillsDetailKey,
-                  onFilterChange: (next) => (state.skillsFilter = next),
-                  onStatusFilterChange: (next) => (state.skillsStatusFilter = next),
-                  onRefresh: () => loadSkills(state, { clearMessages: true }),
-                  onToggle: (key, enabled) => updateSkillEnabled(state, key, enabled),
-                  onEdit: (key, value) => updateSkillEdit(state, key, value),
-                  onSaveKey: (key) => saveSkillApiKey(state, key),
-                  onInstall: (skillKey, name, installId) =>
-                    installSkill(state, skillKey, name, installId),
-                  onDetailOpen: (key) => (state.skillsDetailKey = key),
-                  onDetailClose: () => (state.skillsDetailKey = null),
-                  // Store props
-                  viewTab: state.skillsViewTab,
-                  onViewTabChange: (tab) => {
-                    state.skillsViewTab = tab;
-                    if (tab === "store" && state.skillsStoreItems.length === 0) {
-                      void loadStoreSkills(state);
-                    }
-                  },
-                  storeItems: state.skillsStoreItems,
-                  storeLoading: state.skillsStoreLoading,
-                  storeError: state.skillsStoreError,
-                  storeQuery: state.skillsStoreQuery,
-                  onStoreQueryChange: (q) => (state.skillsStoreQuery = q),
-                  onStoreSearch: () => void loadStoreSkills(state, state.skillsStoreQuery),
-                  onStoreInstall: (slug) => void installStoreSkill(state, slug),
-                  storeDetailSlug: state.skillsStoreDetailSlug,
-                  onStoreDetailOpen: (slug) => (state.skillsStoreDetailSlug = slug),
-                  onStoreDetailClose: () => (state.skillsStoreDetailSlug = null),
-                  // Create
-                  createDropdownOpen: state.skillsCreateDropdownOpen,
-                  onCreateDropdownToggle: () =>
-                    (state.skillsCreateDropdownOpen = !state.skillsCreateDropdownOpen),
-                  onCreateByChat: () => {
-                    state.skillsCreateDropdownOpen = false;
-                    // Navigate to chat with skill creation prompt
-                    state.setTab("chat" as never);
-                  },
-                  onCreateFromFile: () => {
-                    state.skillsCreateDropdownOpen = false;
-                    // Trigger file picker for .zip or SKILL.md
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = ".zip,.md";
-                    input.addEventListener("change", () => {
-                      const file = input.files?.[0];
-                      if (file) {
-                        window.alert(`Selected: ${file.name}\n\nSkill package import coming soon.`);
+            ? (() => {
+                if (
+                  state.skillsViewTab === "store" &&
+                  state.skillsStoreItems.length === 0 &&
+                  !state.skillsStoreLoading
+                ) {
+                  void loadStoreSkills(state);
+                }
+                return lazyRender(lazySkills, (m) =>
+                  m.renderSkills({
+                    connected: state.connected,
+                    loading: state.skillsLoading,
+                    report: state.skillsReport,
+                    error: state.skillsError,
+                    filter: state.skillsFilter,
+                    statusFilter: state.skillsStatusFilter,
+                    edits: state.skillEdits,
+                    messages: state.skillMessages,
+                    busyKey: state.skillsBusyKey,
+                    detailKey: state.skillsDetailKey,
+                    onFilterChange: (next) => (state.skillsFilter = next),
+                    onStatusFilterChange: (next) => (state.skillsStatusFilter = next),
+                    onRefresh: () => loadSkills(state, { clearMessages: true }),
+                    onToggle: (key, enabled) => updateSkillEnabled(state, key, enabled),
+                    onEdit: (key, value) => updateSkillEdit(state, key, value),
+                    onSaveKey: (key) => saveSkillApiKey(state, key),
+                    onInstall: (skillKey, name, installId) =>
+                      installSkill(state, skillKey, name, installId),
+                    onDetailOpen: (key) => (state.skillsDetailKey = key),
+                    onDetailClose: () => (state.skillsDetailKey = null),
+                    // Store props
+                    viewTab: state.skillsViewTab,
+                    onViewTabChange: (tab) => {
+                      state.skillsViewTab = tab;
+                      if (tab === "store" && state.skillsStoreItems.length === 0) {
+                        void loadStoreSkills(state);
                       }
-                    });
-                    input.click();
-                  },
-                }),
-              )
+                    },
+                    storeItems: state.skillsStoreItems,
+                    storeLoading: state.skillsStoreLoading,
+                    storeError: state.skillsStoreError,
+                    storeQuery: state.skillsStoreQuery,
+                    onStoreQueryChange: (q) => (state.skillsStoreQuery = q),
+                    onStoreSearch: () => void loadStoreSkills(state, state.skillsStoreQuery),
+                    onStoreInstall: (slug) => void installStoreSkill(state, slug),
+                    storeDetailSlug: state.skillsStoreDetailSlug,
+                    storeDetail: state.skillsStoreDetail,
+                    storeDetailLoading: state.skillsStoreDetailLoading,
+                    onStoreDetailOpen: (slug) => {
+                      state.skillsStoreDetailSlug = slug;
+                      void loadStoreSkillDetail(state, slug);
+                    },
+                    onStoreDetailClose: () => {
+                      state.skillsStoreDetailSlug = null;
+                      state.skillsStoreDetail = null;
+                    },
+                    // Sort & category
+                    storeSort: state.skillsStoreSort,
+                    onStoreSortChange: (sort) => (state.skillsStoreSort = sort),
+                    storeCategory: state.skillsStoreCategory,
+                    onStoreCategoryChange: (cat) => (state.skillsStoreCategory = cat),
+                    // Create
+                    createDropdownOpen: state.skillsCreateDropdownOpen,
+                    onCreateDropdownToggle: () =>
+                      (state.skillsCreateDropdownOpen = !state.skillsCreateDropdownOpen),
+                    onCreateByChat: () => {
+                      state.skillsCreateDropdownOpen = false;
+                      // Navigate to chat with skill creation prompt
+                      state.setTab("chat" as never);
+                    },
+                    onCreateFromFile: () => {
+                      state.skillsCreateDropdownOpen = false;
+                      // Trigger file picker for .zip or SKILL.md
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".zip,.md";
+                      input.addEventListener("change", () => {
+                        const file = input.files?.[0];
+                        if (file) {
+                          window.alert(
+                            `Selected: ${file.name}\n\nSkill package import coming soon.`,
+                          );
+                        }
+                      });
+                      input.click();
+                    },
+                  }),
+                );
+              })()
             : nothing
         }
 
