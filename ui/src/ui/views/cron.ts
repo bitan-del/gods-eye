@@ -92,6 +92,8 @@ export type CronProps = {
     cronRunsSortDir?: CronSortDir;
   }) => void | Promise<void>;
   onNavigateToChat?: (sessionKey: string) => void;
+  onStartCreate?: () => void;
+  showForm?: boolean;
 };
 
 function getRunStatusOptions(): Array<{ value: CronRunsStatusValue; label: string }> {
@@ -350,7 +352,277 @@ function renderFieldLabel(text: string, required = false) {
   </span>`;
 }
 
+function renderCronCreateModal(props: CronProps) {
+  if (!props.showForm) {
+    return nothing;
+  }
+
+  const form = props.form;
+
+  return html`
+    <div class="crm-backdrop" @click=${(e: Event) => {
+      if ((e.target as HTMLElement).classList.contains("crm-backdrop")) {
+        props.onCancelEdit();
+      }
+    }}>
+      <div class="crm-modal">
+        <div class="crm-header">
+          <h2 class="crm-title">Configure Scheduled Task</h2>
+          <button class="crm-close" @click=${props.onCancelEdit}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18"/><path d="M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="crm-body">
+          <!-- Task Name -->
+          <div class="crm-field">
+            <label class="crm-label">Task Name</label>
+            <input
+              class="crm-input"
+              type="text"
+              placeholder="Please enter task name"
+              .value=${form.name}
+              @input=${(e: Event) => props.onFormChange({ name: (e.target as HTMLInputElement).value })}
+            />
+          </div>
+
+          <!-- Execution Time -->
+          <div class="crm-field">
+            <label class="crm-label">Execution Time</label>
+            <div class="crm-time-row">
+              <select
+                class="crm-select"
+                .value=${form.scheduleKind === "every" ? form.everyUnit : form.scheduleKind}
+                @change=${(e: Event) => {
+                  const val = (e.target as HTMLSelectElement).value;
+                  if (val === "minutes" || val === "hours" || val === "days") {
+                    props.onFormChange({ scheduleKind: "every", everyUnit: val });
+                  } else if (val === "cron") {
+                    props.onFormChange({ scheduleKind: "cron" });
+                  } else {
+                    props.onFormChange({ scheduleKind: "at" });
+                  }
+                }}
+              >
+                <option value="days">Daily</option>
+                <option value="hours">Hourly</option>
+                <option value="minutes">Every X Minutes</option>
+                <option value="cron">Custom (Cron)</option>
+                <option value="at">Once (at time)</option>
+              </select>
+
+              ${
+                form.scheduleKind === "every" && form.everyUnit === "minutes"
+                  ? html`
+                  <input class="crm-input crm-input--small" type="number" min="1" placeholder="30"
+                    .value=${form.everyAmount}
+                    @input=${(e: Event) => props.onFormChange({ everyAmount: (e.target as HTMLInputElement).value })}
+                  />
+                  <span class="crm-time-suffix">minutes</span>
+                `
+                  : nothing
+              }
+
+              ${
+                form.scheduleKind === "every" && form.everyUnit === "hours"
+                  ? html`
+                  <input class="crm-input crm-input--small" type="number" min="1" placeholder="1"
+                    .value=${form.everyAmount}
+                    @input=${(e: Event) => props.onFormChange({ everyAmount: (e.target as HTMLInputElement).value })}
+                  />
+                  <span class="crm-time-suffix">hours</span>
+                `
+                  : nothing
+              }
+
+              ${
+                form.scheduleKind === "every" && form.everyUnit === "days"
+                  ? html`
+                  <div class="crm-time-input-wrap">
+                    <svg class="crm-time-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <input class="crm-input crm-input--time" type="time"
+                      .value=${form.everyAmount || "09:00"}
+                      @input=${(e: Event) => props.onFormChange({ everyAmount: (e.target as HTMLInputElement).value })}
+                    />
+                  </div>
+                  <span class="crm-time-suffix">every day</span>
+                `
+                  : nothing
+              }
+
+              ${
+                form.scheduleKind === "cron"
+                  ? html`<input class="crm-input" type="text" placeholder="0 9 * * *"
+                    .value=${form.cronExpr}
+                    @input=${(e: Event) => props.onFormChange({ cronExpr: (e.target as HTMLInputElement).value })}
+                  />`
+                  : nothing
+              }
+
+              ${
+                form.scheduleKind === "at"
+                  ? html`<input class="crm-input" type="datetime-local"
+                    .value=${form.scheduleAt}
+                    @input=${(e: Event) => props.onFormChange({ scheduleAt: (e.target as HTMLInputElement).value })}
+                  />`
+                  : nothing
+              }
+            </div>
+          </div>
+
+          <!-- Agent -->
+          <div class="crm-field">
+            <label class="crm-label">Agent</label>
+            <select
+              class="crm-select"
+              .value=${form.agentId}
+              @change=${(e: Event) => props.onFormChange({ agentId: (e.target as HTMLSelectElement).value })}
+            >
+              <option value="">Default (main)</option>
+              ${props.agentSuggestions.map(
+                (id) => html`<option value="${id}" ?selected=${form.agentId === id}>${id}</option>`,
+              )}
+            </select>
+          </div>
+
+          <!-- Model -->
+          <div class="crm-field">
+            <label class="crm-label">Model</label>
+            <select
+              class="crm-select"
+              .value=${form.payloadModel}
+              @change=${(e: Event) => props.onFormChange({ payloadModel: (e.target as HTMLSelectElement).value })}
+            >
+              <option value="">Default model</option>
+              ${props.modelSuggestions.map(
+                (id) =>
+                  html`<option value="${id}" ?selected=${form.payloadModel === id}>${id}</option>`,
+              )}
+            </select>
+          </div>
+
+          <!-- AI Prompt -->
+          <div class="crm-field">
+            <label class="crm-label">AI Prompt</label>
+            <textarea
+              class="crm-textarea"
+              placeholder="Enter an AI prompt, e.g. open my inbox and summarize unread emails. (No need to include execution time)"
+              rows="5"
+              .value=${form.payloadText}
+              @input=${(e: Event) => props.onFormChange({ payloadText: (e.target as HTMLTextAreaElement).value })}
+            ></textarea>
+          </div>
+
+          <!-- Advanced Settings (collapsed, fully optional) -->
+          <details class="crm-advanced">
+            <summary class="crm-advanced-toggle">Advanced Settings</summary>
+            <div class="crm-advanced-body">
+              <div class="crm-adv-row">
+                <span class="crm-adv-label">Session</span>
+                <select class="crm-select crm-select--adv"
+                  .value=${form.sessionTarget}
+                  @change=${(e: Event) => props.onFormChange({ sessionTarget: (e.target as HTMLSelectElement).value as "main" | "isolated" })}
+                >
+                  <option value="isolated">Isolated</option>
+                  <option value="main">Main</option>
+                </select>
+              </div>
+              <div class="crm-adv-row">
+                <span class="crm-adv-label">Wake</span>
+                <select class="crm-select crm-select--adv"
+                  .value=${form.wakeMode}
+                  @change=${(e: Event) => props.onFormChange({ wakeMode: (e.target as HTMLSelectElement).value as "next-heartbeat" | "now" })}
+                >
+                  <option value="now">Immediate</option>
+                  <option value="next-heartbeat">Next Heartbeat</option>
+                </select>
+              </div>
+              <div class="crm-adv-row">
+                <span class="crm-adv-label">Type</span>
+                <select class="crm-select crm-select--adv"
+                  .value=${form.payloadKind}
+                  @change=${(e: Event) => props.onFormChange({ payloadKind: (e.target as HTMLSelectElement).value as "systemEvent" | "agentTurn" })}
+                >
+                  <option value="agentTurn">Agent Turn</option>
+                  <option value="systemEvent">System Event</option>
+                </select>
+              </div>
+              <div class="crm-adv-row">
+                <span class="crm-adv-label">Timeout</span>
+                <input class="crm-input crm-input--adv" type="number" placeholder="90 (seconds)"
+                  .value=${form.timeoutSeconds}
+                  @input=${(e: Event) => props.onFormChange({ timeoutSeconds: (e.target as HTMLInputElement).value })}
+                />
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="crm-footer">
+          <button class="crm-btn crm-btn--cancel" @click=${props.onCancelEdit}>Cancel</button>
+          <button
+            class="crm-btn crm-btn--save"
+            ?disabled=${!form.name.trim() || props.busy}
+            @click=${props.onAdd}
+          >
+            ${props.busy ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCronEmptyState(props: CronProps) {
+  return html`
+    <section class="cron-hero">
+      <div class="cron-hero-card">
+        <div class="cron-hero-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <h2 class="cron-hero-title">Create your first cron job</h2>
+        <p class="cron-hero-desc">Schedule recurring tasks to run automatically at specific times or intervals.</p>
+        <button class="cron-hero-create-btn" @click=${props.onStartCreate}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14"/><path d="M5 12h14"/>
+          </svg>
+          Create
+        </button>
+      </div>
+
+      <div class="cron-steps">
+        <p class="cron-steps-label">Get started in three steps</p>
+        <div class="cron-step">
+          <span class="cron-step-num">01</span>
+          <span class="cron-step-text">Pick a task you want to automate on a schedule</span>
+        </div>
+        <div class="cron-step">
+          <span class="cron-step-num">02</span>
+          <span class="cron-step-text">Set the frequency and tell the agent exactly what to do</span>
+        </div>
+        <div class="cron-step">
+          <span class="cron-step-num">03</span>
+          <span class="cron-step-text">Keep the gateway running and it will execute in the background</span>
+        </div>
+      </div>
+    </section>
+
+    ${renderCronCreateModal(props)}
+  `;
+}
+
 export function renderCron(props: CronProps) {
+  // Show clean empty state (with optional create modal) when no jobs exist
+  if (props.jobs.length === 0 && !props.loading && !props.editingJobId && !props.busy) {
+    return renderCronEmptyState(props);
+  }
+
   const isEditing = Boolean(props.editingJobId);
   const isAgentTurn = props.form.payloadKind === "agentTurn";
   const isCronSchedule = props.form.scheduleKind === "cron";

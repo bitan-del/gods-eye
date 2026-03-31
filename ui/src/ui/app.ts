@@ -391,6 +391,7 @@ export class GodsEyeApp extends LitElement {
   @state() cronRunsSortDir: import("./types.js").CronSortDir = "desc";
   @state() cronModelSuggestions: string[] = [];
   @state() cronBusy = false;
+  @state() cronShowForm = false;
 
   @state() updateAvailable: import("./types.js").UpdateAvailable | null = null;
 
@@ -430,6 +431,28 @@ export class GodsEyeApp extends LitElement {
   @state() skillsStoreSort: "newest" | "downloads" | "name" = "newest";
   @state() skillsStoreCategory = "All";
   @state() skillsCreateDropdownOpen = false;
+
+  // Agent Store state
+  @state() agentStoreLoading = false;
+  @state() agentStoreError: string | null = null;
+  @state() agentStoreAgents: import("./controllers/agent-store.ts").AgentStoreEntry[] = [];
+  @state() agentStoreCreating = false;
+  @state() agentStoreCreateError: string | null = null;
+  @state() agentStoreShowCreate = false;
+  @state() agentStoreCreateName = "";
+  @state() agentStoreCreateSummary = "";
+  @state() agentStoreCreateRole = "";
+  @state() agentStoreCreateModel = "";
+  @state() agentStoreCreateSkills: string[] = [];
+  @state() agentStoreCreateAvatar = "";
+  @state() agentStoreSearch = "";
+  @state() agentStoreSort: "newest" | "name" | "recent" = "newest";
+  @state() agentStoreCreateModelSearch = "";
+  @state() agentStoreCreateSkillSearch = "";
+  @state() agentStoreCreateModelDropdownOpen = false;
+  @state() agentStoreCreateSkillDropdownOpen = false;
+  @state() agentStoreModelCatalog: import("./types.ts").ModelCatalogEntry[] = [];
+  @state() agentStoreSkillsReport: import("./types.ts").SkillStatusReport | null = null;
 
   @state() healthLoading = false;
   @state() healthResult: HealthSummary | null = null;

@@ -23,6 +23,13 @@ import { loadAgentFileContent, loadAgentFiles, saveAgentFile } from "./controlle
 import { loadAgentIdentities, loadAgentIdentity } from "./controllers/agent-identity.ts";
 import { loadAgentSkills } from "./controllers/agent-skills.ts";
 import {
+  createAgent,
+  deleteAgent,
+  loadAgentStoreAgents,
+  loadAgentStoreModels,
+  loadAgentStoreSkills,
+} from "./controllers/agent-store.ts";
+import {
   buildToolsEffectiveRequestKey,
   loadAgents,
   loadToolsCatalog,
@@ -142,6 +149,7 @@ const lazyLogs = createLazy(() => import("./views/logs.ts"));
 const lazyNodes = createLazy(() => import("./views/nodes.ts"));
 const lazySessions = createLazy(() => import("./views/sessions.ts"));
 const lazySkills = createLazy(() => import("./views/skills.ts"));
+const lazyAgentStore = createLazy(() => import("./views/agent-store.ts"));
 
 function lazyRender<M>(getter: () => M | null, render: (mod: M) => unknown) {
   const mod = getter();
@@ -829,6 +837,7 @@ export function renderApp(state: AppViewState) {
                 m.renderCron({
                   basePath: state.basePath,
                   loading: state.cronLoading,
+                  showForm: state.cronShowForm,
                   status: state.cronStatus,
                   jobs: visibleCronJobs,
                   jobsLoadingMore: state.cronJobsLoadingMore,
@@ -873,10 +882,19 @@ export function renderApp(state: AppViewState) {
                     state.cronFieldErrors = validateCronForm(state.cronForm);
                   },
                   onRefresh: () => state.loadCron(),
-                  onAdd: () => addCronJob(state),
+                  onAdd: async () => {
+                    await addCronJob(state);
+                    // Reset showForm after successful creation
+                    if (!state.cronError && !state.cronBusy) {
+                      state.cronShowForm = false;
+                    }
+                  },
                   onEdit: (job) => startCronEdit(state, job),
                   onClone: (job) => startCronClone(state, job),
-                  onCancelEdit: () => cancelCronEdit(state),
+                  onCancelEdit: () => {
+                    cancelCronEdit(state);
+                    state.cronShowForm = false;
+                  },
                   onToggle: (job, enabled) => toggleCronJob(state, job, enabled),
                   onRun: (job, mode) => runCronJob(state, job, mode ?? "force"),
                   onRemove: (job) => removeCronJob(state, job),
@@ -915,6 +933,16 @@ export function renderApp(state: AppViewState) {
                       return;
                     }
                     await loadCronRuns(state, state.cronRunsJobId);
+                  },
+                  onStartCreate: () => {
+                    state.cronShowForm = true;
+                    // Set sensible defaults for quick creation
+                    state.cronForm = {
+                      ...state.cronForm,
+                      payloadKind: "agentTurn",
+                      sessionTarget: "isolated",
+                      wakeMode: "now",
+                    };
                   },
                   onNavigateToChat: (sessionKey) => {
                     switchChatSession(state, sessionKey);
@@ -1415,6 +1443,94 @@ export function renderApp(state: AppViewState) {
                       });
                       input.click();
                     },
+                  }),
+                );
+              })()
+            : nothing
+        }
+
+        ${
+          state.tab === "agentStore"
+            ? (() => {
+                if (
+                  !(state as Record<string, unknown>)._agentStoreLoaded &&
+                  !state.agentStoreLoading
+                ) {
+                  (state as Record<string, unknown>)._agentStoreLoaded = true;
+                  void loadAgentStoreAgents(state);
+                  void loadAgentStoreModels(state);
+                  void loadAgentStoreSkills(state);
+                }
+                return lazyRender(lazyAgentStore, (m) =>
+                  m.renderAgentStore({
+                    connected: state.connected,
+                    loading: state.agentStoreLoading,
+                    error: state.agentStoreError,
+                    agents: state.agentStoreAgents,
+                    search: state.agentStoreSearch,
+                    sort: state.agentStoreSort,
+                    showCreate: state.agentStoreShowCreate,
+                    creating: state.agentStoreCreating,
+                    createError: state.agentStoreCreateError,
+                    createName: state.agentStoreCreateName,
+                    createSummary: state.agentStoreCreateSummary,
+                    createRole: state.agentStoreCreateRole,
+                    createModel: state.agentStoreCreateModel,
+                    createSkills: state.agentStoreCreateSkills,
+                    createAvatar: state.agentStoreCreateAvatar,
+                    createModelSearch: state.agentStoreCreateModelSearch,
+                    createSkillSearch: state.agentStoreCreateSkillSearch,
+                    createModelDropdownOpen: state.agentStoreCreateModelDropdownOpen,
+                    createSkillDropdownOpen: state.agentStoreCreateSkillDropdownOpen,
+                    modelCatalog: state.agentStoreModelCatalog,
+                    skillsReport: state.agentStoreSkillsReport,
+                    onSearchChange: (q) => (state.agentStoreSearch = q),
+                    onSortChange: (sort) => (state.agentStoreSort = sort),
+                    onShowCreate: () => {
+                      state.agentStoreShowCreate = true;
+                      state.agentStoreCreateError = null;
+                      if (state.agentStoreModelCatalog.length === 0) {
+                        void loadAgentStoreModels(state);
+                      }
+                      if (!state.agentStoreSkillsReport) {
+                        void loadAgentStoreSkills(state);
+                      }
+                    },
+                    onCloseCreate: () => {
+                      state.agentStoreShowCreate = false;
+                      state.agentStoreCreateError = null;
+                      state.agentStoreCreateModelDropdownOpen = false;
+                      state.agentStoreCreateSkillDropdownOpen = false;
+                      state.agentStoreCreateModelSearch = "";
+                      state.agentStoreCreateSkillSearch = "";
+                    },
+                    onCreateNameChange: (name) => (state.agentStoreCreateName = name),
+                    onCreateSummaryChange: (summary) => (state.agentStoreCreateSummary = summary),
+                    onCreateRoleChange: (role) => (state.agentStoreCreateRole = role),
+                    onCreateModelChange: (model) => (state.agentStoreCreateModel = model),
+                    onCreateSkillsChange: (skills) => (state.agentStoreCreateSkills = skills),
+                    onCreateAvatarChange: (avatar) => (state.agentStoreCreateAvatar = avatar),
+                    onCreateModelSearchChange: (q) => (state.agentStoreCreateModelSearch = q),
+                    onCreateSkillSearchChange: (q) => (state.agentStoreCreateSkillSearch = q),
+                    onCreateModelDropdownToggle: (open) => {
+                      state.agentStoreCreateModelDropdownOpen = open;
+                      if (open) {
+                        state.agentStoreCreateSkillDropdownOpen = false;
+                      }
+                    },
+                    onCreateSkillDropdownToggle: (open) => {
+                      state.agentStoreCreateSkillDropdownOpen = open;
+                      if (open) {
+                        state.agentStoreCreateModelDropdownOpen = false;
+                      }
+                    },
+                    onCreate: () => void createAgent(state),
+                    onAddAgent: (agentId) => {
+                      // Navigate to chat with this agent
+                      state.sessionKey = `agent:${agentId}:main`;
+                      state.setTab("chat" as never);
+                    },
+                    onDeleteAgent: (agentId) => void deleteAgent(state, agentId),
                   }),
                 );
               })()

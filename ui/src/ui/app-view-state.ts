@@ -268,6 +268,8 @@ export type AppViewState = {
   | "cronBusy"
 > &
   Pick<CronModelSuggestionsState, "cronModelSuggestions"> & {
+    cronShowForm: boolean;
+  } & {
     skillsLoading: boolean;
     skillsReport: SkillStatusReport | null;
     skillsError: string | null;
@@ -294,6 +296,27 @@ export type AppViewState = {
     skillsStoreSort: "newest" | "downloads" | "name";
     skillsStoreCategory: string;
     skillsCreateDropdownOpen: boolean;
+    // Agent Store state
+    agentStoreLoading: boolean;
+    agentStoreError: string | null;
+    agentStoreAgents: import("./controllers/agent-store.ts").AgentStoreEntry[];
+    agentStoreCreating: boolean;
+    agentStoreCreateError: string | null;
+    agentStoreShowCreate: boolean;
+    agentStoreCreateName: string;
+    agentStoreCreateSummary: string;
+    agentStoreCreateRole: string;
+    agentStoreCreateModel: string;
+    agentStoreCreateSkills: string[];
+    agentStoreCreateAvatar: string;
+    agentStoreSearch: string;
+    agentStoreSort: "newest" | "name" | "recent";
+    agentStoreCreateModelSearch: string;
+    agentStoreCreateSkillSearch: string;
+    agentStoreCreateModelDropdownOpen: boolean;
+    agentStoreCreateSkillDropdownOpen: boolean;
+    agentStoreModelCatalog: import("./types.ts").ModelCatalogEntry[];
+    agentStoreSkillsReport: import("./types.ts").SkillStatusReport | null;
     healthLoading: boolean;
     healthResult: HealthSummary | null;
     healthError: string | null;
