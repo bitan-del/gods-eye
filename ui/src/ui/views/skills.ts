@@ -232,8 +232,46 @@ function renderStore(props: SkillsProps) {
     return html`<div class="sk-empty sk-empty--error">${props.storeError}</div>`;
   }
   if (props.storeItems.length === 0) {
+    // Fall back to showing installed skills as store items when ClawHub is empty
+    const installed = props.report?.skills ?? [];
+    if (installed.length > 0) {
+      return html`
+        <div class="sk-store-info">Showing locally available skills. Community store coming soon.</div>
+        <div class="sk-grid">
+          ${installed.map(
+            (skill) => html`
+            <div class="sk-card" @click=${() => props.onDetailOpen(skill.skillKey)}>
+              <div class="sk-card-top">
+                <div class="sk-card-icon">
+                  ${
+                    skill.emoji
+                      ? html`<span>${skill.emoji}</span>`
+                      : html`
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+                          </svg>
+                        `
+                  }
+                </div>
+                <span class="sk-card-badge">Added</span>
+              </div>
+              <div class="sk-card-name">${skill.name}</div>
+              <div class="sk-card-desc">${clampText(skill.description, 80)}</div>
+              <div class="sk-card-footer">
+                <button class="sk-card-use-btn" @click=${(e: Event) => {
+                  e.stopPropagation();
+                  props.onDetailOpen(skill.skillKey);
+                }}>Use Now</button>
+              </div>
+            </div>
+          `,
+          )}
+        </div>
+        ${props.detailKey ? renderSkillDetail(installed.find((s) => s.skillKey === props.detailKey) ?? null, props) : nothing}
+      `;
+    }
     return html`
-      <div class="sk-empty">No skills found in store. Try a different search.</div>
+      <div class="sk-empty">No skills found in store. The community skill store is coming soon.</div>
     `;
   }
 
