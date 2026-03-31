@@ -317,6 +317,17 @@ export type AppViewState = {
     agentStoreCreateSkillDropdownOpen: boolean;
     agentStoreModelCatalog: import("./types.ts").ModelCatalogEntry[];
     agentStoreSkillsReport: import("./types.ts").SkillStatusReport | null;
+    // Connectors state
+    connectorsLoading: boolean;
+    connectorsSnapshot: ChannelsStatusSnapshot | null;
+    connectorsError: string | null;
+    connectorsConfiguring: string | null;
+    connectorsFormValues: Record<string, string>;
+    connectorsFormErrors: Record<string, string>;
+    connectorsSaving: boolean;
+    connectorsSaveError: string | null;
+    connectorsSearch: string;
+    connectorsValidating: boolean;
     healthLoading: boolean;
     healthResult: HealthSummary | null;
     healthError: string | null;

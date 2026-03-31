@@ -51,6 +51,14 @@ import {
   removeConfigFormValue,
 } from "./controllers/config.ts";
 import {
+  loadConnectors,
+  openConnectorConfig,
+  closeConnectorConfig,
+  updateConnectorField,
+  validateConnectorForm,
+  CONNECTOR_CATALOG,
+} from "./controllers/connectors.ts";
+import {
   loadCronRuns,
   loadMoreCronJobs,
   loadMoreCronRuns,
@@ -150,6 +158,7 @@ const lazyNodes = createLazy(() => import("./views/nodes.ts"));
 const lazySessions = createLazy(() => import("./views/sessions.ts"));
 const lazySkills = createLazy(() => import("./views/skills.ts"));
 const lazyAgentStore = createLazy(() => import("./views/agent-store.ts"));
+const lazyConnectors = createLazy(() => import("./views/connectors.ts"));
 
 function lazyRender<M>(getter: () => M | null, render: (mod: M) => unknown) {
   const mod = getter();
@@ -1531,6 +1540,107 @@ export function renderApp(state: AppViewState) {
                       state.setTab("chat" as never);
                     },
                     onDeleteAgent: (agentId) => void deleteAgent(state, agentId),
+                  }),
+                );
+              })()
+            : nothing
+        }
+
+        ${
+          state.tab === "connectors"
+            ? (() => {
+                if (
+                  !(state as Record<string, unknown>)._connectorsLoaded &&
+                  !state.connectorsLoading
+                ) {
+                  (state as Record<string, unknown>)._connectorsLoaded = true;
+                  void loadConnectors(state, false);
+                }
+                return lazyRender(lazyConnectors, (m) =>
+                  m.renderConnectors({
+                    loading: state.connectorsLoading,
+                    snapshot: state.connectorsSnapshot,
+                    error: state.connectorsError,
+                    search: state.connectorsSearch,
+                    configuring: state.connectorsConfiguring,
+                    formValues: state.connectorsFormValues,
+                    formErrors: state.connectorsFormErrors,
+                    saving: state.connectorsSaving,
+                    saveError: state.connectorsSaveError,
+                    validating: state.connectorsValidating,
+                    whatsappBusy: state.whatsappBusy,
+                    whatsappQrDataUrl: state.whatsappLoginQrDataUrl,
+                    whatsappMessage: state.whatsappLoginMessage,
+                    whatsappConnected: state.whatsappLoginConnected,
+                    onRefresh: () => void loadConnectors(state, true),
+                    onSearchChange: (q) => (state.connectorsSearch = q),
+                    onConfigure: (id) => openConnectorConfig(state, id),
+                    onCloseConfig: () => closeConnectorConfig(state),
+                    onFieldChange: (key, value) => updateConnectorField(state, key, value),
+                    onSave: (connectorId) => {
+                      const def = CONNECTOR_CATALOG.find((c) => c.id === connectorId);
+                      if (!def) {
+                        return;
+                      }
+                      if (!validateConnectorForm(state, def)) {
+                        return;
+                      }
+                      // Save config values by patching each field into configForm
+                      state.connectorsSaving = true;
+                      state.connectorsSaveError = null;
+                      try {
+                        for (const field of def.fields) {
+                          const value = (state.connectorsFormValues[field.key] ?? "").trim();
+                          if (value) {
+                            updateConfigFormValue(state, field.configPath, value);
+                          }
+                        }
+                        // Also ensure channel is enabled
+                        const enabledPath = def.fields[0]?.configPath.slice(0, -1) ?? [];
+                        if (enabledPath.length > 0) {
+                          updateConfigFormValue(state, [...enabledPath, "enabled"], true);
+                        }
+                        void (async () => {
+                          try {
+                            await saveConfig(state);
+                            await loadConfig(state);
+                            await loadConnectors(state, true);
+                            closeConnectorConfig(state);
+                          } catch (err) {
+                            state.connectorsSaveError = String(err);
+                          } finally {
+                            state.connectorsSaving = false;
+                          }
+                        })();
+                      } catch (err) {
+                        state.connectorsSaveError = String(err);
+                        state.connectorsSaving = false;
+                      }
+                    },
+                    onValidate: (connectorId) => {
+                      const def = CONNECTOR_CATALOG.find((c) => c.id === connectorId);
+                      if (!def) {
+                        return;
+                      }
+                      validateConnectorForm(state, def);
+                    },
+                    onDisconnect: (connectorId) => {
+                      void (async () => {
+                        if (!state.client || !state.connected) {
+                          return;
+                        }
+                        try {
+                          await state.client.request("channels.logout", {
+                            channel: connectorId,
+                          });
+                          void loadConnectors(state, true);
+                        } catch (err) {
+                          state.connectorsError = String(err);
+                        }
+                      })();
+                    },
+                    onWhatsAppStart: (force) => state.handleWhatsAppStart(force),
+                    onWhatsAppWait: () => state.handleWhatsAppWait(),
                   }),
                 );
               })()

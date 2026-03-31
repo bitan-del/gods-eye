@@ -393,6 +393,18 @@ export class GodsEyeApp extends LitElement {
   @state() cronBusy = false;
   @state() cronShowForm = false;
 
+  // -- Connectors --
+  @state() connectorsLoading = false;
+  @state() connectorsSnapshot: import("./types.js").ChannelsStatusSnapshot | null = null;
+  @state() connectorsError: string | null = null;
+  @state() connectorsConfiguring: string | null = null;
+  @state() connectorsFormValues: Record<string, string> = {};
+  @state() connectorsFormErrors: Record<string, string> = {};
+  @state() connectorsSaving = false;
+  @state() connectorsSaveError: string | null = null;
+  @state() connectorsSearch = "";
+  @state() connectorsValidating = false;
+
   @state() updateAvailable: import("./types.js").UpdateAvailable | null = null;
 
   // Overview dashboard state
