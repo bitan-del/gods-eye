@@ -1591,65 +1591,64 @@ export function renderApp(state: AppViewState) {
                       if (!validateConnectorForm(state, def)) {
                         return;
                       }
-                      // Save config values by patching each field into configForm
                       state.connectorsSaving = true;
                       state.connectorsSaveError = null;
-                      try {
-                        for (const field of def.fields) {
-                          const value = (state.connectorsFormValues[field.key] ?? "").trim();
-                          if (!value) {
-                            continue;
-                          }
-
-                          // allowFrom: comma-separated string → array of E.164 numbers
-                          if (field.key === "allowFrom") {
-                            const numbers = value
-                              .split(",")
-                              .map((n) => n.trim())
-                              .filter(Boolean);
-                            updateConfigFormValue(state, field.configPath, numbers);
-                          } else {
-                            updateConfigFormValue(state, field.configPath, value);
-                          }
-                        }
-
-                        // If dmPolicy is "open", auto-set allowFrom to ["*"]
-                        if (
-                          connectorId === "whatsapp" &&
-                          state.connectorsFormValues.dmPolicy === "open"
-                        ) {
-                          updateConfigFormValue(
-                            state,
-                            ["channels", "whatsapp", "allowFrom"],
-                            ["*"],
-                          );
-                        }
-
-                        // Also ensure channel is enabled
-                        if (connectorId === "whatsapp") {
-                          updateConfigFormValue(state, ["channels", "whatsapp", "enabled"], true);
-                        } else {
-                          const enabledPath = def.fields[0]?.configPath.slice(0, -1) ?? [];
-                          if (enabledPath.length > 0) {
-                            updateConfigFormValue(state, [...enabledPath, "enabled"], true);
-                          }
-                        }
-                        void (async () => {
-                          try {
-                            await saveConfig(state);
+                      void (async () => {
+                        try {
+                          // Ensure config is loaded before patching
+                          if (!state.configSnapshot) {
                             await loadConfig(state);
-                            await loadConnectors(state, true);
-                            closeConnectorConfig(state);
-                          } catch (err) {
-                            state.connectorsSaveError = String(err);
-                          } finally {
-                            state.connectorsSaving = false;
                           }
-                        })();
-                      } catch (err) {
-                        state.connectorsSaveError = String(err);
-                        state.connectorsSaving = false;
-                      }
+                          if (!state.configSnapshot) {
+                            state.connectorsSaveError = "Failed to load config.";
+                            state.connectorsSaving = false;
+                            return;
+                          }
+
+                          // Patch each field into the config form
+                          for (const field of def.fields) {
+                            const value = (state.connectorsFormValues[field.key] ?? "").trim();
+                            if (!value) {
+                              continue;
+                            }
+
+                            // allowFrom: comma-separated string → array of E.164 numbers
+                            if (field.key === "allowFrom") {
+                              const numbers = value
+                                .split(",")
+                                .map((n) => n.trim())
+                                .filter(Boolean);
+                              updateConfigFormValue(state, field.configPath, numbers);
+                            } else {
+                              updateConfigFormValue(state, field.configPath, value);
+                            }
+                          }
+
+                          // If dmPolicy is "open", auto-set allowFrom to ["*"]
+                          if (
+                            connectorId === "whatsapp" &&
+                            state.connectorsFormValues.dmPolicy === "open"
+                          ) {
+                            updateConfigFormValue(
+                              state,
+                              ["channels", "whatsapp", "allowFrom"],
+                              ["*"],
+                            );
+                          }
+
+                          // Enable the channel at the channel level
+                          updateConfigFormValue(state, ["channels", connectorId, "enabled"], true);
+
+                          await saveConfig(state);
+                          await loadConfig(state);
+                          await loadConnectors(state, true);
+                          closeConnectorConfig(state);
+                        } catch (err) {
+                          state.connectorsSaveError = String(err);
+                        } finally {
+                          state.connectorsSaving = false;
+                        }
+                      })();
                     },
                     onValidate: (connectorId) => {
                       const def = CONNECTOR_CATALOG.find((c) => c.id === connectorId);

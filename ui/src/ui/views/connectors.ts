@@ -380,6 +380,13 @@ function renderWhatsAppFlow(props: ConnectorsProps): unknown {
               >
                 ${props.whatsappBusy ? "Waiting..." : "I've Scanned the QR"}
               </button>
+              <button
+                class="cn-btn cn-btn-outline"
+                ?disabled=${props.whatsappBusy}
+                @click=${() => props.onWhatsAppStart(true)}
+              >
+                Generate New QR
+              </button>
             </div>
           `
           : nothing
