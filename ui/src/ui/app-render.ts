@@ -159,6 +159,7 @@ const lazySessions = createLazy(() => import("./views/sessions.ts"));
 const lazySkills = createLazy(() => import("./views/skills.ts"));
 const lazyAgentStore = createLazy(() => import("./views/agent-store.ts"));
 const lazyConnectors = createLazy(() => import("./views/connectors.ts"));
+const lazySecurity = createLazy(() => import("./views/security.ts"));
 
 function lazyRender<M>(getter: () => M | null, render: (mod: M) => unknown) {
   const mod = getter();
@@ -1677,6 +1678,20 @@ export function renderApp(state: AppViewState) {
                   }),
                 );
               })()
+            : nothing
+        }
+
+        ${
+          state.tab === "security"
+            ? lazyRender(lazySecurity, (m) =>
+                m.renderSecurity({
+                  features: m.SECURITY_FEATURES,
+                  onToggle: (_featureId, _enabled) => {
+                    // Security features are system-level and always active
+                    // Toggle is visual-only for now
+                  },
+                }),
+              )
             : nothing
         }
 

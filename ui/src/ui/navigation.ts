@@ -7,6 +7,7 @@ export const TAB_GROUPS = [
   { label: "agentStore", tabs: ["agentStore"] },
   { label: "cronJobs", tabs: ["cron"] },
   { label: "connectors", tabs: ["connectors"] },
+  { label: "security", tabs: ["security"] },
   {
     label: "control",
     tabs: ["overview", "channels", "instances", "sessions", "usage"],
@@ -38,6 +39,7 @@ export type Tab =
   | "skills"
   | "agentStore"
   | "connectors"
+  | "security"
   | "nodes"
   | "chat"
   | "config"
@@ -60,6 +62,7 @@ const TAB_PATHS: Record<Tab, string> = {
   skills: "/skills",
   agentStore: "/agent-store",
   connectors: "/connectors",
+  security: "/security",
   nodes: "/nodes",
   chat: "/chat",
   config: "/config",
@@ -177,6 +180,8 @@ export function iconForTab(tab: Tab): IconName {
       return "brain";
     case "connectors":
       return "link";
+    case "security":
+      return "eye";
     case "nodes":
       return "monitor";
     case "config":
