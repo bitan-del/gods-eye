@@ -7109,6 +7109,106 @@ details[open] > .ov-expandable-toggle::after {
   color: #dc2626;
 }
 
+/* Select dropdown */
+.cn-select-wrap {
+  position: relative;
+}
+
+.cn-form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong, #2e3040);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--bg-elevated, #1a1b2e);
+  color: var(--text, #c9d1d9);
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239ca3af' d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.cn-form-select:focus {
+  border-color: var(--accent, #8ab4f8);
+  box-shadow: 0 0 0 3px var(--accent-subtle, rgba(138, 180, 248, 0.12));
+}
+
+.cn-form-select option {
+  background: var(--bg-elevated, #1a1b2e);
+  color: var(--text, #c9d1d9);
+  padding: 8px;
+}
+
+/* Textarea */
+.cn-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border-strong, #2e3040);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--bg-elevated, #1a1b2e);
+  color: var(--text, #c9d1d9);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.cn-form-textarea:focus {
+  border-color: var(--accent, #8ab4f8);
+  box-shadow: 0 0 0 3px var(--accent-subtle, rgba(138, 180, 248, 0.12));
+}
+
+.cn-form-textarea::placeholder {
+  color: var(--muted, #6b7280);
+}
+
+/* Hint text */
+.cn-form-hint {
+  font-size: 0.75rem;
+  color: var(--muted, #6b7280);
+  margin-top: 4px;
+  display: block;
+  line-height: 1.4;
+}
+
+.cn-form-hint-active {
+  color: var(--accent, #8ab4f8);
+  font-style: italic;
+}
+
+/* Light mode overrides for select, textarea, hint */
+:root[data-theme-mode="light"] .cn-form-select {
+  background-color: var(--bg, #fff);
+  border-color: var(--border, #dadce0);
+  color: var(--text, #3c4043);
+}
+
+:root[data-theme-mode="light"] .cn-form-select option {
+  background: var(--bg, #fff);
+  color: var(--text, #3c4043);
+}
+
+:root[data-theme-mode="light"] .cn-form-textarea {
+  background: var(--bg, #fff);
+  border-color: var(--border, #dadce0);
+  color: var(--text, #3c4043);
+}
+
+:root[data-theme-mode="light"] .cn-form-hint-active {
+  color: var(--accent, #1a73e8);
+}
+
 @media (max-width: 640px) {
   .cn-page {
     padding: 16px;

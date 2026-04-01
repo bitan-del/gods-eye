@@ -19,6 +19,12 @@ export type ConnectorField = {
   required: boolean;
   sensitive: boolean;
   configPath: string[];
+  /** If set, render a <select> with these options instead of a text input */
+  options?: { value: string; label: string; description?: string }[];
+  /** If set, render a <textarea> for multi-line input */
+  multiline?: boolean;
+  /** Hint text shown below the field */
+  hint?: string;
 };
 
 export type ConnectorsState = {
@@ -134,7 +140,75 @@ export const CONNECTOR_CATALOG: ConnectorDefinition[] = [
       "Go to Settings > Linked Devices > Link a Device",
       "Scan the QR code displayed here",
     ],
-    fields: [],
+    fields: [
+      {
+        key: "dmPolicy",
+        label: "DM Access Policy",
+        placeholder: "",
+        required: false,
+        sensitive: false,
+        configPath: ["channels", "whatsapp", "dmPolicy"],
+        options: [
+          {
+            value: "pairing",
+            label: "Pairing (Recommended)",
+            description: "Unknown senders get a pairing code. You approve who can talk.",
+          },
+          {
+            value: "allowlist",
+            label: "Allowlist Only",
+            description: "Only pre-approved phone numbers can message the bot.",
+          },
+          {
+            value: "open",
+            label: "Open (Public)",
+            description: "Anyone who messages this number can talk to the bot.",
+          },
+          {
+            value: "disabled",
+            label: "Disabled",
+            description: "Ignore all incoming WhatsApp DMs.",
+          },
+        ],
+        hint: "Controls who can send direct messages to your bot.",
+      },
+      {
+        key: "allowFrom",
+        label: "Allowed Phone Numbers",
+        placeholder: "+15555550123, +44771234567 (E.164 format, comma-separated)",
+        required: false,
+        sensitive: false,
+        configPath: ["channels", "whatsapp", "allowFrom"],
+        multiline: true,
+        hint: 'Pre-approved numbers for "Allowlist" mode. In "Pairing" mode, approved numbers bypass the pairing code.',
+      },
+      {
+        key: "groupPolicy",
+        label: "Group Message Policy",
+        placeholder: "",
+        required: false,
+        sensitive: false,
+        configPath: ["channels", "whatsapp", "groupPolicy"],
+        options: [
+          {
+            value: "open",
+            label: "Open",
+            description: "Respond in any WhatsApp group the bot is added to.",
+          },
+          {
+            value: "allowlist",
+            label: "Allowlist",
+            description: "Only respond to approved senders in groups.",
+          },
+          {
+            value: "disabled",
+            label: "Disabled",
+            description: "Ignore all group messages.",
+          },
+        ],
+        hint: "Controls how the bot responds in WhatsApp group chats.",
+      },
+    ],
   },
   {
     id: "signal",
@@ -584,11 +658,57 @@ export async function loadConnectors(state: ConnectorsState, probe: boolean) {
   }
 }
 
-export function openConnectorConfig(state: ConnectorsState, connectorId: string) {
+export function openConnectorConfig(
+  state: ConnectorsState,
+  connectorId: string,
+  configForm?: Record<string, unknown> | null,
+) {
   state.connectorsConfiguring = connectorId;
-  state.connectorsFormValues = {};
   state.connectorsFormErrors = {};
   state.connectorsSaveError = null;
+
+  // Pre-populate form values from existing config
+  const values: Record<string, string> = {};
+  const def = CONNECTOR_CATALOG.find((c) => c.id === connectorId);
+  if (def && configForm) {
+    for (const field of def.fields) {
+      const val = getNestedValue(configForm, field.configPath);
+      if (val != null) {
+        // Convert arrays back to comma-separated string for display
+        if (Array.isArray(val)) {
+          values[field.key] = val.join(", ");
+        } else {
+          values[field.key] =
+            typeof val === "object"
+              ? JSON.stringify(val)
+              : String(val as string | number | boolean);
+        }
+      } else if (field.options) {
+        // Default to first option for select fields
+        values[field.key] = field.options[0]?.value ?? "";
+      }
+    }
+  } else if (def) {
+    // No config loaded — use defaults for select fields
+    for (const field of def.fields) {
+      if (field.options) {
+        values[field.key] = field.options[0]?.value ?? "";
+      }
+    }
+  }
+  state.connectorsFormValues = values;
+}
+
+/** Safely read a nested value from an object using a path array */
+function getNestedValue(obj: Record<string, unknown>, path: string[]): unknown {
+  let current: unknown = obj;
+  for (const key of path) {
+    if (current == null || typeof current !== "object") {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[key];
+  }
+  return current;
 }
 
 export function closeConnectorConfig(state: ConnectorsState) {

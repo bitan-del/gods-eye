@@ -1574,7 +1574,13 @@ export function renderApp(state: AppViewState) {
                     whatsappConnected: state.whatsappLoginConnected,
                     onRefresh: () => void loadConnectors(state, true),
                     onSearchChange: (q) => (state.connectorsSearch = q),
-                    onConfigure: (id) => openConnectorConfig(state, id),
+                    onConfigure: (id) =>
+                      openConnectorConfig(
+                        state,
+                        id,
+                        state.configForm ??
+                          (state.configSnapshot?.config as Record<string, unknown> | null),
+                      ),
                     onCloseConfig: () => closeConnectorConfig(state),
                     onFieldChange: (key, value) => updateConnectorField(state, key, value),
                     onSave: (connectorId) => {
@@ -1591,14 +1597,42 @@ export function renderApp(state: AppViewState) {
                       try {
                         for (const field of def.fields) {
                           const value = (state.connectorsFormValues[field.key] ?? "").trim();
-                          if (value) {
+                          if (!value) {
+                            continue;
+                          }
+
+                          // allowFrom: comma-separated string → array of E.164 numbers
+                          if (field.key === "allowFrom") {
+                            const numbers = value
+                              .split(",")
+                              .map((n) => n.trim())
+                              .filter(Boolean);
+                            updateConfigFormValue(state, field.configPath, numbers);
+                          } else {
                             updateConfigFormValue(state, field.configPath, value);
                           }
                         }
+
+                        // If dmPolicy is "open", auto-set allowFrom to ["*"]
+                        if (
+                          connectorId === "whatsapp" &&
+                          state.connectorsFormValues.dmPolicy === "open"
+                        ) {
+                          updateConfigFormValue(
+                            state,
+                            ["channels", "whatsapp", "allowFrom"],
+                            ["*"],
+                          );
+                        }
+
                         // Also ensure channel is enabled
-                        const enabledPath = def.fields[0]?.configPath.slice(0, -1) ?? [];
-                        if (enabledPath.length > 0) {
-                          updateConfigFormValue(state, [...enabledPath, "enabled"], true);
+                        if (connectorId === "whatsapp") {
+                          updateConfigFormValue(state, ["channels", "whatsapp", "enabled"], true);
+                        } else {
+                          const enabledPath = def.fields[0]?.configPath.slice(0, -1) ?? [];
+                          if (enabledPath.length > 0) {
+                            updateConfigFormValue(state, [...enabledPath, "enabled"], true);
+                          }
                         }
                         void (async () => {
                           try {

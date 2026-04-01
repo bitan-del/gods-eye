@@ -138,6 +138,77 @@ function renderFieldInput(field: ConnectorField, props: ConnectorsProps): unknow
   const value = props.formValues[field.key] ?? "";
   const error = props.formErrors[field.key] ?? "";
   const showPassword = false;
+
+  // Select dropdown for fields with options
+  if (field.options) {
+    const selectedOption = field.options.find((o) => o.value === value);
+    return html`
+      <div class="cn-form-group">
+        <label class="cn-form-label">
+          ${field.label}
+          ${
+            field.required
+              ? html`
+                  <span class="cn-form-required">*</span>
+                `
+              : nothing
+          }
+        </label>
+        <div class="cn-select-wrap">
+          <select
+            class="cn-form-select ${error ? "cn-form-input-error" : ""}"
+            @change=${(e: Event) =>
+              props.onFieldChange(field.key, (e.target as HTMLSelectElement).value)}
+          >
+            ${field.options.map(
+              (opt) => html`
+                <option value="${opt.value}" ?selected=${opt.value === value}>
+                  ${opt.label}
+                </option>
+              `,
+            )}
+          </select>
+        </div>
+        ${
+          selectedOption?.description
+            ? html`<span class="cn-form-hint cn-form-hint-active">${selectedOption.description}</span>`
+            : nothing
+        }
+        ${field.hint && !selectedOption?.description ? html`<span class="cn-form-hint">${field.hint}</span>` : nothing}
+        ${error ? html`<span class="cn-form-error">${error}</span>` : nothing}
+      </div>
+    `;
+  }
+
+  // Textarea for multiline fields
+  if (field.multiline) {
+    return html`
+      <div class="cn-form-group">
+        <label class="cn-form-label">
+          ${field.label}
+          ${
+            field.required
+              ? html`
+                  <span class="cn-form-required">*</span>
+                `
+              : nothing
+          }
+        </label>
+        <textarea
+          class="cn-form-textarea ${error ? "cn-form-input-error" : ""}"
+          placeholder="${field.placeholder}"
+          rows="3"
+          .value=${value}
+          @input=${(e: Event) =>
+            props.onFieldChange(field.key, (e.target as HTMLTextAreaElement).value)}
+        ></textarea>
+        ${field.hint ? html`<span class="cn-form-hint">${field.hint}</span>` : nothing}
+        ${error ? html`<span class="cn-form-error">${error}</span>` : nothing}
+      </div>
+    `;
+  }
+
+  // Default text/password input
   return html`
     <div class="cn-form-group">
       <label class="cn-form-label">
@@ -177,6 +248,7 @@ function renderFieldInput(field: ConnectorField, props: ConnectorsProps): unknow
             : nothing
         }
       </div>
+      ${field.hint ? html`<span class="cn-form-hint">${field.hint}</span>` : nothing}
       ${error ? html`<span class="cn-form-error">${error}</span>` : nothing}
     </div>
   `;
@@ -237,10 +309,10 @@ function renderConfigModal(def: ConnectorDefinition, props: ConnectorsProps): un
           }
         </div>
 
-        ${
-          !isWhatsApp || def.fields.length > 0
-            ? html`
-              <div class="cn-modal-footer">
+        <div class="cn-modal-footer">
+          ${
+            !isWhatsApp
+              ? html`
                 <button
                   class="cn-btn cn-btn-outline"
                   ?disabled=${props.validating}
@@ -248,17 +320,17 @@ function renderConfigModal(def: ConnectorDefinition, props: ConnectorsProps): un
                 >
                   ${props.validating ? "Validating..." : "Validate Config"}
                 </button>
-                <button
-                  class="cn-btn cn-btn-primary"
-                  ?disabled=${props.saving}
-                  @click=${() => props.onSave(def.id)}
-                >
-                  ${props.saving ? "Saving..." : "Save & Connect"}
-                </button>
-              </div>
-            `
-            : nothing
-        }
+              `
+              : nothing
+          }
+          <button
+            class="cn-btn cn-btn-primary"
+            ?disabled=${props.saving}
+            @click=${() => props.onSave(def.id)}
+          >
+            ${props.saving ? "Saving..." : isWhatsApp ? "Save Settings" : "Save & Connect"}
+          </button>
+        </div>
       </div>
     </div>
   `;
