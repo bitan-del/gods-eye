@@ -51,6 +51,13 @@ function connectorIcon(id: string, color: string): unknown {
     googlechat: "💬",
     irc: "📡",
     imessage: "🍎",
+    line: "💚",
+    nostr: "🟣",
+    feishu: "🐦",
+    mattermost: "💙",
+    bluebubbles: "🫧",
+    "nextcloud-talk": "☁️",
+    "synology-chat": "🗄️",
   };
   const emoji = iconMap[id] ?? "🔌";
   return html`<span class="cn-card-icon" style="background:${color}20;color:${color}"
