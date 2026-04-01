@@ -328,6 +328,10 @@ export type AppViewState = {
     connectorsSaveError: string | null;
     connectorsSearch: string;
     connectorsValidating: boolean;
+    securityFeatures: Record<string, boolean>;
+    securityLoading: boolean;
+    securitySaving: string | null;
+    securityError: string | null;
     healthLoading: boolean;
     healthResult: HealthSummary | null;
     healthError: string | null;

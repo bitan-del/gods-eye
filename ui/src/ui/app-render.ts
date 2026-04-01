@@ -94,6 +94,11 @@ import {
 import { loadLogs } from "./controllers/logs.ts";
 import { loadNodes } from "./controllers/nodes.ts";
 import { loadPresence } from "./controllers/presence.ts";
+import {
+  loadSecurityState,
+  toggleSecurityFeature,
+  SECURITY_FEATURE_DEFS,
+} from "./controllers/security.ts";
 import { deleteSessionsAndRefresh, loadSessions, patchSession } from "./controllers/sessions.ts";
 import {
   installSkill,
@@ -1683,15 +1688,23 @@ export function renderApp(state: AppViewState) {
 
         ${
           state.tab === "security"
-            ? lazyRender(lazySecurity, (m) =>
-                m.renderSecurity({
-                  features: m.SECURITY_FEATURES,
-                  onToggle: (_featureId, _enabled) => {
-                    // Security features are system-level and always active
-                    // Toggle is visual-only for now
-                  },
-                }),
-              )
+            ? (() => {
+                if (!(state as Record<string, unknown>)._securityLoaded && !state.securityLoading) {
+                  (state as Record<string, unknown>)._securityLoaded = true;
+                  void loadSecurityState(state);
+                }
+                return lazyRender(lazySecurity, (m) =>
+                  m.renderSecurity({
+                    features: SECURITY_FEATURE_DEFS,
+                    featureStates: state.securityFeatures,
+                    loading: state.securityLoading,
+                    saving: state.securitySaving,
+                    error: state.securityError,
+                    onToggle: (featureId, enabled) =>
+                      void toggleSecurityFeature(state, featureId, enabled),
+                  }),
+                );
+              })()
             : nothing
         }
 

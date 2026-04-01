@@ -405,6 +405,11 @@ export class GodsEyeApp extends LitElement {
   @state() connectorsSearch = "";
   @state() connectorsValidating = false;
 
+  @state() securityFeatures: Record<string, boolean> = {};
+  @state() securityLoading = false;
+  @state() securitySaving: string | null = null;
+  @state() securityError: string | null = null;
+
   @state() updateAvailable: import("./types.js").UpdateAvailable | null = null;
 
   // Overview dashboard state
