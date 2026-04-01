@@ -9,13 +9,15 @@ export const TAB_GROUPS = [
   { label: "connectors", tabs: ["connectors"] },
   { label: "security", tabs: ["security"] },
   {
-    label: "control",
-    tabs: ["overview", "channels", "instances", "sessions", "usage"],
-  },
-  { label: "agent", tabs: ["agents", "nodes"] },
-  {
-    label: "settings",
+    label: "advanced",
     tabs: [
+      "overview",
+      "channels",
+      "instances",
+      "sessions",
+      "usage",
+      "agents",
+      "nodes",
       "config",
       "communications",
       "appearance",

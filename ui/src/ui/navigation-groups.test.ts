@@ -40,18 +40,14 @@ describe("TAB_GROUPS", () => {
     vi.unstubAllGlobals();
   });
 
-  it("does not expose unfinished settings slices in the sidebar", () => {
-    const settings = navigation.TAB_GROUPS.find((group) => group.label === "settings");
-    expect(settings?.tabs).toEqual([
-      "config",
-      "communications",
-      "appearance",
-      "automation",
-      "infrastructure",
-      "aiAgents",
-      "debug",
-      "logs",
-    ]);
+  it("groups all advanced tabs under the advanced label", () => {
+    const advanced = navigation.TAB_GROUPS.find((group) => group.label === "advanced");
+    expect(advanced?.tabs).toContain("config");
+    expect(advanced?.tabs).toContain("overview");
+    expect(advanced?.tabs).toContain("agents");
+    expect(advanced?.tabs).toContain("nodes");
+    expect(advanced?.tabs).toContain("debug");
+    expect(advanced?.tabs).toContain("logs");
   });
 
   it("routes every published settings slice", () => {

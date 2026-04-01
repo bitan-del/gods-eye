@@ -27,7 +27,7 @@ export const en: TranslationMap = {
     connectors: "Connectors",
     security: "Security",
     studio: "Studio",
-    settings: "Settings",
+    advanced: "Advanced",
     expand: "Expand sidebar",
     collapse: "Collapse sidebar",
     resize: "Resize sidebar",
