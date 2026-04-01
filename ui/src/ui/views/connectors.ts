@@ -88,6 +88,7 @@ function statusBadge(configured: boolean, connected: boolean, running: boolean):
 
 function renderConnectorCard(def: ConnectorDefinition, props: ConnectorsProps): unknown {
   const status = getConnectorStatus(def.id, props.snapshot);
+  const isConfiguredButNotConnected = status.configured && !status.connected;
   return html`
     <div class="cn-card">
       <div class="cn-card-header">
@@ -100,7 +101,7 @@ function renderConnectorCard(def: ConnectorDefinition, props: ConnectorsProps): 
       </div>
       <div class="cn-card-footer">
         ${
-          status.configured
+          status.connected
             ? html`
               <button
                 class="cn-btn cn-btn-outline cn-btn-sm"
@@ -115,19 +116,45 @@ function renderConnectorCard(def: ConnectorDefinition, props: ConnectorsProps): 
                 Disconnect
               </button>
             `
-            : html`
-              <button
-                class="cn-btn cn-btn-connect"
-                @click=${() => {
-                  props.onConfigure(def.id);
-                  if (def.id === "whatsapp") {
-                    props.onWhatsAppStart(false);
-                  }
-                }}
-              >
-                Connect
-              </button>
-            `
+            : isConfiguredButNotConnected
+              ? html`
+                <button
+                  class="cn-btn cn-btn-connect cn-btn-sm"
+                  @click=${() => {
+                    props.onConfigure(def.id);
+                    if (def.id === "whatsapp") {
+                      props.onWhatsAppStart(false);
+                    }
+                  }}
+                >
+                  ${def.id === "whatsapp" ? "Link Device" : "Reconnect"}
+                </button>
+                <button
+                  class="cn-btn cn-btn-outline cn-btn-sm"
+                  @click=${() => props.onConfigure(def.id)}
+                >
+                  Settings
+                </button>
+                <button
+                  class="cn-btn cn-btn-danger-outline cn-btn-sm"
+                  @click=${() => props.onDisconnect(def.id)}
+                >
+                  Remove
+                </button>
+              `
+              : html`
+                <button
+                  class="cn-btn cn-btn-connect"
+                  @click=${() => {
+                    props.onConfigure(def.id);
+                    if (def.id === "whatsapp") {
+                      props.onWhatsAppStart(false);
+                    }
+                  }}
+                >
+                  Connect
+                </button>
+              `
         }
       </div>
     </div>
