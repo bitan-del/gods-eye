@@ -118,8 +118,12 @@ function renderConnectorCard(def: ConnectorDefinition, props: ConnectorsProps): 
             : html`
               <button
                 class="cn-btn cn-btn-connect"
-                @click=${() =>
-                  def.id === "whatsapp" ? props.onWhatsAppStart(false) : props.onConfigure(def.id)}
+                @click=${() => {
+                  props.onConfigure(def.id);
+                  if (def.id === "whatsapp") {
+                    props.onWhatsAppStart(false);
+                  }
+                }}
               >
                 Connect
               </button>
@@ -292,8 +296,8 @@ function renderWhatsAppFlow(props: ConnectorsProps): unknown {
           : nothing
       }
       ${
-        props.whatsappConnected === false && props.whatsappMessage
-          ? html`<div class="cn-whatsapp-error">${props.whatsappMessage}</div>`
+        props.whatsappMessage && props.whatsappConnected !== true
+          ? html`<div class="${props.whatsappConnected === false ? "cn-whatsapp-error" : "cn-whatsapp-info"}">${props.whatsappMessage}</div>`
           : nothing
       }
       ${

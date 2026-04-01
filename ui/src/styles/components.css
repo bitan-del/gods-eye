@@ -6970,6 +6970,12 @@ details[open] > .ov-expandable-toggle::after {
   text-align: center;
 }
 
+.cn-whatsapp-info {
+  color: var(--muted, #838387);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 /* Light mode overrides */
 
 :root[data-theme-mode="light"] .cn-page-title {
