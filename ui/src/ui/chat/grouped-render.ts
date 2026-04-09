@@ -655,6 +655,15 @@ function renderGroupedMessage(
   const hasImages = images.length > 0;
 
   const extractedText = extractTextCached(message);
+
+  // Hide internal system errors from previous versions (e.g. stale module hashes after upgrade)
+  const isStaleSystemError =
+    extractedText &&
+    /ERR_MODULE_NOT_FOUND|Cannot find module.*\/dist\//.test(extractedText);
+  if (isStaleSystemError) {
+    return nothing;
+  }
+
   const extractedThinking =
     opts.showReasoning && role === "assistant" ? extractThinkingCached(message) : null;
   const markdownBase = extractedText?.trim() ? extractedText : null;
