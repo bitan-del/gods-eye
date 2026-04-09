@@ -65,7 +65,7 @@ export const modelsHandlers: GatewayRequestHandlers = {
           );
           if (!alreadyListed) {
             models.push({
-              id: backend.command === "claude" ? "claude" : backend.command,
+              id: backend.command === "claude" ? "sonnet" : backend.command,
               name: `${backend.command === "claude" ? "Claude Code" : backend.command} (Local Terminal)`,
               provider: backend.id,
               contextWindow: 200_000,
