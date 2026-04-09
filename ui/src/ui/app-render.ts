@@ -594,6 +594,14 @@ export function renderApp(state: AppViewState) {
                                   <span class="sidebar-version__label">${t("common.version")}</span>
                                   <span class="sidebar-version__text">v${version}</span>
                                   ${renderSidebarConnectionStatus(state)}
+                                  <button
+                                    class="sidebar-update-btn"
+                                    title="Check for updates"
+                                    ?disabled=${state.updateRunning || !state.connected}
+                                    @click=${() => runUpdate(state)}
+                                  >
+                                    ${state.updateRunning ? icons.loader : icons.download}
+                                  </button>
                                 `
                               : html`
                                   ${renderSidebarConnectionStatus(state)}

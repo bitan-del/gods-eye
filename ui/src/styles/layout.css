@@ -819,6 +819,39 @@
   margin-left: 0;
 }
 
+.sidebar-update-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+.sidebar-update-btn:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.sidebar-update-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.sidebar-update-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* Mode switch in sidebar — hidden on desktop, shown on mobile */
 .sidebar-mode-switch {
   display: none;
