@@ -1,0 +1,35 @@
+{
+  "id": "memory-graph",
+  "name": "Memory Graph",
+  "description": "Persistent codebase knowledge graph that serves as a memory layer for AI agents. Pre-indexes code structure so agents never lose context across sessions. Powered by code-review-graph.",
+  "mcpServers": {
+    "memory-graph": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/src/mcp-bridge.mjs"],
+      "env": {}
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "autoIndex": {
+        "type": "boolean",
+        "description": "Automatically index the workspace on gateway start (default: true)"
+      },
+      "indexDepth": {
+        "type": "number",
+        "description": "Max directory depth for indexing (default: 10)"
+      },
+      "excludePatterns": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Glob patterns to exclude from indexing (default: node_modules, .git, dist)"
+      },
+      "conversationMemory": {
+        "type": "boolean",
+        "description": "Store conversation summaries in the graph for cross-session recall (default: true)"
+      }
+    }
+  }
+}

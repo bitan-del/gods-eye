@@ -1,0 +1,13 @@
+{
+  "name": "@godseye/memory-graph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Persistent codebase knowledge graph and memory layer for Gods Eye agents",
+  "type": "module",
+  "main": "src/mcp-bridge.mjs",
+  "scripts": {
+    "build-graph": "node src/mcp-bridge.mjs --build-only",
+    "setup": "node src/setup.mjs"
+  },
+  "dependencies": {}
+}

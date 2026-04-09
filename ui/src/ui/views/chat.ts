@@ -1063,6 +1063,13 @@ function renderModelDropdown(
             <span class="agent-chat__model-option-name">${model.name ?? model.id}</span>
             ${model.provider ? html`<span class="agent-chat__model-option-provider">${model.provider}</span>` : nothing}
             ${
+              model.provider === "local-cli"
+                ? html`
+                    <span class="agent-chat__model-option-badge agent-chat__model-option-badge--local">local</span>
+                  `
+                : nothing
+            }
+            ${
               model.reasoning
                 ? html`
                     <span class="agent-chat__model-option-badge">reasoning</span>

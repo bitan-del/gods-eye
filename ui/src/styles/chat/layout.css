@@ -1523,6 +1523,11 @@
   line-height: 1.3;
 }
 
+.agent-chat__model-option-badge--local {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.1));
+  color: #10b981;
+}
+
 /* ── Toolbar buttons (skill picker, @ mention) ── */
 
 .agent-chat__toolbar-btn {

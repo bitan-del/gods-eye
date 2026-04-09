@@ -2,6 +2,7 @@ import { DEFAULT_PROVIDER } from "../../agents/defaults.js";
 import { hasAvailableAuthForProvider } from "../../agents/model-auth.js";
 import { buildAllowedModelSet } from "../../agents/model-selection.js";
 import { loadConfig } from "../../config/config.js";
+import { detectCliBackends } from "../../infra/cli-detect.js";
 import {
   ErrorCodes,
   errorShape,
@@ -51,6 +52,31 @@ export const modelsHandlers: GatewayRequestHandlers = {
       }
 
       const models = authenticatedModels.length > 0 ? authenticatedModels : base;
+
+      // Inject locally detected CLI backends as virtual model entries
+      try {
+        const cliResult = await detectCliBackends();
+        for (const backend of cliResult.backends) {
+          if (!backend.available) {
+            continue;
+          }
+          const alreadyListed = models.some(
+            (m) => m.id === backend.id || m.provider === backend.id,
+          );
+          if (!alreadyListed) {
+            models.push({
+              id: backend.id,
+              name: `${backend.command === "claude" ? "Claude Code" : backend.command} (Local Terminal)`,
+              provider: "local-cli",
+              contextWindow: 200_000,
+              reasoning: true,
+            });
+          }
+        }
+      } catch {
+        // CLI detection is best-effort; don't fail the catalog
+      }
+
       respond(true, { models }, undefined);
     } catch (err) {
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
