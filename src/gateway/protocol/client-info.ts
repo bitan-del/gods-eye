@@ -3,17 +3,23 @@ import { normalizeOptionalLowercaseString } from "../../shared/string-coerce.js"
 export const GATEWAY_CLIENT_IDS = {
   WEBCHAT_UI: "webchat-ui",
   CONTROL_UI: "openclaw-control-ui",
+  GODSEYE_CONTROL_UI: "godseye-control-ui",
   TUI: "openclaw-tui",
+  GODSEYE_TUI: "godseye-tui",
   WEBCHAT: "webchat",
   CLI: "cli",
   GATEWAY_CLIENT: "gateway-client",
   MACOS_APP: "openclaw-macos",
+  GODSEYE_MACOS_APP: "godseye-macos",
   IOS_APP: "openclaw-ios",
+  GODSEYE_IOS_APP: "godseye-ios",
   ANDROID_APP: "openclaw-android",
+  GODSEYE_ANDROID_APP: "godseye-android",
   NODE_HOST: "node-host",
   TEST: "test",
   FINGERPRINT: "fingerprint",
   PROBE: "openclaw-probe",
+  GODSEYE_PROBE: "godseye-probe",
 } as const;
 
 export type GatewayClientId = (typeof GATEWAY_CLIENT_IDS)[keyof typeof GATEWAY_CLIENT_IDS];
