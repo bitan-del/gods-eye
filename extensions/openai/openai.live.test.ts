@@ -3,11 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { getModel } from "@mariozechner/pi-ai";
 import { AuthStorage, ModelRegistry } from "@mariozechner/pi-coding-agent";
-import OpenAI from "openai";
 import type { ResolvedTtsConfig } from "godseye/plugin-sdk/agent-runtime";
 import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import { encodePngRgba, fillPixel } from "godseye/plugin-sdk/media-runtime";
+import OpenAI from "openai";
 import { describe, expect, it } from "vitest";
 import {
   registerProviderPlugin,

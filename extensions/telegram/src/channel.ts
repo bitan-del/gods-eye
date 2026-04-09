@@ -17,10 +17,7 @@ import {
 import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { createChannelDirectoryAdapter } from "godseye/plugin-sdk/directory-runtime";
 import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
-import {
-  resolveOutboundSendDep,
-  type OutboundSendDeps,
-} from "godseye/plugin-sdk/outbound-runtime";
+import { resolveOutboundSendDep, type OutboundSendDeps } from "godseye/plugin-sdk/outbound-runtime";
 import {
   buildOutboundBaseSessionKey,
   normalizeOutboundThreadId,

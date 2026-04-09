@@ -1,7 +1,6 @@
 // fal.ai provider — handles actual API calls for image and video generation.
 // Uses the same auth resolution as the bundled fal extension.
 
-
 const DEFAULT_FAL_BASE_URL = "https://fal.run";
 const DEFAULT_FAL_QUEUE_URL = "https://queue.fal.run";
 const DEFAULT_IMAGE_MODEL = "fal-ai/flux/dev";

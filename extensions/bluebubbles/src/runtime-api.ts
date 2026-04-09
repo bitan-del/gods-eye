@@ -24,11 +24,7 @@ export type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
 } from "godseye/plugin-sdk/channel-contract";
-export type {
-  ChannelPlugin,
-  OpenClawConfig,
-  PluginRuntime,
-} from "godseye/plugin-sdk/channel-core";
+export type { ChannelPlugin, OpenClawConfig, PluginRuntime } from "godseye/plugin-sdk/channel-core";
 export { parseFiniteNumber } from "godseye/plugin-sdk/infra-runtime";
 export { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
 export {

@@ -1,6 +1,5 @@
 // OpenAI image provider — DALL-E 3 and GPT Image generation.
 
-
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1";
 

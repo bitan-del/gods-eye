@@ -2,7 +2,7 @@
 
 import type { BaseConfigSchemaResponse } from "./schema-base.js";
 
-export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
+export const GENERATED_BASE_CONFIG_SCHEMA = {
   schema: {
     $schema: "http://json-schema.org/draft-07/schema#",
     type: "object",
@@ -26935,6 +26935,6 @@ export const GENERATED_BASE_CONFIG_SCHEMA: BaseConfigSchemaResponse = {
       tags: ["advanced", "url-secret"],
     },
   },
-  version: "2026.4.10",
+  version: "0.0.0",
   generatedAt: "2026-03-22T21:17:33.302Z",
-};
+} as const satisfies BaseConfigSchemaResponse;

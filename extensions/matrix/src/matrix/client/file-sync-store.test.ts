@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { ISyncResponse } from "matrix-js-sdk";
 import * as jsonStore from "godseye/plugin-sdk/json-store";
+import type { ISyncResponse } from "matrix-js-sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FileBackedMatrixSyncStore } from "./file-sync-store.js";
 

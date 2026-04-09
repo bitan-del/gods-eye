@@ -9,8 +9,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/acpx",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye ACP runtime backend via acpx",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw ACP runtime backend",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -20,14 +20,13 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         type: "object",
         additionalProperties: false,
         properties: {
-          command: {
-            type: "string",
-          },
-          expectedVersion: {
-            type: "string",
-          },
           cwd: {
             type: "string",
+            minLength: 1,
+          },
+          stateDir: {
+            type: "string",
+            minLength: 1,
           },
           permissionMode: {
             type: "string",
@@ -37,12 +36,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
             type: "string",
             enum: ["deny", "fail"],
           },
+          pluginToolsMcpBridge: {
+            type: "boolean",
+          },
           strictWindowsCmdWrapper: {
             type: "boolean",
           },
           timeoutSeconds: {
             type: "number",
             minimum: 0.001,
+            default: 120,
           },
           queueOwnerTtlSeconds: {
             type: "number",
@@ -55,6 +58,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               properties: {
                 command: {
                   type: "string",
+                  minLength: 1,
                   description: "Command to run the MCP server",
                 },
                 args: {
@@ -75,54 +79,115 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               required: ["command"],
             },
           },
+          agents: {
+            type: "object",
+            additionalProperties: {
+              type: "object",
+              properties: {
+                command: {
+                  type: "string",
+                  minLength: 1,
+                },
+              },
+              required: ["command"],
+            },
+          },
         },
       },
+      enabledByDefault: true,
       skills: ["./skills"],
       name: "ACPX Runtime",
       description:
-        "ACP runtime backend powered by acpx with configurable command path and version policy.",
+        "Embedded ACP runtime backend with plugin-owned session and transport management.",
       uiHints: {
-        command: {
-          label: "acpx Command",
-          help: "Optional path/command override for acpx (for example /home/user/repos/acpx/dist/cli.js). Leave unset to use plugin-local bundled acpx.",
-        },
-        expectedVersion: {
-          label: "Expected acpx Version",
-          help: 'Exact version to enforce or "any" to skip strict version matching.',
-        },
         cwd: {
           label: "Default Working Directory",
-          help: "Default cwd for ACP session operations when not set per session.",
+          help: "Default working directory for embedded ACP session operations when not set per session.",
+        },
+        stateDir: {
+          label: "State Directory",
+          help: "Directory used for embedded ACP session state and persistence.",
         },
         permissionMode: {
           label: "Permission Mode",
-          help: "Default acpx permission policy for runtime prompts.",
+          help: "Default permission policy for embedded ACP runtime prompts.",
         },
         nonInteractivePermissions: {
           label: "Non-Interactive Permission Policy",
-          help: "acpx policy when interactive permission prompts are unavailable.",
+          help: "Policy when interactive permission prompts are unavailable.",
+        },
+        pluginToolsMcpBridge: {
+          label: "Plugin Tools MCP Bridge",
+          help: "Default off. When enabled, inject the built-in OpenClaw plugin-tools MCP server into embedded ACP sessions so ACP agents can call plugin-registered tools.",
+          advanced: true,
         },
         strictWindowsCmdWrapper: {
           label: "Strict Windows cmd Wrapper",
-          help: "Enabled by default. On Windows, reject unresolved .cmd/.bat wrappers instead of shell fallback. Disable only for compatibility with non-standard wrappers.",
+          help: "Legacy compatibility field. The current embedded acpx/runtime package uses its own Windows command resolution behavior. Setting this to false is accepted for compatibility and logged as ignored.",
           advanced: true,
         },
         timeoutSeconds: {
           label: "Prompt Timeout Seconds",
-          help: "Optional acpx timeout for each runtime turn.",
+          help: "Timeout for each embedded runtime turn. Defaults to 120 seconds so slower Gemini CLI ACP startups have room to initialize.",
           advanced: true,
         },
         queueOwnerTtlSeconds: {
           label: "Queue Owner TTL Seconds",
-          help: "Idle queue-owner TTL for acpx prompt turns. Keep this short in GodsEye to avoid delayed completion after each turn.",
+          help: "Reserved compatibility field for the older embedded ACPX queue-owner path. Accepted for compatibility and logged as ignored.",
           advanced: true,
         },
         mcpServers: {
           label: "MCP Servers",
-          help: "Named MCP server definitions to inject into ACPX-backed session bootstrap. Each entry needs a command and can include args and env.",
+          help: "Named MCP server definitions to inject into embedded ACP session bootstrap. Each entry needs a command and can include args and env.",
+          advanced: true,
+        },
+        agents: {
+          label: "Agent Commands",
+          help: "Optional per-agent command overrides for the embedded ACP runtime.",
           advanced: true,
         },
       },
+    },
+  },
+  {
+    dirName: "alibaba",
+    idHint: "alibaba",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/alibaba-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Alibaba Model Studio video provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "alibaba",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providerAuthEnvVars: {
+        alibaba: ["MODELSTUDIO_API_KEY", "DASHSCOPE_API_KEY", "QWEN_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "alibaba",
+          method: "api-key",
+          choiceId: "alibaba-model-studio-api-key",
+          choiceLabel: "Alibaba Model Studio API key",
+          groupId: "alibaba",
+          groupLabel: "Alibaba Model Studio",
+          groupHint: "DashScope / Model Studio API key",
+          optionKey: "alibabaModelStudioApiKey",
+          cliFlag: "--alibaba-model-studio-api-key",
+          cliOption: "--alibaba-model-studio-api-key <key>",
+          cliDescription: "Alibaba Model Studio API key",
+        },
+      ],
     },
   },
   {
@@ -133,8 +198,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/amazon-bedrock-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Amazon Bedrock provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Amazon Bedrock provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -143,9 +208,120 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
+        properties: {
+          discovery: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              region: {
+                type: "string",
+              },
+              providerFilter: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              refreshInterval: {
+                type: "integer",
+                minimum: 0,
+              },
+              defaultContextWindow: {
+                type: "integer",
+                minimum: 1,
+              },
+              defaultMaxTokens: {
+                type: "integer",
+                minimum: 1,
+              },
+            },
+          },
+          guardrail: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              guardrailIdentifier: {
+                type: "string",
+              },
+              guardrailVersion: {
+                type: "string",
+              },
+              streamProcessingMode: {
+                type: "string",
+                enum: ["sync", "async"],
+              },
+              trace: {
+                type: "string",
+                enum: ["enabled", "disabled", "enabled_full"],
+              },
+            },
+            required: ["guardrailIdentifier", "guardrailVersion"],
+          },
+        },
+      },
+      enabledByDefault: true,
+      providers: ["amazon-bedrock"],
+      uiHints: {
+        discovery: {
+          label: "Model Discovery",
+          help: "Plugin-owned controls for Amazon Bedrock model auto-discovery.",
+        },
+        "discovery.enabled": {
+          label: "Enable Discovery",
+          help: "When false, OpenClaw keeps the Amazon Bedrock plugin available but skips implicit startup discovery. When true, discovery can run even without AWS auth env markers.",
+        },
+        "discovery.region": {
+          label: "Discovery Region",
+          help: "AWS region to use for Bedrock model discovery. Defaults to AWS_REGION, AWS_DEFAULT_REGION, then us-east-1.",
+        },
+        "discovery.providerFilter": {
+          label: "Provider Filter",
+          help: "Optional Bedrock provider-name allowlist for discovery, such as anthropic or amazon.",
+        },
+        "discovery.refreshInterval": {
+          label: "Discovery Refresh Interval (s)",
+          help: "How long to cache Bedrock discovery results in seconds. Set to 0 to disable caching.",
+        },
+        "discovery.defaultContextWindow": {
+          label: "Default Context Window",
+          help: "Fallback context window to assign to discovered Bedrock models.",
+        },
+        "discovery.defaultMaxTokens": {
+          label: "Default Max Tokens",
+          help: "Fallback max output tokens to assign to discovered Bedrock models.",
+        },
+        guardrail: {
+          label: "Guardrail",
+          help: "Amazon Bedrock Guardrails settings applied to Bedrock model invocations.",
+        },
+      },
+    },
+  },
+  {
+    dirName: "amazon-bedrock-mantle",
+    idHint: "amazon-bedrock-mantle",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/amazon-bedrock-mantle-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Amazon Bedrock Mantle (OpenAI-compatible) provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "amazon-bedrock-mantle",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
         properties: {},
       },
-      providers: ["amazon-bedrock"],
+      enabledByDefault: true,
+      providers: ["amazon-bedrock-mantle"],
     },
   },
   {
@@ -156,8 +332,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/anthropic-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Anthropic provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Anthropic provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -168,6 +344,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["anthropic"],
       providerAuthEnvVars: {
         anthropic: ["ANTHROPIC_OAUTH_TOKEN", "ANTHROPIC_API_KEY"],
@@ -175,13 +352,15 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       providerAuthChoices: [
         {
           provider: "anthropic",
-          method: "setup-token",
-          choiceId: "token",
-          choiceLabel: "Anthropic token (paste setup-token)",
-          choiceHint: "Run `claude setup-token` elsewhere, then paste the token here",
+          method: "cli",
+          choiceId: "anthropic-cli",
+          deprecatedChoiceIds: ["claude-cli"],
+          choiceLabel: "Anthropic Claude CLI",
+          choiceHint: "Reuse a local Claude CLI login on this host",
+          assistantPriority: -20,
           groupId: "anthropic",
           groupLabel: "Anthropic",
-          groupHint: "setup-token + API key",
+          groupHint: "Claude CLI + API key",
         },
         {
           provider: "anthropic",
@@ -190,11 +369,92 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           choiceLabel: "Anthropic API key",
           groupId: "anthropic",
           groupLabel: "Anthropic",
-          groupHint: "setup-token + API key",
+          groupHint: "Claude CLI + API key",
           optionKey: "anthropicApiKey",
           cliFlag: "--anthropic-api-key",
           cliOption: "--anthropic-api-key <key>",
           cliDescription: "Anthropic API key",
+        },
+      ],
+    },
+  },
+  {
+    dirName: "anthropic-vertex",
+    idHint: "anthropic-vertex",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/anthropic-vertex-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Anthropic Vertex provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "anthropic-vertex",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["anthropic-vertex"],
+    },
+  },
+  {
+    dirName: "arcee",
+    idHint: "arcee",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/arcee-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Arcee provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "arcee",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["arcee"],
+      providerAuthEnvVars: {
+        arcee: ["ARCEEAI_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "arcee",
+          method: "arcee-platform",
+          choiceId: "arceeai-api-key",
+          choiceLabel: "Arcee AI API key",
+          choiceHint: "Direct (chat.arcee.ai)",
+          groupId: "arcee",
+          groupLabel: "Arcee AI",
+          groupHint: "Direct API or OpenRouter",
+          optionKey: "arceeaiApiKey",
+          cliFlag: "--arceeai-api-key",
+          cliOption: "--arceeai-api-key <key>",
+          cliDescription: "Arcee AI API key",
+        },
+        {
+          provider: "arcee",
+          method: "openrouter",
+          choiceId: "arceeai-openrouter",
+          choiceLabel: "OpenRouter API key",
+          choiceHint: "Via OpenRouter (openrouter.ai)",
+          groupId: "arcee",
+          groupLabel: "Arcee AI",
+          groupHint: "Direct API or OpenRouter",
+          optionKey: "openrouterApiKey",
+          cliFlag: "--openrouter-api-key",
+          cliOption: "--openrouter-api-key <key>",
+          cliDescription: "OpenRouter API key for Arcee AI models",
         },
       ],
     },
@@ -211,8 +471,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/bluebubbles",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye BlueBubbles channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw BlueBubbles channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -231,9 +491,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/bluebubbles",
-        localPath: "extensions/bluebubbles",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -254,8 +513,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/brave-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Brave plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Brave plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -298,6 +557,29 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "browser",
+    idHint: "browser-plugin",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/browser-plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw browser tool plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "browser",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+    },
+  },
+  {
     dirName: "byteplus",
     idHint: "byteplus",
     source: {
@@ -305,8 +587,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/byteplus-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye BytePlus provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw BytePlus provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -317,6 +599,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["byteplus", "byteplus-plan"],
       providerAuthEnvVars: {
         byteplus: ["BYTEPLUS_API_KEY"],
@@ -346,8 +629,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/chutes-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Chutes.ai provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Chutes.ai provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -399,8 +682,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/cloudflare-ai-gateway-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Cloudflare AI Gateway provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Cloudflare AI Gateway provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -411,6 +694,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["cloudflare-ai-gateway"],
       providerAuthEnvVars: {
         "cloudflare-ai-gateway": ["CLOUDFLARE_AI_GATEWAY_API_KEY"],
@@ -434,6 +718,175 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "comfy",
+    idHint: "comfy",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/comfy-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw ComfyUI provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "comfy",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          mode: {
+            type: "string",
+            enum: ["local", "cloud"],
+          },
+          baseUrl: {
+            type: "string",
+          },
+          apiKey: {
+            type: ["string", "object"],
+          },
+          allowPrivateNetwork: {
+            type: "boolean",
+          },
+          workflowPath: {
+            type: "string",
+          },
+          workflow: {
+            type: "object",
+          },
+          promptNodeId: {
+            type: "string",
+          },
+          promptInputName: {
+            type: "string",
+          },
+          inputImageNodeId: {
+            type: "string",
+          },
+          inputImageInputName: {
+            type: "string",
+          },
+          outputNodeId: {
+            type: "string",
+          },
+          pollIntervalMs: {
+            type: "integer",
+            minimum: 100,
+          },
+          timeoutMs: {
+            type: "integer",
+            minimum: 1000,
+          },
+          image: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              workflowPath: {
+                type: "string",
+              },
+              workflow: {
+                type: "object",
+              },
+              promptNodeId: {
+                type: "string",
+              },
+              promptInputName: {
+                type: "string",
+              },
+              inputImageNodeId: {
+                type: "string",
+              },
+              inputImageInputName: {
+                type: "string",
+              },
+              outputNodeId: {
+                type: "string",
+              },
+              pollIntervalMs: {
+                type: "integer",
+                minimum: 100,
+              },
+              timeoutMs: {
+                type: "integer",
+                minimum: 1000,
+              },
+            },
+          },
+          video: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              workflowPath: {
+                type: "string",
+              },
+              workflow: {
+                type: "object",
+              },
+              promptNodeId: {
+                type: "string",
+              },
+              promptInputName: {
+                type: "string",
+              },
+              inputImageNodeId: {
+                type: "string",
+              },
+              inputImageInputName: {
+                type: "string",
+              },
+              outputNodeId: {
+                type: "string",
+              },
+              pollIntervalMs: {
+                type: "integer",
+                minimum: 100,
+              },
+              timeoutMs: {
+                type: "integer",
+                minimum: 1000,
+              },
+            },
+          },
+          music: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              workflowPath: {
+                type: "string",
+              },
+              workflow: {
+                type: "object",
+              },
+              promptNodeId: {
+                type: "string",
+              },
+              promptInputName: {
+                type: "string",
+              },
+              outputNodeId: {
+                type: "string",
+              },
+              pollIntervalMs: {
+                type: "integer",
+                minimum: 100,
+              },
+              timeoutMs: {
+                type: "integer",
+                minimum: 1000,
+              },
+            },
+          },
+        },
+      },
+      enabledByDefault: true,
+      providers: ["comfy"],
+      providerAuthEnvVars: {
+        comfy: ["COMFY_API_KEY", "COMFY_CLOUD_API_KEY"],
+      },
+    },
+  },
+  {
     dirName: "copilot-proxy",
     idHint: "copilot-proxy",
     source: {
@@ -441,8 +894,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/copilot-proxy",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Copilot Proxy provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Copilot Proxy provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -453,6 +906,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["copilot-proxy"],
       providerAuthChoices: [
         {
@@ -476,8 +930,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/deepgram-provider",
-    packageVersion: "2026.3.14",
-    packageDescription: "GodsEye Deepgram media-understanding provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Deepgram media-understanding provider",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -487,6 +941,10 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         type: "object",
         additionalProperties: false,
         properties: {},
+      },
+      enabledByDefault: true,
+      providerAuthEnvVars: {
+        deepgram: ["DEEPGRAM_API_KEY"],
       },
     },
   },
@@ -498,8 +956,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/deepseek-provider",
-    packageVersion: "2026.3.14",
-    packageDescription: "GodsEye DeepSeek provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw DeepSeek provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -510,6 +968,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["deepseek"],
       providerAuthEnvVars: {
         deepseek: ["DEEPSEEK_API_KEY"],
@@ -539,8 +998,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/diagnostics-otel",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye diagnostics OpenTelemetry exporter",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw diagnostics OpenTelemetry exporter",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -561,8 +1020,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/diffs",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye diff viewer plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw diff viewer plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -572,6 +1031,14 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         type: "object",
         additionalProperties: false,
         properties: {
+          viewerBaseUrl: {
+            type: "string",
+            format: "uri",
+            pattern: "^[Hh][Tt][Tt][Pp][Ss]?://",
+            not: {
+              pattern: "[?#]",
+            },
+          },
           defaults: {
             type: "object",
             additionalProperties: false,
@@ -637,13 +1104,11 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
                 type: "number",
                 minimum: 1,
                 maximum: 4,
-                default: 2,
               },
               fileMaxWidth: {
                 type: "number",
                 minimum: 640,
                 maximum: 2400,
-                default: 960,
               },
               imageFormat: {
                 type: "string",
@@ -686,6 +1151,10 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       name: "Diffs",
       description: "Read-only diff viewer and file renderer for agents.",
       uiHints: {
+        viewerBaseUrl: {
+          label: "Viewer Base URL",
+          help: "Persistent gateway base URL used for returned viewer links when a tool call does not pass baseUrl.",
+        },
         "defaults.fontFamily": {
           label: "Default Font",
           help: "Preferred font family name for diff content and headers.",
@@ -761,8 +1230,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/discord",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Discord channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Discord channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -775,12 +1244,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsLabel: "discord",
         blurb: "very well supported right now.",
         systemImage: "bubble.left.and.bubble.right",
+        markdownCapable: true,
+        configuredState: {
+          specifier: "./configured-state",
+          exportName: "hasDiscordConfiguredState",
+        },
       },
       install: {
         npmSpec: "@godseye/discord",
-        localPath: "extensions/discord",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -801,8 +1274,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/duckduckgo-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye DuckDuckGo plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw DuckDuckGo plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -847,8 +1320,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/elevenlabs-speech",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye ElevenLabs speech plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw ElevenLabs speech plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -869,8 +1342,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/exa-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Exa plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Exa plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -912,8 +1385,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/fal-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye fal provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw fal provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -924,9 +1397,10 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["fal"],
       providerAuthEnvVars: {
-        fal: ["FAL_KEY"],
+        fal: ["FAL_KEY", "FAL_API_KEY"],
       },
       providerAuthChoices: [
         {
@@ -958,8 +1432,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/feishu",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Feishu/Lark channel plugin (community maintained by @m1heng)",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Feishu/Lark channel plugin (community maintained by @m1heng)",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -976,9 +1450,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/feishu",
-        localPath: "extensions/feishu",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1000,8 +1473,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/firecrawl-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Firecrawl plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Firecrawl plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1023,6 +1496,27 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               },
             },
           },
+          webFetch: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              apiKey: {
+                type: ["string", "object"],
+              },
+              baseUrl: {
+                type: "string",
+              },
+              onlyMainContent: {
+                type: "boolean",
+              },
+              maxAgeMs: {
+                type: "number",
+              },
+              timeoutSeconds: {
+                type: "number",
+              },
+            },
+          },
         },
       },
       providerAuthEnvVars: {
@@ -1039,7 +1533,59 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           label: "Firecrawl Search Base URL",
           help: "Firecrawl Search base URL override.",
         },
+        "webFetch.apiKey": {
+          label: "Firecrawl Fetch API Key",
+          help: "Firecrawl API key for web fetch fallback (fallback: FIRECRAWL_API_KEY env var).",
+          sensitive: true,
+          placeholder: "fc-...",
+        },
+        "webFetch.baseUrl": {
+          label: "Firecrawl Fetch Base URL",
+          help: "Firecrawl Fetch base URL override.",
+        },
       },
+    },
+  },
+  {
+    dirName: "fireworks",
+    idHint: "fireworks",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/fireworks-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Fireworks provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "fireworks",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["fireworks"],
+      providerAuthEnvVars: {
+        fireworks: ["FIREWORKS_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "fireworks",
+          method: "api-key",
+          choiceId: "fireworks-api-key",
+          choiceLabel: "Fireworks API key",
+          groupId: "fireworks",
+          groupLabel: "Fireworks",
+          groupHint: "API key",
+          optionKey: "fireworksApiKey",
+          cliFlag: "--fireworks-api-key",
+          cliOption: "--fireworks-api-key <key>",
+          cliDescription: "Fireworks API key",
+        },
+      ],
     },
   },
   {
@@ -1050,8 +1596,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/github-copilot-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye GitHub Copilot provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw GitHub Copilot provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1060,8 +1606,19 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          discovery: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+            },
+          },
+        },
       },
+      enabledByDefault: true,
       providers: ["github-copilot"],
       providerAuthEnvVars: {
         "github-copilot": ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"],
@@ -1078,6 +1635,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           groupHint: "GitHub + local proxy",
         },
       ],
+      uiHints: {
+        discovery: {
+          label: "Model Discovery",
+          help: "Plugin-owned controls for GitHub Copilot model auto-discovery.",
+        },
+        "discovery.enabled": {
+          label: "Enable Discovery",
+          help: "When false, OpenClaw keeps the GitHub Copilot plugin available but skips implicit startup discovery from ambient Copilot credentials.",
+        },
+      },
     },
   },
   {
@@ -1088,8 +1655,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/google-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Google plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Google plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1113,6 +1680,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           },
         },
       },
+      enabledByDefault: true,
       providers: ["google", "google-gemini-cli"],
       providerAuthEnvVars: {
         google: ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
@@ -1168,8 +1736,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/googlechat",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Google Chat channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Google Chat channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1180,15 +1748,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         detailLabel: "Google Chat",
         docsPath: "/channels/googlechat",
         docsLabel: "googlechat",
-        blurb: "Google Workspace Chat app via HTTP webhooks.",
+        blurb: "Google Workspace Chat app with HTTP webhook.",
         aliases: ["gchat", "google-chat"],
         order: 55,
+        systemImage: "message.badge",
+        markdownCapable: true,
       },
       install: {
         npmSpec: "@godseye/googlechat",
-        localPath: "extensions/googlechat",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1209,8 +1778,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/groq-provider",
-    packageVersion: "2026.3.14",
-    packageDescription: "GodsEye Groq media-understanding provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Groq media-understanding provider",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1220,6 +1789,10 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         type: "object",
         additionalProperties: false,
         properties: {},
+      },
+      enabledByDefault: true,
+      providerAuthEnvVars: {
+        groq: ["GROQ_API_KEY"],
       },
     },
   },
@@ -1231,8 +1804,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/huggingface-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Hugging Face provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Hugging Face provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1241,8 +1814,19 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          discovery: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+            },
+          },
+        },
       },
+      enabledByDefault: true,
       providers: ["huggingface"],
       providerAuthEnvVars: {
         huggingface: ["HUGGINGFACE_HUB_TOKEN", "HF_TOKEN"],
@@ -1263,6 +1847,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           cliDescription: "Hugging Face API key (HF token)",
         },
       ],
+      uiHints: {
+        discovery: {
+          label: "Model Discovery",
+          help: "Plugin-owned controls for Hugging Face model auto-discovery.",
+        },
+        "discovery.enabled": {
+          label: "Enable Discovery",
+          help: "When false, OpenClaw keeps the Hugging Face plugin available but skips implicit startup discovery from ambient Hugging Face credentials.",
+        },
+      },
     },
   },
   {
@@ -1277,8 +1871,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/imessage",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye iMessage channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw iMessage channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1316,8 +1910,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/irc",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye IRC channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw IRC channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1329,10 +1923,15 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsPath: "/channels/irc",
         docsLabel: "irc",
         blurb: "classic IRC networks with DM/channel routing and pairing controls.",
+        aliases: ["internet-relay-chat"],
         systemImage: "network",
+        configuredState: {
+          specifier: "./configured-state",
+          exportName: "hasIrcConfiguredState",
+        },
       },
       install: {
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1353,8 +1952,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/kilocode-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Kilo Gateway provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Kilo Gateway provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1365,6 +1964,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["kilocode"],
       providerAuthEnvVars: {
         kilocode: ["KILOCODE_API_KEY"],
@@ -1395,8 +1995,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/kimi-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Kimi provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Kimi provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1407,6 +2007,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["kimi", "kimi-coding"],
       providerAuthEnvVars: {
         kimi: ["KIMI_API_KEY", "KIMICODE_API_KEY"],
@@ -1441,8 +2042,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/line",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye LINE channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw LINE channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1450,17 +2051,18 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         id: "line",
         label: "LINE",
         selectionLabel: "LINE (Messaging API)",
+        detailLabel: "LINE Bot",
         docsPath: "/channels/line",
         docsLabel: "line",
-        blurb: "LINE Messaging API bot for Japan/Taiwan/Thailand markets.",
+        blurb: "LINE Messaging API webhook bot.",
+        systemImage: "message",
         order: 75,
         quickstartAllowFrom: true,
       },
       install: {
         npmSpec: "@godseye/line",
-        localPath: "extensions/line",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1474,6 +2076,49 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "litellm",
+    idHint: "litellm",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/litellm-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw LiteLLM provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "litellm",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["litellm"],
+      providerAuthEnvVars: {
+        litellm: ["LITELLM_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "litellm",
+          method: "api-key",
+          choiceId: "litellm-api-key",
+          choiceLabel: "LiteLLM API key",
+          choiceHint: "Unified gateway for 100+ LLM providers",
+          groupId: "litellm",
+          groupLabel: "LiteLLM",
+          groupHint: "Unified LLM gateway (100+ providers)",
+          optionKey: "litellmApiKey",
+          cliFlag: "--litellm-api-key",
+          cliOption: "--litellm-api-key <key>",
+          cliDescription: "LiteLLM API key",
+        },
+      ],
+    },
+  },
+  {
     dirName: "llm-task",
     idHint: "llm-task",
     source: {
@@ -1481,8 +2126,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/llm-task",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye JSON-only LLM task plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw JSON-only LLM task plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1528,7 +2173,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/lobster",
-    packageVersion: "2026.3.22",
+    packageVersion: "2026.4.10",
     packageDescription: "Lobster workflow tool plugin (typed pipelines + resumable approvals)",
     packageManifest: {
       extensions: ["./index.ts"],
@@ -1556,8 +2201,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/matrix",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Matrix channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Matrix channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1570,12 +2215,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         blurb: "open protocol; install the plugin to enable.",
         order: 70,
         quickstartAllowFrom: true,
+        persistedAuthState: {
+          specifier: "./auth-presence",
+          exportName: "hasAnyMatrixAuth",
+        },
       },
       install: {
         npmSpec: "@godseye/matrix",
-        localPath: "extensions/matrix",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
+        allowInvalidConfigRecovery: true,
       },
     },
     manifest: {
@@ -1600,8 +2249,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/mattermost",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Mattermost channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Mattermost channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -1616,9 +2265,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/mattermost",
-        localPath: "extensions/mattermost",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1639,8 +2287,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/memory-core",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye core memory search plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw core memory search plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1649,9 +2297,132 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          dreaming: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              frequency: {
+                type: "string",
+              },
+              timezone: {
+                type: "string",
+              },
+              verboseLogging: {
+                type: "boolean",
+              },
+              storage: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  mode: {
+                    type: "string",
+                    enum: ["inline", "separate", "both"],
+                  },
+                  separateReports: {
+                    type: "boolean",
+                  },
+                },
+              },
+              phases: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  light: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      enabled: {
+                        type: "boolean",
+                      },
+                      lookbackDays: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      limit: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      dedupeSimilarity: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 1,
+                      },
+                    },
+                  },
+                  deep: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      enabled: {
+                        type: "boolean",
+                      },
+                      limit: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      minScore: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 1,
+                      },
+                      minRecallCount: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      minUniqueQueries: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      recencyHalfLifeDays: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      maxAgeDays: {
+                        type: "integer",
+                        minimum: 1,
+                      },
+                    },
+                  },
+                  rem: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      enabled: {
+                        type: "boolean",
+                      },
+                      lookbackDays: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      limit: {
+                        type: "integer",
+                        minimum: 0,
+                      },
+                      minPatternStrength: {
+                        type: "number",
+                        minimum: 0,
+                        maximum: 1,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       kind: "memory",
+      uiHints: {
+        "dreaming.frequency": {
+          label: "Dreaming Frequency",
+          placeholder: "0 3 * * *",
+          help: "Optional cron cadence for the full dreaming sweep (light, REM, then deep).",
+        },
+      },
     },
   },
   {
@@ -1662,15 +2433,14 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/memory-lancedb",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye LanceDB-backed long-term memory plugin with auto-recall/capture",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw LanceDB-backed long-term memory plugin with auto-recall/capture",
     packageManifest: {
       extensions: ["./index.ts"],
       install: {
         npmSpec: "@godseye/memory-lancedb",
-        localPath: "extensions/memory-lancedb",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -1742,7 +2512,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         },
         dbPath: {
           label: "Database Path",
-          placeholder: "~/.godseye/memory/lancedb",
+          placeholder: "~/.openclaw/memory/lancedb",
           advanced: true,
         },
         autoCapture: {
@@ -1763,6 +2533,194 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "memory-wiki",
+    idHint: "memory-wiki",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/memory-wiki",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw persistent wiki plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "memory-wiki",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          vaultMode: {
+            type: "string",
+            enum: ["isolated", "bridge", "unsafe-local"],
+          },
+          vault: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              path: {
+                type: "string",
+              },
+              renderMode: {
+                type: "string",
+                enum: ["native", "obsidian"],
+              },
+            },
+          },
+          obsidian: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              useOfficialCli: {
+                type: "boolean",
+              },
+              vaultName: {
+                type: "string",
+              },
+              openAfterWrites: {
+                type: "boolean",
+              },
+            },
+          },
+          bridge: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              readMemoryArtifacts: {
+                type: "boolean",
+              },
+              indexDreamReports: {
+                type: "boolean",
+              },
+              indexDailyNotes: {
+                type: "boolean",
+              },
+              indexMemoryRoot: {
+                type: "boolean",
+              },
+              followMemoryEvents: {
+                type: "boolean",
+              },
+            },
+          },
+          unsafeLocal: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              allowPrivateMemoryCoreAccess: {
+                type: "boolean",
+              },
+              paths: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+            },
+          },
+          ingest: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              autoCompile: {
+                type: "boolean",
+              },
+              maxConcurrentJobs: {
+                type: "number",
+                minimum: 1,
+              },
+              allowUrlIngest: {
+                type: "boolean",
+              },
+            },
+          },
+          search: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              backend: {
+                type: "string",
+                enum: ["shared", "local"],
+              },
+              corpus: {
+                type: "string",
+                enum: ["wiki", "memory", "all"],
+              },
+            },
+          },
+          context: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              includeCompiledDigestPrompt: {
+                type: "boolean",
+              },
+            },
+          },
+          render: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              preserveHumanBlocks: {
+                type: "boolean",
+              },
+              createBacklinks: {
+                type: "boolean",
+              },
+              createDashboards: {
+                type: "boolean",
+              },
+            },
+          },
+        },
+      },
+      skills: ["./skills"],
+      name: "Memory Wiki",
+      description: "Persistent wiki compiler and Obsidian-friendly knowledge vault for OpenClaw.",
+      uiHints: {
+        vaultMode: {
+          label: "Vault Mode",
+          help: "Choose isolated, bridge, or unsafe-local mode for the wiki vault.",
+        },
+        "vault.path": {
+          label: "Vault Path",
+          help: "Filesystem path for the wiki vault root.",
+        },
+        "vault.renderMode": {
+          label: "Render Mode",
+          help: "Render markdown in native OpenClaw format or Obsidian-friendly format.",
+        },
+        "obsidian.useOfficialCli": {
+          label: "Use Obsidian CLI",
+          help: "Probe and use the official Obsidian CLI when available.",
+        },
+        "bridge.enabled": {
+          label: "Enable Bridge Mode",
+          help: "Read public memory artifacts and events from the active memory plugin in bridge mode.",
+        },
+        "bridge.readMemoryArtifacts": {
+          label: "Read Memory Artifacts",
+          help: "Enable bridge reads from the active memory plugin's public artifact export.",
+        },
+        "unsafeLocal.allowPrivateMemoryCoreAccess": {
+          label: "Allow Private Memory Access",
+          help: "Experimental same-repo escape hatch for reading memory-core private paths.",
+        },
+        "context.includeCompiledDigestPrompt": {
+          label: "Include Compiled Digest In Prompt",
+          help: "Append a compact compiled wiki digest snapshot to memory prompt sections for context engines and legacy prompt assembly.",
+        },
+      },
+    },
+  },
+  {
     dirName: "microsoft",
     idHint: "microsoft",
     source: {
@@ -1770,8 +2728,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/microsoft-speech",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Microsoft speech plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Microsoft speech plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1792,8 +2750,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/microsoft-foundry",
-    packageVersion: "2026.3.14",
-    packageDescription: "GodsEye Microsoft Foundry provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Microsoft Foundry provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1841,8 +2799,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/minimax-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye MiniMax provider and OAuth plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw MiniMax provider and OAuth plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1851,8 +2809,23 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          webSearch: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              apiKey: {
+                type: ["string", "object"],
+              },
+              region: {
+                type: "string",
+                enum: ["global", "cn"],
+              },
+            },
+          },
+        },
       },
+      enabledByDefault: true,
       providers: ["minimax", "minimax-portal"],
       providerAuthEnvVars: {
         minimax: ["MINIMAX_API_KEY"],
@@ -1873,6 +2846,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           provider: "minimax",
           method: "api-global",
           choiceId: "minimax-global-api",
+          deprecatedChoiceIds: ["minimax", "minimax-api", "minimax-cloud", "minimax-api-lightning"],
           choiceLabel: "MiniMax API key (Global)",
           choiceHint: "Global endpoint - api.minimax.io",
           groupId: "minimax",
@@ -1897,6 +2871,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           provider: "minimax",
           method: "api-cn",
           choiceId: "minimax-cn-api",
+          deprecatedChoiceIds: ["minimax-api-key-cn"],
           choiceLabel: "MiniMax API key (CN)",
           choiceHint: "CN endpoint - api.minimaxi.com",
           groupId: "minimax",
@@ -1908,6 +2883,18 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           cliDescription: "MiniMax API key",
         },
       ],
+      uiHints: {
+        "webSearch.apiKey": {
+          label: "MiniMax Coding Plan key",
+          help: "MiniMax Coding Plan key (fallback: MINIMAX_CODE_PLAN_KEY, MINIMAX_CODING_API_KEY, or MINIMAX_API_KEY if it already points at a coding-plan token).",
+          sensitive: true,
+          placeholder: "sk-cp-...",
+        },
+        "webSearch.region": {
+          label: "MiniMax Search Region",
+          help: "Search endpoint region override. Leave unset to reuse your configured MiniMax host or MINIMAX_API_HOST.",
+        },
+      },
     },
   },
   {
@@ -1918,8 +2905,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/mistral-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Mistral provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Mistral provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -1930,6 +2917,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["mistral"],
       providerAuthEnvVars: {
         mistral: ["MISTRAL_API_KEY"],
@@ -1959,8 +2947,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/modelstudio-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Model Studio provider plugin",
+    packageVersion: "2026.4.1-beta.1",
+    packageDescription: "OpenClaw Model Studio provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2043,8 +3031,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/moonshot-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Moonshot provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Moonshot provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2071,6 +3059,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           },
         },
       },
+      enabledByDefault: true,
       providers: ["moonshot"],
       providerAuthEnvVars: {
         moonshot: ["MOONSHOT_API_KEY"],
@@ -2132,8 +3121,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/msteams",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Microsoft Teams channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Microsoft Teams channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2149,9 +3138,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/msteams",
-        localPath: "extensions/msteams",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -2176,8 +3164,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/nextcloud-talk",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Nextcloud Talk channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Nextcloud Talk channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2194,9 +3182,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/nextcloud-talk",
-        localPath: "extensions/nextcloud-talk",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -2221,8 +3208,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/nostr",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Nostr channel plugin for NIP-04 encrypted DMs",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Nostr channel plugin for NIP-04 encrypted DMs",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2238,9 +3225,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/nostr",
-        localPath: "extensions/nostr",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -2261,8 +3247,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/nvidia-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye NVIDIA provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw NVIDIA provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2273,6 +3259,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["nvidia"],
       providerAuthEnvVars: {
         nvidia: ["NVIDIA_API_KEY"],
@@ -2287,8 +3274,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/ollama-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Ollama provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Ollama provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2297,8 +3284,19 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          discovery: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+            },
+          },
+        },
       },
+      enabledByDefault: true,
       providers: ["ollama"],
       providerAuthEnvVars: {
         ollama: ["OLLAMA_API_KEY"],
@@ -2315,6 +3313,16 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           groupHint: "Cloud and local open models",
         },
       ],
+      uiHints: {
+        discovery: {
+          label: "Model Discovery",
+          help: "Plugin-owned controls for Ollama model auto-discovery.",
+        },
+        "discovery.enabled": {
+          label: "Enable Discovery",
+          help: "When false, OpenClaw keeps the Ollama plugin available but skips implicit startup discovery of ambient local or remote Ollama models.",
+        },
+      },
     },
   },
   {
@@ -2325,7 +3333,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/open-prose",
-    packageVersion: "2026.3.22",
+    packageVersion: "2026.4.10",
     packageDescription: "OpenProse VM skill pack plugin (slash command + telemetry).",
     packageManifest: {
       extensions: ["./index.ts"],
@@ -2350,8 +3358,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/openai-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye OpenAI provider plugins",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw OpenAI provider plugins",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2360,8 +3368,17 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       configSchema: {
         type: "object",
         additionalProperties: false,
-        properties: {},
+        properties: {
+          personality: {
+            type: "string",
+            enum: ["friendly", "on", "off"],
+            default: "friendly",
+            description:
+              "Controls the default OpenAI-specific personality used for OpenAI and OpenAI Codex runs. `friendly` and `on` enable the overlay; `off` disables it.",
+          },
+        },
       },
+      enabledByDefault: true,
       providers: ["openai", "openai-codex"],
       providerAuthEnvVars: {
         openai: ["OPENAI_API_KEY"],
@@ -2371,6 +3388,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           provider: "openai-codex",
           method: "oauth",
           choiceId: "openai-codex",
+          deprecatedChoiceIds: ["codex-cli"],
           choiceLabel: "OpenAI Codex (ChatGPT OAuth)",
           choiceHint: "Browser sign-in",
           groupId: "openai",
@@ -2401,8 +3419,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/opencode-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye OpenCode Zen provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw OpenCode Zen provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2413,6 +3431,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["opencode"],
       providerAuthEnvVars: {
         opencode: ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
@@ -2442,8 +3461,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/opencode-go-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye OpenCode Go provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw OpenCode Go provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2454,6 +3473,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["opencode-go"],
       providerAuthEnvVars: {
         "opencode-go": ["OPENCODE_API_KEY", "OPENCODE_ZEN_API_KEY"],
@@ -2483,8 +3503,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/openrouter-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye OpenRouter provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw OpenRouter provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2495,6 +3515,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["openrouter"],
       providerAuthEnvVars: {
         openrouter: ["OPENROUTER_API_KEY"],
@@ -2524,8 +3545,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/openshell-sandbox",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye OpenShell sandbox backend",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw OpenShell sandbox backend",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2535,25 +3556,35 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         type: "object",
         additionalProperties: false,
         properties: {
+          mode: {
+            type: "string",
+            enum: ["mirror", "remote"],
+          },
           command: {
             type: "string",
+            minLength: 1,
           },
           gateway: {
             type: "string",
+            minLength: 1,
           },
           gatewayEndpoint: {
             type: "string",
+            minLength: 1,
           },
           from: {
             type: "string",
+            minLength: 1,
           },
           policy: {
             type: "string",
+            minLength: 1,
           },
           providers: {
             type: "array",
             items: {
               type: "string",
+              minLength: 1,
             },
           },
           gpu: {
@@ -2564,9 +3595,11 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           },
           remoteWorkspaceDir: {
             type: "string",
+            minLength: 1,
           },
           remoteAgentWorkspaceDir: {
             type: "string",
+            minLength: 1,
           },
           timeoutSeconds: {
             type: "number",
@@ -2578,6 +3611,10 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       description:
         "Sandbox backend powered by OpenShell with mirrored local workspaces and SSH-based command execution.",
       uiHints: {
+        mode: {
+          label: "Mode",
+          help: "Sandbox mode. Use mirror for the default local-workspace flow or remote for a fully remote workspace.",
+        },
         command: {
           label: "OpenShell Command",
           help: "Path or command name for the openshell CLI.",
@@ -2592,7 +3629,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         },
         from: {
           label: "Sandbox Source",
-          help: "OpenShell sandbox source for first-time create. Defaults to godseye.",
+          help: "OpenShell sandbox source for first-time create. Defaults to openclaw.",
         },
         policy: {
           label: "Policy File",
@@ -2638,8 +3675,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/perplexity-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Perplexity plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Perplexity plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2688,6 +3725,82 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "qa-channel",
+    idHint: "qa-channel",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    setupSource: {
+      source: "./setup-entry.ts",
+      built: "setup-entry.js",
+    },
+    packageName: "@godseye/qa-channel",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw QA synthetic channel plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+      setupEntry: "./setup-entry.ts",
+      channel: {
+        id: "qa-channel",
+        label: "QA Channel",
+        selectionLabel: "QA Channel (Synthetic)",
+        detailLabel: "QA Channel",
+        docsPath: "/channels/qa-channel",
+        docsLabel: "qa-channel",
+        blurb: "Synthetic Slack-class transport for automated OpenClaw QA scenarios.",
+        systemImage: "checklist",
+        order: 999,
+        exposure: {
+          configured: false,
+          setup: false,
+          docs: false,
+        },
+      },
+      install: {
+        npmSpec: "@godseye/qa-channel",
+        defaultChoice: "npm",
+        minHostVersion: ">=2026.4.10",
+      },
+    },
+    manifest: {
+      id: "qa-channel",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      channels: ["qa-channel"],
+    },
+  },
+  {
+    dirName: "qa-lab",
+    idHint: "qa-lab",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/qa-lab",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw QA lab plugin with private debugger UI and scenario runner",
+    packageManifest: {
+      extensions: ["./index.ts"],
+      install: {
+        npmSpec: "@godseye/qa-lab",
+        defaultChoice: "npm",
+        minHostVersion: ">=2026.4.10",
+      },
+    },
+    manifest: {
+      id: "qa-lab",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+    },
+  },
+  {
     dirName: "qianfan",
     idHint: "qianfan",
     source: {
@@ -2695,8 +3808,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/qianfan-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Qianfan provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Qianfan provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2707,6 +3820,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["qianfan"],
       providerAuthEnvVars: {
         qianfan: ["QIANFAN_API_KEY"],
@@ -2729,6 +3843,481 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "qqbot",
+    idHint: "qqbot",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    setupSource: {
+      source: "./setup-entry.ts",
+      built: "setup-entry.js",
+    },
+    packageName: "@godseye/qqbot",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw QQ Bot channel plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+      setupEntry: "./setup-entry.ts",
+      channel: {
+        id: "qqbot",
+        label: "QQ Bot",
+        selectionLabel: "QQ Bot (Official API)",
+        detailLabel: "QQ Bot",
+        docsPath: "/channels/qqbot",
+        docsLabel: "qqbot",
+        blurb: "connect to QQ via official QQ Bot API with group chat and direct message support.",
+        systemImage: "bubble.left.and.bubble.right",
+      },
+      install: {
+        npmSpec: "@godseye/qqbot",
+        localPath: "extensions/qqbot",
+        defaultChoice: "npm",
+        minHostVersion: ">=2026.4.10",
+      },
+    },
+    manifest: {
+      id: "qqbot",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        $defs: {
+          audioFormatPolicy: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              sttDirectFormats: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              uploadDirectFormats: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              transcodeEnabled: {
+                type: "boolean",
+              },
+            },
+          },
+          speechQueryParams: {
+            type: "object",
+            additionalProperties: {
+              type: "string",
+            },
+          },
+          tts: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              provider: {
+                type: "string",
+              },
+              baseUrl: {
+                type: "string",
+              },
+              apiKey: {
+                type: "string",
+              },
+              model: {
+                type: "string",
+              },
+              voice: {
+                type: "string",
+              },
+              authStyle: {
+                type: "string",
+                enum: ["bearer", "api-key"],
+              },
+              queryParams: {
+                $ref: "#/$defs/speechQueryParams",
+              },
+              speed: {
+                type: "number",
+              },
+            },
+          },
+          stt: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              provider: {
+                type: "string",
+              },
+              baseUrl: {
+                type: "string",
+              },
+              apiKey: {
+                type: "string",
+              },
+              model: {
+                type: "string",
+              },
+            },
+          },
+          secretRef: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              source: {
+                type: "string",
+                enum: ["env", "file", "exec"],
+              },
+              provider: {
+                type: "string",
+              },
+              id: {
+                type: "string",
+              },
+            },
+            required: ["source", "provider", "id"],
+          },
+          secretInput: {
+            anyOf: [
+              {
+                type: "string",
+                minLength: 1,
+              },
+              {
+                $ref: "#/$defs/secretRef",
+              },
+            ],
+          },
+          account: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              name: {
+                type: "string",
+              },
+              appId: {
+                type: "string",
+              },
+              clientSecret: {
+                $ref: "#/$defs/secretInput",
+              },
+              clientSecretFile: {
+                type: "string",
+              },
+              allowFrom: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              systemPrompt: {
+                type: "string",
+              },
+              markdownSupport: {
+                type: "boolean",
+              },
+              voiceDirectUploadFormats: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              audioFormatPolicy: {
+                $ref: "#/$defs/audioFormatPolicy",
+              },
+              urlDirectUpload: {
+                type: "boolean",
+              },
+              upgradeUrl: {
+                type: "string",
+              },
+              upgradeMode: {
+                type: "string",
+                enum: ["doc", "hot-reload"],
+              },
+              streaming: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  mode: {
+                    type: "string",
+                    enum: ["off", "partial"],
+                    default: "partial",
+                  },
+                },
+              },
+            },
+          },
+        },
+        properties: {
+          enabled: {
+            type: "boolean",
+          },
+          name: {
+            type: "string",
+          },
+          appId: {
+            type: "string",
+          },
+          clientSecret: {
+            $ref: "#/$defs/secretInput",
+          },
+          clientSecretFile: {
+            type: "string",
+          },
+          allowFrom: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+          },
+          systemPrompt: {
+            type: "string",
+          },
+          markdownSupport: {
+            type: "boolean",
+          },
+          voiceDirectUploadFormats: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+          },
+          audioFormatPolicy: {
+            $ref: "#/$defs/audioFormatPolicy",
+          },
+          tts: {
+            $ref: "#/$defs/tts",
+          },
+          stt: {
+            $ref: "#/$defs/stt",
+          },
+          urlDirectUpload: {
+            type: "boolean",
+          },
+          upgradeUrl: {
+            type: "string",
+          },
+          upgradeMode: {
+            type: "string",
+            enum: ["doc", "hot-reload"],
+          },
+          streaming: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              mode: {
+                type: "string",
+                enum: ["off", "partial"],
+                default: "partial",
+              },
+            },
+          },
+          accounts: {
+            type: "object",
+            additionalProperties: {
+              $ref: "#/$defs/account",
+            },
+          },
+          defaultAccount: {
+            type: "string",
+          },
+        },
+      },
+      channels: ["qqbot"],
+      skills: ["./skills"],
+    },
+  },
+  {
+    dirName: "qwen",
+    idHint: "qwen",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/qwen-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Qwen Cloud provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "qwen",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["qwen"],
+      providerAuthEnvVars: {
+        qwen: ["QWEN_API_KEY", "MODELSTUDIO_API_KEY", "DASHSCOPE_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "qwen",
+          method: "standard-api-key-cn",
+          choiceId: "qwen-standard-api-key-cn",
+          deprecatedChoiceIds: ["modelstudio-standard-api-key-cn"],
+          choiceLabel: "Standard API Key for China (pay-as-you-go)",
+          choiceHint: "Endpoint: dashscope.aliyuncs.com",
+          groupId: "qwen",
+          groupLabel: "Qwen Cloud",
+          groupHint: "Standard / Coding Plan (CN / Global) + multimodal roadmap",
+          optionKey: "modelstudioStandardApiKeyCn",
+          cliFlag: "--modelstudio-standard-api-key-cn",
+          cliOption: "--modelstudio-standard-api-key-cn <key>",
+          cliDescription: "Qwen Cloud standard API key (China)",
+        },
+        {
+          provider: "qwen",
+          method: "standard-api-key",
+          choiceId: "qwen-standard-api-key",
+          deprecatedChoiceIds: ["modelstudio-standard-api-key"],
+          choiceLabel: "Standard API Key for Global/Intl (pay-as-you-go)",
+          choiceHint: "Endpoint: dashscope-intl.aliyuncs.com",
+          groupId: "qwen",
+          groupLabel: "Qwen Cloud",
+          groupHint: "Standard / Coding Plan (CN / Global) + multimodal roadmap",
+          optionKey: "modelstudioStandardApiKey",
+          cliFlag: "--modelstudio-standard-api-key",
+          cliOption: "--modelstudio-standard-api-key <key>",
+          cliDescription: "Qwen Cloud standard API key (Global/Intl)",
+        },
+        {
+          provider: "qwen",
+          method: "api-key-cn",
+          choiceId: "qwen-api-key-cn",
+          deprecatedChoiceIds: ["modelstudio-api-key-cn"],
+          choiceLabel: "Coding Plan API Key for China (subscription)",
+          choiceHint: "Endpoint: coding.dashscope.aliyuncs.com",
+          groupId: "qwen",
+          groupLabel: "Qwen Cloud",
+          groupHint: "Standard / Coding Plan (CN / Global) + multimodal roadmap",
+          optionKey: "modelstudioApiKeyCn",
+          cliFlag: "--modelstudio-api-key-cn",
+          cliOption: "--modelstudio-api-key-cn <key>",
+          cliDescription: "Qwen Cloud Coding Plan API key (China)",
+        },
+        {
+          provider: "qwen",
+          method: "api-key",
+          choiceId: "qwen-api-key",
+          deprecatedChoiceIds: ["modelstudio-api-key"],
+          choiceLabel: "Coding Plan API Key for Global/Intl (subscription)",
+          choiceHint: "Endpoint: coding-intl.dashscope.aliyuncs.com",
+          groupId: "qwen",
+          groupLabel: "Qwen Cloud",
+          groupHint: "Standard / Coding Plan (CN / Global) + multimodal roadmap",
+          optionKey: "modelstudioApiKey",
+          cliFlag: "--modelstudio-api-key",
+          cliOption: "--modelstudio-api-key <key>",
+          cliDescription: "Qwen Cloud Coding Plan API key (Global/Intl)",
+        },
+      ],
+    },
+  },
+  {
+    dirName: "runway",
+    idHint: "runway",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/runway-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Runway video provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "runway",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providerAuthEnvVars: {
+        runway: ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "runway",
+          method: "api-key",
+          choiceId: "runway-api-key",
+          choiceLabel: "Runway API key",
+          groupId: "runway",
+          groupLabel: "Runway",
+          groupHint: "API key",
+          optionKey: "runwayApiKey",
+          cliFlag: "--runway-api-key",
+          cliOption: "--runway-api-key <key>",
+          cliDescription: "Runway API key",
+        },
+      ],
+    },
+  },
+  {
+    dirName: "searxng",
+    idHint: "searxng-plugin",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/searxng-plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw SearXNG plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "searxng",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          webSearch: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              baseUrl: {
+                type: ["string", "object"],
+              },
+              categories: {
+                type: "string",
+              },
+              language: {
+                type: "string",
+              },
+            },
+          },
+        },
+      },
+      uiHints: {
+        "webSearch.baseUrl": {
+          label: "SearXNG Base URL",
+          help: "Base URL of your SearXNG instance, such as http://localhost:8080 or https://search.example.com/searxng.",
+        },
+        "webSearch.categories": {
+          label: "SearXNG Categories",
+          help: "Optional comma-separated categories such as general, news, or science.",
+        },
+        "webSearch.language": {
+          label: "SearXNG Language",
+          help: "Optional language code for results such as en, de, or fr.",
+        },
+      },
+    },
+  },
+  {
     dirName: "sglang",
     idHint: "sglang",
     source: {
@@ -2736,8 +4325,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/sglang-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye SGLang provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw SGLang provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2748,6 +4337,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["sglang"],
       providerAuthEnvVars: {
         sglang: ["SGLANG_API_KEY"],
@@ -2778,8 +4368,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/signal",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Signal channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Signal channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2792,6 +4382,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsLabel: "signal",
         blurb: 'signal-cli linked device; more setup (David Reagans: "Hop on Discord.").',
         systemImage: "antenna.radiowaves.left.and.right",
+        markdownCapable: true,
       },
     },
     manifest: {
@@ -2816,8 +4407,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/slack",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Slack channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Slack channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2830,6 +4421,11 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsLabel: "slack",
         blurb: "supported (Socket Mode).",
         systemImage: "number",
+        markdownCapable: true,
+        configuredState: {
+          specifier: "./configured-state",
+          exportName: "hasSlackConfiguredState",
+        },
       },
     },
     manifest: {
@@ -2840,6 +4436,92 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         properties: {},
       },
       channels: ["slack"],
+    },
+  },
+  {
+    dirName: "stepfun",
+    idHint: "stepfun",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/stepfun-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw StepFun provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "stepfun",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["stepfun", "stepfun-plan"],
+      providerAuthEnvVars: {
+        stepfun: ["STEPFUN_API_KEY"],
+        "stepfun-plan": ["STEPFUN_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "stepfun",
+          method: "standard-api-key-cn",
+          choiceId: "stepfun-standard-api-key-cn",
+          choiceLabel: "StepFun Standard API key (China)",
+          choiceHint: "Endpoint: api.stepfun.com/v1",
+          groupId: "stepfun",
+          groupLabel: "StepFun",
+          groupHint: "Standard / Step Plan (China / Global)",
+          optionKey: "stepfunApiKey",
+          cliFlag: "--stepfun-api-key",
+          cliOption: "--stepfun-api-key <key>",
+          cliDescription: "StepFun API key",
+        },
+        {
+          provider: "stepfun",
+          method: "standard-api-key-intl",
+          choiceId: "stepfun-standard-api-key-intl",
+          choiceLabel: "StepFun Standard API key (Global/Intl)",
+          choiceHint: "Endpoint: api.stepfun.ai/v1",
+          groupId: "stepfun",
+          groupLabel: "StepFun",
+          groupHint: "Standard / Step Plan (China / Global)",
+          optionKey: "stepfunApiKey",
+          cliFlag: "--stepfun-api-key",
+          cliOption: "--stepfun-api-key <key>",
+          cliDescription: "StepFun API key",
+        },
+        {
+          provider: "stepfun-plan",
+          method: "plan-api-key-cn",
+          choiceId: "stepfun-plan-api-key-cn",
+          choiceLabel: "StepFun Step Plan API key (China)",
+          choiceHint: "Endpoint: api.stepfun.com/step_plan/v1",
+          groupId: "stepfun",
+          groupLabel: "StepFun",
+          groupHint: "Standard / Step Plan (China / Global)",
+          optionKey: "stepfunApiKey",
+          cliFlag: "--stepfun-api-key",
+          cliOption: "--stepfun-api-key <key>",
+          cliDescription: "StepFun API key",
+        },
+        {
+          provider: "stepfun-plan",
+          method: "plan-api-key-intl",
+          choiceId: "stepfun-plan-api-key-intl",
+          choiceLabel: "StepFun Step Plan API key (Global/Intl)",
+          choiceHint: "Endpoint: api.stepfun.ai/step_plan/v1",
+          groupId: "stepfun",
+          groupLabel: "StepFun",
+          groupHint: "Standard / Step Plan (China / Global)",
+          optionKey: "stepfunApiKey",
+          cliFlag: "--stepfun-api-key",
+          cliOption: "--stepfun-api-key <key>",
+          cliDescription: "StepFun API key",
+        },
+      ],
     },
   },
   {
@@ -2854,8 +4536,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/synology-chat",
-    packageVersion: "2026.3.22",
-    packageDescription: "Synology Chat channel plugin for GodsEye",
+    packageVersion: "2026.4.10",
+    packageDescription: "Synology Chat channel plugin for OpenClaw",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -2865,14 +4547,13 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         selectionLabel: "Synology Chat (Webhook)",
         docsPath: "/channels/synology-chat",
         docsLabel: "synology-chat",
-        blurb: "Connect your Synology NAS Chat to GodsEye with full agent capabilities.",
+        blurb: "Connect your Synology NAS Chat to OpenClaw with full agent capabilities.",
         order: 90,
       },
       install: {
         npmSpec: "@godseye/synology-chat",
-        localPath: "extensions/synology-chat",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -2893,8 +4574,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/synthetic-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Synthetic provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Synthetic provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2905,6 +4586,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["synthetic"],
       providerAuthEnvVars: {
         synthetic: ["SYNTHETIC_API_KEY"],
@@ -2934,8 +4616,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/tavily-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Tavily plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Tavily plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -2989,8 +4671,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/telegram",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Telegram channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Telegram channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -3003,6 +4685,14 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsLabel: "telegram",
         blurb: "simplest way to get started — register a bot with @BotFather and get going.",
         systemImage: "paperplane",
+        selectionDocsPrefix: "",
+        selectionDocsOmitLabel: true,
+        selectionExtras: ["https://openclaw.ai"],
+        markdownCapable: true,
+        configuredState: {
+          specifier: "./configured-state",
+          exportName: "hasTelegramConfiguredState",
+        },
       },
     },
     manifest: {
@@ -3027,8 +4717,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/tlon",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Tlon/Urbit channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Tlon/Urbit channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -3044,9 +4734,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/tlon",
-        localPath: "extensions/tlon",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -3068,8 +4757,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/together-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Together provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Together provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -3080,6 +4769,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["together"],
       providerAuthEnvVars: {
         together: ["TOGETHER_API_KEY"],
@@ -3109,8 +4799,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/twitch",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Twitch channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Twitch channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       channel: {
@@ -3122,7 +4812,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         aliases: ["twitch-chat"],
       },
       install: {
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -3143,8 +4833,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/venice-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Venice provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Venice provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -3155,6 +4845,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["venice"],
       providerAuthEnvVars: {
         venice: ["VENICE_API_KEY"],
@@ -3184,8 +4875,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/vercel-ai-gateway-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Vercel AI Gateway provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Vercel AI Gateway provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -3196,6 +4887,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["vercel-ai-gateway"],
       providerAuthEnvVars: {
         "vercel-ai-gateway": ["AI_GATEWAY_API_KEY"],
@@ -3225,8 +4917,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/vllm-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye vLLM provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw vLLM provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -3237,6 +4929,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["vllm"],
       providerAuthEnvVars: {
         vllm: ["VLLM_API_KEY"],
@@ -3263,12 +4956,12 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/voice-call",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye voice-call plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw voice-call plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       install: {
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -3459,27 +5152,18 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               enabled: {
                 type: "boolean",
               },
-              sttProvider: {
+              provider: {
                 type: "string",
-                enum: ["openai-realtime"],
-              },
-              openaiApiKey: {
-                type: "string",
-              },
-              sttModel: {
-                type: "string",
-              },
-              silenceDurationMs: {
-                type: "integer",
-                minimum: 1,
-              },
-              vadThreshold: {
-                type: "number",
-                minimum: 0,
-                maximum: 1,
               },
               streamPath: {
                 type: "string",
+              },
+              providers: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  additionalProperties: true,
+                },
               },
               preStartTimeoutMs: {
                 type: "integer",
@@ -3499,24 +5183,77 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               },
             },
           },
+          realtime: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              provider: {
+                type: "string",
+              },
+              streamPath: {
+                type: "string",
+              },
+              instructions: {
+                type: "string",
+              },
+              tools: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: {
+                    type: {
+                      type: "string",
+                      enum: ["function"],
+                    },
+                    name: {
+                      type: "string",
+                    },
+                    description: {
+                      type: "string",
+                    },
+                    parameters: {
+                      type: "object",
+                      additionalProperties: false,
+                      properties: {
+                        type: {
+                          type: "string",
+                          enum: ["object"],
+                        },
+                        properties: {
+                          type: "object",
+                          additionalProperties: true,
+                        },
+                        required: {
+                          type: "array",
+                          items: {
+                            type: "string",
+                          },
+                        },
+                      },
+                      required: ["type", "properties"],
+                    },
+                  },
+                  required: ["type", "name", "description", "parameters"],
+                },
+              },
+              providers: {
+                type: "object",
+                additionalProperties: {
+                  type: "object",
+                  additionalProperties: true,
+                },
+              },
+            },
+          },
           publicUrl: {
             type: "string",
           },
           skipSignatureVerification: {
             type: "boolean",
-          },
-          stt: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              provider: {
-                type: "string",
-                enum: ["openai"],
-              },
-              model: {
-                type: "string",
-              },
-            },
           },
           tts: {
             type: "object",
@@ -3569,127 +5306,179 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
                   },
                 },
               },
-              elevenlabs: {
+              providers: {
                 type: "object",
-                additionalProperties: false,
                 properties: {
-                  apiKey: {
-                    type: "string",
-                  },
-                  baseUrl: {
-                    type: "string",
-                  },
-                  voiceId: {
-                    type: "string",
-                  },
-                  modelId: {
-                    type: "string",
-                  },
-                  seed: {
-                    type: "integer",
-                    minimum: 0,
-                    maximum: 4294967295,
-                  },
-                  applyTextNormalization: {
-                    type: "string",
-                    enum: ["auto", "on", "off"],
-                  },
-                  languageCode: {
-                    type: "string",
-                  },
-                  voiceSettings: {
+                  openai: {
                     type: "object",
                     additionalProperties: false,
                     properties: {
-                      stability: {
-                        type: "number",
-                        minimum: 0,
-                        maximum: 1,
+                      apiKey: {
+                        type: "string",
                       },
-                      similarityBoost: {
-                        type: "number",
-                        minimum: 0,
-                        maximum: 1,
+                      baseUrl: {
+                        type: "string",
                       },
-                      style: {
-                        type: "number",
-                        minimum: 0,
-                        maximum: 1,
+                      model: {
+                        type: "string",
                       },
-                      useSpeakerBoost: {
-                        type: "boolean",
+                      voice: {
+                        type: "string",
                       },
                       speed: {
                         type: "number",
-                        minimum: 0.5,
-                        maximum: 2,
+                        minimum: 0.25,
+                        maximum: 4,
+                      },
+                      instructions: {
+                        type: "string",
+                      },
+                    },
+                  },
+                  elevenlabs: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      apiKey: {
+                        type: "string",
+                      },
+                      baseUrl: {
+                        type: "string",
+                      },
+                      voiceId: {
+                        type: "string",
+                      },
+                      modelId: {
+                        type: "string",
+                      },
+                      seed: {
+                        type: "integer",
+                        minimum: 0,
+                        maximum: 4294967295,
+                      },
+                      applyTextNormalization: {
+                        type: "string",
+                        enum: ["auto", "on", "off"],
+                      },
+                      languageCode: {
+                        type: "string",
+                      },
+                      voiceSettings: {
+                        type: "object",
+                        additionalProperties: false,
+                        properties: {
+                          stability: {
+                            type: "number",
+                            minimum: 0,
+                            maximum: 1,
+                          },
+                          similarityBoost: {
+                            type: "number",
+                            minimum: 0,
+                            maximum: 1,
+                          },
+                          style: {
+                            type: "number",
+                            minimum: 0,
+                            maximum: 1,
+                          },
+                          useSpeakerBoost: {
+                            type: "boolean",
+                          },
+                          speed: {
+                            type: "number",
+                            minimum: 0.5,
+                            maximum: 2,
+                          },
+                        },
+                      },
+                    },
+                  },
+                  microsoft: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      enabled: {
+                        type: "boolean",
+                      },
+                      voice: {
+                        type: "string",
+                      },
+                      lang: {
+                        type: "string",
+                      },
+                      outputFormat: {
+                        type: "string",
+                      },
+                      pitch: {
+                        type: "string",
+                      },
+                      rate: {
+                        type: "string",
+                      },
+                      volume: {
+                        type: "string",
+                      },
+                      saveSubtitles: {
+                        type: "boolean",
+                      },
+                      proxy: {
+                        type: "string",
+                      },
+                      timeoutMs: {
+                        type: "integer",
+                        minimum: 1000,
+                        maximum: 120000,
+                      },
+                    },
+                  },
+                  edge: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      enabled: {
+                        type: "boolean",
+                      },
+                      voice: {
+                        type: "string",
+                      },
+                      lang: {
+                        type: "string",
+                      },
+                      outputFormat: {
+                        type: "string",
+                      },
+                      pitch: {
+                        type: "string",
+                      },
+                      rate: {
+                        type: "string",
+                      },
+                      volume: {
+                        type: "string",
+                      },
+                      saveSubtitles: {
+                        type: "boolean",
+                      },
+                      proxy: {
+                        type: "string",
+                      },
+                      timeoutMs: {
+                        type: "integer",
+                        minimum: 1000,
+                        maximum: 120000,
                       },
                     },
                   },
                 },
-              },
-              openai: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  apiKey: {
-                    type: "string",
+                additionalProperties: {
+                  type: "object",
+                  properties: {
+                    apiKey: {
+                      type: "string",
+                    },
                   },
-                  baseUrl: {
-                    type: "string",
-                  },
-                  model: {
-                    type: "string",
-                  },
-                  voice: {
-                    type: "string",
-                  },
-                  speed: {
-                    type: "number",
-                    minimum: 0.25,
-                    maximum: 4,
-                  },
-                  instructions: {
-                    type: "string",
-                  },
-                },
-              },
-              edge: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  enabled: {
-                    type: "boolean",
-                  },
-                  voice: {
-                    type: "string",
-                  },
-                  lang: {
-                    type: "string",
-                  },
-                  outputFormat: {
-                    type: "string",
-                  },
-                  pitch: {
-                    type: "string",
-                  },
-                  rate: {
-                    type: "string",
-                  },
-                  volume: {
-                    type: "string",
-                  },
-                  saveSubtitles: {
-                    type: "boolean",
-                  },
-                  proxy: {
-                    type: "string",
-                  },
-                  timeoutMs: {
-                    type: "integer",
-                    minimum: 1000,
-                    maximum: 120000,
-                  },
+                  additionalProperties: true,
                 },
               },
               prefsPath: {
@@ -3807,17 +5596,38 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           label: "Enable Streaming",
           advanced: true,
         },
-        "streaming.openaiApiKey": {
-          label: "OpenAI Realtime API Key",
-          sensitive: true,
+        "streaming.provider": {
+          label: "Streaming Provider",
+          help: "Uses the first registered realtime transcription provider when unset.",
           advanced: true,
         },
-        "streaming.sttModel": {
-          label: "Realtime STT Model",
+        "streaming.providers": {
+          label: "Streaming Provider Config",
           advanced: true,
         },
         "streaming.streamPath": {
           label: "Media Stream Path",
+          advanced: true,
+        },
+        "realtime.enabled": {
+          label: "Enable Realtime Voice",
+          advanced: true,
+        },
+        "realtime.provider": {
+          label: "Realtime Voice Provider",
+          help: "Uses the first registered realtime voice provider when unset.",
+          advanced: true,
+        },
+        "realtime.streamPath": {
+          label: "Realtime Stream Path",
+          advanced: true,
+        },
+        "realtime.instructions": {
+          label: "Realtime Instructions",
+          advanced: true,
+        },
+        "realtime.providers": {
+          label: "Realtime Provider Config",
           advanced: true,
         },
         "tts.provider": {
@@ -3825,34 +5635,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           help: "Deep-merges with messages.tts (Microsoft is ignored for calls).",
           advanced: true,
         },
-        "tts.openai.model": {
-          label: "OpenAI TTS Model",
-          advanced: true,
-        },
-        "tts.openai.voice": {
-          label: "OpenAI TTS Voice",
-          advanced: true,
-        },
-        "tts.openai.apiKey": {
-          label: "OpenAI API Key",
-          sensitive: true,
-          advanced: true,
-        },
-        "tts.elevenlabs.modelId": {
-          label: "ElevenLabs Model ID",
-          advanced: true,
-        },
-        "tts.elevenlabs.voiceId": {
-          label: "ElevenLabs Voice ID",
-          advanced: true,
-        },
-        "tts.elevenlabs.apiKey": {
-          label: "ElevenLabs API Key",
-          sensitive: true,
-          advanced: true,
-        },
-        "tts.elevenlabs.baseUrl": {
-          label: "ElevenLabs Base URL",
+        "tts.providers": {
+          label: "TTS Provider Config",
           advanced: true,
         },
         publicUrl: {
@@ -3869,6 +5653,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         },
         responseModel: {
           label: "Response Model",
+          help: "Optional override. Falls back to the runtime default model when unset.",
           advanced: true,
         },
         responseSystemPrompt: {
@@ -3890,8 +5675,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/volcengine-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Volcengine provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Volcengine provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -3902,6 +5687,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["volcengine", "volcengine-plan"],
       providerAuthEnvVars: {
         volcengine: ["VOLCANO_ENGINE_API_KEY"],
@@ -3924,6 +5710,139 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
     },
   },
   {
+    dirName: "vydra",
+    idHint: "vydra",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/vydra-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Vydra media provider plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "vydra",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: ["vydra"],
+      providerAuthEnvVars: {
+        vydra: ["VYDRA_API_KEY"],
+      },
+      providerAuthChoices: [
+        {
+          provider: "vydra",
+          method: "api-key",
+          choiceId: "vydra-api-key",
+          choiceLabel: "Vydra API key",
+          groupId: "vydra",
+          groupLabel: "Vydra",
+          groupHint: "Image, video, and speech",
+          onboardingScopes: ["image-generation"],
+          optionKey: "vydraApiKey",
+          cliFlag: "--vydra-api-key",
+          cliOption: "--vydra-api-key <key>",
+          cliDescription: "Vydra API key",
+        },
+      ],
+    },
+  },
+  {
+    dirName: "webhooks",
+    idHint: "webhooks",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/webhooks",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw webhook bridge plugin",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "webhooks",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        $defs: {
+          secretRef: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              source: {
+                type: "string",
+                enum: ["env", "file", "exec"],
+              },
+              provider: {
+                type: "string",
+              },
+              id: {
+                type: "string",
+              },
+            },
+            required: ["source", "provider", "id"],
+          },
+          secretInput: {
+            anyOf: [
+              {
+                type: "string",
+                minLength: 1,
+              },
+              {
+                $ref: "#/$defs/secretRef",
+              },
+            ],
+          },
+          route: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              path: {
+                type: "string",
+                minLength: 1,
+              },
+              sessionKey: {
+                type: "string",
+                minLength: 1,
+              },
+              secret: {
+                $ref: "#/$defs/secretInput",
+              },
+              controllerId: {
+                type: "string",
+                minLength: 1,
+              },
+              description: {
+                type: "string",
+              },
+            },
+            required: ["sessionKey", "secret"],
+          },
+        },
+        properties: {
+          routes: {
+            type: "object",
+            additionalProperties: {
+              $ref: "#/$defs/route",
+            },
+          },
+        },
+      },
+      name: "Webhooks",
+      description:
+        "Authenticated inbound webhooks that bind external automation to OpenClaw TaskFlows.",
+    },
+  },
+  {
     dirName: "whatsapp",
     idHint: "whatsapp",
     source: {
@@ -3935,8 +5854,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/whatsapp",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye WhatsApp channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw WhatsApp channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -3949,12 +5868,15 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         docsLabel: "whatsapp",
         blurb: "works with your own number; recommend a separate phone + eSIM.",
         systemImage: "message",
+        persistedAuthState: {
+          specifier: "./auth-presence",
+          exportName: "hasAnyWhatsAppAuth",
+        },
       },
       install: {
         npmSpec: "@godseye/whatsapp",
-        localPath: "extensions/whatsapp",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -3975,8 +5897,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/xai-plugin",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye xAI plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw xAI plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -4001,8 +5923,51 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
               },
             },
           },
+          xSearch: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              model: {
+                type: "string",
+              },
+              inlineCitations: {
+                type: "boolean",
+              },
+              maxTurns: {
+                type: "number",
+              },
+              timeoutSeconds: {
+                type: "number",
+              },
+              cacheTtlMinutes: {
+                type: "number",
+              },
+            },
+          },
+          codeExecution: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              enabled: {
+                type: "boolean",
+              },
+              model: {
+                type: "string",
+              },
+              maxTurns: {
+                type: "number",
+              },
+              timeoutSeconds: {
+                type: "number",
+              },
+            },
+          },
         },
       },
+      enabledByDefault: true,
       providers: ["xai"],
       providerAuthEnvVars: {
         xai: ["XAI_API_KEY"],
@@ -4036,6 +6001,46 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
           label: "Inline Citations",
           help: "Include inline markdown citations in Grok responses.",
         },
+        "codeExecution.enabled": {
+          label: "Enable Code Execution",
+          help: "Enable the code_execution tool for remote xAI sandbox analysis.",
+        },
+        "xSearch.enabled": {
+          label: "Enable X Search",
+          help: "Enable the x_search tool for searching X posts with xAI.",
+        },
+        "xSearch.model": {
+          label: "X Search Model",
+          help: "xAI model override for x_search.",
+        },
+        "xSearch.inlineCitations": {
+          label: "X Search Inline Citations",
+          help: "Keep inline markdown citations from xAI in x_search responses when available.",
+        },
+        "xSearch.maxTurns": {
+          label: "X Search Max Turns",
+          help: "Optional max internal tool turns xAI may use per x_search request.",
+        },
+        "xSearch.timeoutSeconds": {
+          label: "X Search Timeout",
+          help: "Timeout in seconds for x_search requests.",
+        },
+        "xSearch.cacheTtlMinutes": {
+          label: "X Search Cache TTL",
+          help: "Cache TTL in minutes for x_search results.",
+        },
+        "codeExecution.model": {
+          label: "Code Execution Model",
+          help: "xAI model override for code_execution.",
+        },
+        "codeExecution.maxTurns": {
+          label: "Code Execution Max Turns",
+          help: "Optional max internal tool turns xAI may use for code_execution.",
+        },
+        "codeExecution.timeoutSeconds": {
+          label: "Code Execution Timeout",
+          help: "Timeout in seconds for code_execution requests.",
+        },
       },
     },
   },
@@ -4047,8 +6052,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/xiaomi-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Xiaomi provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Xiaomi provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -4059,6 +6064,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["xiaomi"],
       providerAuthEnvVars: {
         xiaomi: ["XIAOMI_API_KEY"],
@@ -4088,8 +6094,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "index.js",
     },
     packageName: "@godseye/zai-provider",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Z.AI provider plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Z.AI provider plugin",
     packageManifest: {
       extensions: ["./index.ts"],
     },
@@ -4100,6 +6106,7 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
         additionalProperties: false,
         properties: {},
       },
+      enabledByDefault: true,
       providers: ["zai"],
       providerAuthEnvVars: {
         zai: ["ZAI_API_KEY", "Z_AI_API_KEY"],
@@ -4189,8 +6196,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/zalo",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Zalo channel plugin",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Zalo channel plugin",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -4207,9 +6214,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/zalo",
-        localPath: "extensions/zalo",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {
@@ -4234,8 +6240,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       built: "setup-entry.js",
     },
     packageName: "@godseye/zalouser",
-    packageVersion: "2026.3.22",
-    packageDescription: "GodsEye Zalo Personal Account plugin via native zca-js integration",
+    packageVersion: "2026.4.10",
+    packageDescription: "OpenClaw Zalo Personal Account plugin via native zca-js integration",
     packageManifest: {
       extensions: ["./index.ts"],
       setupEntry: "./setup-entry.ts",
@@ -4252,9 +6258,8 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       },
       install: {
         npmSpec: "@godseye/zalouser",
-        localPath: "extensions/zalouser",
         defaultChoice: "npm",
-        minHostVersion: ">=2026.3.22",
+        minHostVersion: ">=2026.4.10",
       },
     },
     manifest: {

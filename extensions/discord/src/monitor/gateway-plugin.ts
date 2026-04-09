@@ -1,11 +1,11 @@
 import * as carbonGateway from "@buape/carbon/gateway";
 import type { APIGatewayBotInfo } from "discord-api-types/v10";
-import * as httpsProxyAgent from "https-proxy-agent";
 import type { DiscordAccountConfig } from "godseye/plugin-sdk/config-runtime";
 import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { danger } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import * as httpsProxyAgent from "https-proxy-agent";
 import * as undici from "undici";
 import * as ws from "ws";
 import { validateDiscordProxyUrl } from "../proxy-fetch.js";

@@ -70,8 +70,9 @@ function hasTrustedOpenClawRootIndicator(params: {
     (typeof params.packageJson.bin === "object" &&
       params.packageJson.bin !== null &&
       typeof params.packageJson.bin.openclaw === "string");
+  const hasGodsEyeEntrypoint = fs.existsSync(path.join(params.packageRoot, "godseye.mjs"));
   const hasOpenClawEntrypoint = fs.existsSync(path.join(params.packageRoot, "openclaw.mjs"));
-  return hasCliEntryExport || hasOpenClawBin || hasOpenClawEntrypoint;
+  return hasCliEntryExport || hasOpenClawBin || hasGodsEyeEntrypoint || hasOpenClawEntrypoint;
 }
 
 function readPluginSdkSubpathsFromPackageRoot(packageRoot: string): string[] | null {

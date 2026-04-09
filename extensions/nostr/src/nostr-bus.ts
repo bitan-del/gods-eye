@@ -1,3 +1,4 @@
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   SimplePool,
   finalizeEvent,
@@ -7,7 +8,6 @@ import {
   type Event,
 } from "nostr-tools";
 import { decrypt, encrypt } from "nostr-tools/nip04";
-import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   createDirectDmPreCryptoGuardPolicy,
   type DirectDmPreCryptoGuardPolicyOverrides,

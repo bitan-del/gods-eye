@@ -6,10 +6,7 @@ import {
 import { createRestrictSendersChannelSecurity } from "godseye/plugin-sdk/channel-policy";
 import { createChannelPluginBase, getChatChannelMeta } from "godseye/plugin-sdk/core";
 import type { ChannelPlugin } from "godseye/plugin-sdk/core";
-import {
-  normalizeE164,
-  normalizeStringifiedOptionalString,
-} from "godseye/plugin-sdk/text-runtime";
+import { normalizeE164, normalizeStringifiedOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   listSignalAccountIds,
   resolveDefaultSignalAccountId,

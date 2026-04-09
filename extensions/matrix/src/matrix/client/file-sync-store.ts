@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { writeJsonFileAtomically } from "godseye/plugin-sdk/json-store";
 import {
   Category,
   MemoryStore,
@@ -10,7 +11,6 @@ import {
   type ISyncResponse,
   type IStoredClientOpts,
 } from "matrix-js-sdk/lib/matrix.js";
-import { writeJsonFileAtomically } from "godseye/plugin-sdk/json-store";
 import { isRecord } from "../../record-shared.js";
 import { createAsyncLock } from "../async-lock.js";
 import { LogService } from "../sdk/logger.js";

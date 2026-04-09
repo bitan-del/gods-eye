@@ -1,5 +1,5 @@
-import type { Bot } from "grammy";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import type { Bot } from "grammy";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { loadWebMedia } = vi.hoisted(() => ({

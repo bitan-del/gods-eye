@@ -2,11 +2,11 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { Bot } from "grammy";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
 import { normalizeOptionalString, readStringValue } from "godseye/plugin-sdk/text-runtime";
+import type { Bot } from "grammy";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { normalizeTelegramCommandName, TELEGRAM_COMMAND_NAME_PATTERN } from "./command-config.js";
 

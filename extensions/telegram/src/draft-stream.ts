@@ -1,6 +1,6 @@
-import type { Bot } from "grammy";
 import { createFinalizableDraftLifecycle } from "godseye/plugin-sdk/channel-lifecycle";
 import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import type { Bot } from "grammy";
 import { buildTelegramThreadParams, type TelegramThreadSpec } from "./bot/helpers.js";
 import { isSafeToRetrySendError, isTelegramClientRejection } from "./network-errors.js";
 import { normalizeTelegramReplyToMessageId } from "./outbound-params.js";

@@ -95,6 +95,8 @@ function loadModelsConfigRuntime() {
 function isLikelyOpenClawCliProcess(argv: string[] = process.argv): boolean {
   const entryBasename = normalizeLowercaseStringOrEmpty(path.basename(argv[1] ?? ""));
   return (
+    entryBasename === "godseye" ||
+    entryBasename === "godseye.mjs" ||
     entryBasename === "openclaw" ||
     entryBasename === "openclaw.mjs" ||
     entryBasename === "entry.js" ||

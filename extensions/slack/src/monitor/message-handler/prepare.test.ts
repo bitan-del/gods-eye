@@ -751,10 +751,9 @@ describe("slack thread.requireExplicitMention", () => {
   it("drops thread reply without explicit mention when requireExplicitMention is true", async () => {
     const ctx = createCtxWithExplicitMention(true);
     const { storePath } = makeTmpStorePath();
-    vi.spyOn(
-      await import("godseye/plugin-sdk/config-runtime"),
-      "resolveStorePath",
-    ).mockReturnValue(storePath);
+    vi.spyOn(await import("godseye/plugin-sdk/config-runtime"), "resolveStorePath").mockReturnValue(
+      storePath,
+    );
     const account = createSlackTestAccount();
     const message: SlackMessageEvent = {
       type: "message",
@@ -778,10 +777,9 @@ describe("slack thread.requireExplicitMention", () => {
   it("allows thread reply with explicit @mention when requireExplicitMention is true", async () => {
     const ctx = createCtxWithExplicitMention(true);
     const { storePath } = makeTmpStorePath();
-    vi.spyOn(
-      await import("godseye/plugin-sdk/config-runtime"),
-      "resolveStorePath",
-    ).mockReturnValue(storePath);
+    vi.spyOn(await import("godseye/plugin-sdk/config-runtime"), "resolveStorePath").mockReturnValue(
+      storePath,
+    );
     const account = createSlackTestAccount();
     const message: SlackMessageEvent = {
       type: "message",
@@ -805,10 +803,9 @@ describe("slack thread.requireExplicitMention", () => {
   it("allows thread reply without explicit mention when requireExplicitMention is false (default)", async () => {
     const ctx = createCtxWithExplicitMention(false);
     const { storePath } = makeTmpStorePath();
-    vi.spyOn(
-      await import("godseye/plugin-sdk/config-runtime"),
-      "resolveStorePath",
-    ).mockReturnValue(storePath);
+    vi.spyOn(await import("godseye/plugin-sdk/config-runtime"), "resolveStorePath").mockReturnValue(
+      storePath,
+    );
     const account = createSlackTestAccount();
     const message: SlackMessageEvent = {
       type: "message",

@@ -202,9 +202,9 @@ function renderDiaryNavigator(
             formatDiaryMonthLabel(previous?.date ?? "") !== formatDiaryMonthLabel(entry.date);
           return html`
             <span
-              class="dreams-diary__timeline-month ${showLabel
-                ? ""
-                : "dreams-diary__timeline-month--ghost"}"
+              class="dreams-diary__timeline-month ${
+                showLabel ? "" : "dreams-diary__timeline-month--ghost"
+              }"
             >
               ${showLabel ? formatDiaryMonthLabel(entry.date) : ""}
             </span>
@@ -215,18 +215,22 @@ function renderDiaryNavigator(
         ${entries.map(
           (entry, index) => html`
             <button
-              class="dreams-diary__day-chip ${entry.page === activePage
-                ? "dreams-diary__day-chip--active"
-                : ""}"
+              class="dreams-diary__day-chip ${
+                entry.page === activePage ? "dreams-diary__day-chip--active" : ""
+              }"
               @click=${() => {
                 setDiaryPage(entry.page);
                 requestUpdate?.();
               }}
               title=${entry.date}
             >
-              ${shouldShowDiaryLabel(entries, index, activePage)
-                ? formatDiaryChipLabel(entry.date)
-                : html`<span aria-hidden="true">&nbsp;</span>`}
+              ${
+                shouldShowDiaryLabel(entries, index, activePage)
+                  ? formatDiaryChipLabel(entry.date)
+                  : html`
+                      <span aria-hidden="true">&nbsp;</span>
+                    `
+              }
             </button>
           `,
         )}
@@ -236,9 +240,9 @@ function renderDiaryNavigator(
           const intensity = Math.min(4, Math.max(1, entry.signalWeight));
           return html`
             <button
-              class="dreams-diary__heatmap-cell ${entry.page === activePage
-                ? "dreams-diary__heatmap-cell--active"
-                : ""}"
+              class="dreams-diary__heatmap-cell ${
+                entry.page === activePage ? "dreams-diary__heatmap-cell--active" : ""
+              }"
               data-intensity=${String(intensity)}
               @click=${() => {
                 setDiaryPage(entry.page);
@@ -496,8 +500,9 @@ function renderScene(props: DreamingProps, idle: boolean, dreamText: string) {
 
       <div class="dreams__moon"></div>
 
-      ${props.active
-        ? html`
+      ${
+        props.active
+          ? html`
             <div class="dreams__bubble">
               <span class="dreams__bubble-text">${dreamText}</span>
             </div>
@@ -510,7 +515,8 @@ function renderScene(props: DreamingProps, idle: boolean, dreamText: string) {
               style="top: calc(50% - 120px); left: calc(50% - 90px); width: 8px; height: 8px; animation-delay: 0.4s;"
             ></div>
           `
-        : nothing}
+          : nothing
+      }
 
       <div class="dreams__glow"></div>
       <div class="dreams__lobster">${sleepingLobster}</div>
@@ -526,9 +532,11 @@ function renderScene(props: DreamingProps, idle: boolean, dreamText: string) {
           <div class="dreams__status-dot"></div>
           <span>
             ${props.promotedCount} ${t("dreaming.status.promotedSuffix")}
-            ${props.nextCycle
-              ? html`· ${t("dreaming.status.nextSweepPrefix")} ${props.nextCycle}`
-              : nothing}
+            ${
+              props.nextCycle
+                ? html`· ${t("dreaming.status.nextSweepPrefix")} ${props.nextCycle}`
+                : nothing
+            }
             ${props.timezone ? html`· ${props.timezone}` : nothing}
           </span>
         </div>
@@ -540,9 +548,11 @@ function renderScene(props: DreamingProps, idle: boolean, dreamText: string) {
           ?disabled=${props.modeSaving || props.dreamDiaryActionLoading}
           @click=${() => props.onBackfillDiary()}
         >
-          ${props.dreamDiaryActionLoading
-            ? t("dreaming.scene.working")
-            : t("dreaming.scene.backfill")}
+          ${
+            props.dreamDiaryActionLoading
+              ? t("dreaming.scene.working")
+              : t("dreaming.scene.backfill")
+          }
         </button>
         <button
           class="btn btn--subtle btn--sm"
@@ -653,9 +663,11 @@ function renderScene(props: DreamingProps, idle: boolean, dreamText: string) {
         })}
       </div>
 
-      ${props.statusError
-        ? html`<div class="dreams__controls-error">${props.statusError}</div>`
-        : nothing}
+      ${
+        props.statusError
+          ? html`<div class="dreams__controls-error">${props.statusError}</div>`
+          : nothing
+      }
     </section>
   `;
 }
@@ -705,9 +717,10 @@ function renderTraceSection(
         <span class="dreams__trace-title">${t(`dreaming.trace.${kind}`)}</span>
         <span class="dreams__trace-count">${options.count}</span>
       </div>
-      ${entries.length === 0
-        ? html`<div class="dreams__trace-empty">${t(options.emptyKey)}</div>`
-        : html`
+      ${
+        entries.length === 0
+          ? html`<div class="dreams__trace-empty">${t(options.emptyKey)}</div>`
+          : html`
             <div class="dreams__trace-list">
               ${entries.map(
                 (entry) => html`
@@ -721,7 +734,8 @@ function renderTraceSection(
                 `,
               )}
             </div>
-          `}
+          `
+      }
     </section>
   `;
 }
@@ -840,8 +854,9 @@ function renderDiarySection(props: DreamingProps) {
       >
         <div class="dreams-diary__accent"></div>
         ${entry.date ? html`<time class="dreams-diary__date">${entry.date}</time>` : nothing}
-        ${structured
-          ? html`
+        ${
+          structured
+            ? html`
               <div class="dreams-diary__grid">
                 <section class="dreams-diary__panel">
                   <h3 class="dreams-diary__panel-title">What Happened</h3>
@@ -877,8 +892,9 @@ function renderDiarySection(props: DreamingProps) {
                 </section>
                 <section class="dreams-diary__panel">
                   <h3 class="dreams-diary__panel-title">Candidates + Possible Lasting Updates</h3>
-                  ${structured.candidates.length > 0
-                    ? html`
+                  ${
+                    structured.candidates.length > 0
+                      ? html`
                         <div class="dreams-diary__panel-subtitle">Candidates</div>
                         <div class="dreams-diary__panel-list dreams-diary__panel-list--points">
                           ${structured.candidates.map(
@@ -894,9 +910,11 @@ function renderDiarySection(props: DreamingProps) {
                           )}
                         </div>
                       `
-                    : nothing}
-                  ${structured.lastingUpdates.length > 0
-                    ? html`
+                      : nothing
+                  }
+                  ${
+                    structured.lastingUpdates.length > 0
+                      ? html`
                         <div class="dreams-diary__panel-subtitle">Possible Lasting Updates</div>
                         <div class="dreams-diary__panel-list dreams-diary__panel-list--points">
                           ${structured.lastingUpdates.map(
@@ -912,25 +930,25 @@ function renderDiarySection(props: DreamingProps) {
                           )}
                         </div>
                       `
-                    : nothing}
+                      : nothing
+                  }
                 </section>
               </div>
             `
-          : html`
+            : html`
               <div class="dreams-diary__prose">
-                ${entry.body
-                  .split("\n")
-                  .map(
-                    (para, i) =>
-                      html`<p
+                ${entry.body.split("\n").map(
+                  (para, i) =>
+                    html`<p
                         class="dreams-diary__para"
                         style="animation-delay: ${0.3 + i * 0.15}s;"
                       >
                         ${para}
                       </p>`,
-                  )}
+                )}
               </div>
-            `}
+            `
+        }
       </article>
     </section>
   `;

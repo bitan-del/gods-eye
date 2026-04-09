@@ -13,10 +13,7 @@ import {
   wrapWebContent,
   writeCache,
 } from "godseye/plugin-sdk/provider-web-search";
-import {
-  assertHttpUrlTargetsPrivateNetwork,
-  type LookupFn,
-} from "godseye/plugin-sdk/ssrf-runtime";
+import { assertHttpUrlTargetsPrivateNetwork, type LookupFn } from "godseye/plugin-sdk/ssrf-runtime";
 import {
   resolveSearxngBaseUrl,
   resolveSearxngCategories,

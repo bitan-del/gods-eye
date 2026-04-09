@@ -1,9 +1,9 @@
 import type { Message } from "@grammyjs/types";
-import type { Bot } from "grammy";
 import { createChannelPairingChallengeIssuer } from "godseye/plugin-sdk/channel-pairing";
 import type { DmPolicy } from "godseye/plugin-sdk/config-runtime";
 import { upsertChannelPairingRequest } from "godseye/plugin-sdk/conversation-runtime";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
+import type { Bot } from "grammy";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { resolveSenderAllowMatch, type NormalizedAllowFrom } from "./bot-access.js";
 import { renderTelegramHtmlText } from "./format.js";

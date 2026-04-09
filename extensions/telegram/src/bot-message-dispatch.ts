@@ -1,4 +1,3 @@
-import type { Bot } from "grammy";
 import {
   logAckFailure,
   logTypingFailure,
@@ -18,6 +17,7 @@ import { resolveSendableOutboundReplyParts } from "godseye/plugin-sdk/reply-payl
 import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
+import type { Bot } from "grammy";
 import { defaultTelegramBotDeps, type TelegramBotDeps } from "./bot-deps.js";
 import type { TelegramMessageContext } from "./bot-message-context.js";
 import {

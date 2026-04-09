@@ -1,4 +1,7 @@
 import { EventEmitter } from "node:events";
+import type { PinnedDispatcherPolicy } from "godseye/plugin-sdk/infra-runtime";
+import { KeyedAsyncQueue } from "godseye/plugin-sdk/keyed-async-queue";
+import { normalizeNullableString } from "godseye/plugin-sdk/text-runtime";
 import {
   ClientEvent,
   MatrixEventEvent,
@@ -8,9 +11,6 @@ import {
   type MatrixEvent,
 } from "matrix-js-sdk/lib/matrix.js";
 import { VerificationMethod } from "matrix-js-sdk/lib/types.js";
-import type { PinnedDispatcherPolicy } from "godseye/plugin-sdk/infra-runtime";
-import { KeyedAsyncQueue } from "godseye/plugin-sdk/keyed-async-queue";
-import { normalizeNullableString } from "godseye/plugin-sdk/text-runtime";
 import type { SsrFPolicy } from "../runtime-api.js";
 import { resolveMatrixRoomKeyBackupReadinessError } from "./backup-health.js";
 import { FileBackedMatrixSyncStore } from "./client/file-sync-store.js";

@@ -1,6 +1,4 @@
 import type { ReactionType, ReactionTypeEmoji } from "@grammyjs/types";
-import * as grammy from "grammy";
-import { type ApiClientOptions, Bot, HttpError } from "grammy";
 import { isDiagnosticFlagEnabled } from "godseye/plugin-sdk/diagnostic-runtime";
 import { formatUncaughtError } from "godseye/plugin-sdk/error-runtime";
 import { recordChannelActivity } from "godseye/plugin-sdk/infra-runtime";
@@ -8,6 +6,8 @@ import { createTelegramRetryRunner, type RetryConfig } from "godseye/plugin-sdk/
 import { createSubsystemLogger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { formatErrorMessage } from "godseye/plugin-sdk/ssrf-runtime";
 import { normalizeOptionalString, redactSensitiveText } from "godseye/plugin-sdk/text-runtime";
+import * as grammy from "grammy";
+import { type ApiClientOptions, Bot, HttpError } from "grammy";
 import { type ResolvedTelegramAccount, resolveTelegramAccount } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { buildTelegramThreadParams, buildTypingThreadParams } from "./bot/helpers.js";

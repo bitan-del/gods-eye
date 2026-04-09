@@ -1,4 +1,3 @@
-import type { Bot, Context } from "grammy";
 import { resolveChannelStreamingBlockEnabled } from "godseye/plugin-sdk/channel-streaming";
 import {
   resolveCommandAuthorization,
@@ -30,6 +29,7 @@ import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { getChildLogger } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import type { Bot, Context } from "grammy";
 import { resolveTelegramAccount } from "./accounts.js";
 import { withTelegramApiErrorLogging } from "./api-logging.js";
 import { isSenderAllowed, normalizeDmAllowFromWithStore } from "./bot-access.js";

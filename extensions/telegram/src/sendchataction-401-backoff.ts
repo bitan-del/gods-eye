@@ -1,10 +1,6 @@
-import type { Bot } from "grammy";
-import {
-  computeBackoff,
-  sleepWithAbort,
-  type BackoffPolicy,
-} from "godseye/plugin-sdk/runtime-env";
+import { computeBackoff, sleepWithAbort, type BackoffPolicy } from "godseye/plugin-sdk/runtime-env";
 import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import type { Bot } from "grammy";
 
 export type TelegramSendChatActionLogger = (message: string) => void;
 

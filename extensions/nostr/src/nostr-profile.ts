@@ -5,8 +5,8 @@
  * This module handles profile event creation and publishing.
  */
 
-import { finalizeEvent, SimplePool, type Event } from "nostr-tools";
 import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { finalizeEvent, SimplePool, type Event } from "nostr-tools";
 import { type NostrProfile, NostrProfileSchema } from "./config-schema.js";
 
 // ============================================================================

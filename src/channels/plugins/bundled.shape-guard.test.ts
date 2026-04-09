@@ -204,9 +204,7 @@ describe("bundled channel entry shape guards", () => {
       "extensions/telegram/src/doctor.ts",
       "extensions/zalouser/src/doctor.ts",
     ].filter((filePath) =>
-      fs
-        .readFileSync(path.resolve(filePath), "utf8")
-        .includes('from "godseye/plugin-sdk/runtime"'),
+      fs.readFileSync(path.resolve(filePath), "utf8").includes('from "godseye/plugin-sdk/runtime"'),
     );
 
     expect(offenders).toEqual([]);

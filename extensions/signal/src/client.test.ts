@@ -8,9 +8,8 @@ vi.mock("godseye/plugin-sdk/fetch-runtime", () => ({
 }));
 
 vi.mock("godseye/plugin-sdk/core", async () => {
-  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/core")>(
-    "godseye/plugin-sdk/core",
-  );
+  const actual =
+    await vi.importActual<typeof import("godseye/plugin-sdk/core")>("godseye/plugin-sdk/core");
   return {
     ...actual,
     generateSecureUuid: () => "test-id",

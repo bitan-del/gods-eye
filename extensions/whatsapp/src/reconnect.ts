@@ -1,10 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
-import {
-  computeBackoff,
-  sleepWithAbort,
-  type BackoffPolicy,
-} from "godseye/plugin-sdk/runtime-env";
+import { computeBackoff, sleepWithAbort, type BackoffPolicy } from "godseye/plugin-sdk/runtime-env";
 import { clamp } from "godseye/plugin-sdk/text-runtime";
 
 export type ReconnectPolicy = BackoffPolicy & {

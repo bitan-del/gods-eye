@@ -658,8 +658,7 @@ function renderGroupedMessage(
 
   // Hide internal system errors from previous versions (e.g. stale module hashes after upgrade)
   const isStaleSystemError =
-    extractedText &&
-    /ERR_MODULE_NOT_FOUND|Cannot find module.*\/dist\//.test(extractedText);
+    extractedText && /ERR_MODULE_NOT_FOUND|Cannot find module.*\/dist\//.test(extractedText);
   if (isStaleSystemError) {
     return nothing;
   }

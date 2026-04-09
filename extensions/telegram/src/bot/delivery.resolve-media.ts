@@ -1,6 +1,6 @@
 import path from "node:path";
-import { GrammyError } from "grammy";
 import { readFileWithinRoot } from "godseye/plugin-sdk/infra-runtime";
+import { GrammyError } from "grammy";
 import type { TelegramTransport } from "../fetch.js";
 import { cacheSticker, getCachedSticker } from "../sticker-cache.js";
 import {

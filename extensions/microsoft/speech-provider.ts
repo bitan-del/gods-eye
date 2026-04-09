@@ -1,10 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
-import {
-  CHROMIUM_FULL_VERSION,
-  TRUSTED_CLIENT_TOKEN,
-  generateSecMsGecToken,
-} from "node-edge-tts/dist/drm.js";
 import { isVoiceCompatibleAudio } from "godseye/plugin-sdk/media-runtime";
 import type {
   SpeechProviderConfig,
@@ -13,6 +8,11 @@ import type {
 } from "godseye/plugin-sdk/speech";
 import { asBoolean, asFiniteNumber, asObject, trimToUndefined } from "godseye/plugin-sdk/speech";
 import { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/temp-path";
+import {
+  CHROMIUM_FULL_VERSION,
+  TRUSTED_CLIENT_TOKEN,
+  generateSecMsGecToken,
+} from "node-edge-tts/dist/drm.js";
 import { edgeTTS, inferEdgeExtension } from "./tts.js";
 
 const DEFAULT_EDGE_VOICE = "en-US-MichelleNeural";

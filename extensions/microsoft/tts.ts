@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
-import { EdgeTTS } from "node-edge-tts";
 import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import { EdgeTTS } from "node-edge-tts";
 
 export function inferEdgeExtension(outputFormat: string): string {
   const normalized = normalizeLowercaseStringOrEmpty(outputFormat);

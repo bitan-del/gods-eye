@@ -46,10 +46,7 @@ export {
 } from "godseye/plugin-sdk/channel-status";
 export { buildBaseAccountStatusSnapshot } from "godseye/plugin-sdk/status-helpers";
 export { chunkTextForOutbound } from "godseye/plugin-sdk/text-chunking";
-export {
-  formatAllowFromLowercase,
-  isNormalizedSenderAllowed,
-} from "godseye/plugin-sdk/allow-from";
+export { formatAllowFromLowercase, isNormalizedSenderAllowed } from "godseye/plugin-sdk/allow-from";
 export { addWildcardAllowFrom } from "godseye/plugin-sdk/setup";
 export { evaluateSenderGroupAccess } from "godseye/plugin-sdk/group-access";
 export { resolveOpenProviderRuntimeGroupPolicy } from "godseye/plugin-sdk/config-runtime";

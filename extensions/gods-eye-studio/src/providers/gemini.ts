@@ -1,7 +1,6 @@
 // Google Gemini provider — handles brand analysis, creative reasoning,
 // and Imagen image generation through the Gemini API.
 
-
 const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_ANALYSIS_MODEL = "gemini-2.5-flash";
 const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";

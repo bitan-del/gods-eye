@@ -9,9 +9,9 @@
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
 import { Type } from "@sinclair/typebox";
-import OpenAI from "openai";
 import { ensureGlobalUndiciEnvProxyDispatcher } from "godseye/plugin-sdk/runtime-env";
 import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import OpenAI from "openai";
 import { definePluginEntry, type OpenClawPluginApi } from "./api.js";
 import {
   DEFAULT_CAPTURE_MAX_CHARS,
