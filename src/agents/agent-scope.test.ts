@@ -2,13 +2,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   hasConfiguredModelFallbacks,
   resolveAgentConfig,
   resolveAgentDir,
   resolveAgentEffectiveModelPrimary,
   resolveAgentExplicitModelPrimary,
+  resolveAgentSkillsFilter,
   resolveFallbackAgentId,
   resolveEffectiveModelFallbacks,
   resolveAgentModelFallbacksOverride,
@@ -25,15 +26,15 @@ afterEach(() => {
 
 describe("resolveAgentConfig", () => {
   it("should return undefined when no agents config exists", () => {
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const result = resolveAgentConfig(cfg, "main");
     expect(result).toBeUndefined();
   });
 
   it("should return undefined when agent id does not exist", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
-        list: [{ id: "main", workspace: "~/godseye" }],
+        list: [{ id: "main", workspace: "~/openclaw" }],
       },
     };
     const result = resolveAgentConfig(cfg, "nonexistent");
@@ -41,14 +42,14 @@ describe("resolveAgentConfig", () => {
   });
 
   it("should return basic agent config", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
             id: "main",
             name: "Main Agent",
-            workspace: "~/godseye",
-            agentDir: "~/.godseye/agents/main",
+            workspace: "~/openclaw",
+            agentDir: "~/.openclaw/agents/main",
             model: "anthropic/claude-sonnet-4-6",
           },
         ],
@@ -57,8 +58,8 @@ describe("resolveAgentConfig", () => {
     const result = resolveAgentConfig(cfg, "main");
     expect(result).toEqual({
       name: "Main Agent",
-      workspace: "~/godseye",
-      agentDir: "~/.godseye/agents/main",
+      workspace: "~/openclaw",
+      agentDir: "~/.openclaw/agents/main",
       model: "anthropic/claude-sonnet-4-6",
       identity: undefined,
       groupChat: undefined,
@@ -66,6 +67,23 @@ describe("resolveAgentConfig", () => {
       sandbox: undefined,
       tools: undefined,
     });
+  });
+
+  it("prefers per-agent verbose defaults over global defaults", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          verboseDefault: "full",
+        },
+        list: [
+          {
+            id: "main",
+            verboseDefault: "on",
+          },
+        ],
+      },
+    };
+    expect(resolveAgentConfig(cfg, "main")?.verboseDefault).toBe("on");
   });
 
   it("resolves explicit and effective model primary separately", () => {
@@ -76,13 +94,13 @@ describe("resolveAgentConfig", () => {
         },
         list: [{ id: "main" }],
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
     expect(resolveAgentExplicitModelPrimary(cfgWithStringDefault, "main")).toBeUndefined();
     expect(resolveAgentEffectiveModelPrimary(cfgWithStringDefault, "main")).toBe(
       "anthropic/claude-sonnet-4-6",
     );
 
-    const cfgWithObjectDefault: GodsEyeConfig = {
+    const cfgWithObjectDefault: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -96,7 +114,7 @@ describe("resolveAgentConfig", () => {
     expect(resolveAgentExplicitModelPrimary(cfgWithObjectDefault, "main")).toBeUndefined();
     expect(resolveAgentEffectiveModelPrimary(cfgWithObjectDefault, "main")).toBe("openai/gpt-5.4");
 
-    const cfgNoDefaults: GodsEyeConfig = {
+    const cfgNoDefaults: OpenClawConfig = {
       agents: {
         list: [{ id: "main" }],
       },
@@ -106,7 +124,7 @@ describe("resolveAgentConfig", () => {
   });
 
   it("supports per-agent model primary+fallbacks", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -132,7 +150,7 @@ describe("resolveAgentConfig", () => {
     expect(resolveAgentModelFallbacksOverride(cfg, "linus")).toEqual(["openai/gpt-5.4"]);
 
     // If fallbacks isn't present, we don't override the global fallbacks.
-    const cfgNoOverride: GodsEyeConfig = {
+    const cfgNoOverride: OpenClawConfig = {
       agents: {
         list: [
           {
@@ -147,7 +165,7 @@ describe("resolveAgentConfig", () => {
     expect(resolveAgentModelFallbacksOverride(cfgNoOverride, "linus")).toBe(undefined);
 
     // Explicit empty list disables global fallbacks for that agent.
-    const cfgDisable: GodsEyeConfig = {
+    const cfgDisable: OpenClawConfig = {
       agents: {
         list: [
           {
@@ -184,7 +202,7 @@ describe("resolveAgentConfig", () => {
       }),
     ).toEqual([]);
 
-    const cfgInheritDefaults: GodsEyeConfig = {
+    const cfgInheritDefaults: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -235,7 +253,7 @@ describe("resolveAgentConfig", () => {
   });
 
   it("resolves run fallback overrides via shared helper", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -270,7 +288,7 @@ describe("resolveAgentConfig", () => {
   });
 
   it("computes whether any model fallbacks are configured via shared helper", () => {
-    const cfgDefaultsOnly: GodsEyeConfig = {
+    const cfgDefaultsOnly: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -287,7 +305,7 @@ describe("resolveAgentConfig", () => {
       }),
     ).toBe(true);
 
-    const cfgAgentOverrideOnly: GodsEyeConfig = {
+    const cfgAgentOverrideOnly: OpenClawConfig = {
       agents: {
         defaults: {
           model: {
@@ -321,12 +339,12 @@ describe("resolveAgentConfig", () => {
   });
 
   it("should return agent-specific sandbox config", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg = {
       agents: {
         list: [
           {
             id: "work",
-            workspace: "~/godseye-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -337,7 +355,7 @@ describe("resolveAgentConfig", () => {
           },
         ],
       },
-    };
+    } as unknown as OpenClawConfig;
     const result = resolveAgentConfig(cfg, "work");
     expect(result?.sandbox).toEqual({
       mode: "all",
@@ -349,12 +367,12 @@ describe("resolveAgentConfig", () => {
   });
 
   it("should return agent-specific tools config", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
             id: "restricted",
-            workspace: "~/godseye-restricted",
+            workspace: "~/openclaw-restricted",
             tools: {
               allow: ["read"],
               deny: ["exec", "write", "edit"],
@@ -379,12 +397,12 @@ describe("resolveAgentConfig", () => {
   });
 
   it("should return both sandbox and tools config", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
             id: "family",
-            workspace: "~/godseye-family",
+            workspace: "~/openclaw-family",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -403,41 +421,75 @@ describe("resolveAgentConfig", () => {
   });
 
   it("should normalize agent id", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
-        list: [{ id: "main", workspace: "~/godseye" }],
+        list: [{ id: "main", workspace: "~/openclaw" }],
       },
     };
     // Should normalize to "main" (default)
     const result = resolveAgentConfig(cfg, "");
     expect(result).toBeDefined();
-    expect(result?.workspace).toBe("~/godseye");
+    expect(result?.workspace).toBe("~/openclaw");
   });
 
-  it("uses GODSEYE_HOME for default agent workspace", () => {
-    const home = path.join(path.sep, "srv", "godseye-home");
-    vi.stubEnv("GODSEYE_HOME", home);
+  it("uses OPENCLAW_HOME for default agent workspace", () => {
+    const home = path.join(path.sep, "srv", "openclaw-home");
+    vi.stubEnv("OPENCLAW_HOME", home);
 
-    const workspace = resolveAgentWorkspaceDir({} as GodsEyeConfig, "main");
-    expect(workspace).toBe(path.join(path.resolve(home), ".godseye", "workspace"));
+    const workspace = resolveAgentWorkspaceDir({} as OpenClawConfig, "main");
+    expect(workspace).toBe(path.join(path.resolve(home), ".openclaw", "workspace"));
   });
 
-  it("uses GODSEYE_HOME for default agentDir", () => {
-    const home = path.join(path.sep, "srv", "godseye-home");
-    vi.stubEnv("GODSEYE_HOME", home);
-    // Clear state dir so it falls back to GODSEYE_HOME
-    vi.stubEnv("GODSEYE_STATE_DIR", "");
+  it("uses OPENCLAW_HOME for default agentDir", () => {
+    const home = path.join(path.sep, "srv", "openclaw-home");
+    vi.stubEnv("OPENCLAW_HOME", home);
+    // Clear state dir so it falls back to OPENCLAW_HOME
+    vi.stubEnv("OPENCLAW_STATE_DIR", "");
 
-    const agentDir = resolveAgentDir({} as GodsEyeConfig, "main");
-    expect(agentDir).toBe(path.join(path.resolve(home), ".godseye", "agents", "main", "agent"));
+    const agentDir = resolveAgentDir({} as OpenClawConfig, "main");
+    expect(agentDir).toBe(path.join(path.resolve(home), ".openclaw", "agents", "main", "agent"));
+  });
+
+  it("non-default agent uses agents.defaults.workspace as base (#59789)", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: { workspace: "/shared-ws" },
+        list: [{ id: "main" }, { id: "work", default: true, workspace: "/work-ws" }],
+      },
+    };
+    const workspace = resolveAgentWorkspaceDir(cfg, "main");
+    expect(workspace).toBe(path.resolve("/shared-ws/main"));
+  });
+
+  it("default agent without per-agent workspace uses agents.defaults.workspace directly", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: { workspace: "/shared-ws" },
+        list: [{ id: "main" }, { id: "work", default: true }],
+      },
+    };
+    const workspace = resolveAgentWorkspaceDir(cfg, "work");
+    expect(workspace).toBe(path.resolve("/shared-ws"));
+  });
+
+  it("non-default agent without defaults.workspace falls back to stateDir", () => {
+    const stateDir = path.join(path.sep, "tmp", "test-state");
+    vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
+    const cfg: OpenClawConfig = {
+      agents: {
+        list: [{ id: "main" }, { id: "work", default: true, workspace: "/work-ws" }],
+      },
+    };
+    const workspace = resolveAgentWorkspaceDir(cfg, "main");
+    expect(workspace).toBe(path.join(stateDir, "workspace-main"));
   });
 });
 
 describe("resolveAgentIdByWorkspacePath", () => {
   it("returns the most specific workspace match for a directory", () => {
-    const workspaceRoot = `/tmp/godseye-agent-scope-${Date.now()}-root`;
+    const workspaceRoot = `/tmp/openclaw-agent-scope-${Date.now()}-root`;
     const opsWorkspace = `${workspaceRoot}/projects/ops`;
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           { id: "main", workspace: workspaceRoot },
@@ -450,8 +502,8 @@ describe("resolveAgentIdByWorkspacePath", () => {
   });
 
   it("returns undefined when directory has no matching workspace", () => {
-    const workspaceRoot = `/tmp/godseye-agent-scope-${Date.now()}-root`;
-    const cfg: GodsEyeConfig = {
+    const workspaceRoot = `/tmp/openclaw-agent-scope-${Date.now()}-root`;
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           { id: "main", workspace: workspaceRoot },
@@ -461,12 +513,12 @@ describe("resolveAgentIdByWorkspacePath", () => {
     };
 
     expect(
-      resolveAgentIdByWorkspacePath(cfg, `/tmp/godseye-agent-scope-${Date.now()}-unrelated`),
+      resolveAgentIdByWorkspacePath(cfg, `/tmp/openclaw-agent-scope-${Date.now()}-unrelated`),
     ).toBeUndefined();
   });
 
   it("matches workspace paths through symlink aliases", () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-agent-scope-"));
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-agent-scope-"));
     const realWorkspaceRoot = path.join(tempRoot, "real-root");
     const realOpsWorkspace = path.join(realWorkspaceRoot, "projects", "ops");
     const aliasWorkspaceRoot = path.join(tempRoot, "alias-root");
@@ -478,7 +530,7 @@ describe("resolveAgentIdByWorkspacePath", () => {
         process.platform === "win32" ? "junction" : "dir",
       );
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           list: [
             { id: "main", workspace: realWorkspaceRoot },
@@ -501,10 +553,10 @@ describe("resolveAgentIdByWorkspacePath", () => {
 
 describe("resolveAgentIdsByWorkspacePath", () => {
   it("returns matching workspaces ordered by specificity", () => {
-    const workspaceRoot = `/tmp/godseye-agent-scope-${Date.now()}-root`;
+    const workspaceRoot = `/tmp/openclaw-agent-scope-${Date.now()}-root`;
     const opsWorkspace = `${workspaceRoot}/projects/ops`;
     const opsDevWorkspace = `${opsWorkspace}/dev`;
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           { id: "main", workspace: workspaceRoot },
@@ -519,5 +571,46 @@ describe("resolveAgentIdsByWorkspacePath", () => {
       "ops",
       "main",
     ]);
+  });
+});
+
+describe("resolveAgentSkillsFilter", () => {
+  it("inherits agents.defaults.skills when the agent omits skills", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          skills: ["github", "weather"],
+        },
+        list: [{ id: "writer" }],
+      },
+    };
+
+    expect(resolveAgentSkillsFilter(cfg, "writer")).toEqual(["github", "weather"]);
+  });
+
+  it("uses agents.list[].skills as a full replacement", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          skills: ["github", "weather"],
+        },
+        list: [{ id: "writer", skills: ["docs-search"] }],
+      },
+    };
+
+    expect(resolveAgentSkillsFilter(cfg, "writer")).toEqual(["docs-search"]);
+  });
+
+  it("keeps explicit empty agent skills as no skills", () => {
+    const cfg: OpenClawConfig = {
+      agents: {
+        defaults: {
+          skills: ["github", "weather"],
+        },
+        list: [{ id: "writer", skills: [] }],
+      },
+    };
+
+    expect(resolveAgentSkillsFilter(cfg, "writer")).toEqual([]);
   });
 });

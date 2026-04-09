@@ -18,14 +18,9 @@ import {
   upsertChannelPairingRequest,
 } from "godseye/plugin-sdk/conversation-runtime";
 import { recordInboundSession } from "godseye/plugin-sdk/conversation-runtime";
-import { normalizeScpRemoteHost } from "godseye/plugin-sdk/infra-runtime";
+import { normalizeScpRemoteHost } from "godseye/plugin-sdk/host-runtime";
 import { waitForTransportReady } from "godseye/plugin-sdk/infra-runtime";
-import {
-  isInboundPathAllowed,
-  resolveIMessageAttachmentRoots,
-  resolveIMessageRemoteAttachmentRoots,
-} from "godseye/plugin-sdk/media-runtime";
-import { kindFromMime } from "godseye/plugin-sdk/media-runtime";
+import { isInboundPathAllowed, kindFromMime } from "godseye/plugin-sdk/media-runtime";
 import {
   clearHistoryEntriesIfEnabled,
   DEFAULT_GROUP_HISTORY_LIMIT,
@@ -40,6 +35,10 @@ import { truncateUtf16Safe } from "godseye/plugin-sdk/text-runtime";
 import { resolveIMessageAccount } from "../accounts.js";
 import { createIMessageRpcClient } from "../client.js";
 import { DEFAULT_IMESSAGE_PROBE_TIMEOUT_MS } from "../constants.js";
+import {
+  resolveIMessageAttachmentRoots,
+  resolveIMessageRemoteAttachmentRoots,
+} from "../media-contract.js";
 import { probeIMessage } from "../probe.js";
 import { sendMessageIMessage } from "../send.js";
 import { normalizeIMessageHandle } from "../targets.js";
@@ -58,7 +57,7 @@ import type { IMessagePayload, MonitorIMessageOpts } from "./types.js";
 
 /**
  * Try to detect remote host from an SSH wrapper script like:
- *   exec ssh -T godseye@192.168.64.3 /opt/homebrew/bin/imsg "$@"
+ *   exec ssh -T openclaw@192.168.64.3 /opt/homebrew/bin/imsg "$@"
  *   exec ssh -T mac-mini imsg "$@"
  * Returns the user@host or host portion if found, undefined otherwise.
  */
@@ -70,7 +69,7 @@ async function detectRemoteHostFromCliPath(cliPath: string): Promise<string | un
       : cliPath;
     const content = await fs.readFile(expanded, "utf8");
 
-    // Match user@host pattern first (e.g., godseye@192.168.64.3)
+    // Match user@host pattern first (e.g., openclaw@192.168.64.3)
     const userHostMatch = content.match(/\bssh\b[^\n]*?\s+([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/);
     if (userHostMatch) {
       return userHostMatch[1];
@@ -536,3 +535,5 @@ export const __testing = {
   resolveIMessageRuntimeGroupPolicy: resolveOpenProviderRuntimeGroupPolicy,
   resolveDefaultGroupPolicy,
 };
+
+export const resolveIMessageRuntimeGroupPolicy = resolveOpenProviderRuntimeGroupPolicy;

@@ -1,13 +1,17 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createSuiteTempRootTracker } from "../test-helpers/temp-dir.js";
 import { captureEnv } from "../test-utils/env.js";
 import type { UpdateCheckResult } from "./update-check.js";
 
-vi.mock("./godseye-root.js", () => ({
-  resolveGodsEyePackageRoot: vi.fn(),
-}));
+vi.mock("./openclaw-root.js", async () => {
+  const actual = await vi.importActual<typeof import("./openclaw-root.js")>("./openclaw-root.js");
+  return {
+    ...actual,
+    resolveOpenClawPackageRoot: vi.fn(),
+  };
+});
 
 vi.mock("./update-check.js", async () => {
   const parse = (value: string) => value.split(".").map((part) => Number.parseInt(part, 10));
@@ -40,12 +44,11 @@ vi.mock("../process/exec.js", () => ({
 }));
 
 describe("update-startup", () => {
-  let suiteRoot = "";
-  let suiteCase = 0;
+  const suiteRootTracker = createSuiteTempRootTracker({ prefix: "openclaw-update-check-suite-" });
   let tempDir: string;
   let envSnapshot: ReturnType<typeof captureEnv>;
 
-  let resolveGodsEyePackageRoot: (typeof import("./godseye-root.js"))["resolveGodsEyePackageRoot"];
+  let resolveOpenClawPackageRoot: (typeof import("./openclaw-root.js"))["resolveOpenClawPackageRoot"];
   let checkUpdateStatus: (typeof import("./update-check.js"))["checkUpdateStatus"];
   let resolveNpmChannelTag: (typeof import("./update-check.js"))["resolveNpmChannelTag"];
   let runCommandWithTimeout: (typeof import("../process/exec.js"))["runCommandWithTimeout"];
@@ -56,16 +59,15 @@ describe("update-startup", () => {
   let loaded = false;
 
   beforeAll(async () => {
-    suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-update-check-suite-"));
+    await suiteRootTracker.setup();
   });
 
   beforeEach(async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-17T10:00:00Z"));
-    tempDir = path.join(suiteRoot, `case-${++suiteCase}`);
-    await fs.mkdir(tempDir);
-    envSnapshot = captureEnv(["GODSEYE_STATE_DIR", "NODE_ENV", "VITEST"]);
-    process.env.GODSEYE_STATE_DIR = tempDir;
+    tempDir = await suiteRootTracker.make("case");
+    envSnapshot = captureEnv(["OPENCLAW_STATE_DIR", "NODE_ENV", "VITEST"]);
+    process.env.OPENCLAW_STATE_DIR = tempDir;
 
     process.env.NODE_ENV = "test";
 
@@ -74,7 +76,7 @@ describe("update-startup", () => {
 
     // Perf: load mocked modules once (after timers/env are set up).
     if (!loaded) {
-      ({ resolveGodsEyePackageRoot } = await import("./godseye-root.js"));
+      ({ resolveOpenClawPackageRoot } = await import("./openclaw-root.js"));
       ({ checkUpdateStatus, resolveNpmChannelTag } = await import("./update-check.js"));
       ({ runCommandWithTimeout } = await import("../process/exec.js"));
       ({
@@ -85,7 +87,7 @@ describe("update-startup", () => {
       } = await import("./update-startup.js"));
       loaded = true;
     }
-    vi.mocked(resolveGodsEyePackageRoot).mockClear();
+    vi.mocked(resolveOpenClawPackageRoot).mockClear();
     vi.mocked(checkUpdateStatus).mockClear();
     vi.mocked(resolveNpmChannelTag).mockClear();
     vi.mocked(runCommandWithTimeout).mockClear();
@@ -99,11 +101,7 @@ describe("update-startup", () => {
   });
 
   afterAll(async () => {
-    if (suiteRoot) {
-      await fs.rm(suiteRoot, { recursive: true, force: true });
-    }
-    suiteRoot = "";
-    suiteCase = 0;
+    await suiteRootTracker.cleanup();
   });
 
   function mockPackageUpdateStatus(tag = "latest", version = "2.0.0") {
@@ -112,9 +110,9 @@ describe("update-startup", () => {
   }
 
   function mockPackageInstallStatus() {
-    vi.mocked(resolveGodsEyePackageRoot).mockResolvedValue("/opt/godseye");
+    vi.mocked(resolveOpenClawPackageRoot).mockResolvedValue("/opt/openclaw");
     vi.mocked(checkUpdateStatus).mockResolvedValue({
-      root: "/opt/godseye",
+      root: "/opt/openclaw",
       installKind: "package",
       packageManager: "npm",
     } satisfies UpdateCheckResult);
@@ -335,7 +333,7 @@ describe("update-startup", () => {
     expect(runAutoUpdate).toHaveBeenCalledWith({
       channel: "stable",
       timeoutMs: 45 * 60 * 1000,
-      root: "/opt/godseye",
+      root: "/opt/openclaw",
     });
   });
 
@@ -352,7 +350,7 @@ describe("update-startup", () => {
     expect(runAutoUpdate).toHaveBeenCalledWith({
       channel: "beta",
       timeoutMs: 45 * 60 * 1000,
-      root: "/opt/godseye",
+      root: "/opt/openclaw",
     });
   });
 
@@ -381,7 +379,7 @@ describe("update-startup", () => {
     });
 
     const originalArgv = process.argv.slice();
-    process.argv = [process.execPath, "/opt/godseye/dist/entry.js"];
+    process.argv = [process.execPath, "/opt/openclaw/dist/entry.js"];
     try {
       await runAutoUpdateCheckWithDefaults({
         cfg: createBetaAutoUpdateConfig(),
@@ -393,7 +391,7 @@ describe("update-startup", () => {
     expect(runCommandWithTimeout).toHaveBeenCalledWith(
       [
         process.execPath,
-        "/opt/godseye/dist/entry.js",
+        "/opt/openclaw/dist/entry.js",
         "update",
         "--yes",
         "--channel",
@@ -403,7 +401,7 @@ describe("update-startup", () => {
       expect.objectContaining({
         timeoutMs: 45 * 60 * 1000,
         env: expect.objectContaining({
-          GODSEYE_AUTO_UPDATE: "1",
+          OPENCLAW_AUTO_UPDATE: "1",
         }),
       }),
     );

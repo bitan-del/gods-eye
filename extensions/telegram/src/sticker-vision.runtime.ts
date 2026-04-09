@@ -3,8 +3,8 @@ import {
   loadModelCatalog,
   modelSupportsVision,
   resolveDefaultModelForAgent,
-} from "openclaw/plugin-sdk/agent-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+} from "godseye/plugin-sdk/agent-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 
 export async function resolveStickerVisionSupportRuntime(params: {
   cfg: OpenClawConfig;

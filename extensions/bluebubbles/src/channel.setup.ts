@@ -1,4 +1,4 @@
-import type { ChannelPlugin } from "godseye/plugin-sdk/core";
+import type { ChannelPlugin } from "godseye/plugin-sdk/channel-core";
 import { type ResolvedBlueBubblesAccount } from "./accounts.js";
 import {
   bluebubblesCapabilities,

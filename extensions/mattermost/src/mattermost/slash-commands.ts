@@ -12,6 +12,7 @@
  * - On shutdown, cleans up registered commands via DELETE /api/v4/commands/{id}
  */
 
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { MattermostClient } from "./client.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ type MattermostCommandResponse = {
 // ─── Default commands ────────────────────────────────────────────────────────
 
 /**
- * Built-in GodsEye commands to register as native slash commands.
+ * Built-in OpenClaw commands to register as native slash commands.
  * These mirror the text-based commands already handled by the gateway.
  */
 export const DEFAULT_COMMAND_SPECS: MattermostCommandSpec[] = [
@@ -239,7 +240,7 @@ export async function updateMattermostCommand(
 }
 
 /**
- * Register all GodsEye slash commands for a given team.
+ * Register all OpenClaw slash commands for a given team.
  * Skips commands that are already registered with the same trigger + callback URL.
  * Returns the list of newly created command IDs.
  */
@@ -289,7 +290,7 @@ export async function registerSlashCommands(params: {
 
     if (ownedCommands.length === 0 && foreignCommands.length > 0) {
       log?.(
-        `mattermost: trigger /${spec.trigger} already used by non-GodsEye command(s); skipping to avoid mutating external integrations`,
+        `mattermost: trigger /${spec.trigger} already used by non-OpenClaw command(s); skipping to avoid mutating external integrations`,
       );
       continue;
     }
@@ -483,7 +484,7 @@ export function parseSlashCommandPayload(
 }
 
 /**
- * Map the trigger word back to the original GodsEye command name.
+ * Map the trigger word back to the original OpenClaw command name.
  * e.g. "oc_status" -> "/status", "oc_model" -> "/model"
  */
 export function resolveCommandText(
@@ -508,7 +509,9 @@ const DEFAULT_CALLBACK_PATH = "/api/channels/mattermost/command";
  */
 function normalizeCallbackPath(path: string): string {
   const trimmed = path.trim();
-  if (!trimmed) return DEFAULT_CALLBACK_PATH;
+  if (!trimmed) {
+    return DEFAULT_CALLBACK_PATH;
+  }
   return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
 }
 
@@ -519,7 +522,7 @@ export function resolveSlashCommandConfig(
     native: raw?.native ?? "auto",
     nativeSkills: raw?.nativeSkills ?? "auto",
     callbackPath: normalizeCallbackPath(raw?.callbackPath ?? DEFAULT_CALLBACK_PATH),
-    callbackUrl: raw?.callbackUrl?.trim() || undefined,
+    callbackUrl: normalizeOptionalString(raw?.callbackUrl),
   };
 }
 
@@ -532,6 +535,22 @@ export function isSlashCommandsEnabled(config: MattermostSlashCommandConfig): bo
   }
   // "auto" defaults to false for mattermost (opt-in)
   return false;
+}
+
+export function collectMattermostSlashCallbackPaths(raw?: Partial<MattermostSlashCommandConfig>) {
+  const config = resolveSlashCommandConfig(raw);
+  const paths = new Set<string>([config.callbackPath]);
+  if (typeof config.callbackUrl === "string" && config.callbackUrl.trim()) {
+    try {
+      const pathname = new URL(config.callbackUrl).pathname;
+      if (pathname) {
+        paths.add(pathname);
+      }
+    } catch {
+      // Ignore invalid callback URLs and keep the normalized callback path only.
+    }
+  }
+  return [...paths];
 }
 
 /**
@@ -548,7 +567,9 @@ export function resolveCallbackUrl(params: {
 
   const isWildcardBindHost = (rawHost: string): boolean => {
     const trimmed = rawHost.trim();
-    if (!trimmed) return false;
+    if (!trimmed) {
+      return false;
+    }
     const host = trimmed.startsWith("[") && trimmed.endsWith("]") ? trimmed.slice(1, -1) : trimmed;
 
     // NOTE: Wildcard listen hosts are valid bind addresses but are not routable callback

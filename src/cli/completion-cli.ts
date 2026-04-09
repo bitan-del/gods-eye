@@ -4,6 +4,10 @@ import path from "node:path";
 import { Command, Option } from "commander";
 import { resolveStateDir } from "../config/paths.js";
 import { routeLogsToStderr } from "../logging/console.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { pathExists } from "../utils.js";
@@ -23,8 +27,8 @@ function isCompletionShell(value: string): value is CompletionShell {
 }
 
 export function resolveShellFromEnv(env: NodeJS.ProcessEnv = process.env): CompletionShell {
-  const shellPath = env.SHELL?.trim() ?? "";
-  const shellName = shellPath ? path.basename(shellPath).toLowerCase() : "";
+  const shellPath = normalizeOptionalString(env.SHELL) ?? "";
+  const shellName = shellPath ? normalizeLowercaseStringOrEmpty(path.basename(shellPath)) : "";
   if (shellName === "zsh") {
     return "zsh";
   }
@@ -43,7 +47,7 @@ export function resolveShellFromEnv(env: NodeJS.ProcessEnv = process.env): Compl
 function sanitizeCompletionBasename(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) {
-    return "godseye";
+    return "openclaw";
   }
   return trimmed.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
@@ -63,7 +67,7 @@ export function resolveCompletionCachePath(shell: CompletionShell, binName: stri
 /** Check if the completion cache file exists for the given shell. */
 export async function completionCacheExists(
   shell: CompletionShell,
-  binName = "godseye",
+  binName = "openclaw",
 ): Promise<boolean> {
   const cachePath = resolveCompletionCachePath(shell, binName);
   return pathExists(cachePath);
@@ -108,7 +112,7 @@ function formatCompletionSourceLine(
 }
 
 function isCompletionProfileHeader(line: string): boolean {
-  return line.trim() === "# GodsEye Completion";
+  return line.trim() === "# OpenClaw Completion";
 }
 
 function isCompletionProfileLine(line: string, binName: string, cachePath: string | null): boolean {
@@ -123,7 +127,7 @@ function isCompletionProfileLine(line: string, binName: string, cachePath: strin
 
 /** Check if a line uses the slow dynamic completion pattern (source <(...)) */
 function isSlowDynamicCompletionLine(line: string, binName: string): boolean {
-  // Matches patterns like: source <(godseye completion --shell zsh)
+  // Matches patterns like: source <(openclaw completion --shell zsh)
   return (
     line.includes(`<(${binName} completion`) ||
     (line.includes(`${binName} completion`) && line.includes("| source"))
@@ -155,7 +159,7 @@ function updateCompletionProfile(
   }
 
   const trimmed = filtered.join("\n").trimEnd();
-  const block = `# GodsEye Completion\n${sourceLine}`;
+  const block = `# OpenClaw Completion\n${sourceLine}`;
   const next = trimmed ? `${trimmed}\n\n${block}\n` : `${block}\n`;
   return { next, changed: next !== content, hadExisting };
 }
@@ -185,7 +189,7 @@ function getShellProfilePath(shell: CompletionShell): string {
 
 export async function isCompletionInstalled(
   shell: CompletionShell,
-  binName = "godseye",
+  binName = "openclaw",
 ): Promise<boolean> {
   const profilePath = getShellProfilePath(shell);
 
@@ -203,11 +207,11 @@ export async function isCompletionInstalled(
 
 /**
  * Check if the profile uses the slow dynamic completion pattern.
- * Returns true if profile has `source <(godseye completion ...)` instead of cached file.
+ * Returns true if profile has `source <(openclaw completion ...)` instead of cached file.
  */
 export async function usesSlowDynamicCompletion(
   shell: CompletionShell,
-  binName = "godseye",
+  binName = "openclaw",
 ): Promise<boolean> {
   const profilePath = getShellProfilePath(shell);
 
@@ -235,7 +239,7 @@ export function registerCompletionCli(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/completion", "docs.gods-eye.org/cli/completion")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/completion", "docs.openclaw.ai/cli/completion")}\n`,
     )
     .addOption(
       new Option("-s, --shell <shell>", "Shell to generate completion for (default: zsh)").choices(
@@ -245,7 +249,7 @@ export function registerCompletionCli(program: Command) {
     .option("-i, --install", "Install completion script to shell profile")
     .option(
       "--write-state",
-      "Write completion scripts to $GODSEYE_STATE_DIR/completions (no stdout)",
+      "Write completion scripts to $OPENCLAW_STATE_DIR/completions (no stdout)",
     )
     .option("-y, --yes", "Skip confirmation (non-interactive)", false)
     .action(async (options) => {
@@ -272,6 +276,11 @@ export function registerCompletionCli(program: Command) {
         }
         await registerSubCliByName(program, entry.name);
       }
+
+      const { registerPluginCliCommandsFromValidatedConfig } = await import("../plugins/cli.js");
+      await registerPluginCliCommandsFromValidatedConfig(program, undefined, undefined, {
+        mode: "eager",
+      });
 
       if (options.writeState) {
         const writeShells = options.shell ? [shell] : [...COMPLETION_SHELLS];
@@ -300,7 +309,7 @@ export function registerCompletionCli(program: Command) {
     });
 }
 
-export async function installCompletion(shell: string, yes: boolean, binName = "godseye") {
+export async function installCompletion(shell: string, yes: boolean, binName = "openclaw") {
   const home = process.env.HOME || os.homedir();
   let profilePath = "";
   let sourceLine = "";
@@ -401,7 +410,23 @@ _${rootCmd}_root_completion() {
 
 ${generateZshSubcommands(program, rootCmd)}
 
-compdef _${rootCmd}_root_completion ${rootCmd}
+_${rootCmd}_register_completion() {
+  if (( ! $+functions[compdef] )); then
+    return 0
+  fi
+
+  compdef _${rootCmd}_root_completion ${rootCmd}
+  precmd_functions=(\${precmd_functions:#_${rootCmd}_register_completion})
+  unfunction _${rootCmd}_register_completion 2>/dev/null
+}
+
+_${rootCmd}_register_completion
+if (( ! $+functions[compdef] )); then
+  typeset -ga precmd_functions
+  if [[ -z "\${precmd_functions[(r)_${rootCmd}_register_completion]}" ]]; then
+    precmd_functions+=(_${rootCmd}_register_completion)
+  fi
+fi
 `;
   return script;
 }

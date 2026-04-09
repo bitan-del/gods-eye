@@ -1,5 +1,5 @@
-import { buildPluginConfigSchema } from "openclaw/plugin-sdk/core";
-import { z } from "openclaw/plugin-sdk/zod";
+import { buildPluginConfigSchema } from "godseye/plugin-sdk/core";
+import { z } from "godseye/plugin-sdk/zod";
 import type { OpenClawPluginConfigSchema } from "../runtime-api.js";
 
 export const ACPX_PERMISSION_MODES = ["approve-all", "approve-reads", "deny-all"] as const;

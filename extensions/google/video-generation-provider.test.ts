@@ -23,7 +23,7 @@ vi.mock("@google/genai", () => ({
   GoogleGenAI: GoogleGenAIMock,
 }));
 
-import * as providerAuthRuntime from "openclaw/plugin-sdk/provider-auth-runtime";
+import * as providerAuthRuntime from "godseye/plugin-sdk/provider-auth-runtime";
 import { buildGoogleVideoGenerationProvider } from "./video-generation-provider.js";
 
 describe("google video generation provider", () => {

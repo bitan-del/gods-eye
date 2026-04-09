@@ -1,9 +1,10 @@
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import type { RuntimeEnv } from "../runtime-api.js";
 import { probeFeishu } from "./probe.js";
 import type { ResolvedFeishuAccount } from "./types.js";
 
 const FEISHU_STARTUP_BOT_INFO_TIMEOUT_DEFAULT_MS = 30_000;
-const FEISHU_STARTUP_BOT_INFO_TIMEOUT_ENV = "GODSEYE_FEISHU_STARTUP_PROBE_TIMEOUT_MS";
+const FEISHU_STARTUP_BOT_INFO_TIMEOUT_ENV = "OPENCLAW_FEISHU_STARTUP_PROBE_TIMEOUT_MS";
 
 function resolveStartupProbeTimeoutMs(): number {
   const raw = process.env[FEISHU_STARTUP_BOT_INFO_TIMEOUT_ENV];
@@ -33,13 +34,12 @@ export type FeishuMonitorBotIdentity = {
 };
 
 function isTimeoutErrorMessage(message: string | undefined): boolean {
-  return message?.toLowerCase().includes("timeout") || message?.toLowerCase().includes("timed out")
-    ? true
-    : false;
+  const lower = normalizeLowercaseStringOrEmpty(message);
+  return lower.includes("timeout") || lower.includes("timed out");
 }
 
 function isAbortErrorMessage(message: string | undefined): boolean {
-  return message?.toLowerCase().includes("aborted") ?? false;
+  return normalizeLowercaseStringOrEmpty(message).includes("aborted");
 }
 
 export async function fetchBotIdentityForMonitor(

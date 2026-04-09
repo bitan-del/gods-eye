@@ -1,5 +1,5 @@
 import { formatCliCommand } from "../cli/command-format.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { readConfigFileSnapshot } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
@@ -14,13 +14,17 @@ export async function runNonInteractiveSetup(
   const snapshot = await readConfigFileSnapshot();
   if (snapshot.exists && !snapshot.valid) {
     runtime.error(
-      `Config invalid. Run \`${formatCliCommand("godseye doctor")}\` to repair it, then re-run setup.`,
+      `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run setup.`,
     );
     runtime.exit(1);
     return;
   }
 
-  const baseConfig: GodsEyeConfig = snapshot.valid ? (snapshot.exists ? snapshot.config : {}) : {};
+  const baseConfig: OpenClawConfig = snapshot.valid
+    ? snapshot.exists
+      ? (snapshot.sourceConfig ?? snapshot.config)
+      : {}
+    : {};
   const mode = opts.mode ?? "local";
   if (mode !== "local" && mode !== "remote") {
     runtime.error(`Invalid --mode "${String(mode)}" (use local|remote).`);
@@ -29,9 +33,9 @@ export async function runNonInteractiveSetup(
   }
 
   if (mode === "remote") {
-    await runNonInteractiveRemoteSetup({ opts, runtime, baseConfig });
+    await runNonInteractiveRemoteSetup({ opts, runtime, baseConfig, baseHash: snapshot.hash });
     return;
   }
 
-  await runNonInteractiveLocalSetup({ opts, runtime, baseConfig });
+  await runNonInteractiveLocalSetup({ opts, runtime, baseConfig, baseHash: snapshot.hash });
 }

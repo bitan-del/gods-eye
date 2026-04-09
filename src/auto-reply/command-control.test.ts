@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../test-utils/channel-plugins.js";
 import { resolveCommandAuthorization } from "./command-auth.js";
@@ -56,7 +56,7 @@ describe("resolveCommandAuthorization", () => {
   }) {
     const cfg = {
       channels: { whatsapp: { allowFrom: params.allowFrom } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const ctx = {
       Provider: "whatsapp",
       Surface: "whatsapp",
@@ -128,7 +128,7 @@ describe("resolveCommandAuthorization", () => {
     const cfg = {
       commands: { ownerAllowFrom: ["whatsapp:+15551234567"] },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const ownerCtx = {
       Provider: "whatsapp",
@@ -159,6 +159,39 @@ describe("resolveCommandAuthorization", () => {
     expect(otherAuth.isAuthorizedSender).toBe(false);
   });
 
+  it("uses explicit owner allowlist when allowFrom is empty", () => {
+    const cfg = {
+      commands: { ownerAllowFrom: ["whatsapp:+15551234567"] },
+      channels: { whatsapp: {} },
+    } as OpenClawConfig;
+
+    const ownerAuth = resolveCommandAuthorization({
+      ctx: {
+        Provider: "whatsapp",
+        Surface: "whatsapp",
+        From: "whatsapp:+15551234567",
+        SenderE164: "+15551234567",
+      } as MsgContext,
+      cfg,
+      commandAuthorized: true,
+    });
+    expect(ownerAuth.senderIsOwner).toBe(true);
+    expect(ownerAuth.isAuthorizedSender).toBe(true);
+
+    const otherAuth = resolveCommandAuthorization({
+      ctx: {
+        Provider: "whatsapp",
+        Surface: "whatsapp",
+        From: "whatsapp:+19995551234",
+        SenderE164: "+19995551234",
+      } as MsgContext,
+      cfg,
+      commandAuthorized: true,
+    });
+    expect(otherAuth.senderIsOwner).toBe(false);
+    expect(otherAuth.isAuthorizedSender).toBe(false);
+  });
+
   it("uses owner allowlist override from context when configured", () => {
     setActivePluginRegistry(
       createTestRegistry([
@@ -174,7 +207,7 @@ describe("resolveCommandAuthorization", () => {
     );
     const cfg = {
       channels: { discord: {} },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const ctx = {
       Provider: "discord",
@@ -194,16 +227,37 @@ describe("resolveCommandAuthorization", () => {
     expect(auth.ownerList).toEqual(["123"]);
   });
 
+  it("suppresses inherited owner status when the context forbids it", () => {
+    const cfg = {
+      channels: { telegram: { allowFrom: ["owner-123"] } },
+    } as OpenClawConfig;
+
+    const auth = resolveCommandAuthorization({
+      ctx: {
+        Provider: "exec-event",
+        Surface: "telegram",
+        OriginatingChannel: "telegram",
+        From: "owner-123",
+        To: "owner-123",
+        ForceSenderIsOwnerFalse: true,
+      } as MsgContext,
+      cfg,
+      commandAuthorized: true,
+    });
+
+    expect(auth.senderIsOwner).toBe(false);
+  });
+
   it("does not infer a provider from channel allowlists for webchat command contexts", () => {
     const cfg = {
       channels: { whatsapp: { allowFrom: ["+15551234567"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const ctx = {
       Provider: "webchat",
       Surface: "webchat",
       OriginatingChannel: "webchat",
-      SenderId: "godseye-control-ui",
+      SenderId: "openclaw-control-ui",
     } as MsgContext;
 
     const auth = resolveCommandAuthorization({
@@ -216,13 +270,35 @@ describe("resolveCommandAuthorization", () => {
     expect(auth.isAuthorizedSender).toBe(true);
   });
 
+  it("preserves external channel command auth in mixed webchat contexts", () => {
+    const cfg = {
+      commands: { allowFrom: { whatsapp: ["+15551234567"] } },
+      channels: { whatsapp: { allowFrom: ["+15551234567"] } },
+    } as OpenClawConfig;
+
+    const auth = resolveCommandAuthorization({
+      ctx: {
+        Provider: "webchat",
+        Surface: "whatsapp",
+        OriginatingChannel: "whatsapp",
+        From: "whatsapp:+19995551234",
+        SenderE164: "+19995551234",
+      } as MsgContext,
+      cfg,
+      commandAuthorized: true,
+    });
+
+    expect(auth.providerId).toBe("whatsapp");
+    expect(auth.isAuthorizedSender).toBe(false);
+  });
+
   it("falls back to channel allowFrom when provider allowlist resolution throws", () => {
     registerAllowFromPlugins(
       createThrowingAllowFromPlugin("telegram", "channels.telegram.botToken: unresolved SecretRef"),
     );
     const cfg = {
       channels: { telegram: { allowFrom: ["123"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const auth = resolveCommandAuthorization({
       ctx: {
@@ -248,7 +324,7 @@ describe("resolveCommandAuthorization", () => {
         },
       },
       channels: { whatsapp: { allowFrom: ["+different"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     function makeWhatsAppContext(senderId: string): MsgContext {
       return {
@@ -305,7 +381,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       // User in global list but not in whatsapp-specific list
       const globalUserCtx = {
@@ -344,7 +420,7 @@ describe("resolveCommandAuthorization", () => {
     it("falls back to channel allowFrom when commands.allowFrom not set", () => {
       const cfg = {
         channels: { whatsapp: { allowFrom: ["+15551234567"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const authorizedCtx = {
         Provider: "whatsapp",
@@ -370,7 +446,7 @@ describe("resolveCommandAuthorization", () => {
           },
         },
         channels: { whatsapp: { allowFrom: ["+specific"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const anyUserCtx = {
         Provider: "whatsapp",
@@ -395,7 +471,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["channel:123456789012345678"],
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -419,7 +495,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["123456789012345678"],
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -444,7 +520,7 @@ describe("resolveCommandAuthorization", () => {
             "*": ["120363411111111111@g.us"],
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -468,7 +544,7 @@ describe("resolveCommandAuthorization", () => {
             discord: ["user:123", "<@!456>", "pk:member-1"],
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const userAuth = resolveCommandAuthorization({
         ctx: makeDiscordContext("123"),
@@ -521,7 +597,7 @@ describe("resolveCommandAuthorization", () => {
             allowFrom: ["123"],
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const auth = resolveCommandAuthorization({
         ctx: {
@@ -556,7 +632,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             telegram: {},
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         commandAuthorized: true,
       });
 
@@ -582,7 +658,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             slack: {},
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         commandAuthorized: false,
       });
 
@@ -610,7 +686,7 @@ describe("resolveCommandAuthorization", () => {
               allowFrom: ["123"],
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         commandAuthorized: false,
       });
 
@@ -642,7 +718,7 @@ describe("resolveCommandAuthorization", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         commandAuthorized: true,
       });
 
@@ -663,7 +739,7 @@ describe("resolveCommandAuthorization", () => {
           channels: {
             discord: {},
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         commandAuthorized: true,
       });
 
@@ -687,7 +763,7 @@ describe("resolveCommandAuthorization", () => {
                 allowFrom: ["123"],
               },
             },
-          } as GodsEyeConfig,
+          } as OpenClawConfig,
           commandAuthorized: true,
         });
         expect(warn).toHaveBeenCalledTimes(1);
@@ -700,7 +776,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("grants senderIsOwner for internal channel with operator.admin scope", () => {
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
     const ctx = {
       Provider: "webchat",
       Surface: "webchat",
@@ -715,7 +791,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("does not grant senderIsOwner for internal channel without admin scope", () => {
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
     const ctx = {
       Provider: "webchat",
       Surface: "webchat",
@@ -730,7 +806,7 @@ describe("resolveCommandAuthorization", () => {
   });
 
   it("does not grant senderIsOwner for external channel even with admin scope", () => {
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
     const ctx = {
       Provider: "telegram",
       Surface: "telegram",
@@ -825,13 +901,49 @@ describe("control command parsing", () => {
   it("ignores telegram commands addressed to other bots", () => {
     expect(
       hasControlCommand("/help@otherbot", undefined, {
-        botUsername: "godseye",
+        botUsername: "openclaw",
       }),
     ).toBe(false);
     expect(
-      hasControlCommand("/help@godseye", undefined, {
-        botUsername: "godseye",
+      hasControlCommand("/help@openclaw", undefined, {
+        botUsername: "openclaw",
       }),
     ).toBe(true);
+  });
+
+  it("detects commands wrapped in inbound metadata blocks", () => {
+    const metaWrapped = [
+      "Conversation info (untrusted metadata):",
+      "```json",
+      '{"message_id":"msg-abc","chat_id":"chat-123"}',
+      "```",
+      "",
+      "/model spark",
+    ].join("\n");
+    expect(hasControlCommand(metaWrapped)).toBe(true);
+  });
+
+  it("detects /new command after metadata prefix", () => {
+    const metaWrapped = [
+      "Sender (untrusted metadata):",
+      "```json",
+      '{"name":"Alice","id":"user-1"}',
+      "```",
+      "",
+      "/new spark",
+    ].join("\n");
+    expect(hasControlCommand(metaWrapped)).toBe(true);
+  });
+
+  it("detects /status command after timestamp + metadata prefix", () => {
+    const metaWrapped = [
+      "[Wed 2026-03-11 23:51 PDT] Conversation info (untrusted metadata):",
+      "```json",
+      '{"chat_id":"chat-123"}',
+      "```",
+      "",
+      "/status",
+    ].join("\n");
+    expect(hasControlCommand(metaWrapped)).toBe(true);
   });
 });

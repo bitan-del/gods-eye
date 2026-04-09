@@ -21,7 +21,7 @@ vi.mock("./logger.js", () => ({
 
 let loadConfigCalls = 0;
 let originalIsTty: boolean | undefined;
-let originalGodsEyeTestConsole: string | undefined;
+let originalOpenClawTestConsole: string | undefined;
 let snapshot: ConsoleSnapshot;
 let logging: typeof import("../logging.js");
 let state: typeof import("./state.js");
@@ -37,8 +37,8 @@ beforeEach(() => {
   shouldSkipMutatingLoggingConfigReadMock.mockReturnValue(false);
   snapshot = captureConsoleSnapshot();
   originalIsTty = process.stdout.isTTY;
-  originalGodsEyeTestConsole = process.env.GODSEYE_TEST_CONSOLE;
-  process.env.GODSEYE_TEST_CONSOLE = "1";
+  originalOpenClawTestConsole = process.env.OPENCLAW_TEST_CONSOLE;
+  process.env.OPENCLAW_TEST_CONSOLE = "1";
   Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
 });
 
@@ -49,10 +49,10 @@ afterEach(() => {
   console.error = snapshot.error;
   console.debug = snapshot.debug;
   console.trace = snapshot.trace;
-  if (originalGodsEyeTestConsole === undefined) {
-    delete process.env.GODSEYE_TEST_CONSOLE;
+  if (originalOpenClawTestConsole === undefined) {
+    delete process.env.OPENCLAW_TEST_CONSOLE;
   } else {
-    process.env.GODSEYE_TEST_CONSOLE = originalGodsEyeTestConsole;
+    process.env.OPENCLAW_TEST_CONSOLE = originalOpenClawTestConsole;
   }
   Object.defineProperty(process.stdout, "isTTY", { value: originalIsTty, configurable: true });
   logging.setConsoleConfigLoaderForTests();

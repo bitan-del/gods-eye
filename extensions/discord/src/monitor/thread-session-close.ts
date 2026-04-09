@@ -1,5 +1,6 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { resolveStorePath, updateSessionStore } from "godseye/plugin-sdk/config-runtime";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
 
 /**
  * Marks every session entry in the store whose key contains {@link threadId}
@@ -11,13 +12,13 @@ import { resolveStorePath, updateSessionStore } from "godseye/plugin-sdk/config-
  * any on-disk transcript history.
  */
 export async function closeDiscordThreadSessions(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   threadId: string;
 }): Promise<number> {
   const { cfg, accountId, threadId } = params;
 
-  const normalizedThreadId = threadId.trim().toLowerCase();
+  const normalizedThreadId = normalizeOptionalLowercaseString(threadId) ?? "";
   if (!normalizedThreadId) {
     return 0;
   }

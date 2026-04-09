@@ -1,7 +1,7 @@
 import type { App } from "@slack/bolt";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../../src/config/config.js";
-import type { RuntimeEnv } from "../../../../src/runtime.js";
 import { createSlackMonitorContext } from "./context.js";
 
 function createTestContext() {
@@ -9,7 +9,7 @@ function createTestContext() {
     cfg: {
       channels: { slack: { enabled: true } },
       session: { dmScope: "main" },
-    } as GodsEyeConfig,
+    } as OpenClawConfig,
     accountId: "default",
     botToken: "xoxb-test",
     app: { client: {} } as App,
@@ -34,9 +34,10 @@ function createTestContext() {
     replyToMode: "off",
     threadHistoryScope: "thread",
     threadInheritParent: false,
+    threadRequireExplicitMention: false,
     slashCommand: {
       enabled: true,
-      name: "godseye",
+      name: "openclaw",
       ephemeral: true,
       sessionPrefix: "slack:slash",
     },

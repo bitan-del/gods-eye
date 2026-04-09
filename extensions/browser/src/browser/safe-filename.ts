@@ -1,5 +1,5 @@
 import path from "node:path";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 
 export function sanitizeUntrustedFileName(fileName: string, fallbackName: string): string {
   const trimmed = normalizeOptionalString(fileName) ?? "";

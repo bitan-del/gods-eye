@@ -3,11 +3,11 @@ import { shortenText } from "./text-format.js";
 
 describe("shortenText", () => {
   it("returns original text when it fits", () => {
-    expect(shortenText("godseye", 16)).toBe("godseye");
+    expect(shortenText("openclaw", 16)).toBe("openclaw");
   });
 
   it("truncates and appends ellipsis when over limit", () => {
-    expect(shortenText("godseye-status-output", 10)).toBe("godseye-…");
+    expect(shortenText("openclaw-status-output", 10)).toBe("openclaw-…");
   });
 
   it("counts multi-byte characters correctly", () => {

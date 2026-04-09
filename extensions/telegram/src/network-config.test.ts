@@ -1,22 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { TelegramNetworkConfig } from "../../../src/config/types.telegram.js";
+import type { TelegramNetworkConfig } from "godseye/plugin-sdk/config-runtime";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("godseye/plugin-sdk/infra-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/infra-runtime")>();
-  return {
-    ...actual,
-    isWSL2Sync: vi.fn(() => false),
-  };
-});
+vi.mock("godseye/plugin-sdk/runtime-env", () => ({
+  isTruthyEnvValue: (value: string | undefined) =>
+    typeof value === "string" && /^(1|true|yes|on)$/i.test(value.trim()),
+  isWSL2Sync: vi.fn(() => false),
+}));
 
-let isWSL2Sync: typeof import("godseye/plugin-sdk/infra-runtime").isWSL2Sync;
+let isWSL2Sync: typeof import("godseye/plugin-sdk/runtime-env").isWSL2Sync;
 let resetTelegramNetworkConfigStateForTests: typeof import("./network-config.js").resetTelegramNetworkConfigStateForTests;
 let resolveTelegramAutoSelectFamilyDecision: typeof import("./network-config.js").resolveTelegramAutoSelectFamilyDecision;
 let resolveTelegramDnsResultOrderDecision: typeof import("./network-config.js").resolveTelegramDnsResultOrderDecision;
 
 async function loadModule() {
-  vi.resetModules();
-  ({ isWSL2Sync } = await import("godseye/plugin-sdk/infra-runtime"));
+  ({ isWSL2Sync } = await import("godseye/plugin-sdk/runtime-env"));
   ({
     resetTelegramNetworkConfigStateForTests,
     resolveTelegramAutoSelectFamilyDecision,
@@ -25,8 +22,12 @@ async function loadModule() {
 }
 
 describe("resolveTelegramAutoSelectFamilyDecision", () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
     await loadModule();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   afterEach(async () => {
@@ -41,38 +42,38 @@ describe("resolveTelegramAutoSelectFamilyDecision", () => {
     {
       name: "prefers env enable over env disable",
       env: {
-        GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1",
-        GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1",
+        OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1",
+        OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1",
       },
       expected: {
         value: true,
-        source: "env:GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
+        source: "env:OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
       },
     },
     {
       name: "uses env disable when set",
-      env: { GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1" },
+      env: { OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1" },
       expected: {
         value: false,
-        source: "env:GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY",
+        source: "env:OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY",
       },
     },
     {
       name: "prefers env enable over config",
-      env: { GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1" },
+      env: { OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1" },
       network: { autoSelectFamily: false },
       expected: {
         value: true,
-        source: "env:GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
+        source: "env:OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
       },
     },
     {
       name: "prefers env disable over config",
-      env: { GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1" },
+      env: { OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY: "1" },
       network: { autoSelectFamily: true },
       expected: {
         value: false,
-        source: "env:GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY",
+        source: "env:OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY",
       },
     },
     {
@@ -118,10 +119,10 @@ describe("resolveTelegramAutoSelectFamilyDecision", () => {
       },
       {
         name: "respects env override on WSL2",
-        env: { GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1" },
+        env: { OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY: "1" },
         expected: {
           value: true,
-          source: "env:GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
+          source: "env:OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY",
         },
       },
       {
@@ -132,7 +133,7 @@ describe("resolveTelegramAutoSelectFamilyDecision", () => {
       },
     ])("$name", ({ env, network, expected, wsl2 = true }) => {
       if (!isWSL2Sync) {
-        throw new Error("infra-runtime mock not loaded");
+        throw new Error("runtime-env mock not loaded");
       }
       vi.mocked(isWSL2Sync).mockReturnValue(wsl2);
       const decision = resolveTelegramAutoSelectFamilyDecision({
@@ -155,27 +156,27 @@ describe("resolveTelegramAutoSelectFamilyDecision", () => {
 });
 
 describe("resolveTelegramDnsResultOrderDecision", () => {
-  beforeEach(async () => {
-    await loadModule();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it.each([
     {
       name: "uses env override when provided",
-      env: { GODSEYE_TELEGRAM_DNS_RESULT_ORDER: "verbatim" },
+      env: { OPENCLAW_TELEGRAM_DNS_RESULT_ORDER: "verbatim" },
       nodeMajor: 22,
       expected: {
         value: "verbatim",
-        source: "env:GODSEYE_TELEGRAM_DNS_RESULT_ORDER",
+        source: "env:OPENCLAW_TELEGRAM_DNS_RESULT_ORDER",
       },
     },
     {
       name: "normalizes trimmed env values",
-      env: { GODSEYE_TELEGRAM_DNS_RESULT_ORDER: "  IPV4FIRST  " },
+      env: { OPENCLAW_TELEGRAM_DNS_RESULT_ORDER: "  IPV4FIRST  " },
       nodeMajor: 20,
       expected: {
         value: "ipv4first",
-        source: "env:GODSEYE_TELEGRAM_DNS_RESULT_ORDER",
+        source: "env:OPENCLAW_TELEGRAM_DNS_RESULT_ORDER",
       },
     },
     {
@@ -194,14 +195,14 @@ describe("resolveTelegramDnsResultOrderDecision", () => {
     },
     {
       name: "ignores invalid env values and falls back to config",
-      env: { GODSEYE_TELEGRAM_DNS_RESULT_ORDER: "bogus" },
+      env: { OPENCLAW_TELEGRAM_DNS_RESULT_ORDER: "bogus" },
       network: { dnsResultOrder: "ipv4first" },
       nodeMajor: 20,
       expected: { value: "ipv4first", source: "config" },
     },
     {
       name: "ignores invalid env and config values before applying Node 22 default",
-      env: { GODSEYE_TELEGRAM_DNS_RESULT_ORDER: "bogus" },
+      env: { OPENCLAW_TELEGRAM_DNS_RESULT_ORDER: "bogus" },
       network: { dnsResultOrder: "invalid" } as TelegramNetworkConfig & { dnsResultOrder: string },
       nodeMajor: 22,
       expected: { value: "ipv4first", source: "default-node22" },

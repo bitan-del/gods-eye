@@ -1,6 +1,6 @@
 import "./test-helpers.js";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import {
   monitorWebChannelWithCapture,
   sendWebDirectInboundAndCollectSessionKeys,
@@ -28,7 +28,7 @@ describe("broadcast groups", () => {
       broadcast: {
         "+1000": ["alfred", "missing"],
       },
-    } satisfies GodsEyeConfig);
+    } satisfies OpenClawConfig);
 
     const { seen, resolver } = await sendWebDirectInboundAndCollectSessionKeys();
 
@@ -48,7 +48,7 @@ describe("broadcast groups", () => {
         strategy: "sequential",
         "+1000": ["alfred", "baerbel"],
       },
-    } satisfies GodsEyeConfig);
+    } satisfies OpenClawConfig);
 
     const { seen, resolver } = await sendWebDirectInboundAndCollectSessionKeys();
 
@@ -69,7 +69,7 @@ describe("broadcast groups", () => {
         strategy: "sequential",
         "123@g.us": ["alfred", "baerbel"],
       },
-    } satisfies GodsEyeConfig);
+    } satisfies OpenClawConfig);
 
     const resolver = vi.fn().mockResolvedValue({ text: "ok" });
 
@@ -149,7 +149,7 @@ describe("broadcast groups", () => {
         strategy: "parallel",
         "+1000": ["alfred", "baerbel"],
       },
-    } satisfies GodsEyeConfig);
+    } satisfies OpenClawConfig);
 
     const sendMedia = vi.fn();
     const reply = vi.fn().mockResolvedValue(undefined);

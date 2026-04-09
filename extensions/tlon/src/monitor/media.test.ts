@@ -1,9 +1,9 @@
-import { MAX_IMAGE_BYTES } from "openclaw/plugin-sdk/media-runtime";
+import { MAX_IMAGE_BYTES } from "godseye/plugin-sdk/media-runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("openclaw/plugin-sdk/media-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/media-runtime")>(
-    "openclaw/plugin-sdk/media-runtime",
+vi.mock("godseye/plugin-sdk/media-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/media-runtime")>(
+    "godseye/plugin-sdk/media-runtime",
   );
   return {
     ...actual,
@@ -14,7 +14,7 @@ vi.mock("openclaw/plugin-sdk/media-runtime", async () => {
 
 describe("tlon monitor media", () => {
   async function loadMediaModule() {
-    const mediaRuntime = await import("openclaw/plugin-sdk/media-runtime");
+    const mediaRuntime = await import("godseye/plugin-sdk/media-runtime");
     const mediaModule = await import("./media.js");
     return {
       fetchRemoteMedia: vi.mocked(mediaRuntime.fetchRemoteMedia),

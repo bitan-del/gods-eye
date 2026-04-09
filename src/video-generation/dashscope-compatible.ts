@@ -2,7 +2,7 @@ import {
   assertOkOrThrowHttpError,
   fetchWithTimeout,
   postJsonRequest,
-} from "openclaw/plugin-sdk/provider-http";
+} from "godseye/plugin-sdk/provider-http";
 import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import type {
   GeneratedVideoAsset,

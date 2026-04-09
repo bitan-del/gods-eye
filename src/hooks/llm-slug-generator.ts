@@ -14,8 +14,9 @@ import {
 import { DEFAULT_PROVIDER, DEFAULT_MODEL } from "../agents/defaults.js";
 import { parseModelRef } from "../agents/model-selection.js";
 import { runEmbeddedPiAgent } from "../agents/pi-embedded.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 
 const log = createSubsystemLogger("llm-slug-generator");
 
@@ -24,7 +25,7 @@ const log = createSubsystemLogger("llm-slug-generator");
  */
 export async function generateSlugViaLLM(params: {
   sessionContent: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 }): Promise<string | null> {
   let tempSessionFile: string | null = null;
 
@@ -34,7 +35,7 @@ export async function generateSlugViaLLM(params: {
     const agentDir = resolveAgentDir(params.cfg, agentId);
 
     // Create a temporary session file for this one-off LLM call
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-slug-"));
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-slug-"));
     tempSessionFile = path.join(tempDir, "session.jsonl");
 
     const prompt = `Based on this conversation, generate a short 1-2 word filename slug (lowercase, hyphen-separated, no file extension).
@@ -70,9 +71,7 @@ Reply with ONLY the slug, nothing else. Examples: "vendor-pitch", "api-design", 
       const text = result.payloads[0]?.text;
       if (text) {
         // Clean up the response - extract just the slug
-        const slug = text
-          .trim()
-          .toLowerCase()
+        const slug = normalizeLowercaseStringOrEmpty(text)
           .replace(/[^a-z0-9-]/g, "-")
           .replace(/-+/g, "-")
           .replace(/^-|-$/g, "")

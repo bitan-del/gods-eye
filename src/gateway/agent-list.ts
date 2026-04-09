@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { SessionScope } from "../config/sessions.js";
 import { normalizeAgentId, normalizeMainKey } from "../routing/session-key.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 
 export type GatewayAgentListRow = {
   id: string;
@@ -25,7 +26,7 @@ function listExistingAgentIdsFromDisk(): string[] {
   }
 }
 
-function listConfiguredAgentIds(cfg: GodsEyeConfig): string[] {
+function listConfiguredAgentIds(cfg: OpenClawConfig): string[] {
   const ids = new Set<string>();
   const defaultId = normalizeAgentId(resolveDefaultAgentId(cfg));
   ids.add(defaultId);
@@ -47,7 +48,7 @@ function listConfiguredAgentIds(cfg: GodsEyeConfig): string[] {
     : sorted;
 }
 
-export function listGatewayAgentsBasic(cfg: GodsEyeConfig): {
+export function listGatewayAgentsBasic(cfg: OpenClawConfig): {
   defaultId: string;
   mainKey: string;
   scope: SessionScope;
@@ -62,7 +63,7 @@ export function listGatewayAgentsBasic(cfg: GodsEyeConfig): {
       continue;
     }
     configuredById.set(normalizeAgentId(entry.id), {
-      name: typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : undefined,
+      name: normalizeOptionalString(entry.name),
     });
   }
   const explicitIds = new Set(

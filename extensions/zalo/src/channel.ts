@@ -1,10 +1,18 @@
-import { describeAccountSnapshot } from "godseye/plugin-sdk/account-helpers";
+import { describeWebhookAccountSnapshot } from "godseye/plugin-sdk/account-helpers";
+import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
+import { formatAllowFromLowercase } from "godseye/plugin-sdk/allow-from";
 import {
   adaptScopedAccountAccessor,
   createScopedChannelConfigAdapter,
   createScopedDmSecurityResolver,
   mapAllowFromEntries,
 } from "godseye/plugin-sdk/channel-config-helpers";
+import type { ChannelAccountSnapshot } from "godseye/plugin-sdk/channel-contract";
+import {
+  buildChannelConfigSchema,
+  createChatChannelPlugin,
+  type ChannelPlugin,
+} from "godseye/plugin-sdk/channel-core";
 import {
   buildOpenGroupPolicyRestrictSendersWarning,
   buildOpenGroupPolicyWarning,
@@ -14,15 +22,21 @@ import {
   createEmptyChannelResult,
   createRawChannelSendResultAdapter,
 } from "godseye/plugin-sdk/channel-send-result";
+import { buildTokenChannelStatusSummary } from "godseye/plugin-sdk/channel-status";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { createStaticReplyToModeResolver } from "godseye/plugin-sdk/conversation-runtime";
-import { createChatChannelPlugin } from "godseye/plugin-sdk/core";
 import { createChannelDirectoryAdapter } from "godseye/plugin-sdk/directory-runtime";
 import { listResolvedDirectoryUserEntriesFromAllowFrom } from "godseye/plugin-sdk/directory-runtime";
 import { createLazyRuntimeModule } from "godseye/plugin-sdk/lazy-runtime";
 import {
+  isNumericTargetId,
+  sendPayloadWithChunkedTextAndMedia,
+} from "godseye/plugin-sdk/reply-payload";
+import {
   createComputedAccountStatusAdapter,
   createDefaultChannelRuntimeState,
 } from "godseye/plugin-sdk/status-helpers";
+import { chunkTextForOutbound } from "godseye/plugin-sdk/text-chunking";
 import {
   listZaloAccountIds,
   resolveDefaultZaloAccountId,
@@ -30,24 +44,12 @@ import {
   type ResolvedZaloAccount,
 } from "./accounts.js";
 import { zaloMessageActions } from "./actions.js";
+import { zaloApprovalAuth } from "./approval-auth.js";
 import { ZaloConfigSchema } from "./config-schema.js";
 import type { ZaloProbeResult } from "./probe.js";
-import {
-  buildChannelConfigSchema,
-  buildTokenChannelStatusSummary,
-  DEFAULT_ACCOUNT_ID,
-  chunkTextForOutbound,
-  formatAllowFromLowercase,
-  listDirectoryUserEntriesFromAllowFrom,
-  isNumericTargetId,
-  sendPayloadWithChunkedTextAndMedia,
-  type ChannelAccountSnapshot,
-  type ChannelPlugin,
-  type GodsEyeConfig,
-} from "./runtime-api.js";
+import { collectRuntimeConfigAssignments, secretTargetRegistryEntries } from "./secret-contract.js";
 import { resolveZaloOutboundSessionRoute } from "./session-route.js";
-import { zaloSetupAdapter } from "./setup-core.js";
-import { zaloSetupWizard } from "./setup-surface.js";
+import { createZaloSetupWizardProxy, zaloSetupAdapter } from "./setup-core.js";
 import { collectZaloStatusIssues } from "./status-issues.js";
 
 const meta = {
@@ -71,6 +73,9 @@ function normalizeZaloMessagingTarget(raw: string): string | undefined {
 }
 
 const loadZaloChannelRuntime = createLazyRuntimeModule(() => import("./channel.runtime.js"));
+const zaloSetupWizard = createZaloSetupWizardProxy(
+  async () => (await import("./setup-surface.js")).zaloSetupWizard,
+);
 const zaloTextChunkLimit = 2000;
 
 const zaloRawSendResultAdapter = createRawChannelSendResultAdapter({
@@ -116,7 +121,7 @@ const resolveZaloDmPolicy = createScopedDmSecurityResolver<ResolvedZaloAccount>(
 });
 
 const collectZaloSecurityWarnings = createOpenProviderGroupPolicyWarningCollector<{
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedZaloAccount;
 }>({
   providerConfigPresent: (cfg) => cfg.channels?.zalo !== undefined,
@@ -172,13 +177,19 @@ export const zaloPlugin: ChannelPlugin<ResolvedZaloAccount, ZaloProbeResult> =
         ...zaloConfigAdapter,
         isConfigured: (account) => Boolean(account.token?.trim()),
         describeAccount: (account): ChannelAccountSnapshot =>
-          describeAccountSnapshot({
+          describeWebhookAccountSnapshot({
             account,
             configured: Boolean(account.token?.trim()),
+            mode: account.config.webhookUrl ? "webhook" : "polling",
             extra: {
               tokenSource: account.tokenSource,
             },
           }),
+      },
+      approvalCapability: zaloApprovalAuth,
+      secrets: {
+        secretTargetRegistryEntries,
+        collectRuntimeConfigAssignments,
       },
       groups: {
         resolveRequireMention: () => true,

@@ -1,7 +1,7 @@
 import type { Model } from "@mariozechner/pi-ai";
 import { getModel, streamSimple } from "@mariozechner/pi-ai";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { isLiveTestEnabled } from "./live-test-helpers.js";
 import { applyExtraParamsToAgent } from "./pi-embedded-runner.js";
 
@@ -18,13 +18,13 @@ const describeGeminiLive = GEMINI_LIVE && GEMINI_KEY ? describe : describe.skip;
 
 describeLive("pi embedded extra params (live)", () => {
   it("applies config maxTokens to openai streamFn", async () => {
-    const model = getModel("openai", "gpt-5.2") as unknown as Model<"openai-completions">;
+    const model = getModel("openai", "gpt-5.4") as unknown as Model<"openai-completions">;
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           models: {
-            "openai/gpt-5.2": {
+            "openai/gpt-5.4": {
               // OpenAI Responses enforces a minimum max_output_tokens of 16.
               params: {
                 maxTokens: 16,
@@ -117,7 +117,7 @@ describeAnthropicLive("pi embedded extra params (anthropic live)", () => {
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "claude-sonnet-4-5",
+          model: "claude-sonnet-4-6",
           max_tokens: 32,
           service_tier: serviceTier,
           messages: [{ role: "user", content: "Reply with OK." }],

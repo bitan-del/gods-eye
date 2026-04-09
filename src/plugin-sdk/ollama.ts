@@ -1,4 +1,4 @@
-type FacadeModule = typeof import("@openclaw/ollama/api.js");
+type FacadeModule = typeof import("@godseye/ollama/api.js");
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 function loadFacadeModule(): FacadeModule {

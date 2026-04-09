@@ -2,8 +2,8 @@ import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { resolveMemoryRemDreamingConfig } from "openclaw/plugin-sdk/memory-core-host-status";
-import { buildAgentSessionKey } from "openclaw/plugin-sdk/routing";
+import { resolveMemoryRemDreamingConfig } from "godseye/plugin-sdk/memory-core-host-status";
+import { buildAgentSessionKey } from "godseye/plugin-sdk/routing";
 import {
   colorize,
   defaultRuntime,

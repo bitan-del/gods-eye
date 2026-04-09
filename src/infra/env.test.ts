@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { withEnv } from "../test-utils/env.js";
 
 const loggerMocks = vi.hoisted(() => ({
@@ -18,10 +18,14 @@ let logAcceptedEnvOption: EnvModule["logAcceptedEnvOption"];
 let normalizeEnv: EnvModule["normalizeEnv"];
 let normalizeZaiEnv: EnvModule["normalizeZaiEnv"];
 
-beforeEach(async () => {
+beforeAll(async () => {
   vi.resetModules();
   ({ isTruthyEnvValue, logAcceptedEnvOption, normalizeEnv, normalizeZaiEnv } =
     await import("./env.js"));
+});
+
+beforeEach(() => {
+  loggerMocks.info.mockClear();
 });
 
 describe("normalizeZaiEnv", () => {
@@ -78,16 +82,16 @@ describe("logAcceptedEnvOption", () => {
       {
         VITEST: "",
         NODE_ENV: "development",
-        GODSEYE_TEST_ENV: "  line one\nline two  ",
+        OPENCLAW_TEST_ENV: "  line one\nline two  ",
       },
       () => {
         logAcceptedEnvOption({
-          key: "GODSEYE_TEST_ENV",
+          key: "OPENCLAW_TEST_ENV",
           description: "test option",
           redact: true,
         });
         logAcceptedEnvOption({
-          key: "GODSEYE_TEST_ENV",
+          key: "OPENCLAW_TEST_ENV",
           description: "test option",
           redact: true,
         });
@@ -95,7 +99,9 @@ describe("logAcceptedEnvOption", () => {
     );
 
     expect(loggerMocks.info).toHaveBeenCalledTimes(1);
-    expect(loggerMocks.info).toHaveBeenCalledWith("env: GODSEYE_TEST_ENV=<redacted> (test option)");
+    expect(loggerMocks.info).toHaveBeenCalledWith(
+      "env: OPENCLAW_TEST_ENV=<redacted> (test option)",
+    );
   });
 
   it("skips blank values and test-mode logging", () => {
@@ -105,11 +111,11 @@ describe("logAcceptedEnvOption", () => {
       {
         VITEST: "1",
         NODE_ENV: "development",
-        GODSEYE_BLANK_ENV: "value",
+        OPENCLAW_BLANK_ENV: "value",
       },
       () => {
         logAcceptedEnvOption({
-          key: "GODSEYE_BLANK_ENV",
+          key: "OPENCLAW_BLANK_ENV",
           description: "skipped in vitest",
         });
       },
@@ -119,11 +125,11 @@ describe("logAcceptedEnvOption", () => {
       {
         VITEST: "",
         NODE_ENV: "development",
-        GODSEYE_BLANK_ENV: "   ",
+        OPENCLAW_BLANK_ENV: "   ",
       },
       () => {
         logAcceptedEnvOption({
-          key: "GODSEYE_BLANK_ENV",
+          key: "OPENCLAW_BLANK_ENV",
           description: "blank value",
         });
       },

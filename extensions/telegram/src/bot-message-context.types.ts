@@ -1,4 +1,5 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { Bot } from "grammy";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type {
   DmPolicy,
   TelegramDirectConfig,
@@ -6,7 +7,6 @@ import type {
   TelegramTopicConfig,
 } from "godseye/plugin-sdk/config-runtime";
 import type { HistoryEntry } from "godseye/plugin-sdk/reply-history";
-import type { Bot } from "grammy";
 import type { StickerMetadata, TelegramContext } from "./bot/types.js";
 
 export type TelegramMediaRef = {
@@ -16,6 +16,7 @@ export type TelegramMediaRef = {
 };
 
 export type TelegramMessageContextOptions = {
+  commandSource?: "text" | "native";
   forceWasMentioned?: boolean;
   messageIdOverride?: string;
   receivedAtMs?: number;
@@ -50,7 +51,7 @@ export type BuildTelegramMessageContextParams = {
   storeAllowFrom: string[];
   options?: TelegramMessageContextOptions;
   bot: Bot;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: { accountId: string };
   historyLimit: number;
   groupHistories: Map<string, HistoryEntry[]>;
@@ -62,7 +63,7 @@ export type BuildTelegramMessageContextParams = {
   resolveGroupActivation: ResolveGroupActivation;
   resolveGroupRequireMention: ResolveGroupRequireMention;
   resolveTelegramGroupConfig: ResolveTelegramGroupConfig;
-  loadFreshConfig?: () => GodsEyeConfig;
+  loadFreshConfig?: () => OpenClawConfig;
   upsertPairingRequest?: typeof import("godseye/plugin-sdk/conversation-runtime").upsertChannelPairingRequest;
   /** Global (per-account) handler for sendChatAction 401 backoff (#27092). */
   sendChatActionHandler: import("./sendchataction-401-backoff.js").TelegramSendChatActionHandler;

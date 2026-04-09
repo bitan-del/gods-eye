@@ -1,17 +1,13 @@
 import {
-  buildDeepSeekModelDefinition,
-  DEEPSEEK_BASE_URL,
-  DEEPSEEK_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
-import {
   applyAgentDefaultModelPrimary,
   applyProviderConfigWithModelCatalog,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
+import { buildDeepSeekModelDefinition, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL_CATALOG } from "./api.js";
 
 export const DEEPSEEK_DEFAULT_MODEL_REF = "deepseek/deepseek-chat";
 
-export function applyDeepSeekProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyDeepSeekProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[DEEPSEEK_DEFAULT_MODEL_REF] = {
     ...models[DEEPSEEK_DEFAULT_MODEL_REF],
@@ -27,7 +23,7 @@ export function applyDeepSeekProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
   });
 }
 
-export function applyDeepSeekConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyDeepSeekConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyAgentDefaultModelPrimary(
     applyDeepSeekProviderConfig(cfg),
     DEEPSEEK_DEFAULT_MODEL_REF,

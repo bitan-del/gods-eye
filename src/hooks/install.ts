@@ -3,6 +3,7 @@ import path from "node:path";
 import { MANIFEST_KEY } from "../compat/legacy-names.js";
 import { resolveSafeInstallDir, unscopedPackageName } from "../infra/install-safe-path.js";
 import { type NpmIntegrityDrift, type NpmSpecResolution } from "../infra/install-source-utils.js";
+import type { InstallSafetyOverrides } from "../plugins/install-security-scan.js";
 import { CONFIG_DIR, resolveUserPath } from "../utils.js";
 import { parseFrontmatter } from "./frontmatter.js";
 
@@ -45,7 +46,7 @@ export type HookNpmIntegrityDriftParams = {
 
 const defaultLogger: HookInstallLogger = {};
 
-type HookInstallForwardParams = {
+type HookInstallForwardParams = InstallSafetyOverrides & {
   hooksDir?: string;
   timeoutMs?: number;
   logger?: HookInstallLogger;
@@ -60,6 +61,7 @@ type HookPathInstallParams = { path: string } & HookInstallForwardParams;
 
 function buildHookInstallForwardParams(params: HookInstallForwardParams): HookInstallForwardParams {
   return {
+    dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
     hooksDir: params.hooksDir,
     timeoutMs: params.timeoutMs,
     logger: params.logger,
@@ -99,14 +101,14 @@ export function resolveHookInstallDir(hookId: string, hooksDir?: string): string
   return targetDirResult.path;
 }
 
-async function ensureGodsEyeHooks(manifest: HookPackageManifest) {
+async function ensureOpenClawHooks(manifest: HookPackageManifest) {
   const hooks = manifest[MANIFEST_KEY]?.hooks;
   if (!Array.isArray(hooks)) {
-    throw new Error("package.json missing godseye.hooks");
+    throw new Error("package.json missing openclaw.hooks");
   }
   const list = hooks.map((e) => (typeof e === "string" ? e.trim() : "")).filter(Boolean);
   if (list.length === 0) {
-    throw new Error("package.json godseye.hooks is empty");
+    throw new Error("package.json openclaw.hooks is empty");
   }
   return list;
 }
@@ -226,7 +228,7 @@ async function installHookPackageFromDir(
 
   let hookEntries: string[];
   try {
-    hookEntries = await ensureGodsEyeHooks(manifest);
+    hookEntries = await ensureOpenClawHooks(manifest);
   } catch (err) {
     return { ok: false, error: String(err) };
   }
@@ -261,7 +263,7 @@ async function installHookPackageFromDir(
     if (!runtime.isPathInside(params.packageDir, hookDir)) {
       return {
         ok: false,
-        error: `godseye.hooks entry escapes package directory: ${entry}`,
+        error: `openclaw.hooks entry escapes package directory: ${entry}`,
       };
     }
     await validateHookDir(hookDir);
@@ -272,7 +274,7 @@ async function installHookPackageFromDir(
     ) {
       return {
         ok: false,
-        error: `godseye.hooks entry resolves outside package directory: ${entry}`,
+        error: `openclaw.hooks entry resolves outside package directory: ${entry}`,
       };
     }
     const hookName = await resolveHookNameFromDir(hookDir);
@@ -383,7 +385,7 @@ export async function installHooksFromArchive(
 
   return await runtime.withExtractedArchiveRoot({
     archivePath,
-    tempDirPrefix: "godseye-hook-",
+    tempDirPrefix: "openclaw-hook-",
     timeoutMs,
     logger,
     onExtracted: async (rootDir) =>
@@ -403,6 +405,7 @@ export async function installHooksFromArchive(
 
 export async function installHooksFromNpmSpec(params: {
   spec: string;
+  dangerouslyForceUnsafeInstall?: boolean;
   hooksDir?: string;
   timeoutMs?: number;
   logger?: HookInstallLogger;
@@ -422,7 +425,7 @@ export async function installHooksFromNpmSpec(params: {
 
   logger.info?.(`Downloading ${spec.trim()}…`);
   return await runtime.installFromValidatedNpmSpecArchive({
-    tempDirPrefix: "godseye-hook-pack-",
+    tempDirPrefix: "openclaw-hook-pack-",
     spec,
     timeoutMs,
     expectedIntegrity: params.expectedIntegrity,
@@ -452,6 +455,7 @@ export async function installHooksFromPath(
   }
   const { resolvedPath: resolved, stat } = pathResult;
   const forwardParams = buildHookInstallForwardParams({
+    dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
     hooksDir: params.hooksDir,
     timeoutMs: params.timeoutMs,
     logger: params.logger,

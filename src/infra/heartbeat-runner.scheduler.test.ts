@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { startHeartbeatRunner } from "./heartbeat-runner.js";
 import { requestHeartbeatNow, resetHeartbeatWakeStateForTests } from "./heartbeat-wake.js";
 
@@ -19,14 +19,14 @@ describe("startHeartbeatRunner", () => {
   }
 
   function heartbeatConfig(
-    list?: NonNullable<NonNullable<GodsEyeConfig["agents"]>["list"]>,
-  ): GodsEyeConfig {
+    list?: NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>,
+  ): OpenClawConfig {
     return {
       agents: {
         defaults: { heartbeat: { every: "30m" } },
         ...(list ? { list } : {}),
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   function createRequestsInFlightRunSpy(skipCount: number) {
@@ -41,7 +41,7 @@ describe("startHeartbeatRunner", () => {
   }
 
   async function expectWakeDispatch(params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     runSpy: RunOnce;
     wake: { reason: string; agentId?: string; sessionKey?: string; coalesceMs: number };
     expectedCall: Record<string, unknown>;
@@ -88,7 +88,7 @@ describe("startHeartbeatRunner", () => {
           { id: "ops", heartbeat: { every: "15m" } },
         ],
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     await vi.advanceTimersByTimeAsync(10 * 60_000 + 1_000);
 
@@ -141,7 +141,7 @@ describe("startHeartbeatRunner", () => {
 
     const cfg = {
       agents: { defaults: { heartbeat: { every: "30m" } } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     // Start runner A
     const runnerA = startHeartbeatRunner({ cfg, runOnce: runSpy1 });
@@ -239,7 +239,7 @@ describe("startHeartbeatRunner", () => {
           { id: "main", heartbeat: { every: "30m" } },
           { id: "ops", heartbeat: { every: "15m" } },
         ]),
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       runSpy,
       wake: {
         reason: "cron:job-123",
@@ -266,7 +266,7 @@ describe("startHeartbeatRunner", () => {
           { id: "main", heartbeat: { every: "30m" } },
           { id: "finance", heartbeat: { every: "30m" } },
         ]),
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       runSpy,
       wake: {
         reason: "exec-event",

@@ -1,4 +1,4 @@
-import { createScopedDmSecurityResolver } from "openclaw/plugin-sdk/channel-config-helpers";
+import { createScopedDmSecurityResolver } from "godseye/plugin-sdk/channel-config-helpers";
 import type { OpenClawConfig } from "../runtime-api.js";
 import {
   listZalouserAccountIds,

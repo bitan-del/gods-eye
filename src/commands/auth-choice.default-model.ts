@@ -1,17 +1,17 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { ensureModelAllowlistEntry } from "./model-allowlist.js";
 
 export async function applyDefaultModelChoice(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   setDefaultModel: boolean;
   defaultModel: string;
-  applyDefaultConfig: (config: GodsEyeConfig) => GodsEyeConfig;
-  applyProviderConfig: (config: GodsEyeConfig) => GodsEyeConfig;
+  applyDefaultConfig: (config: OpenClawConfig) => OpenClawConfig;
+  applyProviderConfig: (config: OpenClawConfig) => OpenClawConfig;
   noteDefault?: string;
   noteAgentModel: (model: string) => Promise<void>;
   prompter: WizardPrompter;
-}): Promise<{ config: GodsEyeConfig; agentModelOverride?: string }> {
+}): Promise<{ config: OpenClawConfig; agentModelOverride?: string }> {
   if (params.setDefaultModel) {
     const next = params.applyDefaultConfig(params.config);
     if (params.noteDefault) {

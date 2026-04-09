@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import { stringEnum } from "godseye/plugin-sdk/core";
+import { stringEnum } from "godseye/plugin-sdk/channel-actions";
 
 const discordComponentEmojiSchema = Type.Object({
   name: Type.String(),

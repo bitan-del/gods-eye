@@ -2,10 +2,14 @@ import {
   createAccountListHelpers,
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,
+  type OpenClawConfig,
   resolveAccountEntry,
   resolveMergedAccountConfig,
 } from "godseye/plugin-sdk/account-resolution";
-import { isSecretRef, type GodsEyeConfig } from "godseye/plugin-sdk/core";
+import { safeParseJsonWithSchema, safeParseWithSchema } from "godseye/plugin-sdk/extension-shared";
+import { isSecretRef } from "godseye/plugin-sdk/secret-input";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import { z } from "zod";
 import type { GoogleChatAccountConfig } from "./types.config.js";
 
 export type GoogleChatCredentialSource = "file" | "inline" | "env" | "none";
@@ -22,6 +26,7 @@ export type ResolvedGoogleChatAccount = {
 
 const ENV_SERVICE_ACCOUNT = "GOOGLE_CHAT_SERVICE_ACCOUNT";
 const ENV_SERVICE_ACCOUNT_FILE = "GOOGLE_CHAT_SERVICE_ACCOUNT_FILE";
+const JsonRecordSchema = z.record(z.string(), z.unknown());
 
 const {
   listAccountIds: listGoogleChatAccountIds,
@@ -30,7 +35,7 @@ const {
 export { listGoogleChatAccountIds, resolveDefaultGoogleChatAccountId };
 
 function mergeGoogleChatAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): GoogleChatAccountConfig {
   const raw = cfg.channels?.["googlechat"] ?? {};
@@ -40,11 +45,7 @@ function mergeGoogleChatAccountConfig(
     accountId,
     omitKeys: ["defaultAccount"],
   });
-  const defaultAccountConfig =
-    resolveAccountEntry(
-      raw.accounts as Record<string, GoogleChatAccountConfig> | undefined,
-      DEFAULT_ACCOUNT_ID,
-    ) ?? {};
+  const defaultAccountConfig = resolveAccountEntry(raw.accounts, DEFAULT_ACCOUNT_ID) ?? {};
   if (accountId === DEFAULT_ACCOUNT_ID) {
     return base;
   }
@@ -62,24 +63,19 @@ function mergeGoogleChatAccountConfig(
 }
 
 function parseServiceAccount(value: unknown): Record<string, unknown> | null {
-  if (value && typeof value === "object") {
-    if (isSecretRef(value)) {
+  if (isSecretRef(value)) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
       return null;
     }
-    return value as Record<string, unknown>;
+    return safeParseJsonWithSchema(JsonRecordSchema, trimmed);
   }
-  if (typeof value !== "string") {
-    return null;
-  }
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-  try {
-    return JSON.parse(trimmed) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+
+  return safeParseWithSchema(JsonRecordSchema, value);
 }
 
 function resolveCredentialsFromConfig(params: {
@@ -108,7 +104,7 @@ function resolveCredentialsFromConfig(params: {
     );
   }
 
-  const file = account.serviceAccountFile?.trim();
+  const file = normalizeOptionalString(account.serviceAccountFile);
   if (file) {
     return { credentialsFile: file, source: "file" };
   }
@@ -119,7 +115,7 @@ function resolveCredentialsFromConfig(params: {
     if (envInline) {
       return { credentials: envInline, source: "env" };
     }
-    const envFile = process.env[ENV_SERVICE_ACCOUNT_FILE]?.trim();
+    const envFile = normalizeOptionalString(process.env[ENV_SERVICE_ACCOUNT_FILE]);
     if (envFile) {
       return { credentialsFile: envFile, source: "env" };
     }
@@ -129,10 +125,12 @@ function resolveCredentialsFromConfig(params: {
 }
 
 export function resolveGoogleChatAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedGoogleChatAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? params.cfg.channels?.["googlechat"]?.defaultAccount,
+  );
   const baseEnabled = params.cfg.channels?.["googlechat"]?.enabled !== false;
   const merged = mergeGoogleChatAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -141,7 +139,7 @@ export function resolveGoogleChatAccount(params: {
 
   return {
     accountId,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     enabled,
     config: merged,
     credentialSource: credentials.source,
@@ -150,7 +148,7 @@ export function resolveGoogleChatAccount(params: {
   };
 }
 
-export function listEnabledGoogleChatAccounts(cfg: GodsEyeConfig): ResolvedGoogleChatAccount[] {
+export function listEnabledGoogleChatAccounts(cfg: OpenClawConfig): ResolvedGoogleChatAccount[] {
   return listGoogleChatAccountIds(cfg)
     .map((accountId) => resolveGoogleChatAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

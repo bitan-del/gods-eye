@@ -4,8 +4,9 @@ import {
   normalizeAccountId,
   normalizeChatType,
   resolveMergedAccountConfig,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/account-resolution";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { SlackAccountSurfaceFields } from "./account-surface-fields.js";
 import type { SlackAccountConfig } from "./runtime-api.js";
 import { resolveSlackAppToken, resolveSlackBotToken, resolveSlackUserToken } from "./token.js";
@@ -29,7 +30,10 @@ const { listAccountIds, resolveDefaultAccountId } = createAccountListHelpers("sl
 export const listSlackAccountIds = listAccountIds;
 export const resolveDefaultSlackAccountId = resolveDefaultAccountId;
 
-export function mergeSlackAccountConfig(cfg: GodsEyeConfig, accountId: string): SlackAccountConfig {
+export function mergeSlackAccountConfig(
+  cfg: OpenClawConfig,
+  accountId: string,
+): SlackAccountConfig {
   return resolveMergedAccountConfig<SlackAccountConfig>({
     channelConfig: cfg.channels?.slack as SlackAccountConfig | undefined,
     accounts: cfg.channels?.slack?.accounts as
@@ -40,10 +44,12 @@ export function mergeSlackAccountConfig(cfg: GodsEyeConfig, accountId: string): 
 }
 
 export function resolveSlackAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedSlackAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultSlackAccountId(params.cfg),
+  );
   const baseEnabled = params.cfg.channels?.slack?.enabled !== false;
   const merged = mergeSlackAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -74,7 +80,7 @@ export function resolveSlackAccount(params: {
   return {
     accountId,
     enabled,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     botToken,
     appToken,
     userToken,
@@ -96,7 +102,7 @@ export function resolveSlackAccount(params: {
   };
 }
 
-export function listEnabledSlackAccounts(cfg: GodsEyeConfig): ResolvedSlackAccount[] {
+export function listEnabledSlackAccounts(cfg: OpenClawConfig): ResolvedSlackAccount[] {
   return listSlackAccountIds(cfg)
     .map((accountId) => resolveSlackAccount({ cfg, accountId }))
     .filter((account) => account.enabled);
@@ -105,7 +111,7 @@ export function listEnabledSlackAccounts(cfg: GodsEyeConfig): ResolvedSlackAccou
 export function resolveSlackReplyToMode(
   account: ResolvedSlackAccount,
   chatType?: string | null,
-): "off" | "first" | "all" {
+): "off" | "first" | "all" | "batched" {
   const normalized = normalizeChatType(chatType ?? undefined);
   if (normalized && account.replyToModeByChatType?.[normalized] !== undefined) {
     return account.replyToModeByChatType[normalized] ?? "off";

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { MEDIA_MAX_BYTES } from "openclaw/plugin-sdk/media-runtime";
+import { MEDIA_MAX_BYTES } from "godseye/plugin-sdk/media-runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTempHomeEnv, type TempHomeEnv } from "../../test-support.js";
 import { persistBrowserProxyFiles } from "./proxy-files.js";

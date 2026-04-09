@@ -1,7 +1,6 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { ResolvedBlueBubblesAccount } from "./accounts.js";
 import { getBlueBubblesRuntime } from "./runtime.js";
-import type { BlueBubblesAccountConfig } from "./types.js";
 export {
   DEFAULT_WEBHOOK_PATH,
   normalizeWebhookPath,
@@ -15,7 +14,7 @@ export type BlueBubblesRuntimeEnv = {
 
 export type BlueBubblesMonitorOptions = {
   account: ResolvedBlueBubblesAccount;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   runtime: BlueBubblesRuntimeEnv;
   abortSignal: AbortSignal;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
@@ -26,7 +25,7 @@ export type BlueBubblesCoreRuntime = ReturnType<typeof getBlueBubblesRuntime>;
 
 export type WebhookTarget = {
   account: ResolvedBlueBubblesAccount;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   runtime: BlueBubblesRuntimeEnv;
   core: BlueBubblesCoreRuntime;
   path: string;

@@ -1,8 +1,9 @@
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
-import { normalizeChatChannelId } from "../channels/registry.js";
+import { normalizeChatChannelId } from "../channels/ids.js";
 import { listRouteBindings } from "../config/bindings.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { AgentRouteBinding } from "../config/types.agents.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { normalizeAccountId, normalizeAgentId } from "./session-key.js";
 
 function normalizeBindingChannelId(raw?: string | null): string | null {
@@ -10,11 +11,11 @@ function normalizeBindingChannelId(raw?: string | null): string | null {
   if (normalized) {
     return normalized;
   }
-  const fallback = (raw ?? "").trim().toLowerCase();
+  const fallback = normalizeLowercaseStringOrEmpty(raw);
   return fallback || null;
 }
 
-export function listBindings(cfg: GodsEyeConfig): AgentRouteBinding[] {
+export function listBindings(cfg: OpenClawConfig): AgentRouteBinding[] {
   return listRouteBindings(cfg);
 }
 
@@ -45,7 +46,7 @@ function resolveNormalizedBindingMatch(binding: AgentRouteBinding): {
   };
 }
 
-export function listBoundAccountIds(cfg: GodsEyeConfig, channelId: string): string[] {
+export function listBoundAccountIds(cfg: OpenClawConfig, channelId: string): string[] {
   const normalizedChannel = normalizeBindingChannelId(channelId);
   if (!normalizedChannel) {
     return [];
@@ -62,7 +63,7 @@ export function listBoundAccountIds(cfg: GodsEyeConfig, channelId: string): stri
 }
 
 export function resolveDefaultAgentBoundAccountId(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   channelId: string,
 ): string | null {
   const normalizedChannel = normalizeBindingChannelId(channelId);
@@ -84,7 +85,7 @@ export function resolveDefaultAgentBoundAccountId(
   return null;
 }
 
-export function buildChannelAccountBindings(cfg: GodsEyeConfig) {
+export function buildChannelAccountBindings(cfg: OpenClawConfig) {
   const map = new Map<string, Map<string, string[]>>();
   for (const binding of listBindings(cfg)) {
     const resolved = resolveNormalizedBindingMatch(binding);

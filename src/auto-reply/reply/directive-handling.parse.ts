@@ -1,5 +1,5 @@
-import type { GodsEyeConfig } from "../../config/config.js";
-import type { ExecAsk, ExecHost, ExecSecurity } from "../../infra/exec-approvals.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import type { ExecAsk, ExecSecurity, ExecTarget } from "../../infra/exec-approvals.js";
 import { extractModelDirective } from "../model.js";
 import type { MsgContext } from "../templating.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "./directives.js";
@@ -34,7 +34,7 @@ export type InlineDirectives = {
   elevatedLevel?: ElevatedLevel;
   rawElevatedLevel?: string;
   hasExecDirective: boolean;
-  execHost?: ExecHost;
+  execHost?: ExecTarget;
   execSecurity?: ExecSecurity;
   execAsk?: ExecAsk;
   execNode?: string;
@@ -206,7 +206,7 @@ export function isDirectiveOnly(params: {
   directives: InlineDirectives;
   cleanedBody: string;
   ctx: MsgContext;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   isGroup: boolean;
 }): boolean {

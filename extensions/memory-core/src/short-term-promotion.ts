@@ -1,10 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { MemorySearchResult } from "openclaw/plugin-sdk/memory-core-host-runtime-files";
-import { formatMemoryDreamingDay } from "openclaw/plugin-sdk/memory-core-host-status";
-import { appendMemoryHostEvent } from "openclaw/plugin-sdk/memory-host-events";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import type { MemorySearchResult } from "godseye/plugin-sdk/memory-core-host-runtime-files";
+import { formatMemoryDreamingDay } from "godseye/plugin-sdk/memory-core-host-status";
+import { appendMemoryHostEvent } from "godseye/plugin-sdk/memory-host-events";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   deriveConceptTags,
   MAX_CONCEPT_TAGS,

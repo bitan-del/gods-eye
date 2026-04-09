@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { GodsEyeSchema } from "./zod-schema.js";
+import { OpenClawSchema } from "./zod-schema.js";
 
-describe("GodsEyeSchema logging levels", () => {
+describe("OpenClawSchema logging levels", () => {
   it("accepts valid logging level values for level and consoleLevel", () => {
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         logging: {
           level: "debug",
           consoleLevel: "warn",
@@ -15,14 +15,14 @@ describe("GodsEyeSchema logging levels", () => {
 
   it("rejects invalid logging level values", () => {
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         logging: {
           level: "loud",
         },
       }),
     ).toThrow();
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         logging: {
           consoleLevel: "verbose",
         },

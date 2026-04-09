@@ -1,4 +1,4 @@
-import type { SecretInput } from "openclaw/plugin-sdk/secret-input";
+import type { SecretInput } from "godseye/plugin-sdk/secret-input";
 
 /** QQ Bot base config. */
 export interface QQBotConfig {

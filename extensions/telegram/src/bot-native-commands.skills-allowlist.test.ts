@@ -1,13 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { writeSkill } from "../../../src/agents/skills.e2e-test-helpers.js";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
-import {
-  pluginCommandMocks,
-  resetPluginCommandMocks,
-} from "../../../test/helpers/extensions/telegram-plugin-command.js";
 import { registerTelegramNativeCommands } from "./bot-native-commands.js";
 import {
   createNativeCommandTestParams,
@@ -15,6 +10,8 @@ import {
   resetNativeCommandMenuMocks,
   waitForRegisteredCommands,
 } from "./bot-native-commands.menu-test-support.js";
+import { resetPluginCommandMocks } from "./test-support/plugin-command.js";
+import { writeSkill } from "./test-support/write-skill.js";
 
 const tempDirs: string[] = [];
 
@@ -36,7 +33,7 @@ describe("registerTelegramNativeCommands skill allowlist integration", () => {
   });
 
   it("registers only allowlisted skills for the bound agent menu", async () => {
-    const workspaceDir = await makeWorkspace("godseye-telegram-skills-");
+    const workspaceDir = await makeWorkspace("openclaw-telegram-skills-");
     await writeSkill({
       dir: path.join(workspaceDir, "skills", "alpha-skill"),
       name: "alpha-skill",
@@ -49,7 +46,7 @@ describe("registerTelegramNativeCommands skill allowlist integration", () => {
     });
 
     const setMyCommands = vi.fn().mockResolvedValue(undefined);
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           { id: "alpha", workspace: workspaceDir, skills: ["alpha-skill"] },
@@ -64,8 +61,9 @@ describe("registerTelegramNativeCommands skill allowlist integration", () => {
       ],
     };
     const actualSkillCommands = await import("../../../src/auto-reply/skill-commands.js");
-    listSkillCommandsForAgents.mockImplementation(({ cfg, agentIds }) =>
-      actualSkillCommands.listSkillCommandsForAgents({ cfg, agentIds }),
+    listSkillCommandsForAgents.mockImplementation(
+      ({ cfg, agentIds }: { cfg: OpenClawConfig; agentIds?: string[] }) =>
+        actualSkillCommands.listSkillCommandsForAgents({ cfg, agentIds }),
     );
 
     registerTelegramNativeCommands({

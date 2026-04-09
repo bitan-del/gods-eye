@@ -1,9 +1,12 @@
 {
   "name": "@godseye/huggingface-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Hugging Face provider plugin",
+  "description": "OpenClaw Hugging Face provider plugin",
   "type": "module",
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
     "extensions": [
       "./index.ts"

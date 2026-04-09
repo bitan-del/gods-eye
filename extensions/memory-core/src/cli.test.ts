@@ -23,9 +23,9 @@ const resolveCommandSecretRefsViaGateway = vi.hoisted(() =>
 
 vi.mock("./cli.host.runtime.js", async () => {
   const [runtimeCli, runtimeCore, runtimeFiles] = await Promise.all([
-    import("openclaw/plugin-sdk/memory-core-host-runtime-cli"),
-    import("openclaw/plugin-sdk/memory-core-host-runtime-core"),
-    import("openclaw/plugin-sdk/memory-core-host-runtime-files"),
+    import("godseye/plugin-sdk/memory-core-host-runtime-cli"),
+    import("godseye/plugin-sdk/memory-core-host-runtime-core"),
+    import("godseye/plugin-sdk/memory-core-host-runtime-files"),
   ]);
   return {
     colorize: runtimeCli.colorize,
@@ -51,9 +51,9 @@ vi.mock("./cli.host.runtime.js", async () => {
 });
 
 let registerMemoryCli: typeof import("./cli.js").registerMemoryCli;
-let defaultRuntime: typeof import("openclaw/plugin-sdk/memory-core-host-runtime-cli").defaultRuntime;
-let isVerbose: typeof import("openclaw/plugin-sdk/memory-core-host-runtime-cli").isVerbose;
-let setVerbose: typeof import("openclaw/plugin-sdk/memory-core-host-runtime-cli").setVerbose;
+let defaultRuntime: typeof import("godseye/plugin-sdk/memory-core-host-runtime-cli").defaultRuntime;
+let isVerbose: typeof import("godseye/plugin-sdk/memory-core-host-runtime-cli").isVerbose;
+let setVerbose: typeof import("godseye/plugin-sdk/memory-core-host-runtime-cli").setVerbose;
 let fixtureRoot = "";
 let workspaceFixtureRoot = "";
 let qmdFixtureRoot = "";
@@ -63,7 +63,7 @@ let qmdCaseId = 0;
 beforeAll(async () => {
   ({ registerMemoryCli } = await import("./cli.js"));
   ({ defaultRuntime, isVerbose, setVerbose } =
-    await import("openclaw/plugin-sdk/memory-core-host-runtime-cli"));
+    await import("godseye/plugin-sdk/memory-core-host-runtime-cli"));
   fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "memory-cli-fixtures-"));
   workspaceFixtureRoot = path.join(fixtureRoot, "workspace");
   qmdFixtureRoot = path.join(fixtureRoot, "qmd");

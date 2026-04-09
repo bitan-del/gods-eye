@@ -1,5 +1,6 @@
 import process from "node:process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { importFreshModule } from "../test/helpers/import-fresh.js";
 
 const applyCliProfileEnvMock = vi.hoisted(() => vi.fn());
 const attachChildProcessBridgeMock = vi.hoisted(() => vi.fn());
@@ -67,18 +68,24 @@ vi.mock("./version.js", () => ({
   VERSION: "9.9.9-test",
 }));
 
+async function importEntry(scope: string) {
+  return await importFreshModule<typeof import("./entry.js")>(
+    import.meta.url,
+    `./entry.js?scope=${scope}`,
+  );
+}
+
 describe("entry root version fast path", () => {
   let originalArgv: string[];
   let originalGatewayToken: string | undefined;
   let exitSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.resetModules();
     vi.clearAllMocks();
     originalArgv = [...process.argv];
-    originalGatewayToken = process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    process.argv = ["node", "godseye", "--version"];
+    originalGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    process.argv = ["node", "openclaw", "--version"];
     exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(((_code?: number) => undefined) as typeof process.exit);
@@ -87,9 +94,9 @@ describe("entry root version fast path", () => {
   afterEach(() => {
     process.argv = originalArgv;
     if (originalGatewayToken === undefined) {
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
     } else {
-      process.env.GODSEYE_GATEWAY_TOKEN = originalGatewayToken;
+      process.env.OPENCLAW_GATEWAY_TOKEN = originalGatewayToken;
     }
     exitSpy.mockRestore();
   });
@@ -97,10 +104,9 @@ describe("entry root version fast path", () => {
   it("prints commit-tagged version output when commit metadata is available", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await import("./entry.js");
-
+    await importEntry("commit-tagged");
     await vi.waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("GodsEye 9.9.9-test (abc1234)");
+      expect(logSpy).toHaveBeenCalledWith("OpenClaw 9.9.9-test (abc1234)");
       expect(exitSpy).toHaveBeenCalledWith(0);
     });
 
@@ -111,10 +117,9 @@ describe("entry root version fast path", () => {
     resolveCommitHashMock.mockReturnValueOnce(null);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await import("./entry.js");
-
+    await importEntry("plain-version");
     await vi.waitFor(() => {
-      expect(logSpy).toHaveBeenCalledWith("GodsEye 9.9.9-test");
+      expect(logSpy).toHaveBeenCalledWith("OpenClaw 9.9.9-test");
       expect(exitSpy).toHaveBeenCalledWith(0);
     });
 
@@ -125,10 +130,9 @@ describe("entry root version fast path", () => {
     resolveCliContainerTargetMock.mockReturnValue("demo");
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-    await import("./entry.js");
-
+    await importEntry("container-target");
     await vi.waitFor(() => {
-      expect(runCliMock).toHaveBeenCalledWith(["node", "godseye", "--version"]);
+      expect(runCliMock).toHaveBeenCalledWith(["node", "openclaw", "--version"]);
     });
     expect(logSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();
@@ -138,13 +142,12 @@ describe("entry root version fast path", () => {
 
   it("allows root version container mode when gateway override env vars are set", async () => {
     resolveCliContainerTargetMock.mockReturnValue("demo");
-    process.env.GODSEYE_GATEWAY_TOKEN = "demo-token";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "demo-token";
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    await import("./entry.js");
-
+    await importEntry("gateway-override");
     await vi.waitFor(() => {
-      expect(runCliMock).toHaveBeenCalledWith(["node", "godseye", "--version"]);
+      expect(runCliMock).toHaveBeenCalledWith(["node", "openclaw", "--version"]);
     });
     expect(errorSpy).not.toHaveBeenCalled();
     expect(exitSpy).not.toHaveBeenCalled();

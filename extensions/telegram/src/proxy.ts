@@ -1,1 +1,1 @@
-export { getProxyUrlFromFetch, makeProxyFetch } from "godseye/plugin-sdk/infra-runtime";
+export { getProxyUrlFromFetch, makeProxyFetch } from "godseye/plugin-sdk/fetch-runtime";

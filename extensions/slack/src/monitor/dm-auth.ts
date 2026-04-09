@@ -1,8 +1,8 @@
 import { formatAllowlistMatchMeta } from "godseye/plugin-sdk/allow-from";
 import { createChannelPairingChallengeIssuer } from "godseye/plugin-sdk/channel-pairing";
-import { upsertChannelPairingRequest } from "godseye/plugin-sdk/conversation-runtime";
 import { resolveSlackAllowListMatch } from "./allow-list.js";
 import type { SlackMonitorContext } from "./context.js";
+import { upsertChannelPairingRequest } from "./conversation.runtime.js";
 
 export async function authorizeSlackDirectMessage(params: {
   ctx: SlackMonitorContext;

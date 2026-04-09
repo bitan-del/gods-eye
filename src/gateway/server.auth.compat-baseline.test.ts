@@ -13,7 +13,10 @@ import {
   restoreGatewayToken,
   startGatewayServer,
   testState,
+  installGatewayTestHooks,
 } from "./server.auth.shared.js";
+
+installGatewayTestHooks({ scope: "suite" });
 
 function expectAuthErrorDetails(params: {
   details: unknown;
@@ -65,9 +68,9 @@ describe("gateway auth compatibility baseline", () => {
     let prevToken: string | undefined;
 
     beforeAll(async () => {
-      prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
       testState.gatewayAuth = { mode: "token", token: "secret" };
-      process.env.GODSEYE_GATEWAY_TOKEN = "secret";
+      process.env.OPENCLAW_GATEWAY_TOKEN = "secret";
       port = await getFreePort();
       server = await startGatewayServer(port);
     });
@@ -151,7 +154,7 @@ describe("gateway auth compatibility baseline", () => {
     test("keeps local backend device-token reconnects out of pairing", async () => {
       const identityPath = path.join(
         os.tmpdir(),
-        `godseye-backend-device-${process.pid}-${port}.json`,
+        `openclaw-backend-device-${process.pid}-${port}.json`,
       );
       const { loadOrCreateDeviceIdentity, publicKeyRawBase64UrlFromPem } =
         await import("../infra/device-identity.js");
@@ -167,7 +170,9 @@ describe("gateway auth compatibility baseline", () => {
         role: "operator",
         scopes: ["operator.admin"],
       });
-      await approveDevicePairing(pending.request.requestId);
+      await approveDevicePairing(pending.request.requestId, {
+        callerScopes: ["operator.admin"],
+      });
 
       const rotated = await rotateDeviceToken({
         deviceId: identity.deviceId,
@@ -188,7 +193,22 @@ describe("gateway auth compatibility baseline", () => {
           scopes: ["operator.admin"],
         });
         expect(res.ok).toBe(true);
-        expect((res.payload as { type?: string } | undefined)?.type).toBe("hello-ok");
+        const payload = res.payload as
+          | {
+              type?: string;
+              snapshot?: {
+                configPath?: string;
+                stateDir?: string;
+                authMode?: string;
+              };
+            }
+          | undefined;
+        expect(payload?.type).toBe("hello-ok");
+        expect(typeof payload?.snapshot?.configPath).toBe("string");
+        expect((payload?.snapshot?.configPath ?? "").length).toBeGreaterThan(0);
+        expect(typeof payload?.snapshot?.stateDir).toBe("string");
+        expect((payload?.snapshot?.stateDir ?? "").length).toBeGreaterThan(0);
+        expect(payload?.snapshot?.authMode).toBe("token");
       } finally {
         ws.close();
       }
@@ -201,9 +221,9 @@ describe("gateway auth compatibility baseline", () => {
     let prevToken: string | undefined;
 
     beforeAll(async () => {
-      prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
       testState.gatewayAuth = { mode: "password", password: "secret" };
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
       port = await getFreePort();
       server = await startGatewayServer(port);
     });
@@ -250,9 +270,9 @@ describe("gateway auth compatibility baseline", () => {
     let prevToken: string | undefined;
 
     beforeAll(async () => {
-      prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
       testState.gatewayAuth = { mode: "none" };
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
       port = await getFreePort();
       server = await startGatewayServer(port);
     });

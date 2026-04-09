@@ -1,4 +1,4 @@
-import { loadBundledEntryExportSync } from "openclaw/plugin-sdk/channel-entry-contract";
+import { loadBundledEntryExportSync } from "godseye/plugin-sdk/channel-entry-contract";
 
 type SetupSurfaceModule = typeof import("./src/setup-surface.js");
 

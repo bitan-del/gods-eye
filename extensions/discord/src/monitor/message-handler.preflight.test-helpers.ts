@@ -1,9 +1,9 @@
 import { ChannelType } from "@buape/carbon";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { preflightDiscordMessage } from "./message-handler.preflight.js";
 import { createNoopThreadBindingManager } from "./thread-bindings.js";
 
-export type DiscordConfig = NonNullable<GodsEyeConfig["channels"]>["discord"];
+export type DiscordConfig = NonNullable<OpenClawConfig["channels"]>["discord"];
 export type DiscordMessageEvent = import("./listeners.js").DiscordMessageEvent;
 export type DiscordClient = import("@buape/carbon").Client;
 
@@ -12,7 +12,7 @@ export const DEFAULT_PREFLIGHT_CFG = {
     mainKey: "main",
     scope: "per-sender",
   },
-} as GodsEyeConfig;
+} as OpenClawConfig;
 
 export function createGuildTextClient(channelId: string): DiscordClient {
   return {
@@ -79,7 +79,7 @@ export function createDiscordMessage(params: {
 }
 
 export function createDiscordPreflightArgs(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   discordConfig: DiscordConfig;
   data: DiscordMessageEvent;
   client: DiscordClient;
@@ -91,7 +91,7 @@ export function createDiscordPreflightArgs(params: {
     accountId: "default",
     token: "token",
     runtime: {} as import("godseye/plugin-sdk/runtime-env").RuntimeEnv,
-    botUserId: params.botUserId ?? "godseye-bot",
+    botUserId: params.botUserId ?? "openclaw-bot",
     guildHistories: new Map(),
     historyLimit: 0,
     mediaMaxBytes: 1_000_000,

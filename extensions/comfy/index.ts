@@ -1,4 +1,4 @@
-import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 import { buildComfyImageGenerationProvider } from "./image-generation-provider.js";
 import { buildComfyMusicGenerationProvider } from "./music-generation-provider.js";
 import { buildComfyVideoGenerationProvider } from "./video-generation-provider.js";

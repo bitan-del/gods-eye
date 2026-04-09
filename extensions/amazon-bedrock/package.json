@@ -1,10 +1,19 @@
 {
   "name": "@godseye/amazon-bedrock-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Amazon Bedrock provider plugin",
+  "description": "OpenClaw Amazon Bedrock provider plugin",
   "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-bedrock": "3.1024.0"
+  },
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
+    "bundle": {
+      "stageRuntimeDependencies": true
+    },
     "extensions": [
       "./index.ts"
     ]

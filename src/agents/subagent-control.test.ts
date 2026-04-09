@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import * as sessions from "../config/sessions.js";
 import type { CallGatewayOptions } from "../gateway/call.js";
 import {
@@ -29,7 +29,7 @@ describe("sendControlledSubagentMessage", () => {
     const result = await sendControlledSubagentMessage({
       cfg: {
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:subagent:leaf",
         callerSessionKey: "agent:main:subagent:leaf",
@@ -83,7 +83,7 @@ describe("sendControlledSubagentMessage", () => {
     const result = await sendControlledSubagentMessage({
       cfg: {
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -127,7 +127,7 @@ describe("sendControlledSubagentMessage", () => {
     const result = await sendControlledSubagentMessage({
       cfg: {
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -172,14 +172,14 @@ describe("sendControlledSubagentMessage", () => {
 
     __testing.setDepsForTest({
       callGateway: async <T = Record<string, unknown>>(request: CallGatewayOptions) => {
+        if (request.method === "chat.history") {
+          return { messages: [] } as T;
+        }
         if (request.method === "agent") {
           return { runId: "run-followup-send" } as T;
         }
         if (request.method === "agent.wait") {
           return { status: "done" } as T;
-        }
-        if (request.method === "chat.history") {
-          return { messages: [] } as T;
         }
         throw new Error(`unexpected method: ${request.method}`);
       },
@@ -188,7 +188,7 @@ describe("sendControlledSubagentMessage", () => {
     const result = await sendControlledSubagentMessage({
       cfg: {
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -247,14 +247,14 @@ describe("sendControlledSubagentMessage", () => {
 
     __testing.setDepsForTest({
       callGateway: async <T = Record<string, unknown>>(request: CallGatewayOptions) => {
+        if (request.method === "chat.history") {
+          return { messages: [] } as T;
+        }
         if (request.method === "agent") {
           return { runId: "run-followup-stale-send" } as T;
         }
         if (request.method === "agent.wait") {
           return { status: "done" } as T;
-        }
-        if (request.method === "chat.history") {
-          return { messages: [] } as T;
         }
         throw new Error(`unexpected method: ${request.method}`);
       },
@@ -263,7 +263,7 @@ describe("sendControlledSubagentMessage", () => {
     const result = await sendControlledSubagentMessage({
       cfg: {
         channels: { whatsapp: { allowFrom: ["*"] } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -292,6 +292,77 @@ describe("sendControlledSubagentMessage", () => {
       replyText: undefined,
     });
   });
+
+  it("does not return the previous assistant reply when no new assistant message appears", async () => {
+    addSubagentRunForTests({
+      runId: "run-owned-stale-reply",
+      childSessionKey: "agent:main:subagent:owned-stale-reply",
+      controllerSessionKey: "agent:main:main",
+      requesterSessionKey: "agent:main:main",
+      requesterDisplayKey: "main",
+      task: "continue work",
+      cleanup: "keep",
+      createdAt: Date.now() - 5_000,
+      startedAt: Date.now() - 4_000,
+      endedAt: Date.now() - 1_000,
+      outcome: { status: "ok" },
+    });
+
+    let historyCalls = 0;
+    const staleAssistantMessage = {
+      role: "assistant",
+      content: [{ type: "text", text: "older reply from a previous run" }],
+    };
+
+    __testing.setDepsForTest({
+      callGateway: async <T = Record<string, unknown>>(request: CallGatewayOptions) => {
+        if (request.method === "chat.history") {
+          historyCalls += 1;
+          return { messages: [staleAssistantMessage] } as T;
+        }
+        if (request.method === "agent") {
+          return { runId: "run-followup-stale-reply" } as T;
+        }
+        if (request.method === "agent.wait") {
+          return { status: "done" } as T;
+        }
+        throw new Error(`unexpected method: ${request.method}`);
+      },
+    });
+
+    const result = await sendControlledSubagentMessage({
+      cfg: {
+        channels: { whatsapp: { allowFrom: ["*"] } },
+      } as OpenClawConfig,
+      controller: {
+        controllerSessionKey: "agent:main:main",
+        callerSessionKey: "agent:main:main",
+        callerIsSubagent: false,
+        controlScope: "children",
+      },
+      entry: {
+        runId: "run-owned-stale-reply",
+        childSessionKey: "agent:main:subagent:owned-stale-reply",
+        requesterSessionKey: "agent:main:main",
+        requesterDisplayKey: "main",
+        controllerSessionKey: "agent:main:main",
+        task: "continue work",
+        cleanup: "keep",
+        createdAt: Date.now() - 5_000,
+        startedAt: Date.now() - 4_000,
+        endedAt: Date.now() - 1_000,
+        outcome: { status: "ok" },
+      },
+      message: "continue",
+    });
+
+    expect(historyCalls).toBe(2);
+    expect(result).toEqual({
+      status: "ok",
+      runId: "run-followup-stale-reply",
+      replyText: undefined,
+    });
+  });
 });
 
 describe("killSubagentRunAdmin", () => {
@@ -301,7 +372,7 @@ describe("killSubagentRunAdmin", () => {
   });
 
   it("kills a subagent by session key without requester ownership checks", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-subagent-admin-kill-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-subagent-admin-kill-"));
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:worker";
 
@@ -334,7 +405,7 @@ describe("killSubagentRunAdmin", () => {
 
     const cfg = {
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const result = await killSubagentRunAdmin({
       cfg,
@@ -352,7 +423,7 @@ describe("killSubagentRunAdmin", () => {
 
   it("returns found=false when the session key is not tracked as a subagent run", async () => {
     const result = await killSubagentRunAdmin({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       sessionKey: "agent:main:subagent:missing",
     });
 
@@ -388,7 +459,7 @@ describe("killSubagentRunAdmin", () => {
     });
 
     const result = await killSubagentRunAdmin({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       sessionKey: childSessionKey,
     });
 
@@ -401,7 +472,7 @@ describe("killSubagentRunAdmin", () => {
   });
 
   it("still terminates the run when session store persistence fails during kill", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-subagent-admin-kill-store-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-subagent-admin-kill-store-"));
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:worker-store-fail";
 
@@ -440,7 +511,7 @@ describe("killSubagentRunAdmin", () => {
       const result = await killSubagentRunAdmin({
         cfg: {
           session: { store: storePath },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         sessionKey: childSessionKey,
       });
 
@@ -464,7 +535,7 @@ describe("killControlledSubagentRun", () => {
   });
 
   it("does not mutate the live session when the caller passes a stale run entry", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-subagent-stale-kill-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-subagent-stale-kill-"));
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:stale-kill-worker";
 
@@ -497,7 +568,7 @@ describe("killControlledSubagentRun", () => {
     const result = await killControlledSubagentRun({
       cfg: {
         session: { store: storePath },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -587,7 +658,7 @@ describe("killControlledSubagentRun", () => {
     });
 
     const result = await killControlledSubagentRun({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -688,7 +759,7 @@ describe("killControlledSubagentRun", () => {
     });
 
     const result = await killControlledSubagentRun({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -728,7 +799,7 @@ describe("killAllControlledSubagentRuns", () => {
   });
 
   it("ignores stale run snapshots in bulk kill requests", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-subagent-stale-kill-all-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-subagent-stale-kill-all-"));
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:stale-kill-all-worker";
 
@@ -761,7 +832,7 @@ describe("killAllControlledSubagentRuns", () => {
     const result = await killAllControlledSubagentRuns({
       cfg: {
         session: { store: storePath },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -798,7 +869,7 @@ describe("killAllControlledSubagentRuns", () => {
 
   it("does not let a stale bulk entry suppress the current live entry for the same child key", async () => {
     const tmpDir = fs.mkdtempSync(
-      path.join(os.tmpdir(), "godseye-subagent-stale-kill-all-shadow-"),
+      path.join(os.tmpdir(), "openclaw-subagent-stale-kill-all-shadow-"),
     );
     const storePath = path.join(tmpDir, "sessions.json");
     const childSessionKey = "agent:main:subagent:stale-kill-all-shadow-worker";
@@ -832,7 +903,7 @@ describe("killAllControlledSubagentRuns", () => {
     const result = await killAllControlledSubagentRuns({
       cfg: {
         session: { store: storePath },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -902,7 +973,7 @@ describe("killAllControlledSubagentRuns", () => {
     });
 
     const result = await killAllControlledSubagentRuns({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -974,7 +1045,7 @@ describe("killAllControlledSubagentRuns", () => {
     });
 
     const result = await killAllControlledSubagentRuns({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -1044,7 +1115,7 @@ describe("steerControlledSubagentRun", () => {
 
     try {
       const result = await steerControlledSubagentRun({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         controller: {
           controllerSessionKey: "agent:main:main",
           callerSessionKey: "agent:main:main",
@@ -1089,7 +1160,7 @@ describe("steerControlledSubagentRun", () => {
     });
 
     const result = await steerControlledSubagentRun({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",
@@ -1169,7 +1240,7 @@ describe("steerControlledSubagentRun", () => {
     });
 
     const result = await steerControlledSubagentRun({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       controller: {
         controllerSessionKey: "agent:main:main",
         callerSessionKey: "agent:main:main",

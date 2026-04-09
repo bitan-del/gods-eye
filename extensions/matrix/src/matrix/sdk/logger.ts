@@ -1,5 +1,5 @@
 import { format } from "node:util";
-import { redactSensitiveText } from "godseye/plugin-sdk/diagnostics-otel";
+import { redactSensitiveText } from "godseye/plugin-sdk/logging-core";
 import type { RuntimeLogger } from "godseye/plugin-sdk/plugin-runtime";
 import { getMatrixRuntime } from "../../runtime.js";
 

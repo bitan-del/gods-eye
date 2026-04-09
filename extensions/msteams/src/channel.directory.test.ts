@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createDirectoryTestRuntime,
   expectDirectorySurface,
-} from "../../../test/helpers/extensions/directory.js";
-import type { GodsEyeConfig, RuntimeEnv } from "../runtime-api.js";
-import { msteamsPlugin } from "./channel.js";
+} from "../../../test/helpers/plugins/directory.js";
+import type { OpenClawConfig, RuntimeEnv } from "../runtime-api.js";
+import { msteamsDirectoryAdapter } from "./directory.js";
 import { resolveMSTeamsOutboundSessionRoute } from "./session-route.js";
 
 function requireDirectorySelf(
-  directory: typeof msteamsPlugin.directory | null | undefined,
-): NonNullable<NonNullable<typeof msteamsPlugin.directory>["self"]> {
+  directory: typeof msteamsDirectoryAdapter | null | undefined,
+): NonNullable<(typeof msteamsDirectoryAdapter)["self"]> {
   if (!directory?.self) {
     throw new Error("expected msteams directory.self");
   }
@@ -18,7 +18,7 @@ function requireDirectorySelf(
 
 describe("msteams directory", () => {
   const runtimeEnv = createDirectoryTestRuntime() as RuntimeEnv;
-  const directorySelf = requireDirectorySelf(msteamsPlugin.directory);
+  const directorySelf = requireDirectorySelf(msteamsDirectoryAdapter);
 
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -34,7 +34,7 @@ describe("msteams directory", () => {
             tenantId: "tenant-id-5678",
           },
         },
-      } as unknown as GodsEyeConfig;
+      } as unknown as OpenClawConfig;
 
       const result = await directorySelf({ cfg, runtime: runtimeEnv });
       expect(result).toEqual({ kind: "user", id: "test-app-id-1234", name: "test-app-id-1234" });
@@ -44,7 +44,7 @@ describe("msteams directory", () => {
       vi.stubEnv("MSTEAMS_APP_ID", "");
       vi.stubEnv("MSTEAMS_APP_PASSWORD", "");
       vi.stubEnv("MSTEAMS_TENANT_ID", "");
-      const cfg = { channels: {} } as unknown as GodsEyeConfig;
+      const cfg = { channels: {} } as unknown as OpenClawConfig;
       const result = await directorySelf({ cfg, runtime: runtimeEnv });
       expect(result).toBeNull();
     });
@@ -66,9 +66,9 @@ describe("msteams directory", () => {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
-    const directory = expectDirectorySurface(msteamsPlugin.directory);
+    const directory = expectDirectorySurface(msteamsDirectoryAdapter);
 
     await expect(
       directory.listPeers({
@@ -109,9 +109,9 @@ describe("msteams directory", () => {
           dms: { "  Carol  ": {}, "user:Dave": {} },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
-    const directory = expectDirectorySurface(msteamsPlugin.directory);
+    const directory = expectDirectorySurface(msteamsDirectoryAdapter);
 
     await expect(
       directory.listPeers({

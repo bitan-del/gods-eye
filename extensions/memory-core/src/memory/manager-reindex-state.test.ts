@@ -1,4 +1,4 @@
-import type { MemorySource } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+import type { MemorySource } from "godseye/plugin-sdk/memory-core-host-engine-storage";
 import { describe, expect, it } from "vitest";
 import {
   resolveConfiguredScopeHash,

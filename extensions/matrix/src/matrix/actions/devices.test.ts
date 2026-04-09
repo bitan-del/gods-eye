@@ -19,7 +19,7 @@ describe("matrix device actions", () => {
         listOwnDevices: vi.fn(async () => [
           {
             deviceId: "A7hWrQ70ea",
-            displayName: "GodsEye Gateway",
+            displayName: "OpenClaw Gateway",
             lastSeenIp: null,
             lastSeenTs: null,
             current: true,
@@ -42,14 +42,14 @@ describe("matrix device actions", () => {
     ]);
   });
 
-  it("prunes stale GodsEye-managed devices but preserves the current device", async () => {
+  it("prunes stale OpenClaw-managed devices but preserves the current device", async () => {
     const deleteOwnDevices = vi.fn(async () => ({
       currentDeviceId: "du314Zpw3A",
       deletedDeviceIds: ["BritdXC6iL", "G6NJU9cTgs", "My3T0hkTE0"],
       remainingDevices: [
         {
           deviceId: "du314Zpw3A",
-          displayName: "GodsEye Gateway",
+          displayName: "OpenClaw Gateway",
           lastSeenIp: null,
           lastSeenTs: null,
           current: true,
@@ -61,28 +61,28 @@ describe("matrix device actions", () => {
         listOwnDevices: vi.fn(async () => [
           {
             deviceId: "du314Zpw3A",
-            displayName: "GodsEye Gateway",
+            displayName: "OpenClaw Gateway",
             lastSeenIp: null,
             lastSeenTs: null,
             current: true,
           },
           {
             deviceId: "BritdXC6iL",
-            displayName: "GodsEye Gateway",
+            displayName: "OpenClaw Gateway",
             lastSeenIp: null,
             lastSeenTs: null,
             current: false,
           },
           {
             deviceId: "G6NJU9cTgs",
-            displayName: "GodsEye Debug",
+            displayName: "OpenClaw Debug",
             lastSeenIp: null,
             lastSeenTs: null,
             current: false,
           },
           {
             deviceId: "My3T0hkTE0",
-            displayName: "GodsEye Gateway",
+            displayName: "OpenClaw Gateway",
             lastSeenIp: null,
             lastSeenTs: null,
             current: false,

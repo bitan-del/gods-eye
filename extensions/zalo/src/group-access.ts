@@ -1,10 +1,12 @@
+import { isNormalizedSenderAllowed } from "godseye/plugin-sdk/allow-from";
 import {
-  evaluateSenderGroupAccess,
-  isNormalizedSenderAllowed,
   resolveOpenProviderRuntimeGroupPolicy,
   type GroupPolicy,
+} from "godseye/plugin-sdk/config-runtime";
+import {
+  evaluateSenderGroupAccess,
   type SenderGroupAccessDecision,
-} from "./runtime-api.js";
+} from "godseye/plugin-sdk/group-access";
 
 const ZALO_ALLOW_FROM_PREFIX_RE = /^(zalo|zl):/i;
 

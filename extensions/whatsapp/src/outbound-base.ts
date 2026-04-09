@@ -1,9 +1,9 @@
 import {
   createAttachedChannelResultAdapter,
   type ChannelOutboundAdapter,
-} from "openclaw/plugin-sdk/channel-send-result";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { resolveOutboundSendDep, sanitizeForPlainText } from "openclaw/plugin-sdk/infra-runtime";
+} from "godseye/plugin-sdk/channel-send-result";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveOutboundSendDep, sanitizeForPlainText } from "godseye/plugin-sdk/infra-runtime";
 import { WHATSAPP_LEGACY_OUTBOUND_SEND_DEP_KEYS } from "./outbound-send-deps.js";
 
 type WhatsAppChunker = NonNullable<ChannelOutboundAdapter["chunker"]>;

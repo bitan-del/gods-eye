@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import { withStateDirEnv } from "../../../src/test-helpers/state-dir-env.js";
 import { resolveTelegramToken } from "./token.js";
 import { readTelegramUpdateOffset, writeTelegramUpdateOffset } from "./update-offset-store.js";
@@ -11,7 +11,7 @@ describe("resolveTelegramToken", () => {
   const tempDirs: string[] = [];
 
   function createTempDir(): string {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-telegram-token-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-telegram-token-"));
     tempDirs.push(dir);
     return dir;
   }
@@ -21,6 +21,25 @@ describe("resolveTelegramToken", () => {
     const tokenFile = path.join(dir, fileName);
     fs.writeFileSync(tokenFile, contents, "utf-8");
     return tokenFile;
+  }
+
+  function createUnknownAccountConfig(): OpenClawConfig {
+    return {
+      channels: {
+        telegram: {
+          botToken: "wrong-bot-token",
+          accounts: {
+            knownBot: { botToken: "known-bot-token" },
+          },
+        },
+      },
+    } as OpenClawConfig;
+  }
+
+  function expectNoTokenForUnknownAccount(cfg: OpenClawConfig) {
+    const res = resolveTelegramToken(cfg, { accountId: "unknownBot" });
+    expect(res.token).toBe("");
+    expect(res.source).toBe("none");
   }
 
   afterEach(() => {
@@ -36,7 +55,7 @@ describe("resolveTelegramToken", () => {
       envToken: "env-token",
       cfg: {
         channels: { telegram: { botToken: "cfg-token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       expected: { token: "cfg-token", source: "config" },
     },
     {
@@ -44,7 +63,7 @@ describe("resolveTelegramToken", () => {
       envToken: "env-token",
       cfg: {
         channels: { telegram: {} },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       expected: { token: "env-token", source: "env" },
     },
     {
@@ -52,11 +71,11 @@ describe("resolveTelegramToken", () => {
       envToken: "",
       cfg: {
         channels: { telegram: { tokenFile: "" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       resolveCfg: () =>
         ({
           channels: { telegram: { tokenFile: createTokenFile("token.txt") } },
-        }) as GodsEyeConfig,
+        }) as OpenClawConfig,
       expected: { token: "file-token", source: "tokenFile" },
     },
     {
@@ -64,7 +83,7 @@ describe("resolveTelegramToken", () => {
       envToken: "",
       cfg: {
         channels: { telegram: { botToken: "cfg-token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       expected: { token: "cfg-token", source: "config" },
     },
   ])("$name", ({ envToken, cfg, resolveCfg, expected }) => {
@@ -81,7 +100,7 @@ describe("resolveTelegramToken", () => {
     fs.writeFileSync(tokenFile, "file-token\n", "utf-8");
     fs.symlinkSync(tokenFile, tokenLink);
 
-    const cfg = { channels: { telegram: { tokenFile: tokenLink } } } as GodsEyeConfig;
+    const cfg = { channels: { telegram: { tokenFile: tokenLink } } } as OpenClawConfig;
     const res = resolveTelegramToken(cfg);
     expect(res.token).toBe("");
     expect(res.source).toBe("none");
@@ -93,7 +112,7 @@ describe("resolveTelegramToken", () => {
     const tokenFile = path.join(dir, "missing-token.txt");
     const cfg = {
       channels: { telegram: { tokenFile, botToken: "cfg-token" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const res = resolveTelegramToken(cfg);
     expect(res.token).toBe("");
     expect(res.source).toBe("none");
@@ -110,7 +129,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "careynotifications" });
     expect(res.token).toBe("acct-token");
@@ -127,7 +146,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "carey-notifications" });
     expect(res.token).toBe("acct-token");
@@ -144,7 +163,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "work" });
     expect(res.token).toBe("top-level-token");
@@ -164,7 +183,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "work" });
     expect(res.token).toBe("account-file-token");
@@ -181,7 +200,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "work" });
     expect(res.token).toBe("file-token");
@@ -198,7 +217,7 @@ describe("resolveTelegramToken", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "work" });
     expect(res.token).toBe("");
@@ -207,20 +226,7 @@ describe("resolveTelegramToken", () => {
 
   it("does not fall through to channel-level token when non-default accountId is not in config", () => {
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "");
-    const cfg = {
-      channels: {
-        telegram: {
-          botToken: "wrong-bot-token",
-          accounts: {
-            knownBot: { botToken: "known-bot-token" },
-          },
-        },
-      },
-    } as GodsEyeConfig;
-
-    const res = resolveTelegramToken(cfg, { accountId: "unknownBot" });
-    expect(res.token).toBe("");
-    expect(res.source).toBe("none");
+    expectNoTokenForUnknownAccount(createUnknownAccountConfig());
   });
 
   it("throws when botToken is an unresolved SecretRef object", () => {
@@ -230,14 +236,14 @@ describe("resolveTelegramToken", () => {
           botToken: { source: "env", provider: "default", id: "TELEGRAM_BOT_TOKEN" },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     expect(() => resolveTelegramToken(cfg)).toThrow(
       /channels\.telegram\.botToken: unresolved SecretRef/i,
     );
   });
 
-  // Regression: https://github.com/bitan-del/gods-eye/issues/53876
+  // Regression: https://github.com/openclaw/openclaw/issues/53876
   // Binding-created accountIds should inherit the channel-level token in
   // single-bot setups (no accounts section).
   it("falls through to channel-level token for binding-created accountId without accounts section", () => {
@@ -248,7 +254,7 @@ describe("resolveTelegramToken", () => {
           enabled: true,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const res = resolveTelegramToken(cfg, { accountId: "bot-main" });
     expect(res.token).toBe("channel-level-token");
@@ -257,26 +263,13 @@ describe("resolveTelegramToken", () => {
 
   it("still blocks fallthrough for unknown accountId when accounts section exists", () => {
     vi.stubEnv("TELEGRAM_BOT_TOKEN", "");
-    const cfg = {
-      channels: {
-        telegram: {
-          botToken: "wrong-bot-token",
-          accounts: {
-            knownBot: { botToken: "known-bot-token" },
-          },
-        },
-      },
-    } as GodsEyeConfig;
-
-    const res = resolveTelegramToken(cfg, { accountId: "unknownBot" });
-    expect(res.token).toBe("");
-    expect(res.source).toBe("none");
+    expectNoTokenForUnknownAccount(createUnknownAccountConfig());
   });
 });
 
 describe("telegram update offset store", () => {
   it("persists and reloads the last update id", async () => {
-    await withStateDirEnv("godseye-telegram-", async () => {
+    await withStateDirEnv("openclaw-telegram-", async () => {
       expect(await readTelegramUpdateOffset({ accountId: "primary" })).toBeNull();
 
       await writeTelegramUpdateOffset({

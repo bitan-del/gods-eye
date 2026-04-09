@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { isTruthyEnvValue } from "./env.js";
+import { formatErrorMessage } from "./errors.js";
 import { sanitizeHostExecEnv } from "./host-env-security.js";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -128,7 +129,7 @@ function probeLoginShellEnv(params: {
     const stdout = execLoginShellEnvZero({ shell, env: execEnv, exec, timeoutMs });
     return { ok: true, shellEnv: parseShellEnv(stdout) };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: formatErrorMessage(err) };
   }
 }
 
@@ -166,7 +167,7 @@ export function loadShellEnvFallback(opts: ShellEnvFallbackOptions): ShellEnvFal
     exec: opts.exec,
   });
   if (!probe.ok) {
-    logger.warn(`[godseye] shell env fallback failed: ${probe.error}`);
+    logger.warn(`[openclaw] shell env fallback failed: ${probe.error}`);
     lastAppliedKeys = [];
     return { ok: false, error: probe.error, applied: [] };
   }
@@ -189,15 +190,15 @@ export function loadShellEnvFallback(opts: ShellEnvFallbackOptions): ShellEnvFal
 }
 
 export function shouldEnableShellEnvFallback(env: NodeJS.ProcessEnv): boolean {
-  return isTruthyEnvValue(env.GODSEYE_LOAD_SHELL_ENV);
+  return isTruthyEnvValue(env.OPENCLAW_LOAD_SHELL_ENV);
 }
 
 export function shouldDeferShellEnvFallback(env: NodeJS.ProcessEnv): boolean {
-  return isTruthyEnvValue(env.GODSEYE_DEFER_SHELL_ENV_FALLBACK);
+  return isTruthyEnvValue(env.OPENCLAW_DEFER_SHELL_ENV_FALLBACK);
 }
 
 export function resolveShellEnvFallbackTimeoutMs(env: NodeJS.ProcessEnv): number {
-  const raw = env.GODSEYE_SHELL_ENV_TIMEOUT_MS?.trim();
+  const raw = env.OPENCLAW_SHELL_ENV_TIMEOUT_MS?.trim();
   if (!raw) {
     return DEFAULT_TIMEOUT_MS;
   }

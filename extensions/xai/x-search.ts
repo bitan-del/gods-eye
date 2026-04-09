@@ -1,4 +1,4 @@
-import { getRuntimeConfigSnapshot } from "openclaw/plugin-sdk/config-runtime";
+import { getRuntimeConfigSnapshot } from "godseye/plugin-sdk/config-runtime";
 import {
   jsonResult,
   readCache,
@@ -7,7 +7,7 @@ import {
   resolveCacheTtlMs,
   resolveTimeoutSeconds,
   writeCache,
-} from "openclaw/plugin-sdk/provider-web-search";
+} from "godseye/plugin-sdk/provider-web-search";
 import { isXaiToolEnabled, resolveXaiToolApiKey } from "./src/tool-auth-shared.js";
 import { resolveEffectiveXSearchConfig } from "./src/x-search-config.js";
 import {

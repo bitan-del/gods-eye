@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
-import type { ProviderCatalogContext } from "openclaw/plugin-sdk/provider-catalog-shared";
+import type { ProviderCatalogContext } from "godseye/plugin-sdk/provider-catalog-shared";
 import type {
   ModelDefinitionConfig,
   ModelProviderConfig,
-} from "openclaw/plugin-sdk/provider-model-shared";
+} from "godseye/plugin-sdk/provider-model-shared";
 
 const PROVIDER_ID = "anthropic-vertex";
 const ANTHROPIC_VERTEX_DEFAULT_REGION = "global";

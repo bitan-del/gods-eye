@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import type { AgentMessage, StreamFn } from "@mariozechner/pi-agent-core";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { resolveUserPath } from "../utils.js";
 import { parseBooleanValue } from "../utils/boolean.js";
@@ -11,6 +11,8 @@ import { getQueuedFileWriter, type QueuedFileWriter } from "./queued-file-writer
 import { buildAgentTraceBase } from "./trace-base.js";
 
 export type CacheTraceStage =
+  | "cache:result"
+  | "cache:state"
   | "session:loaded"
   | "session:sanitized"
   | "session:limited"
@@ -52,7 +54,7 @@ export type CacheTrace = {
 };
 
 type CacheTraceInit = {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   runId?: string;
   sessionId?: string;
@@ -79,17 +81,17 @@ const writers = new Map<string, CacheTraceWriter>();
 function resolveCacheTraceConfig(params: CacheTraceInit): CacheTraceConfig {
   const env = params.env ?? process.env;
   const config = params.cfg?.diagnostics?.cacheTrace;
-  const envEnabled = parseBooleanValue(env.GODSEYE_CACHE_TRACE);
+  const envEnabled = parseBooleanValue(env.OPENCLAW_CACHE_TRACE);
   const enabled = envEnabled ?? config?.enabled ?? false;
-  const fileOverride = config?.filePath?.trim() || env.GODSEYE_CACHE_TRACE_FILE?.trim();
+  const fileOverride = config?.filePath?.trim() || env.OPENCLAW_CACHE_TRACE_FILE?.trim();
   const filePath = fileOverride
     ? resolveUserPath(fileOverride)
     : path.join(resolveStateDir(env), "logs", "cache-trace.jsonl");
 
   const includeMessages =
-    parseBooleanValue(env.GODSEYE_CACHE_TRACE_MESSAGES) ?? config?.includeMessages;
-  const includePrompt = parseBooleanValue(env.GODSEYE_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
-  const includeSystem = parseBooleanValue(env.GODSEYE_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
+    parseBooleanValue(env.OPENCLAW_CACHE_TRACE_MESSAGES) ?? config?.includeMessages;
+  const includePrompt = parseBooleanValue(env.OPENCLAW_CACHE_TRACE_PROMPT) ?? config?.includePrompt;
+  const includeSystem = parseBooleanValue(env.OPENCLAW_CACHE_TRACE_SYSTEM) ?? config?.includeSystem;
 
   return {
     enabled,
@@ -236,14 +238,19 @@ export function createCacheTrace(params: CacheTraceInit): CacheTrace | null {
 
   const wrapStreamFn: CacheTrace["wrapStreamFn"] = (streamFn) => {
     const wrapped: StreamFn = (model, context, options) => {
+      const traceContext = context as {
+        messages?: AgentMessage[];
+        system?: unknown;
+        systemPrompt?: unknown;
+      };
       recordStage("stream:context", {
         model: {
           id: model?.id,
           provider: model?.provider,
           api: model?.api,
         },
-        system: (context as { system?: unknown }).system,
-        messages: (context as { messages?: AgentMessage[] }).messages ?? [],
+        system: traceContext.systemPrompt ?? traceContext.system,
+        messages: traceContext.messages ?? [],
         options: (options ?? {}) as Record<string, unknown>,
       });
       return streamFn(model, context, options);

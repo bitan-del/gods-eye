@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { readMemoryFile } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+import { readMemoryFile } from "godseye/plugin-sdk/memory-core-host-engine-storage";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 describe("MemoryIndexManager.readFile", () => {

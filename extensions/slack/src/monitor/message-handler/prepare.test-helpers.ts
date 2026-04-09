@@ -1,15 +1,17 @@
 import type { App } from "@slack/bolt";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import type { ResolvedSlackAccount } from "../../accounts.js";
+import type { SlackChannelConfigEntries } from "../channel-config.js";
 import { createSlackMonitorContext } from "../context.js";
 
 export function createInboundSlackTestContext(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   appClient?: App["client"];
   defaultRequireMention?: boolean;
   replyToMode?: "off" | "all" | "first";
-  channelsConfig?: Record<string, { systemPrompt: string }>;
+  channelsConfig?: SlackChannelConfigEntries;
+  threadRequireExplicitMention?: boolean;
 }) {
   return createSlackMonitorContext({
     cfg: params.cfg,
@@ -38,9 +40,10 @@ export function createInboundSlackTestContext(params: {
     replyToMode: params.replyToMode ?? "off",
     threadHistoryScope: "thread",
     threadInheritParent: false,
+    threadRequireExplicitMention: params.threadRequireExplicitMention ?? false,
     slashCommand: {
       enabled: false,
-      name: "godseye",
+      name: "openclaw",
       sessionPrefix: "slack:slash",
       ephemeral: true,
     },

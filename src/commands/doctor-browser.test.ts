@@ -8,7 +8,7 @@ describe("doctor browser readiness", () => {
       {
         browser: {
           profiles: {
-            godseye: { color: "#FF4500" },
+            openclaw: { color: "#FF4500" },
           },
         },
       },

@@ -1,5 +1,5 @@
 // Private helper surface for the bundled mattermost plugin.
-// Keep this list additive and scoped to symbols used under extensions/mattermost.
+// Keep this list additive and scoped to the bundled Mattermost surface.
 
 export { formatInboundFromLabel } from "../auto-reply/envelope.js";
 export type { HistoryEntry } from "../auto-reply/reply/history.js";
@@ -20,13 +20,14 @@ export {
   buildModelsProviderData,
   type ModelsProviderData,
 } from "../auto-reply/reply/commands-models.js";
-export { resolveStoredModelOverride } from "../auto-reply/reply/model-selection.js";
+export { resolveStoredModelOverride } from "../auto-reply/reply/stored-model-override.js";
 export {
   deleteAccountFromConfigSection,
   setAccountEnabledInConfigSection,
 } from "../channels/plugins/config-helpers.js";
 export { buildChannelConfigSchema } from "../channels/plugins/config-schema.js";
 export { formatPairingApproveHint } from "../channels/plugins/helpers.js";
+export { chunkTextForOutbound } from "./text-chunking.js";
 export { resolveChannelMediaMaxBytes } from "../channels/plugins/media-limits.js";
 export {
   buildSingleChannelSecretPromptState,
@@ -36,9 +37,10 @@ export {
 export {
   applyAccountNameToChannelSection,
   applySetupAccountConfigPatch,
+  createSetupInputPresenceValidator,
   migrateBaseNameToDefaultAccount,
 } from "../channels/plugins/setup-helpers.js";
-export { createAccountStatusSink } from "./channel-lifecycle.js";
+export { createAccountStatusSink } from "./channel-lifecycle.core.js";
 export { buildComputedAccountStatusSnapshot } from "./status-helpers.js";
 export { createAccountListHelpers } from "../channels/plugins/account-helpers.js";
 export type {
@@ -51,7 +53,7 @@ export type {
 export type { ChannelDirectoryEntry } from "../channels/plugins/types.core.js";
 export type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 export { createChannelReplyPipeline } from "./channel-reply-pipeline.js";
-export type { GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig } from "../config/config.js";
 export { isDangerousNameMatchingEnabled } from "../config/dangerous-name-matching.js";
 export { loadSessionStore, resolveStorePath } from "../config/sessions.js";
 export {
@@ -74,7 +76,7 @@ export { isLoopbackHost, isTrustedProxyAddress, resolveClientIp } from "../gatew
 export { registerPluginHttpRoute } from "../plugins/http-registry.js";
 export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { PluginRuntime } from "../plugins/runtime/types.js";
-export type { GodsEyePluginApi } from "../plugins/types.js";
+export type { OpenClawPluginApi } from "../plugins/types.js";
 export {
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,

@@ -1,8 +1,8 @@
-import { loadConfig } from "openclaw/plugin-sdk/config-runtime";
-import { readChannelAllowFromStore } from "openclaw/plugin-sdk/conversation-runtime";
-import { getPluginCommandSpecs } from "openclaw/plugin-sdk/plugin-runtime";
-import { dispatchReplyWithBufferedBlockDispatcher } from "openclaw/plugin-sdk/reply-dispatch-runtime";
-import { listSkillCommandsForAgents } from "openclaw/plugin-sdk/skill-commands-runtime";
+import { loadConfig } from "godseye/plugin-sdk/config-runtime";
+import { readChannelAllowFromStore } from "godseye/plugin-sdk/conversation-runtime";
+import { getPluginCommandSpecs } from "godseye/plugin-sdk/plugin-runtime";
+import { dispatchReplyWithBufferedBlockDispatcher } from "godseye/plugin-sdk/reply-dispatch-runtime";
+import { listSkillCommandsForAgents } from "godseye/plugin-sdk/skill-commands-runtime";
 import type { TelegramBotDeps } from "./bot-deps.js";
 import { syncTelegramMenuCommands } from "./bot-native-command-menu.js";
 

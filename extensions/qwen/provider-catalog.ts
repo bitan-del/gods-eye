@@ -1,4 +1,4 @@
-import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-model-shared";
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import { buildQwenModelCatalogForBaseUrl, QWEN_BASE_URL } from "./models.js";
 
 export function buildQwenProvider(params?: { baseUrl?: string }): ModelProviderConfig {

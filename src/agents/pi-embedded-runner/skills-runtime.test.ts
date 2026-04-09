@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearRuntimeConfigSnapshot,
   setRuntimeConfigSnapshot,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "../../config/config.js";
 import * as skillsModule from "../skills.js";
 import type { SkillSnapshot } from "../skills.js";
@@ -19,7 +19,7 @@ describe("resolveEmbeddedRunSkillEntries", () => {
   });
 
   it("loads skill entries with config when no resolved snapshot skills exist", () => {
-    const config: GodsEyeConfig = {
+    const config: OpenClawConfig = {
       plugins: {
         entries: {
           diffs: { enabled: true },
@@ -41,8 +41,25 @@ describe("resolveEmbeddedRunSkillEntries", () => {
     expect(loadWorkspaceSkillEntriesSpy).toHaveBeenCalledWith("/tmp/workspace", { config });
   });
 
+  it("threads agentId through live skill loading", () => {
+    resolveEmbeddedRunSkillEntries({
+      workspaceDir: "/tmp/workspace",
+      config: {},
+      agentId: "writer",
+      skillsSnapshot: {
+        prompt: "skills prompt",
+        skills: [],
+      },
+    });
+
+    expect(loadWorkspaceSkillEntriesSpy).toHaveBeenCalledWith("/tmp/workspace", {
+      config: {},
+      agentId: "writer",
+    });
+  });
+
   it("prefers the active runtime snapshot when caller config still contains SecretRefs", () => {
-    const sourceConfig: GodsEyeConfig = {
+    const sourceConfig: OpenClawConfig = {
       skills: {
         entries: {
           diffs: {
@@ -55,7 +72,7 @@ describe("resolveEmbeddedRunSkillEntries", () => {
         },
       },
     };
-    const runtimeConfig: GodsEyeConfig = {
+    const runtimeConfig: OpenClawConfig = {
       skills: {
         entries: {
           diffs: {

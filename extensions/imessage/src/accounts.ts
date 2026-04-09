@@ -2,8 +2,9 @@ import {
   createAccountListHelpers,
   normalizeAccountId,
   resolveMergedAccountConfig,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/account-resolution";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { IMessageAccountConfig } from "../runtime-api.js";
 
 export type ResolvedIMessageAccount = {
@@ -18,7 +19,7 @@ const { listAccountIds, resolveDefaultAccountId } = createAccountListHelpers("im
 export const listIMessageAccountIds = listAccountIds;
 export const resolveDefaultIMessageAccountId = resolveDefaultAccountId;
 
-function mergeIMessageAccountConfig(cfg: GodsEyeConfig, accountId: string): IMessageAccountConfig {
+function mergeIMessageAccountConfig(cfg: OpenClawConfig, accountId: string): IMessageAccountConfig {
   return resolveMergedAccountConfig<IMessageAccountConfig>({
     channelConfig: cfg.channels?.imessage as IMessageAccountConfig | undefined,
     accounts: cfg.channels?.imessage?.accounts as
@@ -29,10 +30,12 @@ function mergeIMessageAccountConfig(cfg: GodsEyeConfig, accountId: string): IMes
 }
 
 export function resolveIMessageAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedIMessageAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultIMessageAccountId(params.cfg),
+  );
   const baseEnabled = params.cfg.channels?.imessage?.enabled !== false;
   const merged = mergeIMessageAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -55,13 +58,13 @@ export function resolveIMessageAccount(params: {
   return {
     accountId,
     enabled: baseEnabled && accountEnabled,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     config: merged,
     configured,
   };
 }
 
-export function listEnabledIMessageAccounts(cfg: GodsEyeConfig): ResolvedIMessageAccount[] {
+export function listEnabledIMessageAccounts(cfg: OpenClawConfig): ResolvedIMessageAccount[] {
   return listIMessageAccountIds(cfg)
     .map((accountId) => resolveIMessageAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

@@ -10,14 +10,14 @@ const report: HookStatusReport = {
     {
       name: "session-memory",
       description: "Save session context to memory",
-      source: "godseye-bundled",
+      source: "openclaw-bundled",
       pluginId: undefined,
       filePath: "/tmp/hooks/session-memory/HOOK.md",
       baseDir: "/tmp/hooks/session-memory",
       handlerPath: "/tmp/hooks/session-memory/handler.js",
       hookKey: "session-memory",
       emoji: "💾",
-      homepage: "https://docs.gods-eye.org/automation/hooks#session-memory",
+      homepage: "https://docs.openclaw.ai/automation/hooks#session-memory",
       events: ["command:new"],
       always: false,
       enabledByConfig: true,
@@ -29,6 +29,35 @@ const report: HookStatusReport = {
     },
   ],
 };
+
+function createPluginManagedHookReport(): HookStatusReport {
+  return {
+    workspaceDir: "/tmp/workspace",
+    managedHooksDir: "/tmp/hooks",
+    hooks: [
+      {
+        name: "plugin-hook",
+        description: "Hook from plugin",
+        source: "openclaw-plugin",
+        pluginId: "voice-call",
+        filePath: "/tmp/hooks/plugin-hook/HOOK.md",
+        baseDir: "/tmp/hooks/plugin-hook",
+        handlerPath: "/tmp/hooks/plugin-hook/handler.js",
+        hookKey: "plugin-hook",
+        emoji: "🔗",
+        homepage: undefined,
+        events: ["command:new"],
+        always: false,
+        enabledByConfig: true,
+        requirementsSatisfied: true,
+        loadable: true,
+        blockedReason: undefined,
+        managedByPlugin: true,
+        ...createEmptyInstallChecks(),
+      },
+    ],
+  };
+}
 
 describe("hooks cli formatting", () => {
   it("labels hooks list output", () => {
@@ -43,64 +72,14 @@ describe("hooks cli formatting", () => {
   });
 
   it("labels plugin-managed hooks with plugin id", () => {
-    const pluginReport: HookStatusReport = {
-      workspaceDir: "/tmp/workspace",
-      managedHooksDir: "/tmp/hooks",
-      hooks: [
-        {
-          name: "plugin-hook",
-          description: "Hook from plugin",
-          source: "godseye-plugin",
-          pluginId: "voice-call",
-          filePath: "/tmp/hooks/plugin-hook/HOOK.md",
-          baseDir: "/tmp/hooks/plugin-hook",
-          handlerPath: "/tmp/hooks/plugin-hook/handler.js",
-          hookKey: "plugin-hook",
-          emoji: "🔗",
-          homepage: undefined,
-          events: ["command:new"],
-          always: false,
-          enabledByConfig: true,
-          requirementsSatisfied: true,
-          loadable: true,
-          blockedReason: undefined,
-          managedByPlugin: true,
-          ...createEmptyInstallChecks(),
-        },
-      ],
-    };
+    const pluginReport = createPluginManagedHookReport();
 
     const output = formatHooksList(pluginReport, {});
     expect(output).toContain("plugin:voice-call");
   });
 
   it("shows plugin-managed details in hook info", () => {
-    const pluginReport: HookStatusReport = {
-      workspaceDir: "/tmp/workspace",
-      managedHooksDir: "/tmp/hooks",
-      hooks: [
-        {
-          name: "plugin-hook",
-          description: "Hook from plugin",
-          source: "godseye-plugin",
-          pluginId: "voice-call",
-          filePath: "/tmp/hooks/plugin-hook/HOOK.md",
-          baseDir: "/tmp/hooks/plugin-hook",
-          handlerPath: "/tmp/hooks/plugin-hook/handler.js",
-          hookKey: "plugin-hook",
-          emoji: "🔗",
-          homepage: undefined,
-          events: ["command:new"],
-          always: false,
-          enabledByConfig: true,
-          requirementsSatisfied: true,
-          loadable: true,
-          blockedReason: undefined,
-          managedByPlugin: true,
-          ...createEmptyInstallChecks(),
-        },
-      ],
-    };
+    const pluginReport = createPluginManagedHookReport();
 
     const output = formatHookInfo(pluginReport, "plugin-hook", {});
     expect(output).toContain("voice-call");

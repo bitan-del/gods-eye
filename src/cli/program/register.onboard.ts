@@ -67,9 +67,9 @@ export function registerOnboardCommand(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/onboard", "docs.gods-eye.org/cli/onboard")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/onboard", "docs.openclaw.ai/cli/onboard")}\n`,
     )
-    .option("--workspace <dir>", "Agent workspace directory (default: ~/.godseye/workspace)")
+    .option("--workspace <dir>", "Agent workspace directory (default: ~/.openclaw/workspace)")
     .option(
       "--reset",
       "Reset config + credentials + sessions before running onboard (workspace only with --reset-scope full)",
@@ -120,7 +120,7 @@ export function registerOnboardCommand(program: Command) {
     .option("--gateway-token <token>", "Gateway token (token auth)")
     .option(
       "--gateway-token-ref-env <name>",
-      "Gateway token SecretRef env var name (token auth; e.g. GODSEYE_GATEWAY_TOKEN)",
+      "Gateway token SecretRef env var name (token auth; e.g. OPENCLAW_GATEWAY_TOKEN)",
     )
     .option("--gateway-password <password>", "Gateway password (password auth)")
     .option("--remote-url <url>", "Remote Gateway WebSocket URL")
@@ -134,7 +134,6 @@ export function registerOnboardCommand(program: Command) {
     .option("--skip-channels", "Skip channel setup")
     .option("--skip-skills", "Skip skills setup")
     .option("--skip-search", "Skip search provider setup")
-    .option("--skip-creative", "Skip Gods Eye Studio creative tools setup")
     .option("--skip-health", "Skip health check")
     .option("--skip-ui", "Skip Control UI/TUI prompts")
     .option("--node-manager <name>", "Node manager for skills: npm|pnpm|bun")
@@ -191,7 +190,6 @@ export function registerOnboardCommand(program: Command) {
           skipChannels: Boolean(opts.skipChannels),
           skipSkills: Boolean(opts.skipSkills),
           skipSearch: Boolean(opts.skipSearch),
-          skipCreative: Boolean(opts.skipCreative),
           skipHealth: Boolean(opts.skipHealth),
           skipUi: Boolean(opts.skipUi),
           nodeManager: opts.nodeManager as NodeManagerChoice | undefined,

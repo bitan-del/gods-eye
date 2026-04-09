@@ -8,24 +8,24 @@ import {
 describe("parseCliContainerArgs", () => {
   it("extracts a root --container flag before the command", () => {
     expect(
-      parseCliContainerArgs(["node", "godseye", "--container", "demo", "status", "--deep"]),
+      parseCliContainerArgs(["node", "openclaw", "--container", "demo", "status", "--deep"]),
     ).toEqual({
       ok: true,
       container: "demo",
-      argv: ["node", "godseye", "status", "--deep"],
+      argv: ["node", "openclaw", "status", "--deep"],
     });
   });
 
   it("accepts the equals form", () => {
-    expect(parseCliContainerArgs(["node", "godseye", "--container=demo", "health"])).toEqual({
+    expect(parseCliContainerArgs(["node", "openclaw", "--container=demo", "health"])).toEqual({
       ok: true,
       container: "demo",
-      argv: ["node", "godseye", "health"],
+      argv: ["node", "openclaw", "health"],
     });
   });
 
   it("rejects a missing container value", () => {
-    expect(parseCliContainerArgs(["node", "godseye", "--container"])).toEqual({
+    expect(parseCliContainerArgs(["node", "openclaw", "--container"])).toEqual({
       ok: false,
       error: "--container requires a value",
     });
@@ -33,7 +33,7 @@ describe("parseCliContainerArgs", () => {
 
   it("does not consume an adjacent flag as the container value", () => {
     expect(
-      parseCliContainerArgs(["node", "godseye", "--container", "--no-color", "status"]),
+      parseCliContainerArgs(["node", "openclaw", "--container", "--no-color", "status"]),
     ).toEqual({
       ok: false,
       error: "--container requires a value",
@@ -41,20 +41,20 @@ describe("parseCliContainerArgs", () => {
   });
 
   it("leaves argv unchanged when the flag is absent", () => {
-    expect(parseCliContainerArgs(["node", "godseye", "status"])).toEqual({
+    expect(parseCliContainerArgs(["node", "openclaw", "status"])).toEqual({
       ok: true,
       container: null,
-      argv: ["node", "godseye", "status"],
+      argv: ["node", "openclaw", "status"],
     });
   });
 
   it("extracts --container after the command like other root options", () => {
     expect(
-      parseCliContainerArgs(["node", "godseye", "status", "--container", "demo", "--deep"]),
+      parseCliContainerArgs(["node", "openclaw", "status", "--container", "demo", "--deep"]),
     ).toEqual({
       ok: true,
       container: "demo",
-      argv: ["node", "godseye", "status", "--deep"],
+      argv: ["node", "openclaw", "status", "--deep"],
     });
   });
 
@@ -62,7 +62,7 @@ describe("parseCliContainerArgs", () => {
     expect(
       parseCliContainerArgs([
         "node",
-        "godseye",
+        "openclaw",
         "nodes",
         "run",
         "--",
@@ -77,7 +77,7 @@ describe("parseCliContainerArgs", () => {
       container: null,
       argv: [
         "node",
-        "godseye",
+        "openclaw",
         "nodes",
         "run",
         "--",
@@ -92,14 +92,14 @@ describe("parseCliContainerArgs", () => {
 });
 
 describe("resolveCliContainerTarget", () => {
-  it("uses argv first and falls back to GODSEYE_CONTAINER", () => {
+  it("uses argv first and falls back to OPENCLAW_CONTAINER", () => {
     expect(
-      resolveCliContainerTarget(["node", "godseye", "--container", "demo", "status"], {}),
+      resolveCliContainerTarget(["node", "openclaw", "--container", "demo", "status"], {}),
     ).toBe("demo");
-    expect(resolveCliContainerTarget(["node", "godseye", "status"], {})).toBeNull();
+    expect(resolveCliContainerTarget(["node", "openclaw", "status"], {})).toBeNull();
     expect(
-      resolveCliContainerTarget(["node", "godseye", "status"], {
-        GODSEYE_CONTAINER: "demo",
+      resolveCliContainerTarget(["node", "openclaw", "status"], {
+        OPENCLAW_CONTAINER: "demo",
       } as NodeJS.ProcessEnv),
     ).toBe("demo");
   });
@@ -107,13 +107,13 @@ describe("resolveCliContainerTarget", () => {
 
 describe("maybeRunCliInContainer", () => {
   it("passes through when no container target is provided", () => {
-    expect(maybeRunCliInContainer(["node", "godseye", "status"], { env: {} })).toEqual({
+    expect(maybeRunCliInContainer(["node", "openclaw", "status"], { env: {} })).toEqual({
       handled: false,
-      argv: ["node", "godseye", "status"],
+      argv: ["node", "openclaw", "status"],
     });
   });
 
-  it("uses GODSEYE_CONTAINER when the flag is absent", () => {
+  it("uses OPENCLAW_CONTAINER when the flag is absent", () => {
     const spawnSync = vi
       .fn()
       .mockReturnValueOnce({
@@ -130,8 +130,8 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(
-      maybeRunCliInContainer(["node", "godseye", "status"], {
-        env: { GODSEYE_CONTAINER: "demo" } as NodeJS.ProcessEnv,
+      maybeRunCliInContainer(["node", "openclaw", "status"], {
+        env: { OPENCLAW_CONTAINER: "demo" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
     ).toEqual({
@@ -146,17 +146,17 @@ describe("maybeRunCliInContainer", () => {
         "exec",
         "-i",
         "--env",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "--env",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "status",
       ],
       {
         stdio: "inherit",
         env: {
-          GODSEYE_CONTAINER: "",
+          OPENCLAW_CONTAINER: "",
         },
       },
     );
@@ -178,14 +178,14 @@ describe("maybeRunCliInContainer", () => {
         stdout: "",
       });
 
-    maybeRunCliInContainer(["node", "godseye", "status"], {
+    maybeRunCliInContainer(["node", "openclaw", "status"], {
       env: {
-        GODSEYE_CONTAINER: "demo",
-        GODSEYE_PROFILE: "work",
-        GODSEYE_GATEWAY_PORT: "19001",
-        GODSEYE_GATEWAY_URL: "ws://127.0.0.1:18789",
-        GODSEYE_GATEWAY_TOKEN: "token",
-        GODSEYE_GATEWAY_PASSWORD: "password",
+        OPENCLAW_CONTAINER: "demo",
+        OPENCLAW_PROFILE: "work",
+        OPENCLAW_GATEWAY_PORT: "19001",
+        OPENCLAW_GATEWAY_URL: "ws://127.0.0.1:18789",
+        OPENCLAW_GATEWAY_TOKEN: "token",
+        OPENCLAW_GATEWAY_PASSWORD: "password",
       } as NodeJS.ProcessEnv,
       spawnSync,
     });
@@ -197,17 +197,17 @@ describe("maybeRunCliInContainer", () => {
         "exec",
         "-i",
         "--env",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "--env",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "status",
       ],
       {
         stdio: "inherit",
         env: {
-          GODSEYE_CONTAINER: "",
+          OPENCLAW_CONTAINER: "",
         },
       },
     );
@@ -230,7 +230,7 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
         env: {},
         spawnSync,
       }),
@@ -252,16 +252,16 @@ describe("maybeRunCliInContainer", () => {
         "exec",
         "-i",
         "--env",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "--env",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "status",
       ],
       {
         stdio: "inherit",
-        env: { GODSEYE_CONTAINER: "" },
+        env: { OPENCLAW_CONTAINER: "" },
       },
     );
   });
@@ -283,8 +283,8 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "health"], {
-        env: { USER: "godseye" } as NodeJS.ProcessEnv,
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "health"], {
+        env: { USER: "openclaw" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
     ).toEqual({
@@ -305,16 +305,16 @@ describe("maybeRunCliInContainer", () => {
         "exec",
         "-i",
         "-e",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "-e",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "health",
       ],
       {
         stdio: "inherit",
-        env: { USER: "godseye", GODSEYE_CONTAINER: "" },
+        env: { USER: "openclaw", OPENCLAW_CONTAINER: "" },
       },
     );
   });
@@ -340,7 +340,7 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
         env: { USER: "somalley" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
@@ -368,16 +368,16 @@ describe("maybeRunCliInContainer", () => {
         "exec",
         "-i",
         "-e",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "-e",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "status",
       ],
       {
         stdio: "inherit",
-        env: { USER: "somalley", GODSEYE_CONTAINER: "" },
+        env: { USER: "somalley", OPENCLAW_CONTAINER: "" },
       },
     );
     expect(spawnSync).toHaveBeenCalledTimes(3);
@@ -396,7 +396,7 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
         env: { USER: "somalley" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
@@ -434,7 +434,7 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
         env: { USER: "somalley" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
@@ -459,7 +459,7 @@ describe("maybeRunCliInContainer", () => {
         stdout: "",
       });
 
-    maybeRunCliInContainer(["node", "godseye", "--container", "demo", "setup"], {
+    maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "setup"], {
       env: {},
       spawnSync,
       stdinIsTTY: true,
@@ -474,21 +474,21 @@ describe("maybeRunCliInContainer", () => {
         "-i",
         "-t",
         "--env",
-        "GODSEYE_CONTAINER_HINT=demo",
+        "OPENCLAW_CONTAINER_HINT=demo",
         "--env",
-        "GODSEYE_CLI_CONTAINER_BYPASS=1",
+        "OPENCLAW_CLI_CONTAINER_BYPASS=1",
         "demo",
-        "godseye",
+        "openclaw",
         "setup",
       ],
       {
         stdio: "inherit",
-        env: { GODSEYE_CONTAINER: "" },
+        env: { OPENCLAW_CONTAINER: "" },
       },
     );
   });
 
-  it("prefers --container over GODSEYE_CONTAINER", () => {
+  it("prefers --container over OPENCLAW_CONTAINER", () => {
     const spawnSync = vi
       .fn()
       .mockReturnValueOnce({
@@ -505,8 +505,8 @@ describe("maybeRunCliInContainer", () => {
       });
 
     expect(
-      maybeRunCliInContainer(["node", "godseye", "--container", "flag-demo", "health"], {
-        env: { GODSEYE_CONTAINER: "env-demo" } as NodeJS.ProcessEnv,
+      maybeRunCliInContainer(["node", "openclaw", "--container", "flag-demo", "health"], {
+        env: { OPENCLAW_CONTAINER: "env-demo" } as NodeJS.ProcessEnv,
         spawnSync,
       }),
     ).toEqual({
@@ -529,7 +529,7 @@ describe("maybeRunCliInContainer", () => {
     });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
         env: {},
         spawnSync,
       }),
@@ -538,12 +538,12 @@ describe("maybeRunCliInContainer", () => {
 
   it("skips recursion when the bypass env is set", () => {
     expect(
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "status"], {
-        env: { GODSEYE_CLI_CONTAINER_BYPASS: "1" } as NodeJS.ProcessEnv,
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "status"], {
+        env: { OPENCLAW_CLI_CONTAINER_BYPASS: "1" } as NodeJS.ProcessEnv,
       }),
     ).toEqual({
       handled: false,
-      argv: ["node", "godseye", "--container", "demo", "status"],
+      argv: ["node", "openclaw", "--container", "demo", "status"],
     });
   });
 
@@ -554,12 +554,12 @@ describe("maybeRunCliInContainer", () => {
     });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "update"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "update"], {
         env: {},
         spawnSync,
       }),
     ).toThrow(
-      "godseye update is not supported with --container; rebuild or restart the container image instead.",
+      "openclaw update is not supported with --container; rebuild or restart the container image instead.",
     );
     expect(spawnSync).not.toHaveBeenCalled();
   });
@@ -571,12 +571,12 @@ describe("maybeRunCliInContainer", () => {
     });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "--no-color", "update"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "--no-color", "update"], {
         env: {},
         spawnSync,
       }),
     ).toThrow(
-      "godseye update is not supported with --container; rebuild or restart the container image instead.",
+      "openclaw update is not supported with --container; rebuild or restart the container image instead.",
     );
     expect(spawnSync).not.toHaveBeenCalled();
   });
@@ -588,12 +588,12 @@ describe("maybeRunCliInContainer", () => {
     });
 
     expect(() =>
-      maybeRunCliInContainer(["node", "godseye", "--container", "demo", "--update"], {
+      maybeRunCliInContainer(["node", "openclaw", "--container", "demo", "--update"], {
         env: {},
         spawnSync,
       }),
     ).toThrow(
-      "godseye update is not supported with --container; rebuild or restart the container image instead.",
+      "openclaw update is not supported with --container; rebuild or restart the container image instead.",
     );
     expect(spawnSync).not.toHaveBeenCalled();
   });

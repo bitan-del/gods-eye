@@ -71,7 +71,7 @@ export function registerTriggerHandlingUsageSummaryCases(params: {
 
         const text = Array.isArray(res) ? res[0]?.text : res?.text;
         expect(text).toContain("Model:");
-        expect(text).toContain("Gods Eye");
+        expect(text).toContain("OpenClaw");
         expect(runEmbeddedPiAgentMock).not.toHaveBeenCalled();
       });
     });

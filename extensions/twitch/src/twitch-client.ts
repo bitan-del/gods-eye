@@ -1,6 +1,7 @@
 import { RefreshingAuthProvider, StaticAuthProvider } from "@twurple/auth";
 import { ChatClient, LogLevel } from "@twurple/chat";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import type { OpenClawConfig } from "../runtime-api.js";
 import { resolveTwitchToken } from "./token.js";
 import type { ChannelLogSink, TwitchAccountConfig, TwitchChatMessage } from "./types.js";
 import { normalizeToken } from "./utils/twitch.js";
@@ -45,7 +46,7 @@ export class TwitchClientManager {
         })
         .catch((err) => {
           this.logger.error(
-            `Failed to add user to RefreshingAuthProvider: ${err instanceof Error ? err.message : String(err)}`,
+            `Failed to add user to RefreshingAuthProvider: ${formatErrorMessage(err)}`,
           );
         });
 
@@ -76,7 +77,7 @@ export class TwitchClientManager {
    */
   async getClient(
     account: TwitchAccountConfig,
-    cfg?: GodsEyeConfig,
+    cfg?: OpenClawConfig,
     accountId?: string,
   ): Promise<ChatClient> {
     const key = this.getAccountKey(account);
@@ -92,7 +93,7 @@ export class TwitchClientManager {
 
     if (!tokenResolution.token) {
       this.logger.error(
-        `Missing Twitch token for account ${account.username} (set channels.twitch.accounts.${account.username}.token or GODSEYE_TWITCH_ACCESS_TOKEN for default)`,
+        `Missing Twitch token for account ${account.username} (set channels.twitch.accounts.${account.username}.token or OPENCLAW_TWITCH_ACCESS_TOKEN for default)`,
       );
       throw new Error("Missing Twitch token");
     }
@@ -236,7 +237,7 @@ export class TwitchClientManager {
     account: TwitchAccountConfig,
     channel: string,
     message: string,
-    cfg?: GodsEyeConfig,
+    cfg?: OpenClawConfig,
     accountId?: string,
   ): Promise<{ ok: boolean; error?: string; messageId?: string }> {
     try {
@@ -250,12 +251,10 @@ export class TwitchClientManager {
 
       return { ok: true, messageId };
     } catch (error) {
-      this.logger.error(
-        `Failed to send message: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      this.logger.error(`Failed to send message: ${formatErrorMessage(error)}`);
       return {
         ok: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: formatErrorMessage(error),
       };
     }
   }

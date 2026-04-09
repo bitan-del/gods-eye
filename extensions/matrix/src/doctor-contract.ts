@@ -1,12 +1,12 @@
 import type {
   ChannelDoctorConfigMutation,
   ChannelDoctorLegacyConfigRule,
-} from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+} from "godseye/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   hasLegacyFlatAllowPrivateNetworkAlias,
   migrateLegacyFlatAllowPrivateNetworkAlias,
-} from "openclaw/plugin-sdk/ssrf-runtime";
+} from "godseye/plugin-sdk/ssrf-runtime";
 import { isRecord } from "./record-shared.js";
 
 function hasLegacyMatrixRoomAllowAlias(value: unknown): boolean {

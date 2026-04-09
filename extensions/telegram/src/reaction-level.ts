@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   resolveReactionLevel,
   type ReactionLevel,
@@ -13,7 +13,7 @@ export type ResolvedReactionLevel = BaseResolvedReactionLevel;
  * Resolve the effective reaction level and its implications.
  */
 export function resolveTelegramReactionLevel(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string;
 }): ResolvedReactionLevel {
   const account = resolveTelegramAccount({

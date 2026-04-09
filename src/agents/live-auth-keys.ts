@@ -1,7 +1,12 @@
+import { getProviderEnvVars } from "../secrets/provider-env-vars.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { normalizeProviderId } from "./model-selection.js";
 
 const KEY_SPLIT_RE = /[\s,;]+/g;
-const GOOGLE_LIVE_SINGLE_KEY = "GODSEYE_LIVE_GEMINI_KEY";
+const GOOGLE_LIVE_SINGLE_KEY = "OPENCLAW_LIVE_GEMINI_KEY";
 
 const PROVIDER_PREFIX_OVERRIDES: Record<string, string> = {
   google: "GEMINI",
@@ -16,10 +21,15 @@ type ProviderApiKeyConfig = {
   fallbackVars: string[];
 };
 
+type CollectProviderApiKeysOptions = {
+  env?: NodeJS.ProcessEnv;
+  providerEnvVars?: readonly string[];
+};
+
 const PROVIDER_API_KEY_CONFIG: Record<string, Omit<ProviderApiKeyConfig, "fallbackVars">> = {
   anthropic: {
-    liveSingle: "GODSEYE_LIVE_ANTHROPIC_KEY",
-    listVar: "GODSEYE_LIVE_ANTHROPIC_KEYS",
+    liveSingle: "OPENCLAW_LIVE_ANTHROPIC_KEY",
+    listVar: "OPENCLAW_LIVE_ANTHROPIC_KEYS",
     primaryVar: "ANTHROPIC_API_KEY",
     prefixedVar: "ANTHROPIC_API_KEY_",
   },
@@ -36,7 +46,7 @@ const PROVIDER_API_KEY_CONFIG: Record<string, Omit<ProviderApiKeyConfig, "fallba
     prefixedVar: "GEMINI_API_KEY_",
   },
   openai: {
-    liveSingle: "GODSEYE_LIVE_OPENAI_KEY",
+    liveSingle: "OPENCLAW_LIVE_OPENAI_KEY",
     listVar: "OPENAI_API_KEYS",
     primaryVar: "OPENAI_API_KEY",
     prefixedVar: "OPENAI_API_KEY_",
@@ -53,13 +63,13 @@ function parseKeyList(raw?: string | null): string[] {
     .filter(Boolean);
 }
 
-function collectEnvPrefixedKeys(prefix: string): string[] {
+function collectEnvPrefixedKeys(prefix: string, env: NodeJS.ProcessEnv): string[] {
   const keys: string[] = [];
-  for (const [name, value] of Object.entries(process.env)) {
+  for (const [name, value] of Object.entries(env)) {
     if (!name.startsWith(prefix)) {
       continue;
     }
-    const trimmed = value?.trim();
+    const trimmed = normalizeOptionalString(value);
     if (!trimmed) {
       continue;
     }
@@ -73,7 +83,7 @@ function resolveProviderApiKeyConfig(provider: string): ProviderApiKeyConfig {
   const custom = PROVIDER_API_KEY_CONFIG[normalized];
   const base = PROVIDER_PREFIX_OVERRIDES[normalized] ?? normalized.toUpperCase().replace(/-/g, "_");
 
-  const liveSingle = custom?.liveSingle ?? `GODSEYE_LIVE_${base}_KEY`;
+  const liveSingle = custom?.liveSingle ?? `OPENCLAW_LIVE_${base}_KEY`;
   const listVar = custom?.listVar ?? `${base}_API_KEYS`;
   const primaryVar = custom?.primaryVar ?? `${base}_API_KEY`;
   const prefixedVar = custom?.prefixedVar ?? `${base}_API_KEY_`;
@@ -97,20 +107,31 @@ function resolveProviderApiKeyConfig(provider: string): ProviderApiKeyConfig {
   };
 }
 
-export function collectProviderApiKeys(provider: string): string[] {
-  const config = resolveProviderApiKeyConfig(provider);
+export function collectProviderApiKeys(
+  provider: string,
+  options: CollectProviderApiKeysOptions = {},
+): string[] {
+  const env = options.env ?? process.env;
+  const normalizedProvider = normalizeProviderId(provider);
+  const config = resolveProviderApiKeyConfig(normalizedProvider);
 
-  const forcedSingle = config.liveSingle ? process.env[config.liveSingle]?.trim() : undefined;
+  const forcedSingle = config.liveSingle
+    ? normalizeOptionalString(env[config.liveSingle])
+    : undefined;
   if (forcedSingle) {
     return [forcedSingle];
   }
 
-  const fromList = parseKeyList(config.listVar ? process.env[config.listVar] : undefined);
-  const primary = config.primaryVar ? process.env[config.primaryVar]?.trim() : undefined;
-  const fromPrefixed = config.prefixedVar ? collectEnvPrefixedKeys(config.prefixedVar) : [];
+  const fromList = parseKeyList(config.listVar ? env[config.listVar] : undefined);
+  const primary = config.primaryVar ? normalizeOptionalString(env[config.primaryVar]) : undefined;
+  const fromPrefixed = config.prefixedVar ? collectEnvPrefixedKeys(config.prefixedVar, env) : [];
 
   const fallback = config.fallbackVars
-    .map((envVar) => process.env[envVar]?.trim())
+    .map((envVar) => normalizeOptionalString(env[envVar]))
+    .filter(Boolean) as string[];
+  const manifestEnvVars = options.providerEnvVars ?? getProviderEnvVars(normalizedProvider);
+  const manifestFallback = manifestEnvVars
+    .map((envVar) => normalizeOptionalString(env[envVar]))
     .filter(Boolean) as string[];
 
   const seen = new Set<string>();
@@ -135,6 +156,9 @@ export function collectProviderApiKeys(provider: string): string[] {
   for (const value of fallback) {
     add(value);
   }
+  for (const value of manifestFallback) {
+    add(value);
+  }
 
   return Array.from(seen);
 }
@@ -148,7 +172,7 @@ export function collectGeminiApiKeys(): string[] {
 }
 
 export function isApiKeyRateLimitError(message: string): boolean {
-  const lower = message.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(message);
   if (lower.includes("rate_limit")) {
     return true;
   }
@@ -175,7 +199,7 @@ export function isAnthropicRateLimitError(message: string): boolean {
 }
 
 export function isAnthropicBillingError(message: string): boolean {
-  const lower = message.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(message);
   if (lower.includes("credit balance")) {
     return true;
   }

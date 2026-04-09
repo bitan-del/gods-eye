@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildWorkspaceSkillStatus } from "../agents/skills-status.js";
 import type { SkillEntry } from "../agents/skills.js";
+import { createCanonicalFixtureSkill } from "../agents/skills.test-helpers.js";
 import { captureEnv } from "../test-utils/env.js";
 import { formatSkillInfo, formatSkillsCheck, formatSkillsList } from "./skills-cli.format.js";
 
@@ -13,10 +14,10 @@ describe("skills-cli (e2e)", () => {
   let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeAll(() => {
-    envSnapshot = captureEnv(["GODSEYE_BUNDLED_SKILLS_DIR"]);
-    tempWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-skills-test-"));
-    tempBundledDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-bundled-skills-test-"));
-    process.env.GODSEYE_BUNDLED_SKILLS_DIR = tempBundledDir;
+    envSnapshot = captureEnv(["OPENCLAW_BUNDLED_SKILLS_DIR"]);
+    tempWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-skills-test-"));
+    tempBundledDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-bundled-skills-test-"));
+    process.env.OPENCLAW_BUNDLED_SKILLS_DIR = tempBundledDir;
   });
 
   afterAll(() => {
@@ -31,15 +32,16 @@ describe("skills-cli (e2e)", () => {
 
   function createEntries(): SkillEntry[] {
     const baseDir = path.join(tempWorkspaceDir, "peekaboo");
+    const filePath = path.join(baseDir, "SKILL.md");
     return [
       {
-        skill: {
+        skill: createFixtureSkill({
           name: "peekaboo",
           description: "Capture UI screenshots",
-          source: "godseye-bundled",
-          filePath: path.join(baseDir, "SKILL.md"),
+          filePath,
           baseDir,
-        } as SkillEntry["skill"],
+          source: "openclaw-bundled",
+        }),
         frontmatter: {},
         metadata: { emoji: "📸" },
       },
@@ -83,3 +85,13 @@ describe("skills-cli (e2e)", () => {
     expect(output).toContain("Details:");
   });
 });
+
+function createFixtureSkill(params: {
+  name: string;
+  description: string;
+  filePath: string;
+  baseDir: string;
+  source: string;
+}): SkillEntry["skill"] {
+  return createCanonicalFixtureSkill(params);
+}

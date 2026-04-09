@@ -1,4 +1,4 @@
-import type { ChannelPlugin } from "openclaw/plugin-sdk/core";
+import type { ChannelPlugin } from "godseye/plugin-sdk/core";
 import { qqbotConfigAdapter, qqbotMeta, qqbotSetupAdapterShared } from "./channel-config-shared.js";
 import { qqbotChannelConfigSchema } from "./config-schema.js";
 import { qqbotSetupWizard } from "./setup-surface.js";

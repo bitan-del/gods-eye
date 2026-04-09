@@ -3,56 +3,15 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
+  readCompactionCount,
+  seedSessionStore,
+  waitForCompactionCount,
+} from "./pi-embedded-subscribe.compaction-test-helpers.js";
+import {
   handleAutoCompactionEnd,
   reconcileSessionStoreCompactionCountAfterSuccess,
 } from "./pi-embedded-subscribe.handlers.compaction.js";
 import type { EmbeddedPiSubscribeContext } from "./pi-embedded-subscribe.handlers.types.js";
-
-async function seedSessionStore(params: {
-  storePath: string;
-  sessionKey: string;
-  compactionCount: number;
-  updatedAt?: number;
-}) {
-  await fs.mkdir(path.dirname(params.storePath), { recursive: true });
-  await fs.writeFile(
-    params.storePath,
-    JSON.stringify(
-      {
-        [params.sessionKey]: {
-          sessionId: "session-1",
-          updatedAt: params.updatedAt ?? 1_000,
-          compactionCount: params.compactionCount,
-        },
-      },
-      null,
-      2,
-    ),
-    "utf-8",
-  );
-}
-
-async function readCompactionCount(storePath: string, sessionKey: string): Promise<number> {
-  const store = JSON.parse(await fs.readFile(storePath, "utf-8")) as Record<
-    string,
-    { compactionCount?: number }
-  >;
-  return store[sessionKey]?.compactionCount ?? 0;
-}
-
-async function waitForCompactionCount(params: {
-  storePath: string;
-  sessionKey: string;
-  expected: number;
-}) {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    if ((await readCompactionCount(params.storePath, params.sessionKey)) === params.expected) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-  throw new Error(`timed out waiting for compactionCount=${params.expected}`);
-}
 
 function createCompactionContext(params: {
   storePath: string;
@@ -93,7 +52,7 @@ function createCompactionContext(params: {
 
 describe("reconcileSessionStoreCompactionCountAfterSuccess", () => {
   it("raises the stored compaction count to the observed value", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-compaction-reconcile-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-compaction-reconcile-"));
     const storePath = path.join(tmp, "sessions.json");
     const sessionKey = "main";
     await seedSessionStore({
@@ -115,7 +74,7 @@ describe("reconcileSessionStoreCompactionCountAfterSuccess", () => {
   });
 
   it("does not double count when the store is already at or above the observed value", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-compaction-idempotent-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-compaction-idempotent-"));
     const storePath = path.join(tmp, "sessions.json");
     const sessionKey = "main";
     await seedSessionStore({
@@ -139,7 +98,7 @@ describe("reconcileSessionStoreCompactionCountAfterSuccess", () => {
 
 describe("handleAutoCompactionEnd", () => {
   it("reconciles the session store after a successful compaction end event", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-compaction-handler-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-compaction-handler-"));
     const storePath = path.join(tmp, "sessions.json");
     const sessionKey = "main";
     await seedSessionStore({

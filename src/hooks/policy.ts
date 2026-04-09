@@ -1,4 +1,4 @@
-import type { GodsEyeConfig, HookConfig } from "../config/config.js";
+import type { OpenClawConfig, HookConfig } from "../config/config.js";
 import { resolveHookKey } from "./frontmatter.js";
 import type { HookEntry, HookSource } from "./types.js";
 
@@ -24,33 +24,33 @@ export type HookResolutionCollision = {
 };
 
 const HOOK_SOURCE_POLICIES: Record<HookSource, HookSourcePolicy> = {
-  "godseye-bundled": {
+  "openclaw-bundled": {
     precedence: 10,
     trustedLocalCode: true,
     defaultEnableMode: "default-on",
-    canOverride: ["godseye-bundled"],
-    canBeOverriddenBy: ["godseye-managed", "godseye-plugin"],
+    canOverride: ["openclaw-bundled"],
+    canBeOverriddenBy: ["openclaw-managed", "openclaw-plugin"],
   },
-  "godseye-plugin": {
+  "openclaw-plugin": {
     precedence: 20,
     trustedLocalCode: true,
     defaultEnableMode: "default-on",
-    canOverride: ["godseye-bundled", "godseye-plugin"],
-    canBeOverriddenBy: ["godseye-managed"],
+    canOverride: ["openclaw-bundled", "openclaw-plugin"],
+    canBeOverriddenBy: ["openclaw-managed"],
   },
-  "godseye-managed": {
+  "openclaw-managed": {
     precedence: 30,
     trustedLocalCode: true,
     defaultEnableMode: "default-on",
-    canOverride: ["godseye-bundled", "godseye-managed", "godseye-plugin"],
-    canBeOverriddenBy: ["godseye-managed"],
+    canOverride: ["openclaw-bundled", "openclaw-managed", "openclaw-plugin"],
+    canBeOverriddenBy: ["openclaw-managed"],
   },
-  "godseye-workspace": {
+  "openclaw-workspace": {
     precedence: 40,
     trustedLocalCode: true,
     defaultEnableMode: "explicit-opt-in",
-    canOverride: ["godseye-workspace"],
-    canBeOverriddenBy: ["godseye-workspace"],
+    canOverride: ["openclaw-workspace"],
+    canBeOverriddenBy: ["openclaw-workspace"],
   },
 };
 
@@ -59,7 +59,7 @@ export function getHookSourcePolicy(source: HookSource): HookSourcePolicy {
 }
 
 export function resolveHookConfig(
-  config: GodsEyeConfig | undefined,
+  config: OpenClawConfig | undefined,
   hookKey: string,
 ): HookConfig | undefined {
   const hooks = config?.hooks?.internal?.entries;
@@ -75,14 +75,14 @@ export function resolveHookConfig(
 
 export function resolveHookEnableState(params: {
   entry: HookEntry;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   hookConfig?: HookConfig;
 }): HookEnableState {
   const { entry, config } = params;
   const hookKey = resolveHookKey(entry.hook.name, entry);
   const hookConfig = params.hookConfig ?? resolveHookConfig(config, hookKey);
 
-  if (entry.hook.source === "godseye-plugin") {
+  if (entry.hook.source === "openclaw-plugin") {
     return { enabled: true };
   }
   if (hookConfig?.enabled === false) {

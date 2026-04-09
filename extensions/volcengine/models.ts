@@ -1,10 +1,10 @@
-import type { ModelDefinitionConfig } from "openclaw/plugin-sdk/provider-model-shared";
+import type { ModelDefinitionConfig } from "godseye/plugin-sdk/provider-model-shared";
 import {
   buildVolcModelDefinition,
   VOLC_MODEL_GLM_4_7,
   VOLC_MODEL_KIMI_K2_5,
   VOLC_SHARED_CODING_MODEL_CATALOG,
-} from "openclaw/plugin-sdk/volc-model-catalog-shared";
+} from "godseye/plugin-sdk/volc-model-catalog-shared";
 
 export const DOUBAO_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3";
 export const DOUBAO_CODING_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3";

@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveGodsEyePackageRoot } from "../infra/godseye-root.js";
+import { resolveOpenClawPackageRoot } from "../infra/openclaw-root.js";
 
-export async function resolveGodsEyeDocsPath(params: {
+export async function resolveOpenClawDocsPath(params: {
   workspaceDir?: string;
   argv1?: string;
   cwd?: string;
@@ -16,7 +16,7 @@ export async function resolveGodsEyeDocsPath(params: {
     }
   }
 
-  const packageRoot = await resolveGodsEyePackageRoot({
+  const packageRoot = await resolveOpenClawPackageRoot({
     cwd: params.cwd,
     argv1: params.argv1,
     moduleUrl: params.moduleUrl,

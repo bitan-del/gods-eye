@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 
 const mocks = vi.hoisted(() => ({
@@ -61,7 +61,7 @@ function makeRuntime(): RuntimeEnv {
 async function runGatewayPrompt(params: {
   selectQueue: string[];
   textQueue: Array<string | undefined>;
-  baseConfig?: GodsEyeConfig;
+  baseConfig?: OpenClawConfig;
   randomToken?: string;
   confirmResult?: boolean;
   authConfigFactory?: (input: Record<string, unknown>) => Record<string, unknown>;
@@ -240,26 +240,26 @@ describe("promptGatewayConfig", () => {
   });
 
   it("stores gateway token as SecretRef when token source is ref", async () => {
-    const previous = process.env.GODSEYE_GATEWAY_TOKEN;
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-gateway-token";
+    const previous = process.env.OPENCLAW_GATEWAY_TOKEN;
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-gateway-token";
     try {
       const { call, result } = await runGatewayPrompt({
         selectQueue: ["loopback", "token", "off", "ref"],
-        textQueue: ["18789", "GODSEYE_GATEWAY_TOKEN"],
+        textQueue: ["18789", "OPENCLAW_GATEWAY_TOKEN"],
         authConfigFactory: ({ mode, token }) => ({ mode, token }),
       });
 
       expect(call?.token).toEqual({
         source: "env",
         provider: "default",
-        id: "GODSEYE_GATEWAY_TOKEN",
+        id: "OPENCLAW_GATEWAY_TOKEN",
       });
       expect(result.token).toBeUndefined();
     } finally {
       if (previous === undefined) {
-        delete process.env.GODSEYE_GATEWAY_TOKEN;
+        delete process.env.OPENCLAW_GATEWAY_TOKEN;
       } else {
-        process.env.GODSEYE_GATEWAY_TOKEN = previous;
+        process.env.OPENCLAW_GATEWAY_TOKEN = previous;
       }
     }
   });

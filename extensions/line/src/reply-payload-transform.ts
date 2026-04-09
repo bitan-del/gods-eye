@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import type { ReplyPayload } from "../runtime-api.js";
 import {
   createAgendaCard,

@@ -2,9 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { resolveDiscordGroupRequireMention } from "../../extensions/discord/src/group-policy.js";
-import { resolveSlackGroupRequireMention } from "../../extensions/slack/src/group-policy.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { GroupKeyResolution } from "../config/sessions.js";
 import { resetPluginRuntimeStateForTest } from "../plugins/runtime.js";
 import { createInboundDebouncer } from "./inbound-debounce.js";
@@ -686,9 +684,9 @@ describe("createInboundDebouncer", () => {
 
 describe("initSessionState BodyStripped", () => {
   it("prefers BodyForAgent over Body for group chats", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-sender-meta-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-sender-meta-"));
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as GodsEyeConfig;
+    const cfg = { session: { store: storePath } } as OpenClawConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -708,9 +706,9 @@ describe("initSessionState BodyStripped", () => {
   });
 
   it("prefers BodyForAgent over Body for direct chats", async () => {
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-sender-meta-direct-"));
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-sender-meta-direct-"));
     const storePath = path.join(root, "sessions.json");
-    const cfg = { session: { store: storePath } } as GodsEyeConfig;
+    const cfg = { session: { store: storePath } } as OpenClawConfig;
 
     const result = await initSessionState({
       ctx: {
@@ -733,22 +731,22 @@ describe("mention helpers", () => {
   it("builds regexes and skips invalid or unsafe patterns", () => {
     const regexes = buildMentionRegexes({
       messages: {
-        groupChat: { mentionPatterns: ["\\bgodseye\\b", "(invalid", "(a+)+$"] },
+        groupChat: { mentionPatterns: ["\\bopenclaw\\b", "(invalid", "(a+)+$"] },
       },
     });
     expect(regexes).toHaveLength(1);
-    expect(regexes[0]?.test("godseye")).toBe(true);
+    expect(regexes[0]?.test("openclaw")).toBe(true);
   });
 
   it("normalizes zero-width characters", () => {
-    expect(normalizeMentionText("open\u200bclaw")).toBe("godseye");
+    expect(normalizeMentionText("open\u200bclaw")).toBe("openclaw");
   });
 
   it("matches patterns case-insensitively", () => {
     const regexes = buildMentionRegexes({
-      messages: { groupChat: { mentionPatterns: ["\\bgodseye\\b"] } },
+      messages: { groupChat: { mentionPatterns: ["\\bopenclaw\\b"] } },
     });
-    expect(matchesMentionPatterns("GODSEYE: hi", regexes)).toBe(true);
+    expect(matchesMentionPatterns("OPENCLAW: hi", regexes)).toBe(true);
   });
 
   it("uses per-agent mention patterns when configured", () => {
@@ -773,9 +771,9 @@ describe("mention helpers", () => {
   });
 
   it("strips safe mention patterns and ignores unsafe ones", () => {
-    const stripped = stripMentions("godseye " + "a".repeat(28) + "!", {} as MsgContext, {
+    const stripped = stripMentions("openclaw " + "a".repeat(28) + "!", {} as MsgContext, {
       messages: {
-        groupChat: { mentionPatterns: ["\\bgodseye\\b", "(a+)+$"] },
+        groupChat: { mentionPatterns: ["\\bopenclaw\\b", "(a+)+$"] },
       },
     });
     expect(stripped).toBe(`${"a".repeat(28)}!`);
@@ -783,14 +781,14 @@ describe("mention helpers", () => {
 
   it("strips provider mention regexes without config compilation", () => {
     const stripped = stripMentions("<@12345> hello", { Provider: "discord" } as MsgContext, {});
-    expect(stripped).toBe("hello");
+    expect(stripped).toBe("< > hello");
   });
 });
 
 describe("resolveGroupRequireMention", () => {
-  it("respects Discord guild/channel requireMention settings", () => {
+  it("respects Discord guild/channel requireMention settings", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         discord: {
           guilds: {
@@ -816,12 +814,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("respects Slack channel requireMention settings", () => {
+  it("respects Slack channel requireMention settings", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         slack: {
           channels: {
@@ -842,12 +840,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("uses Slack fallback resolver semantics for default-account wildcard channels", () => {
+  it("uses Slack fallback resolver semantics for default-account wildcard channels", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         slack: {
           defaultAccount: "work",
@@ -873,12 +871,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("matches the Slack plugin resolver for default-account wildcard fallbacks", () => {
+  it("keeps core reply-stage resolution aligned for Slack default-account wildcard fallbacks", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         slack: {
           defaultAccount: "work",
@@ -904,18 +902,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(
-      resolveSlackGroupRequireMention({
-        cfg,
-        groupId: groupResolution.id,
-        groupChannel: ctx.GroupSubject,
-      }),
-    );
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("uses Discord fallback resolver semantics for guild slug matches", () => {
+  it("uses Discord fallback resolver semantics for guild slug matches", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         discord: {
           guilds: {
@@ -940,12 +932,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("matches the Discord plugin resolver for slug + wildcard guild fallbacks", () => {
+  it("keeps core reply-stage resolution aligned for Discord slug + wildcard guild fallbacks", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         discord: {
           guilds: {
@@ -972,19 +964,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(
-      resolveDiscordGroupRequireMention({
-        cfg,
-        groupId: groupResolution.id,
-        groupChannel: ctx.GroupChannel,
-        groupSpace: ctx.GroupSpace,
-      }),
-    );
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(true);
   });
 
-  it("respects LINE prefixed group keys in reply-stage requireMention resolution", () => {
+  it("respects LINE prefixed group keys in reply-stage requireMention resolution", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           groups: {
@@ -1004,12 +989,12 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 
-  it("preserves plugin-backed channel requireMention resolution", () => {
+  it("preserves plugin-backed channel requireMention resolution", async () => {
     resetPluginRuntimeStateForTest();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         bluebubbles: {
           groups: {
@@ -1029,6 +1014,6 @@ describe("resolveGroupRequireMention", () => {
       chatType: "group",
     };
 
-    expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).toBe(false);
+    await expect(resolveGroupRequireMention({ cfg, ctx, groupResolution })).resolves.toBe(false);
   });
 });

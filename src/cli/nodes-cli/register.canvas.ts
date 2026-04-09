@@ -1,17 +1,21 @@
 import fs from "node:fs/promises";
 import type { Command } from "commander";
 import { defaultRuntime } from "../../runtime.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../../shared/string-coerce.js";
 import { shortenHomePath } from "../../utils.js";
 import { writeBase64ToFile } from "../nodes-camera.js";
 import { canvasSnapshotTempPath, parseCanvasSnapshotPayload } from "../nodes-canvas.js";
-import { parseTimeoutMs } from "../nodes-run.js";
+import { parseTimeoutMs } from "../parse-timeout.js";
 import { buildA2UITextJsonl, validateA2UIJsonl } from "./a2ui-jsonl.js";
 import { getNodesTheme, runNodesCommand } from "./cli-utils.js";
 import { buildNodeInvokeParams, callGatewayCli, nodesCallOpts, resolveNodeId } from "./rpc.js";
 import type { NodesRpcOpts } from "./types.js";
 
 async function invokeCanvas(opts: NodesRpcOpts, command: string, params?: Record<string, unknown>) {
-  const nodeId = await resolveNodeId(opts, String(opts.node ?? ""));
+  const nodeId = await resolveNodeId(opts, normalizeOptionalString(opts.node) ?? "");
   const timeoutMs = parseTimeoutMs(opts.invokeTimeout);
   return await callGatewayCli(
     "node.invoke",
@@ -41,9 +45,9 @@ export function registerNodesCanvasCommands(nodes: Command) {
       .option("--invoke-timeout <ms>", "Node invoke timeout in ms (default 20000)", "20000")
       .action(async (opts: NodesRpcOpts) => {
         await runNodesCommand("canvas snapshot", async () => {
-          const formatOpt = String(opts.format ?? "jpg")
-            .trim()
-            .toLowerCase();
+          const formatOpt = normalizeLowercaseStringOrEmpty(
+            normalizeOptionalString(opts.format) ?? "jpg",
+          );
           const formatForParams =
             formatOpt === "jpg" ? "jpeg" : formatOpt === "jpeg" ? "jpeg" : "png";
           if (formatForParams !== "png" && formatForParams !== "jpeg") {
@@ -208,7 +212,7 @@ export function registerNodesCanvasCommands(nodes: Command) {
           const { version, messageCount } = validateA2UIJsonl(jsonl);
           if (version === "v0.9") {
             throw new Error(
-              "Detected A2UI v0.9 JSONL (createSurface). GodsEye currently supports v0.8 only.",
+              "Detected A2UI v0.9 JSONL (createSurface). OpenClaw currently supports v0.8 only.",
             );
           }
           await invokeCanvas(opts, "canvas.a2ui.pushJSONL", { jsonl });

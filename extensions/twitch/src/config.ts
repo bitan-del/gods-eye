@@ -1,5 +1,5 @@
 import { listCombinedAccountIds } from "godseye/plugin-sdk/account-resolution";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 import { resolveTwitchToken, type TwitchTokenResolution } from "./token.js";
 import type { TwitchAccountConfig } from "./types.js";
 import { isAccountConfigured } from "./utils/twitch.js";
@@ -35,7 +35,7 @@ export function getAccountConfig(
     return null;
   }
 
-  const cfg = coreConfig as GodsEyeConfig;
+  const cfg = coreConfig as OpenClawConfig;
   const twitch = cfg.channels?.twitch;
   // Access accounts via unknown to handle union type (single-account vs multi-account)
   const twitchRaw = twitch as Record<string, unknown> | undefined;
@@ -99,7 +99,7 @@ export function getAccountConfig(
  *
  * Includes both explicit accounts and implicit "default" from base-level config
  */
-export function listAccountIds(cfg: GodsEyeConfig): string[] {
+export function listAccountIds(cfg: OpenClawConfig): string[] {
   const twitch = cfg.channels?.twitch;
   // Access accounts via unknown to handle union type (single-account vs multi-account)
   const twitchRaw = twitch as Record<string, unknown> | undefined;
@@ -118,11 +118,26 @@ export function listAccountIds(cfg: GodsEyeConfig): string[] {
   });
 }
 
+export function resolveDefaultTwitchAccountId(cfg: OpenClawConfig): string {
+  const preferred =
+    typeof cfg.channels?.twitch?.defaultAccount === "string"
+      ? cfg.channels.twitch.defaultAccount.trim()
+      : "";
+  const ids = listAccountIds(cfg);
+  if (preferred && ids.includes(preferred)) {
+    return preferred;
+  }
+  if (ids.includes(DEFAULT_ACCOUNT_ID)) {
+    return DEFAULT_ACCOUNT_ID;
+  }
+  return ids[0] ?? DEFAULT_ACCOUNT_ID;
+}
+
 export function resolveTwitchAccountContext(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId?: string | null,
 ): ResolvedTwitchAccountContext {
-  const resolvedAccountId = accountId?.trim() || DEFAULT_ACCOUNT_ID;
+  const resolvedAccountId = accountId?.trim() || resolveDefaultTwitchAccountId(cfg);
   const account = getAccountConfig(cfg, resolvedAccountId);
   const tokenResolution = resolveTwitchToken(cfg, { accountId: resolvedAccountId });
   return {
@@ -135,7 +150,7 @@ export function resolveTwitchAccountContext(
 }
 
 export function resolveTwitchSnapshotAccountId(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   account: TwitchAccountConfig,
 ): string {
   const twitch = (cfg as Record<string, unknown>).channels as Record<string, unknown> | undefined;

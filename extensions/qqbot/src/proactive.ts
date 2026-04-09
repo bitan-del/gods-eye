@@ -5,8 +5,8 @@
  * Known-user storage is delegated to `./known-users.ts`.
  */
 
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import {
   getAccessToken,
   sendC2CImageMessage,

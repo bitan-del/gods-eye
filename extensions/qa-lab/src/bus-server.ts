@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import type { QaBusState } from "./bus-state.js";
 import type {
   QaBusCreateThreadInput,

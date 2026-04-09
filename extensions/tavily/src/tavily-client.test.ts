@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 // Capture every call to postTrustedWebToolsJson so we can assert on extraHeaders.
 const postTrustedWebToolsJson = vi.fn();
 
-vi.mock("openclaw/plugin-sdk/provider-web-search", () => ({
+vi.mock("godseye/plugin-sdk/provider-web-search", () => ({
   DEFAULT_CACHE_TTL_MINUTES: 5,
   normalizeCacheKey: (k: string) => k,
   postTrustedWebToolsJson,
@@ -12,7 +12,7 @@ vi.mock("openclaw/plugin-sdk/provider-web-search", () => ({
   writeCache: vi.fn(),
 }));
 
-vi.mock("openclaw/plugin-sdk/security-runtime", () => ({
+vi.mock("godseye/plugin-sdk/security-runtime", () => ({
   wrapExternalContent: (v: string) => v,
   wrapWebContent: (v: string) => v,
 }));

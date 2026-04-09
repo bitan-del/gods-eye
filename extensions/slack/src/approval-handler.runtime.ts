@@ -5,15 +5,15 @@ import type {
   ExecApprovalExpiredView,
   ExecApprovalPendingView,
   ExecApprovalResolvedView,
-} from "openclaw/plugin-sdk/approval-handler-runtime";
-import { createChannelApprovalNativeRuntimeAdapter } from "openclaw/plugin-sdk/approval-handler-runtime";
-import { buildChannelApprovalNativeTargetKey } from "openclaw/plugin-sdk/approval-native-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+} from "godseye/plugin-sdk/approval-handler-runtime";
+import { createChannelApprovalNativeRuntimeAdapter } from "godseye/plugin-sdk/approval-handler-runtime";
+import { buildChannelApprovalNativeTargetKey } from "godseye/plugin-sdk/approval-native-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   buildApprovalInteractiveReplyFromActionDescriptors,
   type ExecApprovalRequest,
-} from "openclaw/plugin-sdk/infra-runtime";
-import { logError, normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/infra-runtime";
+import { logError, normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { slackNativeApprovalAdapter } from "./approval-native.js";
 import {
   isSlackExecApprovalClientEnabled,

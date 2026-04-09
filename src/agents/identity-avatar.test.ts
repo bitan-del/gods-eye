@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { AVATAR_MAX_BYTES } from "../shared/avatar-policy.js";
 import { resolveAgentAvatar } from "./identity-avatar.js";
 
@@ -12,12 +12,13 @@ async function writeFile(filePath: string, contents = "avatar") {
 }
 
 async function expectLocalAvatarPath(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   workspace: string,
   expectedRelativePath: string,
+  opts?: Parameters<typeof resolveAgentAvatar>[2],
 ) {
   const workspaceReal = await fs.realpath(workspace);
-  const resolved = resolveAgentAvatar(cfg, "main");
+  const resolved = resolveAgentAvatar(cfg, "main", opts);
   expect(resolved.kind).toBe("local");
   if (resolved.kind === "local") {
     const resolvedReal = await fs.realpath(resolved.filePath);
@@ -28,7 +29,7 @@ async function expectLocalAvatarPath(
 const tempRoots: string[] = [];
 
 async function createTempAvatarRoot() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-avatar-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-avatar-"));
   tempRoots.push(root);
   return root;
 }
@@ -48,7 +49,7 @@ describe("resolveAgentAvatar", () => {
     const avatarPath = path.join(workspace, "avatars", "main.png");
     await writeFile(avatarPath);
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
@@ -70,7 +71,7 @@ describe("resolveAgentAvatar", () => {
     const outsidePath = path.join(root, "outside.png");
     await writeFile(outsidePath);
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           {
@@ -101,7 +102,7 @@ describe("resolveAgentAvatar", () => {
       "utf-8",
     );
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [{ id: "main", workspace }],
       },
@@ -115,7 +116,7 @@ describe("resolveAgentAvatar", () => {
     const workspace = path.join(root, "work");
     await fs.mkdir(workspace, { recursive: true });
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [{ id: "main", workspace, identity: { avatar: "avatars/missing.png" } }],
       },
@@ -135,7 +136,7 @@ describe("resolveAgentAvatar", () => {
     await fs.mkdir(path.dirname(avatarPath), { recursive: true });
     await fs.writeFile(avatarPath, Buffer.alloc(AVATAR_MAX_BYTES + 1));
 
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [{ id: "main", workspace, identity: { avatar: "avatars/too-big.png" } }],
       },
@@ -149,7 +150,7 @@ describe("resolveAgentAvatar", () => {
   });
 
   it("accepts remote and data avatars", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         list: [
           { id: "main", identity: { avatar: "https://example.com/avatar.png" } },
@@ -163,5 +164,73 @@ describe("resolveAgentAvatar", () => {
 
     const data = resolveAgentAvatar(cfg, "data");
     expect(data.kind).toBe("data");
+  });
+
+  it("resolves local avatar from ui.assistant.avatar when no agents.list identity is set", async () => {
+    const root = await createTempAvatarRoot();
+    const workspace = path.join(root, "work");
+    const avatarPath = path.join(workspace, "ui-avatar.png");
+    await writeFile(avatarPath);
+
+    const cfg: OpenClawConfig = {
+      ui: { assistant: { avatar: "ui-avatar.png" } },
+      agents: { list: [{ id: "main", workspace }] },
+    };
+
+    await expectLocalAvatarPath(cfg, workspace, "ui-avatar.png", { includeUiOverride: true });
+  });
+
+  it("ui.assistant.avatar ignored without includeUiOverride (outbound callers)", async () => {
+    const root = await createTempAvatarRoot();
+    const workspace = path.join(root, "work");
+    const uiAvatarPath = path.join(workspace, "ui-avatar.png");
+    const cfgAvatarPath = path.join(workspace, "cfg-avatar.png");
+    await writeFile(uiAvatarPath);
+    await writeFile(cfgAvatarPath);
+
+    const cfg: OpenClawConfig = {
+      ui: { assistant: { avatar: "ui-avatar.png" } },
+      agents: { list: [{ id: "main", workspace, identity: { avatar: "cfg-avatar.png" } }] },
+    };
+
+    // Without the opt-in, outbound callers get the per-agent identity avatar, not the UI override.
+    await expectLocalAvatarPath(cfg, workspace, "cfg-avatar.png");
+  });
+
+  it("ui.assistant.avatar takes priority over agents.list identity.avatar with includeUiOverride", async () => {
+    const root = await createTempAvatarRoot();
+    const workspace = path.join(root, "work");
+    const uiAvatarPath = path.join(workspace, "ui-avatar.png");
+    const cfgAvatarPath = path.join(workspace, "cfg-avatar.png");
+    await writeFile(uiAvatarPath);
+    await writeFile(cfgAvatarPath);
+
+    const cfg: OpenClawConfig = {
+      ui: { assistant: { avatar: "ui-avatar.png" } },
+      agents: { list: [{ id: "main", workspace, identity: { avatar: "cfg-avatar.png" } }] },
+    };
+
+    await expectLocalAvatarPath(cfg, workspace, "ui-avatar.png", { includeUiOverride: true });
+  });
+
+  it("ui.assistant.avatar takes priority over IDENTITY.md avatar with includeUiOverride", async () => {
+    const root = await createTempAvatarRoot();
+    const workspace = path.join(root, "work");
+    const uiAvatarPath = path.join(workspace, "ui-avatar.png");
+    const identityAvatarPath = path.join(workspace, "identity-avatar.png");
+    await writeFile(uiAvatarPath);
+    await writeFile(identityAvatarPath);
+    await fs.writeFile(
+      path.join(workspace, "IDENTITY.md"),
+      "- Avatar: identity-avatar.png\n",
+      "utf-8",
+    );
+
+    const cfg: OpenClawConfig = {
+      ui: { assistant: { avatar: "ui-avatar.png" } },
+      agents: { list: [{ id: "main", workspace }] },
+    };
+
+    await expectLocalAvatarPath(cfg, workspace, "ui-avatar.png", { includeUiOverride: true });
   });
 });

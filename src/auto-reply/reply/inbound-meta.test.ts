@@ -1,7 +1,47 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../../plugins/runtime.js";
+import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { withEnv } from "../../test-utils/env.js";
 import type { TemplateContext } from "../templating.js";
 import { buildInboundMetaSystemPrompt, buildInboundUserContextPrefix } from "./inbound-meta.js";
+
+vi.mock("../../channels/plugins/index.js", () => ({
+  getChannelPlugin: (channelId: string) =>
+    channelId === "slack"
+      ? {
+          agentPrompt: {
+            inboundFormattingHints: () => ({
+              text_markup: "slack_mrkdwn",
+              rules: [
+                "Use Slack mrkdwn, not standard Markdown.",
+                "Bold uses *single asterisks*.",
+                "Links use <url|label>.",
+                "Code blocks use triple backticks without a language identifier.",
+                "Do not use markdown headings or pipe tables.",
+              ],
+            }),
+          },
+        }
+      : undefined,
+  getLoadedChannelPlugin: (channelId: string) =>
+    channelId === "slack"
+      ? {
+          agentPrompt: {
+            inboundFormattingHints: () => ({
+              text_markup: "slack_mrkdwn",
+              rules: [
+                "Use Slack mrkdwn, not standard Markdown.",
+                "Bold uses *single asterisks*.",
+                "Links use <url|label>.",
+                "Code blocks use triple backticks without a language identifier.",
+                "Do not use markdown headings or pipe tables.",
+              ],
+            }),
+          },
+        }
+      : undefined,
+  normalizeChannelId: (channelId?: string) => channelId?.trim().toLowerCase(),
+}));
 
 function parseInboundMetaPayload(text: string): Record<string, unknown> {
   const match = text.match(/```json\n([\s\S]*?)\n```/);
@@ -42,7 +82,7 @@ describe("buildInboundMetaSystemPrompt", () => {
     } as TemplateContext);
 
     const payload = parseInboundMetaPayload(prompt);
-    expect(payload["schema"]).toBe("godseye.inbound_meta.v1");
+    expect(payload["schema"]).toBe("openclaw.inbound_meta.v1");
     expect(payload["chat_id"]).toBe("telegram:5494292670");
     expect(payload["account_id"]).toBe("work");
     expect(payload["channel"]).toBe("telegram");
@@ -100,13 +140,82 @@ describe("buildInboundMetaSystemPrompt", () => {
     const payload = parseInboundMetaPayload(prompt);
     expect(payload["sender_id"]).toBeUndefined();
   });
+
+  it("includes Slack mrkdwn response format hints for Slack chats", () => {
+    resetPluginRuntimeStateForTest();
+    setActivePluginRegistry(
+      createTestRegistry([
+        {
+          pluginId: "slack-plugin",
+          source: "test",
+          plugin: {
+            id: "slack",
+            meta: {
+              id: "slack",
+              label: "Slack",
+              selectionLabel: "Slack",
+              docsPath: "/channels/slack",
+              blurb: "test stub",
+            },
+            capabilities: { chatTypes: ["channel"] },
+            config: { listAccountIds: () => [], resolveAccount: () => ({}) },
+            agentPrompt: {
+              inboundFormattingHints: () => ({
+                text_markup: "slack_mrkdwn",
+                rules: [
+                  "Use Slack mrkdwn, not standard Markdown.",
+                  "Bold uses *single asterisks*.",
+                  "Links use <url|label>.",
+                  "Code blocks use triple backticks without a language identifier.",
+                  "Do not use markdown headings or pipe tables.",
+                ],
+              }),
+            },
+          },
+        },
+      ]),
+    );
+
+    const prompt = buildInboundMetaSystemPrompt({
+      OriginatingTo: "channel:C123",
+      OriginatingChannel: "slack",
+      Provider: "slack",
+      Surface: "slack",
+      ChatType: "channel",
+    } as TemplateContext);
+
+    const payload = parseInboundMetaPayload(prompt);
+    expect(payload["response_format"]).toEqual({
+      text_markup: "slack_mrkdwn",
+      rules: [
+        "Use Slack mrkdwn, not standard Markdown.",
+        "Bold uses *single asterisks*.",
+        "Links use <url|label>.",
+        "Code blocks use triple backticks without a language identifier.",
+        "Do not use markdown headings or pipe tables.",
+      ],
+    });
+  });
+
+  it("omits response format hints for non-Slack chats", () => {
+    const prompt = buildInboundMetaSystemPrompt({
+      OriginatingTo: "telegram:123",
+      OriginatingChannel: "telegram",
+      Provider: "telegram",
+      Surface: "telegram",
+      ChatType: "direct",
+    } as TemplateContext);
+
+    const payload = parseInboundMetaPayload(prompt);
+    expect(payload["response_format"]).toBeUndefined();
+  });
 });
 
 describe("buildInboundUserContextPrefix", () => {
   it("omits conversation label block for direct chats", () => {
     const text = buildInboundUserContextPrefix({
       ChatType: "direct",
-      ConversationLabel: "godseye-tui",
+      ConversationLabel: "openclaw-tui",
     } as TemplateContext);
 
     expect(text).toBe("");
@@ -153,14 +262,14 @@ describe("buildInboundUserContextPrefix", () => {
   it("does not treat group chats as direct based on sender id", () => {
     const text = buildInboundUserContextPrefix({
       ChatType: "group",
-      SenderId: "godseye-control-ui",
+      SenderId: "openclaw-control-ui",
       MessageSid: "123",
       ConversationLabel: "some-label",
     } as TemplateContext);
 
     const conversationInfo = parseConversationInfoPayload(text);
     expect(conversationInfo["message_id"]).toBe("123");
-    expect(conversationInfo["sender_id"]).toBe("godseye-control-ui");
+    expect(conversationInfo["sender_id"]).toBe("openclaw-control-ui");
     expect(conversationInfo["conversation_label"]).toBe("some-label");
   });
 

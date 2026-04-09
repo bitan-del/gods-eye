@@ -1,26 +1,27 @@
 import {
+  definePluginEntry,
+  type OpenClawPluginApi,
+  type ProviderAuthMethodNonInteractiveContext,
+} from "godseye/plugin-sdk/plugin-entry";
+import {
   SGLANG_DEFAULT_API_KEY_ENV_VAR,
   SGLANG_DEFAULT_BASE_URL,
   SGLANG_MODEL_PLACEHOLDER,
   SGLANG_PROVIDER_LABEL,
-} from "godseye/plugin-sdk/agent-runtime";
-import {
-  definePluginEntry,
-  type GodsEyePluginApi,
-  type ProviderAuthMethodNonInteractiveContext,
-} from "godseye/plugin-sdk/plugin-entry";
+  buildSglangProvider,
+} from "./api.js";
 
 const PROVIDER_ID = "sglang";
 
 async function loadProviderSetup() {
-  return await import("godseye/plugin-sdk/self-hosted-provider-setup");
+  return await import("godseye/plugin-sdk/provider-setup");
 }
 
 export default definePluginEntry({
   id: "sglang",
   name: "SGLang Provider",
   description: "Bundled SGLang provider plugin",
-  register(api: GodsEyePluginApi) {
+  register(api: OpenClawPluginApi) {
     api.registerProvider({
       id: PROVIDER_ID,
       label: "SGLang",
@@ -64,7 +65,7 @@ export default definePluginEntry({
           return await providerSetup.discoverOpenAICompatibleSelfHostedProvider({
             ctx,
             providerId: PROVIDER_ID,
-            buildProvider: providerSetup.buildSglangProvider,
+            buildProvider: buildSglangProvider,
           });
         },
       },

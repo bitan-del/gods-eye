@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
-import { jsonResult, readNumberParam, readStringParam } from "godseye/plugin-sdk/agent-runtime";
-import type { GodsEyePluginApi } from "godseye/plugin-sdk/plugin-runtime";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-runtime";
+import {
+  jsonResult,
+  readNumberParam,
+  readStringParam,
+} from "godseye/plugin-sdk/provider-web-search";
 import { runTavilySearch } from "./tavily-client.js";
 
 function optionalStringEnum<const T extends readonly string[]>(
@@ -54,7 +58,7 @@ const TavilySearchToolSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export function createTavilySearchTool(api: GodsEyePluginApi) {
+export function createTavilySearchTool(api: OpenClawPluginApi) {
   return {
     name: "tavily_search",
     label: "Tavily Search",

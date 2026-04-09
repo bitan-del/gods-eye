@@ -21,7 +21,7 @@ export type DiscordMessageEvent = import("./listeners.js").DiscordMessageEvent;
 type DiscordMessagePreflightSharedFields = {
   cfg: LoadedConfig;
   discordConfig: NonNullable<
-    import("godseye/plugin-sdk/config-runtime").GodsEyeConfig["channels"]
+    import("godseye/plugin-sdk/config-runtime").OpenClawConfig["channels"]
   >["discord"];
   accountId: string;
   token: string;

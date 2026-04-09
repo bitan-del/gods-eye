@@ -4,7 +4,7 @@ import path from "node:path";
 import type {
   MemorySearchConfig,
   OpenClawConfig,
-} from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
+} from "godseye/plugin-sdk/memory-core-host-engine-foundation";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemoryIndexManager } from "./index.js";
 import { registerBuiltInMemoryEmbeddingProviders } from "./provider-adapters.js";

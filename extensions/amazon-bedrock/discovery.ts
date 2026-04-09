@@ -5,18 +5,18 @@ import {
   ListInferenceProfilesCommand,
   type ListInferenceProfilesCommandOutput,
 } from "@aws-sdk/client-bedrock";
-import { createSubsystemLogger } from "openclaw/plugin-sdk/core";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
-import { resolveAwsSdkEnvVarName } from "openclaw/plugin-sdk/provider-auth-runtime";
+import { createSubsystemLogger } from "godseye/plugin-sdk/core";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { resolveAwsSdkEnvVarName } from "godseye/plugin-sdk/provider-auth-runtime";
 import type {
   BedrockDiscoveryConfig,
   ModelDefinitionConfig,
   ModelProviderConfig,
-} from "openclaw/plugin-sdk/provider-model-shared";
+} from "godseye/plugin-sdk/provider-model-shared";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 
 const log = createSubsystemLogger("bedrock-discovery");
 

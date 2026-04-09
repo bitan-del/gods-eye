@@ -1,4 +1,4 @@
-import { TELEGRAM_COMMAND_NAME_PATTERN as sdkTelegramCommandNamePattern } from "openclaw/plugin-sdk/telegram-command-config";
+import { TELEGRAM_COMMAND_NAME_PATTERN as sdkTelegramCommandNamePattern } from "godseye/plugin-sdk/telegram-command-config";
 import { describe, expect, it } from "vitest";
 import { TELEGRAM_COMMAND_NAME_PATTERN } from "./channel-config-api.js";
 

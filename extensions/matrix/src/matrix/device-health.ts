@@ -6,26 +6,26 @@ export type MatrixManagedDeviceInfo = {
 
 export type MatrixDeviceHealthSummary = {
   currentDeviceId: string | null;
-  staleGodsEyeDevices: MatrixManagedDeviceInfo[];
-  currentGodsEyeDevices: MatrixManagedDeviceInfo[];
+  staleOpenClawDevices: MatrixManagedDeviceInfo[];
+  currentOpenClawDevices: MatrixManagedDeviceInfo[];
 };
 
-const GODSEYE_DEVICE_NAME_PREFIX = "GodsEye ";
+const OPENCLAW_DEVICE_NAME_PREFIX = "OpenClaw ";
 
-export function isGodsEyeManagedMatrixDevice(displayName: string | null | undefined): boolean {
-  return displayName?.startsWith(GODSEYE_DEVICE_NAME_PREFIX) === true;
+export function isOpenClawManagedMatrixDevice(displayName: string | null | undefined): boolean {
+  return displayName?.startsWith(OPENCLAW_DEVICE_NAME_PREFIX) === true;
 }
 
 export function summarizeMatrixDeviceHealth(
   devices: MatrixManagedDeviceInfo[],
 ): MatrixDeviceHealthSummary {
   const currentDeviceId = devices.find((device) => device.current)?.deviceId ?? null;
-  const godsEyeDevices = devices.filter((device) =>
-    isGodsEyeManagedMatrixDevice(device.displayName),
+  const openClawDevices = devices.filter((device) =>
+    isOpenClawManagedMatrixDevice(device.displayName),
   );
   return {
     currentDeviceId,
-    staleGodsEyeDevices: godsEyeDevices.filter((device) => !device.current),
-    currentGodsEyeDevices: godsEyeDevices.filter((device) => device.current),
+    staleOpenClawDevices: openClawDevices.filter((device) => !device.current),
+    currentOpenClawDevices: openClawDevices.filter((device) => device.current),
   };
 }

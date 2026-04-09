@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { probeSlack } from "./probe.js";
 
 const authTestMock = vi.hoisted(() => vi.fn());
 const createSlackWebClientMock = vi.hoisted(() => vi.fn());
@@ -12,11 +13,8 @@ vi.mock("godseye/plugin-sdk/text-runtime", () => ({
   withTimeout: withTimeoutMock,
 }));
 
-let probeSlack: typeof import("./probe.js").probeSlack;
-
 describe("probeSlack", () => {
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeEach(() => {
     authTestMock.mockReset();
     createSlackWebClientMock.mockReset();
     withTimeoutMock.mockReset();
@@ -27,7 +25,6 @@ describe("probeSlack", () => {
       },
     });
     withTimeoutMock.mockImplementation(async (promise: Promise<unknown>) => await promise);
-    ({ probeSlack } = await import("./probe.js"));
   });
 
   it("maps Slack auth metadata on success", async () => {
@@ -35,17 +32,17 @@ describe("probeSlack", () => {
     authTestMock.mockResolvedValue({
       ok: true,
       user_id: "U123",
-      user: "godseye-bot",
+      user: "openclaw-bot",
       team_id: "T123",
-      team: "Gods Eye",
+      team: "OpenClaw",
     });
 
     await expect(probeSlack("xoxb-test", 2500)).resolves.toEqual({
       ok: true,
       status: 200,
       elapsedMs: 45,
-      bot: { id: "U123", name: "godseye-bot" },
-      team: { id: "T123", name: "Gods Eye" },
+      bot: { id: "U123", name: "openclaw-bot" },
+      team: { id: "T123", name: "OpenClaw" },
     });
     expect(createSlackWebClientMock).toHaveBeenCalledWith("xoxb-test");
     expect(withTimeoutMock).toHaveBeenCalledWith(expect.any(Promise), 2500);

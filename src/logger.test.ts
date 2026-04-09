@@ -1,6 +1,4 @@
-import crypto from "node:crypto";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { isVerbose, isYes, logVerbose, setVerbose, setYes } from "./globals.js";
@@ -12,6 +10,7 @@ import {
   stripRedundantSubsystemPrefixForConsole,
 } from "./logging.js";
 import type { RuntimeEnv } from "./runtime.js";
+import { withTempDirSync } from "./test-helpers/temp-dir.js";
 
 describe("logger helpers", () => {
   afterEach(() => {
@@ -49,40 +48,40 @@ describe("logger helpers", () => {
   });
 
   it("writes to configured log file at configured level", () => {
-    const logPath = pathForTest();
-    cleanup(logPath);
-    setLoggerOverride({ level: "info", file: logPath });
-    fs.writeFileSync(logPath, "");
-    logInfo("hello");
-    logDebug("debug-only"); // may be filtered depending on level mapping
-    const content = fs.readFileSync(logPath, "utf-8");
-    expect(content.length).toBeGreaterThan(0);
-    cleanup(logPath);
+    withTempDirSync({ prefix: "openclaw-log-test-" }, (dir) => {
+      const logPath = path.join(dir, "openclaw.log");
+      setLoggerOverride({ level: "info", file: logPath });
+      fs.writeFileSync(logPath, "");
+      logInfo("hello");
+      logDebug("debug-only"); // may be filtered depending on level mapping
+      const content = fs.readFileSync(logPath, "utf-8");
+      expect(content.length).toBeGreaterThan(0);
+    });
   });
 
   it("filters messages below configured level", () => {
-    const logPath = pathForTest();
-    cleanup(logPath);
-    setLoggerOverride({ level: "warn", file: logPath });
-    logInfo("info-only");
-    logWarn("warn-only");
-    const content = fs.readFileSync(logPath, "utf-8");
-    expect(content).toContain("warn-only");
-    cleanup(logPath);
+    withTempDirSync({ prefix: "openclaw-log-test-" }, (dir) => {
+      const logPath = path.join(dir, "openclaw.log");
+      setLoggerOverride({ level: "warn", file: logPath });
+      logInfo("info-only");
+      logWarn("warn-only");
+      const content = fs.readFileSync(logPath, "utf-8");
+      expect(content).toContain("warn-only");
+    });
   });
 
   it("uses daily rolling default log file and prunes old ones", () => {
     resetLogger();
     setLoggerOverride({ level: "info" }); // force default file path with enabled file logging
     const today = localDateString(new Date());
-    const todayPath = path.join(DEFAULT_LOG_DIR, `godseye-${today}.log`);
+    const todayPath = path.join(DEFAULT_LOG_DIR, `openclaw-${today}.log`);
 
     // create an old file to be pruned
-    const oldPath = path.join(DEFAULT_LOG_DIR, "godseye-2000-01-01.log");
+    const oldPath = path.join(DEFAULT_LOG_DIR, "openclaw-2000-01-01.log");
     fs.mkdirSync(DEFAULT_LOG_DIR, { recursive: true });
     fs.writeFileSync(oldPath, "old");
     fs.utimesSync(oldPath, new Date(0), new Date(0));
-    cleanup(todayPath);
+    fs.rmSync(todayPath, { force: true });
 
     logInfo("roll-me");
 
@@ -90,7 +89,7 @@ describe("logger helpers", () => {
     expect(fs.readFileSync(todayPath, "utf-8")).toContain("roll-me");
     expect(fs.existsSync(oldPath)).toBe(false);
 
-    cleanup(todayPath);
+    fs.rmSync(todayPath, { force: true });
   });
 });
 
@@ -122,23 +121,17 @@ describe("globals", () => {
 });
 
 describe("stripRedundantSubsystemPrefixForConsole", () => {
-  it("drops known subsystem prefixes", () => {
-    const cases = [
-      { input: "discord: hello", subsystem: "discord", expected: "hello" },
-      { input: "WhatsApp: hello", subsystem: "whatsapp", expected: "hello" },
-      { input: "discord gateway: closed", subsystem: "discord", expected: "gateway: closed" },
-      {
-        input: "[discord] connection stalled",
-        subsystem: "discord",
-        expected: "connection stalled",
-      },
-    ];
-
-    for (const testCase of cases) {
-      expect(stripRedundantSubsystemPrefixForConsole(testCase.input, testCase.subsystem)).toBe(
-        testCase.expected,
-      );
-    }
+  it.each([
+    { input: "discord: hello", subsystem: "discord", expected: "hello" },
+    { input: "WhatsApp: hello", subsystem: "whatsapp", expected: "hello" },
+    { input: "discord gateway: closed", subsystem: "discord", expected: "gateway: closed" },
+    {
+      input: "[discord] connection stalled",
+      subsystem: "discord",
+      expected: "connection stalled",
+    },
+  ] as const)("drops known subsystem prefix for $input", ({ input, subsystem, expected }) => {
+    expect(stripRedundantSubsystemPrefixForConsole(input, subsystem)).toBe(expected);
   });
 
   it("keeps messages that do not start with the subsystem", () => {
@@ -147,20 +140,6 @@ describe("stripRedundantSubsystemPrefixForConsole", () => {
     );
   });
 });
-
-function pathForTest() {
-  const file = path.join(os.tmpdir(), `godseye-log-${crypto.randomUUID()}.log`);
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  return file;
-}
-
-function cleanup(file: string) {
-  try {
-    fs.rmSync(file, { force: true });
-  } catch {
-    // ignore
-  }
-}
 
 function localDateString(date: Date) {
   const year = date.getFullYear();

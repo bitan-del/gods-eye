@@ -180,15 +180,11 @@ vi.mock("./slash-commands.runtime.js", () => {
 });
 
 type RegisterFn = (params: { ctx: unknown; account: unknown }) => Promise<void>;
-let registerSlackMonitorSlashCommands: RegisterFn;
+const { registerSlackMonitorSlashCommands } = (await import("./slash.js")) as {
+  registerSlackMonitorSlashCommands: RegisterFn;
+};
 
 const { dispatchMock } = getSlackSlashMocks();
-
-beforeAll(async () => {
-  ({ registerSlackMonitorSlashCommands } = (await import("./slash.js")) as {
-    registerSlackMonitorSlashCommands: RegisterFn;
-  });
-});
 
 beforeEach(() => {
   resetSlackSlashMocks();
@@ -260,7 +256,7 @@ function createArgMenusHarness() {
     channelsConfig: undefined,
     slashCommand: {
       enabled: true,
-      name: "godseye",
+      name: "openclaw",
       ephemeral: true,
       sessionPrefix: "slack:slash",
     },
@@ -418,8 +414,8 @@ describe("Slack native command argument menus", () => {
     reportLongHandler = requireHandler(harness.commands, "/reportlong", "/reportlong");
     unsafeConfirmHandler = requireHandler(harness.commands, "/unsafeconfirm", "/unsafeconfirm");
     agentStatusHandler = requireHandler(harness.commands, "/agentstatus", "/agentstatus");
-    argMenuHandler = requireHandler(harness.actions, "godseye_cmdarg", "arg-menu action");
-    argMenuOptionsHandler = requireHandler(harness.options, "godseye_cmdarg", "arg-menu options");
+    argMenuHandler = requireHandler(harness.actions, "openclaw_cmdarg", "arg-menu action");
+    argMenuOptionsHandler = requireHandler(harness.options, "openclaw_cmdarg", "arg-menu options");
   });
 
   beforeEach(() => {
@@ -430,8 +426,8 @@ describe("Slack native command argument menus", () => {
     const testHarness = createArgMenusHarness();
     await registerCommands(testHarness.ctx, testHarness.account);
     expect(testHarness.commands.size).toBeGreaterThan(0);
-    expect(testHarness.actions.has("godseye_cmdarg")).toBe(true);
-    expect(testHarness.options.has("godseye_cmdarg")).toBe(true);
+    expect(testHarness.actions.has("openclaw_cmdarg")).toBe(true);
+    expect(testHarness.options.has("openclaw_cmdarg")).toBe(true);
     expect(testHarness.optionsReceiverContexts[0]).toBe(testHarness.app);
   });
 
@@ -469,7 +465,7 @@ describe("Slack native command argument menus", () => {
       channelsConfig: undefined,
       slashCommand: {
         enabled: true,
-        name: "godseye",
+        name: "openclaw",
         ephemeral: true,
         sessionPrefix: "slack:slash",
       },
@@ -487,7 +483,7 @@ describe("Slack native command argument menus", () => {
     // Registration should not throw despite app.options() throwing
     await registerCommands(ctx, account);
     expect(commands.size).toBeGreaterThan(0);
-    expect(actions.has("godseye_cmdarg")).toBe(true);
+    expect(actions.has("openclaw_cmdarg")).toBe(true);
 
     // The /reportexternal command (140 choices) should fall back to static_select
     // instead of external_select since options registration failed
@@ -520,7 +516,7 @@ describe("Slack native command argument menus", () => {
     const actions = expectArgMenuLayout(respond);
     const element = actions?.elements?.[0];
     expect(element?.type).toBe("static_select");
-    expect(element?.action_id).toBe("godseye_cmdarg");
+    expect(element?.action_id).toBe("openclaw_cmdarg");
     expect(element?.confirm).toBeTruthy();
   });
 
@@ -533,7 +529,7 @@ describe("Slack native command argument menus", () => {
   it("shows an overflow menu when choices fit compact range", async () => {
     const element = await getFirstActionElementFromCommand(reportCompactHandler);
     expect(element?.type).toBe("overflow");
-    expect(element?.action_id).toBe("godseye_cmdarg");
+    expect(element?.action_id).toBe("openclaw_cmdarg");
     expect(element?.confirm).toBeTruthy();
   });
 
@@ -600,15 +596,15 @@ describe("Slack native command argument menus", () => {
     const actions = findFirstActionsBlock(payload);
     const element = actions?.elements?.[0];
     expect(element?.type).toBe("external_select");
-    expect(element?.action_id).toBe("godseye_cmdarg");
-    expect(blockId).toContain("godseye_cmdarg_ext:");
-    const token = (blockId ?? "").slice("godseye_cmdarg_ext:".length);
+    expect(element?.action_id).toBe("openclaw_cmdarg");
+    expect(blockId).toContain("openclaw_cmdarg_ext:");
+    const token = (blockId ?? "").slice("openclaw_cmdarg_ext:".length);
     expect(token).toMatch(/^[A-Za-z0-9_-]{24}$/);
   });
 
   it("serves filtered options for external_select menus", async () => {
     const { blockId } = await runCommandAndResolveActionsBlock(reportExternalHandler);
-    expect(blockId).toContain("godseye_cmdarg_ext:");
+    expect(blockId).toContain("openclaw_cmdarg_ext:");
 
     const ackOptions = vi.fn().mockResolvedValue(undefined);
     await argMenuOptionsHandler({
@@ -630,7 +626,7 @@ describe("Slack native command argument menus", () => {
 
   it("rejects external_select option requests without user identity", async () => {
     const { blockId } = await runCommandAndResolveActionsBlock(reportExternalHandler);
-    expect(blockId).toContain("godseye_cmdarg_ext:");
+    expect(blockId).toContain("openclaw_cmdarg_ext:");
 
     const ackOptions = vi.fn().mockResolvedValue(undefined);
     await argMenuOptionsHandler({
@@ -695,7 +691,7 @@ describe("Slack native command argument menus", () => {
 
 function createPolicyHarness(overrides?: {
   groupPolicy?: "open" | "allowlist";
-  channelsConfig?: Record<string, { allow?: boolean; requireMention?: boolean }>;
+  channelsConfig?: Record<string, { enabled?: boolean; requireMention?: boolean }>;
   channelId?: string;
   channelName?: string;
   allowFrom?: string[];
@@ -732,7 +728,7 @@ function createPolicyHarness(overrides?: {
     channelsConfig: overrides?.channelsConfig,
     slashCommand: {
       enabled: true,
-      name: "godseye",
+      name: "openclaw",
       ephemeral: true,
       sessionPrefix: "slack:slash",
     },
@@ -864,7 +860,7 @@ describe("slack slash commands channel policy", () => {
   it("blocks explicitly denied channels when groupPolicy is open", async () => {
     const harness = createPolicyHarness({
       groupPolicy: "open",
-      channelsConfig: { C_DENIED: { allow: false } },
+      channelsConfig: { C_DENIED: { enabled: false } },
       channelId: "C_DENIED",
       channelName: "denied",
     });
@@ -979,8 +975,12 @@ describe("slack slash command session metadata", () => {
   });
 
   it("awaits session metadata persistence before dispatch", async () => {
+    const recordStarted = createDeferred<void>();
     const deferred = createDeferred<void>();
-    recordSessionMetaFromInboundMock.mockClear().mockReturnValue(deferred.promise);
+    recordSessionMetaFromInboundMock.mockClear().mockImplementation(() => {
+      recordStarted.resolve();
+      return deferred.promise;
+    });
 
     const harness = createPolicyHarness({ groupPolicy: "open" });
     await registerCommands(harness.ctx, harness.account);
@@ -993,9 +993,8 @@ describe("slack slash command session metadata", () => {
       },
     });
 
-    await vi.waitFor(() => {
-      expect(recordSessionMetaFromInboundMock).toHaveBeenCalledTimes(1);
-    });
+    await recordStarted.promise;
+    expect(recordSessionMetaFromInboundMock).toHaveBeenCalledTimes(1);
     expect(dispatchMock).not.toHaveBeenCalled();
 
     deferred.resolve();

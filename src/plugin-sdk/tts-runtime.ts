@@ -1,5 +1,5 @@
 // Manual facade. Keep loader boundary explicit.
-type FacadeModule = typeof import("@openclaw/speech-core/runtime-api.js");
+type FacadeModule = typeof import("@godseye/speech-core/runtime-api.js");
 import {
   createLazyFacadeObjectValue,
   loadActivatedBundledPluginPublicSurfaceModuleSync,
@@ -61,16 +61,16 @@ export const textToSpeech: FacadeModule["textToSpeech"] = createLazyFacadeValue(
 export const textToSpeechTelephony: FacadeModule["textToSpeechTelephony"] =
   createLazyFacadeValue("textToSpeechTelephony");
 
-export type ResolvedTtsConfig = import("@openclaw/speech-core/runtime-api.js").ResolvedTtsConfig;
+export type ResolvedTtsConfig = import("@godseye/speech-core/runtime-api.js").ResolvedTtsConfig;
 export type ResolvedTtsModelOverrides =
-  import("@openclaw/speech-core/runtime-api.js").ResolvedTtsModelOverrides;
+  import("@godseye/speech-core/runtime-api.js").ResolvedTtsModelOverrides;
 export type TtsDirectiveOverrides =
-  import("@openclaw/speech-core/runtime-api.js").TtsDirectiveOverrides;
+  import("@godseye/speech-core/runtime-api.js").TtsDirectiveOverrides;
 export type TtsDirectiveParseResult =
-  import("@openclaw/speech-core/runtime-api.js").TtsDirectiveParseResult;
-export type TtsResult = import("@openclaw/speech-core/runtime-api.js").TtsResult;
-export type TtsSynthesisResult = import("@openclaw/speech-core/runtime-api.js").TtsSynthesisResult;
-export type TtsTelephonyResult = import("@openclaw/speech-core/runtime-api.js").TtsTelephonyResult;
+  import("@godseye/speech-core/runtime-api.js").TtsDirectiveParseResult;
+export type TtsResult = import("@godseye/speech-core/runtime-api.js").TtsResult;
+export type TtsSynthesisResult = import("@godseye/speech-core/runtime-api.js").TtsSynthesisResult;
+export type TtsTelephonyResult = import("@godseye/speech-core/runtime-api.js").TtsTelephonyResult;
 
 function createLazyFacadeValue<K extends keyof FacadeModule>(key: K): FacadeModule[K] {
   return ((...args: unknown[]) => {

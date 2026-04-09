@@ -1,10 +1,10 @@
-# @godseye/nostr
+# @openclaw/nostr
 
-Nostr DM channel plugin for Gods Eye using NIP-04 encrypted direct messages.
+Nostr DM channel plugin for OpenClaw using NIP-04 encrypted direct messages.
 
 ## Overview
 
-This extension adds Nostr as a messaging channel to Gods Eye. It enables your bot to:
+This extension adds Nostr as a messaging channel to OpenClaw. It enables your bot to:
 
 - Receive encrypted DMs from Nostr users
 - Send encrypted responses back
@@ -13,7 +13,7 @@ This extension adds Nostr as a messaging channel to Gods Eye. It enables your bo
 ## Installation
 
 ```bash
-godseye plugins install @godseye/nostr
+openclaw plugins install @openclaw/nostr
 ```
 
 ## Quick Setup
@@ -68,7 +68,7 @@ godseye plugins install @godseye/nostr
 - **open**: Anyone can message the bot (use with caution)
 - **disabled**: DMs are disabled
 
-Policy enforcement happens before signature verification and NIP-04 decryption.
+Inbound event signatures are verified before policy enforcement and NIP-04 decryption.
 Unknown senders in `pairing` mode can receive a pairing reply, but their original DM body is not
 processed unless approved.
 
@@ -94,7 +94,7 @@ processed unless approved.
 # Using strfry
 docker run -p 7777:7777 ghcr.io/hoytech/strfry
 
-# Configure godseye to use local relay
+# Configure openclaw to use local relay
 "relays": ["ws://localhost:7777"]
 ```
 

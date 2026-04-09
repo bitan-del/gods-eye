@@ -10,6 +10,7 @@ import {
   type ClawHubSkillDetail,
   type ClawHubSkillSearchResult,
 } from "../infra/clawhub.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import { withExtractedArchiveRoot } from "../infra/install-flow.js";
 import { installPackageDir } from "../infra/install-package-dir.js";
 import { resolveSafeInstallDir } from "../infra/install-safe-path.js";
@@ -292,7 +293,7 @@ async function performClawHubSkillInstall(
     try {
       const install = await withExtractedArchiveRoot({
         archivePath: archive.archivePath,
-        tempDirPrefix: "godseye-skill-clawhub-",
+        tempDirPrefix: "openclaw-skill-clawhub-",
         timeoutMs: 120_000,
         rootMarkers: ["SKILL.md"],
         onExtracted: async (rootDir) =>
@@ -331,15 +332,12 @@ async function performClawHubSkillInstall(
         detail,
       };
     } finally {
-      await fs.rm(archive.archivePath, { force: true }).catch(() => undefined);
-      await fs
-        .rm(path.dirname(archive.archivePath), { recursive: true, force: true })
-        .catch(() => undefined);
+      await archive.cleanup().catch(() => undefined);
     }
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatErrorMessage(err),
     };
   }
 }
@@ -355,7 +353,7 @@ async function installRequestedSkillFromClawHub(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatErrorMessage(err),
     };
   }
 }
@@ -371,7 +369,7 @@ async function installTrackedSkillFromClawHub(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatErrorMessage(err),
     };
   }
 }

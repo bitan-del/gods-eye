@@ -1,16 +1,46 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { setActivePluginRegistry } from "../plugins/runtime.js";
+import { createChannelTestPluginBase, createTestRegistry } from "../test-utils/channel-plugins.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
-import {
-  patchChannelOnboardingAdapter,
-  setDefaultChannelPluginRegistryForTests,
-} from "./channel-test-helpers.js";
+import { patchChannelSetupWizardAdapter } from "./channel-test-helpers.js";
 import {
   createChannelOnboardingPostWriteHookCollector,
   runCollectedChannelOnboardingPostWriteHooks,
   setupChannels,
 } from "./onboard-channels.js";
 import { createExitThrowingRuntime, createWizardPrompter } from "./test-wizard-helpers.js";
+
+function setMinimalTelegramOnboardingRegistryForTests(): void {
+  setActivePluginRegistry(
+    createTestRegistry([
+      {
+        pluginId: "telegram",
+        source: "test",
+        plugin: {
+          ...createChannelTestPluginBase({
+            id: "telegram",
+            label: "Telegram",
+            capabilities: { chatTypes: ["direct", "group"] },
+          }),
+          setup: {
+            applyAccountConfig: ({ cfg }: { cfg: OpenClawConfig }) => cfg,
+          },
+          setupWizard: {
+            channel: "telegram",
+            status: {
+              configuredLabel: "Configured",
+              unconfiguredLabel: "Not configured",
+              resolveConfigured: ({ cfg }: { cfg: OpenClawConfig }) =>
+                Boolean(cfg.channels?.telegram?.botToken),
+            },
+            credentials: [],
+          },
+        },
+      },
+    ]),
+  );
+}
 
 function createPrompter(overrides: Partial<WizardPrompter>): WizardPrompter {
   return createWizardPrompter(
@@ -45,26 +75,26 @@ function createUnexpectedQuickstartPrompter(select: WizardPrompter["select"]) {
 
 describe("setupChannels post-write hooks", () => {
   beforeEach(() => {
-    setDefaultChannelPluginRegistryForTests();
+    setMinimalTelegramOnboardingRegistryForTests();
   });
 
   it("collects onboarding post-write hooks and runs them against the final config", async () => {
     const select = createQuickstartTelegramSelect();
     const afterConfigWritten = vi.fn(async () => {});
-    const configureInteractive = vi.fn(async ({ cfg }: { cfg: GodsEyeConfig }) => ({
+    const configureInteractive = vi.fn(async ({ cfg }: { cfg: OpenClawConfig }) => ({
       cfg: {
         ...cfg,
         channels: {
           ...cfg.channels,
           telegram: { ...cfg.channels?.telegram, botToken: "new-token" },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       accountId: "acct-1",
     }));
-    const restore = patchChannelOnboardingAdapter("telegram", {
+    const restore = patchChannelSetupWizardAdapter("telegram", {
       configureInteractive,
       afterConfigWritten,
-      getStatus: vi.fn(async ({ cfg }: { cfg: GodsEyeConfig }) => ({
+      getStatus: vi.fn(async ({ cfg }: { cfg: OpenClawConfig }) => ({
         channel: "telegram",
         configured: Boolean(cfg.channels?.telegram?.botToken),
         statusLines: [],
@@ -77,7 +107,7 @@ describe("setupChannels post-write hooks", () => {
     const runtime = createExitThrowingRuntime();
 
     try {
-      const cfg = await setupChannels({} as GodsEyeConfig, runtime, prompter, {
+      const cfg = await setupChannels({} as OpenClawConfig, runtime, prompter, {
         quickstartDefaults: true,
         skipConfirm: true,
         onPostWriteHook: (hook) => {
@@ -94,7 +124,7 @@ describe("setupChannels post-write hooks", () => {
       });
 
       expect(afterConfigWritten).toHaveBeenCalledWith({
-        previousCfg: {} as GodsEyeConfig,
+        previousCfg: {} as OpenClawConfig,
         cfg,
         accountId: "acct-1",
         runtime,
@@ -117,7 +147,7 @@ describe("setupChannels post-write hooks", () => {
           },
         },
       ],
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       runtime,
     });
 

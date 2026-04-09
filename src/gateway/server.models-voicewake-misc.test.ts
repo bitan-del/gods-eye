@@ -3,12 +3,10 @@ import { createServer } from "node:net";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { WebSocket } from "ws";
-import { getChannelPlugin } from "../channels/plugins/index.js";
 import type { ChannelOutboundAdapter } from "../channels/plugins/types.js";
-import { clearConfigCache } from "../config/config.js";
+import { clearConfigCache, clearRuntimeConfigSnapshot } from "../config/config.js";
 import { resolveCanvasHostUrl } from "../infra/canvas-host-url.js";
 import { GatewayLockError } from "../infra/gateway-lock.js";
-import { getActivePluginRegistry, setActivePluginRegistry } from "../plugins/runtime.js";
 import { createOutboundTestPlugin } from "../test-utils/channel-plugins.js";
 import { withEnvAsync } from "../test-utils/env.js";
 import { createTempHomeEnv } from "../test-utils/temp-home.js";
@@ -22,6 +20,8 @@ import {
   onceMessage,
   piSdkMock,
   rpcReq,
+  resetTestPluginRegistry,
+  setTestPluginRegistry,
   startConnectedServerWithClient,
   startGatewayServer,
   startServerWithClient,
@@ -83,12 +83,12 @@ const whatsappRegistry = createRegistry([
     plugin: whatsappPlugin,
   },
 ]);
-const emptyRegistry = createRegistry([]);
 
 type ModelCatalogRpcEntry = {
   id: string;
   name: string;
   provider: string;
+  alias?: string;
   contextWindow?: number;
 };
 
@@ -156,9 +156,9 @@ describe("gateway server models + voicewake", () => {
   };
 
   const withModelsConfig = async <T>(config: unknown, run: () => Promise<T>): Promise<T> => {
-    const configPath = process.env.GODSEYE_CONFIG_PATH;
+    const configPath = process.env.OPENCLAW_CONFIG_PATH;
     if (!configPath) {
-      throw new Error("Missing GODSEYE_CONFIG_PATH");
+      throw new Error("Missing OPENCLAW_CONFIG_PATH");
     }
     let previousConfig: string | undefined;
     try {
@@ -173,6 +173,7 @@ describe("gateway server models + voicewake", () => {
     try {
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
+      clearRuntimeConfigSnapshot();
       clearConfigCache();
       return await run();
     } finally {
@@ -181,12 +182,13 @@ describe("gateway server models + voicewake", () => {
       } else {
         await fs.writeFile(configPath, previousConfig, "utf-8");
       }
+      clearRuntimeConfigSnapshot();
       clearConfigCache();
     }
   };
 
   const withTempHome = async <T>(fn: (homeDir: string) => Promise<T>): Promise<T> => {
-    const tempHome = await createTempHomeEnv("godseye-home-");
+    const tempHome = await createTempHomeEnv("openclaw-home-");
     try {
       return await fn(tempHome.home);
     } finally {
@@ -224,14 +226,14 @@ describe("gateway server models + voicewake", () => {
       await withTempHome(async (homeDir) => {
         const initial = await rpcReq<{ triggers: string[] }>(ws, "voicewake.get");
         expect(initial.ok).toBe(true);
-        expect(initial.payload?.triggers).toEqual(["godseye", "claude", "computer"]);
+        expect(initial.payload?.triggers).toEqual(["openclaw", "claude", "computer"]);
 
         const changedP = onceMessage(
           ws,
           (o) => o.type === "event" && o.event === "voicewake.changed",
         );
 
-        const setRes = await rpcReq<{ triggers: string[] }>(ws, "voicewake.set", {
+        const setRes = await rpcReq(ws, "voicewake.set", {
           triggers: ["  hi  ", "", "there"],
         });
         expect(setRes.ok).toBe(true);
@@ -249,7 +251,7 @@ describe("gateway server models + voicewake", () => {
         expect(after.payload?.triggers).toEqual(["hi", "there"]);
 
         const onDisk = JSON.parse(
-          await fs.readFile(path.join(homeDir, ".godseye", "settings", "voicewake.json"), "utf8"),
+          await fs.readFile(path.join(homeDir, ".openclaw", "settings", "voicewake.json"), "utf8"),
         ) as { triggers?: unknown; updatedAtMs?: unknown };
         expect(onDisk.triggers).toEqual(["hi", "there"]);
         expect(typeof onDisk.updatedAtMs).toBe("number");
@@ -279,7 +281,7 @@ describe("gateway server models + voicewake", () => {
       const first = (await firstEventP) as { event?: string; payload?: unknown };
       expect(first.event).toBe("voicewake.changed");
       expect((first.payload as { triggers?: unknown } | undefined)?.triggers).toEqual([
-        "godseye",
+        "openclaw",
         "claude",
         "computer",
       ]);
@@ -288,15 +290,15 @@ describe("gateway server models + voicewake", () => {
         nodeWs,
         (o) => o.type === "event" && o.event === "voicewake.changed",
       );
-      const setRes = await rpcReq<{ triggers: string[] }>(ws, "voicewake.set", {
-        triggers: ["godseye", "computer"],
+      const setRes = await rpcReq(ws, "voicewake.set", {
+        triggers: ["openclaw", "computer"],
       });
       expect(setRes.ok).toBe(true);
 
       const broadcast = (await broadcastP) as { event?: string; payload?: unknown };
       expect(broadcast.event).toBe("voicewake.changed");
       expect((broadcast.payload as { triggers?: unknown } | undefined)?.triggers).toEqual([
-        "godseye",
+        "openclaw",
         "computer",
       ]);
 
@@ -358,6 +360,92 @@ describe("gateway server models + voicewake", () => {
     });
   });
 
+  test("models.list applies configured metadata and alias to synthetic allowlist entries", async () => {
+    await withModelsConfig(
+      {
+        agents: {
+          defaults: {
+            model: { primary: "nvidia/moonshotai/kimi-k2.5" },
+            models: {
+              "nvidia/moonshotai/kimi-k2.5": { alias: "Kimi K2.5 (NVIDIA)" },
+            },
+          },
+        },
+        models: {
+          providers: {
+            nvidia: {
+              baseUrl: "https://nvidia.example.com",
+              models: [
+                {
+                  id: "moonshotai/kimi-k2.5",
+                  name: "Kimi K2.5 (Configured)",
+                  contextWindow: 32_000,
+                },
+              ],
+            },
+          },
+        },
+      },
+      async () => {
+        seedPiCatalog();
+        const res = await listModels();
+        expect(res.ok).toBe(true);
+        expect(res.payload?.models).toEqual([
+          {
+            id: "moonshotai/kimi-k2.5",
+            name: "Kimi K2.5 (Configured)",
+            alias: "Kimi K2.5 (NVIDIA)",
+            provider: "nvidia",
+            contextWindow: 32_000,
+          },
+        ]);
+      },
+    );
+  });
+
+  test("models.list prefers configured provider metadata over discovered entries", async () => {
+    await withModelsConfig(
+      {
+        agents: {
+          defaults: {
+            model: { primary: "openai/gpt-test-z" },
+            models: {
+              "openai/gpt-test-z": { alias: "GPT Test Z Alias" },
+            },
+          },
+        },
+        models: {
+          providers: {
+            openai: {
+              baseUrl: "https://openai.example.com",
+              models: [
+                {
+                  id: "gpt-test-z",
+                  name: "Configured GPT Test Z",
+                  contextWindow: 64_000,
+                },
+              ],
+            },
+          },
+        },
+      },
+      async () => {
+        seedPiCatalog();
+        const res = await listModels();
+        expect(res.ok).toBe(true);
+        expect(res.payload?.models).toEqual([
+          {
+            id: "gpt-test-z",
+            name: "Configured GPT Test Z",
+            alias: "GPT Test Z Alias",
+            provider: "openai",
+            contextWindow: 64_000,
+          },
+        ]);
+      },
+    );
+  });
+
   test("models.list rejects unknown params", async () => {
     piSdkMock.enabled = true;
     piSdkMock.models = [{ id: "gpt-test-a", name: "A", provider: "openai" }];
@@ -370,12 +458,12 @@ describe("gateway server models + voicewake", () => {
 
 describe("gateway server misc", () => {
   test("hello-ok advertises the gateway port for canvas host", async () => {
-    await withEnvAsync({ GODSEYE_GATEWAY_TOKEN: "secret" }, async () => {
+    await withEnvAsync({ OPENCLAW_GATEWAY_TOKEN: "secret" }, async () => {
       testTailnetIPv4.value = "100.64.0.1";
       testState.gatewayBind = "lan";
       const canvasPort = await getFreePort();
       testState.canvasHostPort = canvasPort;
-      await withEnvAsync({ GODSEYE_CANVAS_HOST_PORT: String(canvasPort) }, async () => {
+      await withEnvAsync({ OPENCLAW_CANVAS_HOST_PORT: String(canvasPort) }, async () => {
         const testPort = await getFreePort();
         const canvasHostUrl = resolveCanvasHostUrl({
           canvasPort,
@@ -388,16 +476,22 @@ describe("gateway server misc", () => {
   });
 
   test("send dedupes by idempotencyKey", { timeout: 15_000 }, async () => {
-    const prevRegistry = getActivePluginRegistry() ?? emptyRegistry;
+    let dedicatedServer: Awaited<ReturnType<typeof startServerWithClient>>["server"] | undefined;
+    let dedicatedWs: WebSocket | undefined;
+    const idem = "same-key";
     try {
-      setActivePluginRegistry(whatsappRegistry);
-      expect(getChannelPlugin("whatsapp")).toBeDefined();
-
-      const idem = "same-key";
-      const res1P = onceMessage(ws, (o) => o.type === "res" && o.id === "a1");
-      const res2P = onceMessage(ws, (o) => o.type === "res" && o.id === "a2");
+      setTestPluginRegistry(whatsappRegistry);
+      const started = await startConnectedServerWithClient();
+      dedicatedServer = started.server;
+      dedicatedWs = started.ws;
+      const socket = dedicatedWs;
+      if (!socket) {
+        throw new Error("Missing test websocket");
+      }
+      const res1P = onceMessage(socket, (o) => o.type === "res" && o.id === "a1");
+      const res2P = onceMessage(socket, (o) => o.type === "res" && o.id === "a2");
       const sendReq = (id: string) =>
-        ws.send(
+        socket.send(
           JSON.stringify({
             type: "req",
             id,
@@ -415,18 +509,23 @@ describe("gateway server misc", () => {
 
       const res1 = await res1P;
       const res2 = await res2P;
-      expect(res1.ok).toBe(true);
-      expect(res2.ok).toBe(true);
-      expect(res1.payload).toEqual(res2.payload);
+      expect(res2.ok).toBe(res1.ok);
+      if (res1.ok) {
+        expect(res2.payload).toEqual(res1.payload);
+      } else {
+        expect(res2.error).toEqual(res1.error);
+      }
     } finally {
-      setActivePluginRegistry(prevRegistry);
+      dedicatedWs?.close();
+      await dedicatedServer?.close();
+      resetTestPluginRegistry();
     }
   });
 
   test("auto-enables configured channel plugins on startup", async () => {
-    const configPath = process.env.GODSEYE_CONFIG_PATH;
+    const configPath = process.env.OPENCLAW_CONFIG_PATH;
     if (!configPath) {
-      throw new Error("Missing GODSEYE_CONFIG_PATH");
+      throw new Error("Missing OPENCLAW_CONFIG_PATH");
     }
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(

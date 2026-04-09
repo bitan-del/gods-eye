@@ -9,13 +9,14 @@ import {
   TUI,
 } from "@mariozechner/pi-tui";
 import { resolveAgentIdByWorkspacePath, resolveDefaultAgentId } from "../agents/agent-scope.js";
-import { loadConfig, type GodsEyeConfig } from "../config/config.js";
+import { loadConfig, type OpenClawConfig } from "../config/config.js";
 import {
   buildAgentMainSessionKey,
   normalizeAgentId,
   normalizeMainKey,
   parseAgentSessionKey,
 } from "../routing/session-key.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { getSlashCommands } from "./commands.js";
 import { ChatLog } from "./components/chat-log.js";
 import { CustomEditor } from "./components/custom-editor.js";
@@ -69,13 +70,13 @@ export function resolveTuiSessionKey(params: {
     return trimmed;
   }
   if (trimmed.startsWith("agent:")) {
-    return trimmed.toLowerCase();
+    return normalizeLowercaseStringOrEmpty(trimmed);
   }
-  return `agent:${params.currentAgentId}:${trimmed.toLowerCase()}`;
+  return `agent:${params.currentAgentId}:${normalizeLowercaseStringOrEmpty(trimmed)}`;
 }
 
 export function resolveInitialTuiAgentId(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   fallbackAgentId: string;
   initialSessionInput?: string;
   cwd?: string;
@@ -105,9 +106,9 @@ export function resolveGatewayDisconnectState(reason?: string): {
   if (/pairing required/i.test(reasonLabel)) {
     return {
       connectionStatus: `gateway disconnected: ${reasonLabel}`,
-      activityStatus: "pairing required: run godseye devices list",
+      activityStatus: "pairing required: run openclaw devices list",
       pairingHint:
-        "Pairing required. Run `godseye devices list`, approve your request ID, then reconnect.",
+        "Pairing required. Run `openclaw devices list`, approve your request ID, then reconnect.",
     };
   }
   return {
@@ -158,6 +159,24 @@ export function stopTuiSafely(stop: () => void): void {
   }
 }
 
+type DrainableTui = {
+  stop: () => void;
+  terminal?: {
+    drainInput?: (maxMs?: number, idleMs?: number) => Promise<void>;
+  };
+};
+
+export async function drainAndStopTuiSafely(tui: DrainableTui): Promise<void> {
+  if (typeof tui.terminal?.drainInput === "function") {
+    try {
+      await tui.terminal.drainInput();
+    } catch {
+      // Best-effort only. A failed drain should not skip terminal shutdown.
+    }
+  }
+  stopTuiSafely(() => tui.stop());
+}
+
 type CtrlCAction = "clear" | "warn" | "exit";
 
 export function resolveCtrlCAction(params: {
@@ -203,6 +222,7 @@ export async function runTui(opts: TuiOptions) {
   let initialSessionApplied = false;
   let currentSessionId: string | null = null;
   let activeChatRunId: string | null = null;
+  let pendingOptimisticUserMessage = false;
   let historyLoaded = false;
   let isConnected = false;
   let wasDisconnected = false;
@@ -273,6 +293,12 @@ export async function runTui(opts: TuiOptions) {
     },
     set activeChatRunId(value) {
       activeChatRunId = value;
+    },
+    get pendingOptimisticUserMessage() {
+      return pendingOptimisticUserMessage;
+    },
+    set pendingOptimisticUserMessage(value) {
+      pendingOptimisticUserMessage = value;
     },
     get historyLoaded() {
       return historyLoaded;
@@ -460,7 +486,7 @@ export async function runTui(opts: TuiOptions) {
     const agentLabel = formatAgentLabel(currentAgentId);
     header.setText(
       theme.header(
-        `godseye tui - ${client.connection.url} - agent ${agentLabel} - session ${sessionLabel}`,
+        `openclaw tui - ${client.connection.url} - agent ${agentLabel} - session ${sessionLabel}`,
       ),
     );
   };
@@ -712,6 +738,7 @@ export async function runTui(opts: TuiOptions) {
     setActivityStatus,
     refreshSessionInfo,
     loadHistory,
+    noteLocalRunId,
     isLocalRunId,
     forgetLocalRunId,
     clearLocalRunIds,
@@ -726,8 +753,9 @@ export async function runTui(opts: TuiOptions) {
     }
     exitRequested = true;
     client.stop();
-    stopTuiSafely(() => tui.stop());
-    process.exit(0);
+    void drainAndStopTuiSafely(tui).then(() => {
+      process.exit(0);
+    });
   };
 
   const { handleCommand, sendMessage, openModelSelector, openAgentSelector, openSessionSelector } =

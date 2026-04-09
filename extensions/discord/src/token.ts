@@ -1,5 +1,5 @@
 import type { BaseTokenResolution } from "godseye/plugin-sdk/channel-contract";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/routing";
 import { resolveAccountEntry } from "godseye/plugin-sdk/routing";
 import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
@@ -19,7 +19,7 @@ export function normalizeDiscordToken(raw: unknown, path: string): string | unde
 }
 
 export function resolveDiscordToken(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   opts: { accountId?: string | null; envToken?: string | null } = {},
 ): DiscordTokenResolution {
   const accountId = normalizeAccountId(opts.accountId);

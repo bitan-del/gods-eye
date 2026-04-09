@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { normalizeE164 } from "openclaw/plugin-sdk/account-resolution";
-import { logVerbose, shouldLogVerbose } from "openclaw/plugin-sdk/runtime-env";
-import { escapeRegExp } from "openclaw/plugin-sdk/text-runtime";
-import { CONFIG_DIR, resolveUserPath } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeE164 } from "godseye/plugin-sdk/account-resolution";
+import { logVerbose, shouldLogVerbose } from "godseye/plugin-sdk/runtime-env";
+import { escapeRegExp } from "godseye/plugin-sdk/text-runtime";
+import { CONFIG_DIR, resolveUserPath } from "godseye/plugin-sdk/text-runtime";
 
 const WHATSAPP_FENCE_PLACEHOLDER = "\x00FENCE";
 const WHATSAPP_INLINE_CODE_PLACEHOLDER = "\x00CODE";

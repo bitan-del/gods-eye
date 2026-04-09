@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { asRecord, readString } from "../config-record-shared.js";
 import { debugLog, debugError, debugWarn } from "./debug-log.js";
 import { detectFfmpeg, isWindows } from "./platform.js";

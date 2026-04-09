@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetFileLockStateForTest } from "../../infra/file-lock.js";
 import { captureEnv } from "../../test-utils/env.js";
 import type { AuthProfileStore } from "./types.js";
@@ -34,6 +34,17 @@ vi.mock("../../plugins/provider-runtime.runtime.js", () => ({
   refreshProviderOAuthCredentialWithPlugin: async () => null,
 }));
 
+vi.mock("../../plugins/provider-runtime.js", () => ({
+  resolveExternalAuthProfilesWithPlugins: () => [],
+}));
+
+afterAll(() => {
+  vi.doUnmock("@mariozechner/pi-ai/oauth");
+  vi.doUnmock("../cli-credentials.js");
+  vi.doUnmock("../../plugins/provider-runtime.runtime.js");
+  vi.doUnmock("../../plugins/provider-runtime.js");
+});
+
 let clearRuntimeAuthProfileStoreSnapshots: typeof import("./store.js").clearRuntimeAuthProfileStoreSnapshots;
 let ensureAuthProfileStore: typeof import("./store.js").ensureAuthProfileStore;
 let resolveApiKeyForProfile: typeof import("./oauth.js").resolveApiKeyForProfile;
@@ -45,7 +56,11 @@ async function loadFreshOAuthModuleForTest() {
 }
 
 describe("resolveApiKeyForProfile fallback to main agent", () => {
-  const envSnapshot = captureEnv(["GODSEYE_STATE_DIR", "GODSEYE_AGENT_DIR", "PI_CODING_AGENT_DIR"]);
+  const envSnapshot = captureEnv([
+    "OPENCLAW_STATE_DIR",
+    "OPENCLAW_AGENT_DIR",
+    "PI_CODING_AGENT_DIR",
+  ]);
   let tmpDir: string;
   let mainAgentDir: string;
   let secondaryAgentDir: string;
@@ -62,9 +77,9 @@ describe("resolveApiKeyForProfile fallback to main agent", () => {
     await fs.mkdir(mainAgentDir, { recursive: true });
     await fs.mkdir(secondaryAgentDir, { recursive: true });
 
-    // Set environment variables so resolveGodsEyeAgentDir() returns mainAgentDir
-    process.env.GODSEYE_STATE_DIR = tmpDir;
-    process.env.GODSEYE_AGENT_DIR = mainAgentDir;
+    // Set environment variables so resolveOpenClawAgentDir() returns mainAgentDir
+    process.env.OPENCLAW_STATE_DIR = tmpDir;
+    process.env.OPENCLAW_AGENT_DIR = mainAgentDir;
     process.env.PI_CODING_AGENT_DIR = mainAgentDir;
     await loadFreshOAuthModuleForTest();
     clearRuntimeAuthProfileStoreSnapshots();

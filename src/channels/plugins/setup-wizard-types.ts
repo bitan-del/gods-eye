@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { DmPolicy } from "../../config/types.js";
 import type { RuntimeEnv } from "../../runtime.js";
 import type { WizardPrompter } from "../../wizard/prompts.js";
@@ -18,9 +18,6 @@ export type SetupChannelsOptions = {
   onAccountId?: (channel: ChannelId, accountId: string) => void;
   onResolvedPlugin?: (channel: ChannelId, plugin: ChannelSetupPlugin) => void;
   promptAccountIds?: boolean;
-  whatsappAccountId?: string;
-  promptWhatsAppAccountId?: boolean;
-  onWhatsAppAccountId?: (accountId: string) => void;
   forceAllowFromChannels?: ChannelId[];
   skipStatusNote?: boolean;
   skipDmPolicyPrompt?: boolean;
@@ -31,11 +28,11 @@ export type SetupChannelsOptions = {
 };
 
 export type PromptAccountIdParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   label: string;
   currentId?: string;
-  listAccountIds: (cfg: GodsEyeConfig) => string[];
+  listAccountIds: (cfg: OpenClawConfig) => string[];
   defaultAccountId: string;
 };
 
@@ -50,13 +47,13 @@ export type ChannelSetupStatus = {
 };
 
 export type ChannelSetupStatusContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   options?: SetupChannelsOptions;
   accountOverrides: Partial<Record<ChannelId, string>>;
 };
 
 export type ChannelSetupConfigureContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   runtime: RuntimeEnv;
   prompter: WizardPrompter;
   options?: SetupChannelsOptions;
@@ -66,8 +63,8 @@ export type ChannelSetupConfigureContext = {
 };
 
 export type ChannelOnboardingPostWriteContext = {
-  previousCfg: GodsEyeConfig;
-  cfg: GodsEyeConfig;
+  previousCfg: OpenClawConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   runtime: RuntimeEnv;
 };
@@ -75,11 +72,11 @@ export type ChannelOnboardingPostWriteContext = {
 export type ChannelOnboardingPostWriteHook = {
   channel: ChannelId;
   accountId: string;
-  run: (ctx: { cfg: GodsEyeConfig; runtime: RuntimeEnv }) => Promise<void> | void;
+  run: (ctx: { cfg: OpenClawConfig; runtime: RuntimeEnv }) => Promise<void> | void;
 };
 
 export type ChannelSetupResult = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string;
 };
 
@@ -96,16 +93,16 @@ export type ChannelSetupDmPolicy = {
   policyKey: string;
   allowFromKey: string;
   resolveConfigKeys?: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     accountId?: string,
   ) => { policyKey: string; allowFromKey: string };
-  getCurrent: (cfg: GodsEyeConfig, accountId?: string) => DmPolicy;
-  setPolicy: (cfg: GodsEyeConfig, policy: DmPolicy, accountId?: string) => GodsEyeConfig;
+  getCurrent: (cfg: OpenClawConfig, accountId?: string) => DmPolicy;
+  setPolicy: (cfg: OpenClawConfig, policy: DmPolicy, accountId?: string) => OpenClawConfig;
   promptAllowFrom?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     prompter: WizardPrompter;
     accountId?: string;
-  }) => Promise<GodsEyeConfig>;
+  }) => Promise<OpenClawConfig>;
 };
 
 export type ChannelSetupWizardAdapter = {
@@ -121,5 +118,5 @@ export type ChannelSetupWizardAdapter = {
   afterConfigWritten?: (ctx: ChannelOnboardingPostWriteContext) => Promise<void> | void;
   dmPolicy?: ChannelSetupDmPolicy;
   onAccountRecorded?: (accountId: string, options?: SetupChannelsOptions) => void;
-  disable?: (cfg: GodsEyeConfig) => GodsEyeConfig;
+  disable?: (cfg: OpenClawConfig) => OpenClawConfig;
 };

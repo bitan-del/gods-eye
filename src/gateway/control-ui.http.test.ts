@@ -13,7 +13,7 @@ describe("handleControlUiHttpRequest", () => {
     indexHtml?: string;
     fn: (tmp: string) => Promise<T>;
   }) {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
     try {
       await fs.writeFile(path.join(tmp, "index.html"), params.indexHtml ?? "<html></html>\n");
       return await params.fn(tmp);
@@ -27,7 +27,6 @@ describe("handleControlUiHttpRequest", () => {
       basePath: string;
       assistantName: string;
       assistantAvatar: string;
-      assistantAgentId: string;
     };
   }
 
@@ -97,7 +96,7 @@ describe("handleControlUiHttpRequest", () => {
     siblingDir: string;
     fn: (paths: { root: string; sibling: string }) => Promise<T>;
   }) {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-root-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-root-"));
     try {
       const root = path.join(tmp, "ui");
       const sibling = path.join(tmp, params.siblingDir);
@@ -196,7 +195,8 @@ describe("handleControlUiHttpRequest", () => {
         expect(parsed.basePath).toBe("");
         expect(parsed.assistantName).toBe("</script><script>alert(1)//");
         expect(parsed.assistantAvatar).toBe("/avatar/main");
-        expect(parsed.assistantAgentId).toBe("main");
+        expect(parsed).not.toHaveProperty("assistantAgentId");
+        expect(parsed).not.toHaveProperty("serverVersion");
       },
     });
   });
@@ -206,10 +206,10 @@ describe("handleControlUiHttpRequest", () => {
       fn: async (tmp) => {
         const { res, end } = makeMockHttpResponse();
         const handled = handleControlUiHttpRequest(
-          { url: `/godseye${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, method: "GET" } as IncomingMessage,
+          { url: `/openclaw${CONTROL_UI_BOOTSTRAP_CONFIG_PATH}`, method: "GET" } as IncomingMessage,
           res,
           {
-            basePath: "/godseye",
+            basePath: "/openclaw",
             root: { kind: "resolved", path: tmp },
             config: {
               agents: { defaults: { workspace: tmp } },
@@ -219,16 +219,17 @@ describe("handleControlUiHttpRequest", () => {
         );
         expect(handled).toBe(true);
         const parsed = parseBootstrapPayload(end);
-        expect(parsed.basePath).toBe("/godseye");
+        expect(parsed.basePath).toBe("/openclaw");
         expect(parsed.assistantName).toBe("Ops");
-        expect(parsed.assistantAvatar).toBe("/godseye/avatar/main");
-        expect(parsed.assistantAgentId).toBe("main");
+        expect(parsed.assistantAvatar).toBe("/openclaw/avatar/main");
+        expect(parsed).not.toHaveProperty("assistantAgentId");
+        expect(parsed).not.toHaveProperty("serverVersion");
       },
     });
   });
 
   it("serves local avatar bytes through hardened avatar handler", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-avatar-http-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-avatar-http-"));
     try {
       const avatarPath = path.join(tmp, "main.png");
       await fs.writeFile(avatarPath, "avatar-bytes\n");
@@ -248,8 +249,8 @@ describe("handleControlUiHttpRequest", () => {
   });
 
   it("rejects avatar symlink paths from resolver", async () => {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-avatar-http-link-"));
-    const outside = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-avatar-http-outside-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-avatar-http-link-"));
+    const outside = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-avatar-http-outside-"));
     try {
       const outsideFile = path.join(outside, "secret.txt");
       await fs.writeFile(outsideFile, "outside-secret\n");
@@ -273,7 +274,7 @@ describe("handleControlUiHttpRequest", () => {
     await withControlUiRoot({
       fn: async (tmp) => {
         const assetsDir = path.join(tmp, "assets");
-        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-outside-"));
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-outside-"));
         try {
           const outsideFile = path.join(outsideDir, "secret.txt");
           await fs.mkdir(assetsDir, { recursive: true });
@@ -336,7 +337,7 @@ describe("handleControlUiHttpRequest", () => {
   it("rejects symlinked SPA fallback index.html outside control-ui root", async () => {
     await withControlUiRoot({
       fn: async (tmp) => {
-        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-index-outside-"));
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-index-outside-"));
         try {
           const outsideIndex = path.join(outsideDir, "index.html");
           await fs.writeFile(outsideIndex, "<html>outside</html>\n");
@@ -359,7 +360,7 @@ describe("handleControlUiHttpRequest", () => {
   it("rejects hardlinked index.html for non-package control-ui roots", async () => {
     await withControlUiRoot({
       fn: async (tmp) => {
-        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-index-hardlink-"));
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-index-hardlink-"));
         try {
           const outsideIndex = path.join(outsideDir, "index.html");
           await fs.writeFile(outsideIndex, "<html>outside-hardlink</html>\n");
@@ -441,7 +442,7 @@ describe("handleControlUiHttpRequest", () => {
         const handled = handleControlUiHttpRequest(
           { url: "/bluebubbles-webhook", method: "POST" } as IncomingMessage,
           res,
-          { basePath: "/godseye", root: { kind: "resolved", path: tmp } },
+          { basePath: "/openclaw", root: { kind: "resolved", path: tmp } },
         );
         expect(handled).toBe(false);
       },
@@ -495,12 +496,12 @@ describe("handleControlUiHttpRequest", () => {
   it("falls through POST requests under configured basePath (plugin webhook passthrough)", async () => {
     await withControlUiRoot({
       fn: async (tmp) => {
-        for (const route of ["/godseye", "/godseye/", "/godseye/some-page"]) {
+        for (const route of ["/openclaw", "/openclaw/", "/openclaw/some-page"]) {
           const { handled, end } = runControlUiRequest({
             url: route,
             method: "POST",
             rootPath: tmp,
-            basePath: "/godseye",
+            basePath: "/openclaw",
           });
           expect(handled, `POST to ${route} should pass through to plugin handlers`).toBe(false);
           expect(end, `POST to ${route} should not write a response`).not.toHaveBeenCalled();
@@ -519,10 +520,10 @@ describe("handleControlUiHttpRequest", () => {
         const secretPathUrl = secretPath.split(path.sep).join("/");
         const absolutePathUrl = secretPathUrl.startsWith("/") ? secretPathUrl : `/${secretPathUrl}`;
         const { res, end, handled } = runControlUiRequest({
-          url: `/godseye/${absolutePathUrl}`,
+          url: `/openclaw/${absolutePathUrl}`,
           method: "GET",
           rootPath: root,
-          basePath: "/godseye",
+          basePath: "/openclaw",
         });
         expectNotFoundResponse({ handled, res, end });
       },
@@ -548,10 +549,10 @@ describe("handleControlUiHttpRequest", () => {
         }
 
         const { res, end, handled } = runControlUiRequest({
-          url: "/godseye/assets/leak.txt",
+          url: "/openclaw/assets/leak.txt",
           method: "GET",
           rootPath: root,
-          basePath: "/godseye",
+          basePath: "/openclaw",
         });
         expectNotFoundResponse({ handled, res, end });
       },

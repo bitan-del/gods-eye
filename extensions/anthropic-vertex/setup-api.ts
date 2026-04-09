@@ -1,4 +1,4 @@
-import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
+import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 import { resolveAnthropicVertexConfigApiKey } from "./region.js";
 
 export default definePluginEntry({

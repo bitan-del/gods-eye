@@ -2,11 +2,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { App } from "@slack/bolt";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveAgentRoute } from "godseye/plugin-sdk/routing";
+import { resolveThreadSessionKeys } from "godseye/plugin-sdk/routing";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { expectChannelInboundContextContract as expectInboundContextContract } from "../../../../../src/channels/plugins/contracts/suites.js";
-import type { GodsEyeConfig } from "../../../../../src/config/config.js";
-import { resolveAgentRoute } from "../../../../../src/routing/resolve-route.js";
-import { resolveThreadSessionKeys } from "../../../../../src/routing/session-key.js";
+import { expectChannelInboundContextContract as expectInboundContextContract } from "../../../../../src/channels/plugins/contracts/test-helpers.js";
 import type { ResolvedSlackAccount } from "../../accounts.js";
 import type { SlackMessageEvent } from "../../types.js";
 import type { SlackMonitorContext } from "../context.js";
@@ -27,7 +27,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
   }
 
   beforeAll(() => {
-    fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-slack-thread-"));
+    fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-slack-thread-"));
   });
 
   afterAll(() => {
@@ -43,9 +43,8 @@ describe("slack prepareSlackMessage inbound contract", () => {
     const slackCtx = createInboundSlackCtx({
       cfg: {
         channels: { slack: { enabled: true } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
     return slackCtx;
   }
@@ -94,7 +93,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
     });
   }
 
-  function createThreadSlackCtx(params: { cfg: GodsEyeConfig; replies: unknown }) {
+  function createThreadSlackCtx(params: { cfg: OpenClawConfig; replies: unknown }) {
     return createInboundSlackCtx({
       cfg: params.cfg,
       appClient: { conversations: { replies: params.replies } } as App["client"],
@@ -136,9 +135,8 @@ describe("slack prepareSlackMessage inbound contract", () => {
       cfg: {
         channels: { slack: { enabled: true } },
         session: { dmScope: "main" },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
     // Simulate API returning correct type for DM channel
     slackCtx.resolveChannelName = async () => ({ name: undefined, type: "im" as const });
@@ -160,7 +158,6 @@ describe("slack prepareSlackMessage inbound contract", () => {
     options?: { includeFromCheck?: boolean },
   ) {
     expect(prepared).toBeTruthy();
-    // oxlint-disable-next-line typescript/no-explicit-any
     expectInboundContextContract(prepared!.ctxPayload as any);
     expect(prepared!.isDirectMessage).toBe(true);
     expect(prepared!.route.sessionKey).toBe("agent:main:main");
@@ -184,13 +181,12 @@ describe("slack prepareSlackMessage inbound contract", () => {
             ...(params?.groupPolicy ? { groupPolicy: params.groupPolicy } : {}),
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       replyToMode: "all",
       ...(params?.defaultRequireMention === undefined
         ? {}
         : { defaultRequireMention: params.defaultRequireMention }),
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
     if (params?.asChannel) {
       slackCtx.resolveChannelName = async () => ({ name: "general", type: "channel" });
@@ -210,8 +206,33 @@ describe("slack prepareSlackMessage inbound contract", () => {
     const prepared = await prepareWithDefaultCtx(message);
 
     expect(prepared).toBeTruthy();
-    // oxlint-disable-next-line typescript/no-explicit-any
     expectInboundContextContract(prepared!.ctxPayload as any);
+  });
+
+  it("does not enable Slack status reactions when the message timestamp is missing", async () => {
+    const slackCtx = createInboundSlackCtx({
+      cfg: {
+        messages: {
+          ackReaction: "👀",
+          ackReactionScope: "all",
+          statusReactions: { enabled: true },
+        },
+        channels: { slack: { enabled: true } },
+      } as OpenClawConfig,
+    });
+    slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
+
+    const prepared = await prepareMessageWith(slackCtx, defaultAccount, {
+      channel: "D123",
+      channel_type: "im",
+      user: "U1",
+      text: "hi",
+      event_ts: "1.000",
+    } as SlackMessageEvent);
+
+    expect(prepared).toBeTruthy();
+    expect(prepared?.ackReactionMessageTs).toBeUndefined();
+    expect(prepared?.ackReactionPromise).toBeNull();
   });
 
   it("includes forwarded shared attachment text in raw body", async () => {
@@ -273,10 +294,9 @@ describe("slack prepareSlackMessage inbound contract", () => {
         channels: {
           slack: { enabled: true },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       defaultRequireMention: false,
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Bot" }) as any;
 
     const account = createSlackAccount({ allowBots: true });
@@ -305,13 +325,12 @@ describe("slack prepareSlackMessage inbound contract", () => {
             enabled: true,
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       defaultRequireMention: false,
       channelsConfig: {
         C123: { systemPrompt: "Config prompt" },
       },
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
     const channelInfo = {
       name: "general",
@@ -350,6 +369,19 @@ describe("slack prepareSlackMessage inbound contract", () => {
     );
 
     expectMainScopedDmClassification(prepared, { includeFromCheck: true });
+  });
+
+  it("uses the concrete DM channel as the live reply target while keeping user-scoped routing", async () => {
+    const prepared = await prepareMessageWith(
+      createDmScopeMainSlackCtx(),
+      createSlackAccount(),
+      createMainScopedDmMessage({}),
+    );
+
+    expect(prepared).toBeTruthy();
+    expect(prepared!.replyTarget).toBe("channel:D0ACP6B1T8V");
+    expect(prepared!.ctxPayload.To).toBe("user:U1");
+    expect(prepared!.ctxPayload.NativeChannelId).toBe("D0ACP6B1T8V");
   });
 
   it("classifies D-prefix DMs when channel_type is missing", async () => {
@@ -436,7 +468,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
       cfg: {
         session: { store: storePath },
         channels: { slack: { enabled: true, replyToMode: "all", groupPolicy: "open" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       replies,
     });
     slackCtx.resolveUserName = async (id: string) => ({
@@ -462,7 +494,7 @@ describe("slack prepareSlackMessage inbound contract", () => {
     const cfg = {
       session: { store: storePath },
       channels: { slack: { enabled: true, replyToMode: "all", groupPolicy: "open" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const route = resolveAgentRoute({
       cfg,
       channel: "slack",
@@ -551,10 +583,9 @@ describe("slack prepareSlackMessage inbound contract", () => {
       cfg: {
         session: { store: storePath },
         channels: { slack: { enabled: true, replyToMode: "all" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       replyToMode: "all",
     });
-    // oxlint-disable-next-line typescript/no-explicit-any
     slackCtx.resolveUserName = async () => ({ name: "Alice" }) as any;
 
     const message = createSlackMessage({ ts: "500.000" });
@@ -581,7 +612,7 @@ describe("prepareSlackMessage sender prefix", () => {
   }): SlackMonitorContext {
     return {
       cfg: {
-        agents: { defaults: { model: "anthropic/claude-opus-4-5", workspace: "/tmp/godseye" } },
+        agents: { defaults: { model: "anthropic/claude-opus-4-5", workspace: "/tmp/openclaw" } },
         channels: { slack: params.channels },
       },
       accountId: "default",
@@ -614,6 +645,7 @@ describe("prepareSlackMessage sender prefix", () => {
       replyToMode: "off",
       threadHistoryScope: "channel",
       threadInheritParent: false,
+      threadRequireExplicitMention: false,
       slashCommand: params.slashCommand,
       textLimit: 2000,
       ackReactionScope: "off",
@@ -650,7 +682,7 @@ describe("prepareSlackMessage sender prefix", () => {
   it("prefixes channel bodies with sender label", async () => {
     const ctx = createSenderPrefixCtx({
       channels: {},
-      slashCommand: { command: "/godseye", enabled: true },
+      slashCommand: { command: "/openclaw", enabled: true },
     });
 
     const result = await prepareSenderPrefixMessage(ctx, "<@BOT> hello", "1700000000.0001");
@@ -667,7 +699,7 @@ describe("prepareSlackMessage sender prefix", () => {
       useAccessGroups: true,
       slashCommand: {
         enabled: false,
-        name: "godseye",
+        name: "openclaw",
         sessionPrefix: "slack:slash",
         ephemeral: true,
       },
@@ -677,5 +709,123 @@ describe("prepareSlackMessage sender prefix", () => {
 
     expect(result).not.toBeNull();
     expect(result?.ctxPayload.CommandAuthorized).toBe(true);
+  });
+});
+
+describe("slack thread.requireExplicitMention", () => {
+  let fixtureRoot = "";
+  let caseId = 0;
+
+  function makeTmpStorePath() {
+    if (!fixtureRoot) {
+      throw new Error("fixtureRoot missing");
+    }
+    const dir = path.join(fixtureRoot, `require-explicit-${caseId++}`);
+    fs.mkdirSync(dir);
+    return { dir, storePath: path.join(dir, "sessions.json") };
+  }
+
+  beforeAll(() => {
+    fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-slack-explicit-mention-"));
+  });
+
+  afterAll(() => {
+    if (fixtureRoot) {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+      fixtureRoot = "";
+    }
+  });
+
+  function createCtxWithExplicitMention(requireExplicitMention: boolean) {
+    const ctx = createInboundSlackTestContext({
+      cfg: {
+        channels: { slack: { enabled: true } },
+        session: {},
+      } as OpenClawConfig,
+      threadRequireExplicitMention: requireExplicitMention,
+    });
+    ctx.resolveUserName = async () => ({ name: "Alice" }) as any;
+    return ctx;
+  }
+
+  it("drops thread reply without explicit mention when requireExplicitMention is true", async () => {
+    const ctx = createCtxWithExplicitMention(true);
+    const { storePath } = makeTmpStorePath();
+    vi.spyOn(
+      await import("godseye/plugin-sdk/config-runtime"),
+      "resolveStorePath",
+    ).mockReturnValue(storePath);
+    const account = createSlackTestAccount();
+    const message: SlackMessageEvent = {
+      type: "message",
+      channel: "C123",
+      channel_type: "channel",
+      user: "U1",
+      text: "hello",
+      ts: "1700000001.000001",
+      thread_ts: "1700000000.000000",
+      parent_user_id: "B1", // bot is thread parent
+    };
+    const result = await prepareSlackMessage({
+      ctx,
+      account,
+      message,
+      opts: { source: "message" },
+    });
+    expect(result).toBeNull();
+  });
+
+  it("allows thread reply with explicit @mention when requireExplicitMention is true", async () => {
+    const ctx = createCtxWithExplicitMention(true);
+    const { storePath } = makeTmpStorePath();
+    vi.spyOn(
+      await import("godseye/plugin-sdk/config-runtime"),
+      "resolveStorePath",
+    ).mockReturnValue(storePath);
+    const account = createSlackTestAccount();
+    const message: SlackMessageEvent = {
+      type: "message",
+      channel: "C123",
+      channel_type: "channel",
+      user: "U1",
+      text: "<@B1> hello",
+      ts: "1700000001.000002",
+      thread_ts: "1700000000.000000",
+      parent_user_id: "B1",
+    };
+    const result = await prepareSlackMessage({
+      ctx,
+      account,
+      message,
+      opts: { source: "message" },
+    });
+    expect(result).not.toBeNull();
+  });
+
+  it("allows thread reply without explicit mention when requireExplicitMention is false (default)", async () => {
+    const ctx = createCtxWithExplicitMention(false);
+    const { storePath } = makeTmpStorePath();
+    vi.spyOn(
+      await import("godseye/plugin-sdk/config-runtime"),
+      "resolveStorePath",
+    ).mockReturnValue(storePath);
+    const account = createSlackTestAccount();
+    const message: SlackMessageEvent = {
+      type: "message",
+      channel: "C123",
+      channel_type: "channel",
+      user: "U1",
+      text: "hello",
+      ts: "1700000001.000003",
+      thread_ts: "1700000000.000000",
+      parent_user_id: "B1",
+    };
+    const result = await prepareSlackMessage({
+      ctx,
+      account,
+      message,
+      opts: { source: "message" },
+    });
+    expect(result).not.toBeNull();
   });
 });

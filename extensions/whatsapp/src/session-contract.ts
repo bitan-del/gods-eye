@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 function extractLegacyWhatsAppGroupId(key: string): string | null {
   const trimmed = key.trim();

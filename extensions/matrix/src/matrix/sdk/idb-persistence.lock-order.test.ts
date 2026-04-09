@@ -15,9 +15,9 @@ const { withFileLockMock } = vi.hoisted(() => ({
   ),
 }));
 
-vi.mock("openclaw/plugin-sdk/infra-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/infra-runtime")>(
-    "openclaw/plugin-sdk/infra-runtime",
+vi.mock("godseye/plugin-sdk/infra-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/infra-runtime")>(
+    "godseye/plugin-sdk/infra-runtime",
   );
   return {
     ...actual,

@@ -1,7 +1,7 @@
 import fsPromises from "node:fs/promises";
-import { loadConfig } from "openclaw/plugin-sdk/browser-config-runtime";
-import { withTimeout } from "openclaw/plugin-sdk/browser-node-runtime";
-import { detectMime } from "openclaw/plugin-sdk/browser-setup-tools";
+import { loadConfig } from "godseye/plugin-sdk/browser-config-runtime";
+import { withTimeout } from "godseye/plugin-sdk/browser-node-runtime";
+import { detectMime } from "godseye/plugin-sdk/browser-setup-tools";
 import { redactCdpUrl } from "../browser/cdp.helpers.js";
 import { resolveBrowserConfig } from "../browser/config.js";
 import {

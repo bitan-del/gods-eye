@@ -1,10 +1,10 @@
-import { resolveNormalizedAccountEntry } from "godseye/plugin-sdk/account-resolution";
+import { resolveNormalizedAccountEntry } from "godseye/plugin-sdk/account-core";
 import type { BaseTokenResolution } from "godseye/plugin-sdk/channel-contract";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { tryReadSecretFileSync } from "godseye/plugin-sdk/infra-runtime";
+import { tryReadSecretFileSync } from "godseye/plugin-sdk/channel-core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { TelegramAccountConfig } from "godseye/plugin-sdk/config-runtime";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/routing";
 import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
-import type { TelegramAccountConfig } from "../runtime-api.js";
 
 export type TelegramTokenSource = "env" | "tokenFile" | "config" | "none";
 
@@ -19,7 +19,7 @@ type ResolveTelegramTokenOpts = {
 };
 
 export function resolveTelegramToken(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   opts: ResolveTelegramTokenOpts = {},
 ): TelegramTokenResolution {
   const accountId = normalizeAccountId(opts.accountId);
@@ -47,7 +47,7 @@ export function resolveTelegramToken(
   //
   // Single-bot: no accounts section (or empty) → allow fallthrough so that
   // binding-created accountIds inherit the channel-level token.
-  // See: https://github.com/bitan-del/gods-eye/issues/53876
+  // See: https://github.com/openclaw/openclaw/issues/53876
   if (accountId !== DEFAULT_ACCOUNT_ID && !accountCfg) {
     const accounts = telegramCfg?.accounts;
     const hasConfiguredAccounts =

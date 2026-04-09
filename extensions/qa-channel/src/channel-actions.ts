@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
-import { jsonResult, readStringParam } from "openclaw/plugin-sdk/channel-actions";
-import { extractToolSend } from "openclaw/plugin-sdk/tool-send";
+import { jsonResult, readStringParam } from "godseye/plugin-sdk/channel-actions";
+import { extractToolSend } from "godseye/plugin-sdk/tool-send";
 import { resolveQaChannelAccount } from "./accounts.js";
 import {
   createQaBusThread,

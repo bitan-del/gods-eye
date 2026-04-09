@@ -7,15 +7,15 @@ describe("buildPlatformRuntimeLogHints", () => {
       buildPlatformRuntimeLogHints({
         platform: "darwin",
         env: {
-          GODSEYE_STATE_DIR: "/tmp/godseye-state",
-          GODSEYE_LOG_PREFIX: "gateway",
+          OPENCLAW_STATE_DIR: "/tmp/openclaw-state",
+          OPENCLAW_LOG_PREFIX: "gateway",
         },
-        systemdServiceName: "godseye-gateway",
-        windowsTaskName: "GodsEye Gateway",
+        systemdServiceName: "openclaw-gateway",
+        windowsTaskName: "OpenClaw Gateway",
       }),
     ).toEqual([
-      "Launchd stdout (if installed): /tmp/godseye-state/logs/gateway.log",
-      "Launchd stderr (if installed): /tmp/godseye-state/logs/gateway.err.log",
+      "Launchd stdout (if installed): /tmp/openclaw-state/logs/gateway.log",
+      "Launchd stderr (if installed): /tmp/openclaw-state/logs/gateway.err.log",
     ]);
   });
 
@@ -23,17 +23,17 @@ describe("buildPlatformRuntimeLogHints", () => {
     expect(
       buildPlatformRuntimeLogHints({
         platform: "linux",
-        systemdServiceName: "godseye-gateway",
-        windowsTaskName: "GodsEye Gateway",
+        systemdServiceName: "openclaw-gateway",
+        windowsTaskName: "OpenClaw Gateway",
       }),
-    ).toEqual(["Logs: journalctl --user -u godseye-gateway.service -n 200 --no-pager"]);
+    ).toEqual(["Logs: journalctl --user -u openclaw-gateway.service -n 200 --no-pager"]);
     expect(
       buildPlatformRuntimeLogHints({
         platform: "win32",
-        systemdServiceName: "godseye-gateway",
-        windowsTaskName: "GodsEye Gateway",
+        systemdServiceName: "openclaw-gateway",
+        windowsTaskName: "OpenClaw Gateway",
       }),
-    ).toEqual(['Logs: schtasks /Query /TN "GodsEye Gateway" /V /FO LIST']);
+    ).toEqual(['Logs: schtasks /Query /TN "OpenClaw Gateway" /V /FO LIST']);
   });
 });
 
@@ -42,30 +42,30 @@ describe("buildPlatformServiceStartHints", () => {
     expect(
       buildPlatformServiceStartHints({
         platform: "darwin",
-        installCommand: "godseye gateway install",
-        startCommand: "godseye gateway",
-        launchAgentPlistPath: "~/Library/LaunchAgents/com.godseye.gateway.plist",
-        systemdServiceName: "godseye-gateway",
-        windowsTaskName: "GodsEye Gateway",
+        installCommand: "openclaw gateway install",
+        startCommand: "openclaw gateway",
+        launchAgentPlistPath: "~/Library/LaunchAgents/com.openclaw.gateway.plist",
+        systemdServiceName: "openclaw-gateway",
+        windowsTaskName: "OpenClaw Gateway",
       }),
     ).toEqual([
-      "godseye gateway install",
-      "godseye gateway",
-      "launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.godseye.gateway.plist",
+      "openclaw gateway install",
+      "openclaw gateway",
+      "launchctl bootstrap gui/$UID ~/Library/LaunchAgents/com.openclaw.gateway.plist",
     ]);
     expect(
       buildPlatformServiceStartHints({
         platform: "linux",
-        installCommand: "godseye gateway install",
-        startCommand: "godseye gateway",
-        launchAgentPlistPath: "~/Library/LaunchAgents/com.godseye.gateway.plist",
-        systemdServiceName: "godseye-gateway",
-        windowsTaskName: "GodsEye Gateway",
+        installCommand: "openclaw gateway install",
+        startCommand: "openclaw gateway",
+        launchAgentPlistPath: "~/Library/LaunchAgents/com.openclaw.gateway.plist",
+        systemdServiceName: "openclaw-gateway",
+        windowsTaskName: "OpenClaw Gateway",
       }),
     ).toEqual([
-      "godseye gateway install",
-      "godseye gateway",
-      "systemctl --user start godseye-gateway.service",
+      "openclaw gateway install",
+      "openclaw gateway",
+      "systemctl --user start openclaw-gateway.service",
     ]);
   });
 });

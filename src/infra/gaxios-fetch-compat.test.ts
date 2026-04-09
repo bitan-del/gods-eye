@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const TEST_GAXIOS_CONSTRUCTOR_OVERRIDE = "__GODSEYE_TEST_GAXIOS_CONSTRUCTOR__";
+const TEST_GAXIOS_CONSTRUCTOR_OVERRIDE = "__OPENCLAW_TEST_GAXIOS_CONSTRUCTOR__";
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 let ProxyAgent: typeof import("undici").ProxyAgent;
 let __testing: typeof import("./gaxios-fetch-compat.js").__testing;
@@ -23,7 +23,6 @@ beforeEach(() => {
 
 describe("gaxios fetch compat", () => {
   afterEach(() => {
-    vi.doUnmock("undici");
     Reflect.deleteProperty(globalThis as object, TEST_GAXIOS_CONSTRUCTOR_OVERRIDE);
     __testing.resetGaxiosFetchCompatForTests();
     vi.restoreAllMocks();

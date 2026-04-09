@@ -1,11 +1,11 @@
 import {
   applyAgentDefaultModelPrimary,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 
 export const OPENROUTER_DEFAULT_MODEL_REF = "openrouter/auto";
 
-export function applyOpenrouterProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpenrouterProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[OPENROUTER_DEFAULT_MODEL_REF] = {
     ...models[OPENROUTER_DEFAULT_MODEL_REF],
@@ -24,7 +24,7 @@ export function applyOpenrouterProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig
   };
 }
 
-export function applyOpenrouterConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpenrouterConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyAgentDefaultModelPrimary(
     applyOpenrouterProviderConfig(cfg),
     OPENROUTER_DEFAULT_MODEL_REF,

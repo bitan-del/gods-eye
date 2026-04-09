@@ -1,4 +1,5 @@
 import { runCommandWithTimeout } from "../process/exec.js";
+import { normalizeOptionalLowercaseString } from "../shared/string-coerce.js";
 import { isTailnetIPv4 } from "./tailnet.js";
 import { resolveWideAreaDiscoveryDomain } from "./widearea-dns.js";
 
@@ -66,7 +67,7 @@ export type GatewayBonjourDiscoverOpts = {
 };
 
 const DEFAULT_TIMEOUT_MS = 2000;
-const GATEWAY_SERVICE_TYPE = "_godseye-gw._tcp";
+const GATEWAY_SERVICE_TYPE = "_openclaw-gw._tcp";
 
 function decodeDnsSdEscapes(value: string): string {
   let decoded = false;
@@ -228,7 +229,7 @@ function parseDnsSdBrowse(stdout: string): string[] {
     if (!line.includes("Add")) {
       continue;
     }
-    const match = line.match(/_godseye-gw\._tcp\.?\s+(.+)$/);
+    const match = line.match(/_openclaw-gw\._tcp\.?\s+(.+)$/);
     if (match?.[1]) {
       instances.add(decodeDnsSdEscapes(match[1].trim()));
     }
@@ -279,7 +280,7 @@ function parseDnsSdResolve(stdout: string, instanceName: string): GatewayBonjour
   beacon.gatewayPort = parseIntOrNull(txt.gatewayPort);
   beacon.sshPort = parseIntOrNull(txt.sshPort);
   if (txt.gatewayTls) {
-    const raw = txt.gatewayTls.trim().toLowerCase();
+    const raw = normalizeOptionalLowercaseString(txt.gatewayTls);
     beacon.gatewayTls = raw === "1" || raw === "true" || raw === "yes";
   }
   if (txt.gatewayTlsSha256) {
@@ -416,7 +417,7 @@ async function discoverWideAreaViaTailnetDns(
     if (!ptrName) {
       continue;
     }
-    const instanceName = ptrName.replace(/\.?_godseye-gw\._tcp\..*$/, "");
+    const instanceName = ptrName.replace(/\.?_openclaw-gw\._tcp\..*$/, "");
 
     const srv = await run(["dig", "+short", "+time=1", "+tries=1", nameserverArg, ptrName, "SRV"], {
       timeoutMs: Math.max(1, Math.min(350, budget)),
@@ -457,7 +458,7 @@ async function discoverWideAreaViaTailnetDns(
       cliPath: txtMap.cliPath || undefined,
     };
     if (txtMap.gatewayTls) {
-      const raw = txtMap.gatewayTls.trim().toLowerCase();
+      const raw = normalizeOptionalLowercaseString(txtMap.gatewayTls);
       beacon.gatewayTls = raw === "1" || raw === "true" || raw === "yes";
     }
     if (txtMap.gatewayTlsSha256) {
@@ -541,7 +542,7 @@ function parseAvahiBrowse(stdout: string): GatewayBonjourBeacon[] {
       current.gatewayPort = parseIntOrNull(txt.gatewayPort);
       current.sshPort = parseIntOrNull(txt.sshPort);
       if (txt.gatewayTls) {
-        const raw = txt.gatewayTls.trim().toLowerCase();
+        const raw = normalizeOptionalLowercaseString(txt.gatewayTls);
         current.gatewayTls = raw === "1" || raw === "true" || raw === "yes";
       }
       if (txt.gatewayTlsSha256) {

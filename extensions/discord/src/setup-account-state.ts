@@ -1,10 +1,11 @@
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/account-id";
 import { listCombinedAccountIds } from "godseye/plugin-sdk/account-resolution";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   hasConfiguredSecretInput,
   normalizeSecretInputString,
 } from "godseye/plugin-sdk/secret-input";
+import { resolveDefaultDiscordAccountId } from "./accounts.js";
 import { mergeDiscordAccountConfig, resolveDiscordAccountConfig } from "./accounts.js";
 import type { DiscordAccountConfig } from "./runtime-api.js";
 import { resolveDiscordToken } from "./token.js";
@@ -42,7 +43,7 @@ function inspectConfiguredToken(value: unknown): {
   return null;
 }
 
-export function listDiscordSetupAccountIds(cfg: GodsEyeConfig): string[] {
+export function listDiscordSetupAccountIds(cfg: OpenClawConfig): string[] {
   const accounts = cfg.channels?.discord?.accounts;
   return listCombinedAccountIds({
     configuredAccountIds:
@@ -53,15 +54,17 @@ export function listDiscordSetupAccountIds(cfg: GodsEyeConfig): string[] {
   });
 }
 
-export function resolveDefaultDiscordSetupAccountId(cfg: GodsEyeConfig): string {
-  return listDiscordSetupAccountIds(cfg)[0] ?? DEFAULT_ACCOUNT_ID;
+export function resolveDefaultDiscordSetupAccountId(cfg: OpenClawConfig): string {
+  return resolveDefaultDiscordAccountId(cfg);
 }
 
 export function resolveDiscordSetupAccountConfig(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): { accountId: string; config: DiscordAccountConfig } {
-  const accountId = normalizeAccountId(params.accountId ?? DEFAULT_ACCOUNT_ID);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultDiscordSetupAccountId(params.cfg),
+  );
   return {
     accountId,
     config: mergeDiscordAccountConfig(params.cfg, accountId),
@@ -69,7 +72,7 @@ export function resolveDiscordSetupAccountConfig(params: {
 }
 
 export function inspectDiscordSetupAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): InspectedDiscordSetupAccount {
   const { accountId, config } = resolveDiscordSetupAccountConfig(params);

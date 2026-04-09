@@ -1,2 +1,2 @@
-export { enqueueSystemEvent } from "openclaw/plugin-sdk/infra-runtime";
-export { readSessionUpdatedAt, resolveStorePath } from "openclaw/plugin-sdk/session-store-runtime";
+export { enqueueSystemEvent } from "godseye/plugin-sdk/infra-runtime";
+export { readSessionUpdatedAt, resolveStorePath } from "godseye/plugin-sdk/session-store-runtime";

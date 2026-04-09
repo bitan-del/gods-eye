@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { readConfigFileSnapshot } from "../config/config.js";
 import { formatConfigIssueLines } from "../config/issue-format.js";
 import { note } from "../terminal/note.js";
@@ -14,8 +14,8 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
     return changes;
   }
 
-  const targetDir = path.join(home, ".godseye");
-  const targetPath = path.join(targetDir, "godseye.json");
+  const targetDir = path.join(home, ".openclaw");
+  const targetPath = path.join(targetDir, "openclaw.json");
   try {
     await fs.access(targetPath);
     return changes;
@@ -23,10 +23,7 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
     // missing config
   }
 
-  const legacyCandidates = [
-    path.join(home, ".clawdbot", "clawdbot.json"),
-    path.join(home, ".moldbot", "moldbot.json"),
-  ];
+  const legacyCandidates = [path.join(home, ".clawdbot", "clawdbot.json")];
 
   let legacyPath: string | null = null;
   for (const candidate of legacyCandidates) {
@@ -55,7 +52,7 @@ async function maybeMigrateLegacyConfig(): Promise<string[]> {
 
 export type DoctorConfigPreflightResult = {
   snapshot: Awaited<ReturnType<typeof readConfigFileSnapshot>>;
-  baseConfig: GodsEyeConfig;
+  baseConfig: OpenClawConfig;
 };
 
 export async function runDoctorConfigPreflight(
@@ -103,6 +100,6 @@ export async function runDoctorConfigPreflight(
 
   return {
     snapshot,
-    baseConfig: snapshot.config ?? {},
+    baseConfig: snapshot.sourceConfig ?? snapshot.config ?? {},
   };
 }

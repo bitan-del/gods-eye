@@ -2,7 +2,7 @@ import {
   asNullableRecord,
   hasNonEmptyString as sharedHasNonEmptyString,
   isRecord,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 
 export { asNullableRecord as asRecord, isRecord };
 

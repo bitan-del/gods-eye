@@ -2,10 +2,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import {
+  createRebindableDirectoryAlias,
+  withRealpathSymlinkRebindRace,
+} from "../test-utils/symlink-rebind-race.js";
 import { applyPatch } from "./apply-patch.js";
 
 async function withTempDir<T>(fn: (dir: string) => Promise<T>) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-patch-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-patch-"));
   try {
     return await fn(dir);
   } finally {
@@ -14,7 +18,7 @@ async function withTempDir<T>(fn: (dir: string) => Promise<T>) {
 }
 
 async function withWorkspaceTempDir<T>(fn: (dir: string) => Promise<T>) {
-  const dir = await fs.mkdtemp(path.join(process.cwd(), "godseye-patch-workspace-"));
+  const dir = await fs.mkdtemp(path.join(process.cwd(), "openclaw-patch-workspace-"));
   try {
     return await fn(dir);
   } finally {
@@ -119,7 +123,7 @@ describe("applyPatch", () => {
 
   it("rejects absolute paths outside cwd by default", async () => {
     await withTempDir(async (dir) => {
-      const escapedPath = path.join(os.tmpdir(), `godseye-apply-patch-${Date.now()}.txt`);
+      const escapedPath = path.join(os.tmpdir(), `openclaw-apply-patch-${Date.now()}.txt`);
 
       try {
         await expectOutsideWriteRejected({
@@ -147,22 +151,17 @@ describe("applyPatch", () => {
     });
   });
 
-  it("resolves delete targets before calling fs.rm", async () => {
+  it("deletes the resolved target path", async () => {
     await withTempDir(async (dir) => {
       const target = path.join(dir, "delete-me.txt");
       await fs.writeFile(target, "x\n", "utf8");
-      const rmSpy = vi.spyOn(fs, "rm");
-
-      try {
-        const patch = `*** Begin Patch
+      const patch = `*** Begin Patch
 *** Delete File: delete-me.txt
 *** End Patch`;
 
-        await applyPatch(patch, { cwd: dir });
-        expect(rmSpy).toHaveBeenCalledWith(target);
-      } finally {
-        rmSpy.mockRestore();
-      }
+      const result = await applyPatch(patch, { cwd: dir });
+      expect(result.summary.deleted).toEqual(["delete-me.txt"]);
+      await expect(fs.stat(target)).rejects.toBeDefined();
     });
   });
 
@@ -335,7 +334,7 @@ describe("applyPatch", () => {
 
   it("allows deleting a symlink itself even if it points outside cwd", async () => {
     await withTempDir(async (dir) => {
-      const outsideDir = await fs.mkdtemp(path.join(path.dirname(dir), "godseye-patch-outside-"));
+      const outsideDir = await fs.mkdtemp(path.join(path.dirname(dir), "openclaw-patch-outside-"));
       try {
         const outsideTarget = path.join(outsideDir, "target.txt");
         await fs.writeFile(outsideTarget, "keep\n", "utf8");
@@ -363,6 +362,85 @@ describe("applyPatch", () => {
       }
     });
   });
+
+  it.runIf(process.platform !== "win32")(
+    "does not delete out-of-root files when a checked directory is rebound before remove",
+    async () => {
+      await withTempDir(async (dir) => {
+        const inside = path.join(dir, "inside");
+        const outside = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-patch-outside-"));
+        const slot = path.join(dir, "slot");
+        await fs.mkdir(inside, { recursive: true });
+        await fs.writeFile(path.join(inside, "target.txt"), "inside\n", "utf8");
+        const outsideTarget = path.join(outside, "target.txt");
+        await fs.writeFile(outsideTarget, "outside\n", "utf8");
+        await createRebindableDirectoryAlias({
+          aliasPath: slot,
+          targetPath: inside,
+        });
+
+        const patch = `*** Begin Patch
+*** Delete File: slot/target.txt
+*** End Patch`;
+
+        try {
+          await withRealpathSymlinkRebindRace({
+            shouldFlip: (realpathInput) => realpathInput.endsWith(path.join("slot")),
+            symlinkPath: slot,
+            symlinkTarget: outside,
+            timing: "before-realpath",
+            run: async () => {
+              await expect(applyPatch(patch, { cwd: dir })).rejects.toThrow(
+                /symlink escapes sandbox root|under root|not found/i,
+              );
+            },
+          });
+          await expect(fs.readFile(outsideTarget, "utf8")).resolves.toBe("outside\n");
+        } finally {
+          await fs.rm(outside, { recursive: true, force: true });
+        }
+      });
+    },
+  );
+
+  it.runIf(process.platform !== "win32")(
+    "does not create out-of-root directories when a checked directory is rebound before mkdir",
+    async () => {
+      await withTempDir(async (dir) => {
+        const inside = path.join(dir, "inside");
+        const outside = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-patch-outside-"));
+        const slot = path.join(dir, "slot");
+        await fs.mkdir(inside, { recursive: true });
+        await createRebindableDirectoryAlias({
+          aliasPath: slot,
+          targetPath: inside,
+        });
+
+        const patch = `*** Begin Patch
+*** Add File: slot/nested/deep/file.txt
++safe
+*** End Patch`;
+
+        try {
+          await withRealpathSymlinkRebindRace({
+            shouldFlip: (realpathInput) =>
+              realpathInput.endsWith(path.join("slot", "nested", "deep", "file.txt")),
+            symlinkPath: slot,
+            symlinkTarget: outside,
+            timing: "before-realpath",
+            run: async () => {
+              await expect(applyPatch(patch, { cwd: dir })).rejects.toThrow(/under root/i);
+            },
+          });
+          await expect(fs.stat(path.join(outside, "nested"))).rejects.toMatchObject({
+            code: "ENOENT",
+          });
+        } finally {
+          await fs.rm(outside, { recursive: true, force: true });
+        }
+      });
+    },
+  );
 
   it("uses container paths when the sandbox bridge has no local host path", async () => {
     const files = new Map<string, string>([["/sandbox/source.txt", "before\n"]]);

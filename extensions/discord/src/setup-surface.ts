@@ -1,7 +1,7 @@
 import {
-  type GodsEyeConfig,
-  type WizardPrompter,
   type ChannelSetupWizard,
+  type OpenClawConfig,
+  type WizardPrompter,
 } from "godseye/plugin-sdk/setup-runtime";
 import { formatDocsLink } from "godseye/plugin-sdk/setup-tools";
 import { resolveDiscordChannelAllowlist } from "./resolve-channels.js";
@@ -10,12 +10,7 @@ import {
   resolveDefaultDiscordSetupAccountId,
   resolveDiscordSetupAccountConfig,
 } from "./setup-account-state.js";
-import {
-  createDiscordSetupWizardBase,
-  DISCORD_TOKEN_HELP_LINES,
-  parseDiscordAllowFromId,
-  setDiscordGuildChannelAllowlist,
-} from "./setup-core.js";
+import { createDiscordSetupWizardBase, parseDiscordAllowFromId } from "./setup-core.js";
 import {
   promptLegacyChannelAllowFromForAccount,
   resolveEntriesWithOptionalToken,
@@ -48,10 +43,10 @@ async function resolveDiscordAllowFromEntries(params: { token?: string; entries:
 }
 
 async function promptDiscordAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   return await promptLegacyChannelAllowFromForAccount({
     cfg: params.cfg,
     channel,
@@ -94,7 +89,7 @@ async function promptDiscordAllowFrom(params: {
 }
 
 async function resolveDiscordGroupAllowlist(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   credentialValues: { token?: string };
   entries: string[];

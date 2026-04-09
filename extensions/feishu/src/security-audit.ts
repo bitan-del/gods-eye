@@ -1,5 +1,5 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { hasConfiguredSecretInput } from "openclaw/plugin-sdk/setup";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { hasConfiguredSecretInput } from "godseye/plugin-sdk/setup";
 import { asRecord, hasNonEmptyString } from "./comment-shared.js";
 
 function isFeishuDocToolEnabled(cfg: OpenClawConfig): boolean {

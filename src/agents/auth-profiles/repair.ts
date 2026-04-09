@@ -1,6 +1,6 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { AuthProfileConfig } from "../../config/types.js";
-import { findNormalizedProviderKey, normalizeProviderId } from "../model-selection.js";
+import { findNormalizedProviderKey, normalizeProviderId } from "../provider-id.js";
 import { resolveAuthProfileMetadata } from "./identity.js";
 import { dedupeProfileIds, listProfilesForProvider } from "./profiles.js";
 import type { AuthProfileIdRepairResult, AuthProfileStore } from "./types.js";
@@ -22,7 +22,7 @@ function isEmailLike(value: string): boolean {
 }
 
 export function suggestOAuthProfileIdForLegacyDefault(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   provider: string;
   legacyProfileId: string;
@@ -83,7 +83,7 @@ export function suggestOAuthProfileIdForLegacyDefault(params: {
 }
 
 export function repairOAuthProfileIdMismatch(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   store: AuthProfileStore;
   provider: string;
   legacyProfileId?: string;
@@ -148,7 +148,7 @@ export function repairOAuthProfileIdMismatch(params: {
     return { ...order, [resolvedKey]: deduped };
   })();
 
-  const nextCfg: GodsEyeConfig = {
+  const nextCfg: OpenClawConfig = {
     ...params.cfg,
     auth: {
       ...params.cfg.auth,

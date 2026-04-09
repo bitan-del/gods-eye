@@ -1,35 +1,35 @@
 import { describe, expect, it } from "vitest";
 import {
-  compareGodsEyeVersions,
-  isSameGodsEyeStableFamily,
-  parseGodsEyeVersion,
+  compareOpenClawVersions,
+  isSameOpenClawStableFamily,
+  parseOpenClawVersion,
   shouldWarnOnTouchedVersion,
 } from "./version.js";
 
-describe("parseGodsEyeVersion", () => {
+describe("parseOpenClawVersion", () => {
   it("parses stable, correction, and beta forms", () => {
-    expect(parseGodsEyeVersion("2026.3.23")).toEqual({
+    expect(parseOpenClawVersion("2026.3.23")).toEqual({
       major: 2026,
       minor: 3,
       patch: 23,
       revision: null,
       prerelease: null,
     });
-    expect(parseGodsEyeVersion("2026.3.23-1")).toEqual({
+    expect(parseOpenClawVersion("2026.3.23-1")).toEqual({
       major: 2026,
       minor: 3,
       patch: 23,
       revision: 1,
       prerelease: null,
     });
-    expect(parseGodsEyeVersion("2026.3.23-beta.1")).toEqual({
+    expect(parseOpenClawVersion("2026.3.23-beta.1")).toEqual({
       major: 2026,
       minor: 3,
       patch: 23,
       revision: null,
       prerelease: ["beta", "1"],
     });
-    expect(parseGodsEyeVersion("v2026.3.23.beta.2")).toEqual({
+    expect(parseOpenClawVersion("v2026.3.23.beta.2")).toEqual({
       major: 2026,
       minor: 3,
       patch: 23,
@@ -39,31 +39,31 @@ describe("parseGodsEyeVersion", () => {
   });
 
   it("rejects invalid versions", () => {
-    expect(parseGodsEyeVersion("2026.3")).toBeNull();
-    expect(parseGodsEyeVersion("latest")).toBeNull();
+    expect(parseOpenClawVersion("2026.3")).toBeNull();
+    expect(parseOpenClawVersion("latest")).toBeNull();
   });
 });
 
-describe("compareGodsEyeVersions", () => {
+describe("compareOpenClawVersions", () => {
   it("treats correction publishes as newer than the base stable release", () => {
-    expect(compareGodsEyeVersions("2026.3.23", "2026.3.23-1")).toBe(-1);
-    expect(compareGodsEyeVersions("2026.3.23-1", "2026.3.23")).toBe(1);
-    expect(compareGodsEyeVersions("2026.3.23-2", "2026.3.23-1")).toBe(1);
+    expect(compareOpenClawVersions("2026.3.23", "2026.3.23-1")).toBe(-1);
+    expect(compareOpenClawVersions("2026.3.23-1", "2026.3.23")).toBe(1);
+    expect(compareOpenClawVersions("2026.3.23-2", "2026.3.23-1")).toBe(1);
   });
 
   it("treats stable as newer than beta and compares beta identifiers", () => {
-    expect(compareGodsEyeVersions("2026.3.23", "2026.3.23-beta.1")).toBe(1);
-    expect(compareGodsEyeVersions("2026.3.23-beta.2", "2026.3.23-beta.1")).toBe(1);
-    expect(compareGodsEyeVersions("2026.3.23.beta.1", "2026.3.23-beta.2")).toBe(-1);
+    expect(compareOpenClawVersions("2026.3.23", "2026.3.23-beta.1")).toBe(1);
+    expect(compareOpenClawVersions("2026.3.23-beta.2", "2026.3.23-beta.1")).toBe(1);
+    expect(compareOpenClawVersions("2026.3.23.beta.1", "2026.3.23-beta.2")).toBe(-1);
   });
 });
 
-describe("isSameGodsEyeStableFamily", () => {
+describe("isSameOpenClawStableFamily", () => {
   it("treats same-base stable and correction versions as one family", () => {
-    expect(isSameGodsEyeStableFamily("2026.3.23", "2026.3.23-1")).toBe(true);
-    expect(isSameGodsEyeStableFamily("2026.3.23-1", "2026.3.23-2")).toBe(true);
-    expect(isSameGodsEyeStableFamily("2026.3.23", "2026.3.24")).toBe(false);
-    expect(isSameGodsEyeStableFamily("2026.3.23-beta.1", "2026.3.23")).toBe(false);
+    expect(isSameOpenClawStableFamily("2026.3.23", "2026.3.23-1")).toBe(true);
+    expect(isSameOpenClawStableFamily("2026.3.23-1", "2026.3.23-2")).toBe(true);
+    expect(isSameOpenClawStableFamily("2026.3.23", "2026.3.24")).toBe(false);
+    expect(isSameOpenClawStableFamily("2026.3.23-beta.1", "2026.3.23")).toBe(false);
   });
 });
 

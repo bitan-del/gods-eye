@@ -5,18 +5,18 @@ describe("buildDaemonHintItems", () => {
   it("classifies common daemon hint kinds", () => {
     expect(
       buildDaemonHintItems([
-        "godseye gateway install",
-        "Restart the container or the service that manages it for godseye-demo-container.",
+        "openclaw gateway install",
+        "Restart the container or the service that manages it for openclaw-demo-container.",
         "systemd user services are unavailable; install/enable systemd or run the gateway under your supervisor.",
         "On a headless server (SSH/no desktop session): run `sudo loginctl enable-linger $(whoami)` to persist your systemd user session across logins.",
-        "If you're in a container, run the gateway in the foreground instead of `godseye gateway`.",
+        "If you're in a container, run the gateway in the foreground instead of `openclaw gateway`.",
         "WSL2 needs systemd enabled: edit /etc/wsl.conf with [boot]\\nsystemd=true",
       ]),
     ).toEqual([
-      { kind: "install", text: "godseye gateway install" },
+      { kind: "install", text: "openclaw gateway install" },
       {
         kind: "container-restart",
-        text: "Restart the container or the service that manages it for godseye-demo-container.",
+        text: "Restart the container or the service that manages it for openclaw-demo-container.",
       },
       {
         kind: "systemd-unavailable",
@@ -28,7 +28,7 @@ describe("buildDaemonHintItems", () => {
       },
       {
         kind: "container-foreground",
-        text: "If you're in a container, run the gateway in the foreground instead of `godseye gateway`.",
+        text: "If you're in a container, run the gateway in the foreground instead of `openclaw gateway`.",
       },
       {
         kind: "wsl-systemd",

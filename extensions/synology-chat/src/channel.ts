@@ -1,14 +1,16 @@
 /**
- * Synology Chat Channel Plugin for GodsEye.
+ * Synology Chat Channel Plugin for OpenClaw.
  *
  * Implements the ChannelPlugin interface following the LINE pattern.
  */
 
-import type { GodsEyeConfig } from "godseye/plugin-sdk/account-resolution";
+import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
+import type { OpenClawConfig } from "godseye/plugin-sdk/account-resolution";
 import {
   createHybridChannelConfigAdapter,
   createScopedDmSecurityResolver,
 } from "godseye/plugin-sdk/channel-config-helpers";
+import { createChatChannelPlugin, type ChannelPlugin } from "godseye/plugin-sdk/channel-core";
 import { waitUntilAbort } from "godseye/plugin-sdk/channel-lifecycle";
 import {
   composeWarningCollectors,
@@ -17,10 +19,10 @@ import {
   projectAccountWarningCollector,
 } from "godseye/plugin-sdk/channel-policy";
 import { attachChannelToResult } from "godseye/plugin-sdk/channel-send-result";
-import { createChatChannelPlugin, type ChannelPlugin } from "godseye/plugin-sdk/core";
 import { createEmptyChannelDirectoryAdapter } from "godseye/plugin-sdk/directory-runtime";
-import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/setup";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { listAccountIds, resolveAccount } from "./accounts.js";
+import { synologyChatApprovalAuth } from "./approval-auth.js";
 import { sendMessage, sendFileUrl } from "./client.js";
 import { SynologyChatChannelConfigSchema } from "./config-schema.js";
 import {
@@ -28,6 +30,7 @@ import {
   registerSynologyWebhookRoute,
   validateSynologyGatewayAccountStartup,
 } from "./gateway-runtime.js";
+import { collectSynologyChatSecurityAuditFindings } from "./security-audit.js";
 import { synologyChatSetupAdapter, synologyChatSetupWizard } from "./setup-surface.js";
 import type { ResolvedSynologyChatAccount } from "./types.js";
 
@@ -39,12 +42,12 @@ const resolveSynologyChatDmPolicy = createScopedDmSecurityResolver<ResolvedSynol
   resolveAllowFrom: (account) => account.allowedUserIds,
   policyPathSuffix: "dmPolicy",
   defaultPolicy: "allowlist",
-  approveHint: "godseye pairing approve synology-chat <code>",
-  normalizeEntry: (raw) => raw.toLowerCase().trim(),
+  approveHint: "openclaw pairing approve synology-chat <code>",
+  normalizeEntry: (raw) => normalizeLowercaseStringOrEmpty(raw),
 });
 
 type SynologyChannelGatewayContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   abortSignal: AbortSignal;
   log?: {
@@ -54,16 +57,16 @@ type SynologyChannelGatewayContext = {
   };
 };
 type SynologyChannelOutboundContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   text?: string;
   mediaUrl?: string;
   accountId?: string | null;
 };
 type SynologyChannelSendTextContext = SynologyChannelOutboundContext & { text: string };
-type SynologyChannelSendMediaContext = SynologyChannelOutboundContext & { mediaUrl: string };
+type _SynologyChannelSendMediaContext = SynologyChannelOutboundContext & { mediaUrl: string };
 type SynologySecurityWarningContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedSynologyChatAccount;
 };
 
@@ -87,7 +90,7 @@ const synologyChatConfigAdapter = createHybridChannelConfigAdapter<ResolvedSynol
   ],
   resolveAllowFrom: (account) => account.allowedUserIds,
   formatAllowFrom: (allowFrom) =>
-    allowFrom.map((entry) => String(entry).trim().toLowerCase()).filter(Boolean),
+    allowFrom.map((entry) => normalizeLowercaseStringOrEmpty(String(entry))).filter(Boolean),
 });
 
 const collectSynologyChatSecurityWarnings =
@@ -130,16 +133,16 @@ type SynologyChatPlugin = Omit<
   pairing: {
     idLabel: string;
     normalizeAllowEntry?: (entry: string) => string;
-    notifyApproval: (params: { cfg: GodsEyeConfig; id: string }) => Promise<void>;
+    notifyApproval: (params: { cfg: OpenClawConfig; id: string }) => Promise<void>;
   };
   security: {
-    resolveDmPolicy: (params: { cfg: GodsEyeConfig; account: ResolvedSynologyChatAccount }) => {
+    resolveDmPolicy: (params: { cfg: OpenClawConfig; account: ResolvedSynologyChatAccount }) => {
       policy: string | null | undefined;
       allowFrom?: Array<string | number>;
       normalizeEntry?: (raw: string) => string;
     } | null;
     collectWarnings: (params: {
-      cfg: GodsEyeConfig;
+      cfg: OpenClawConfig;
       account: ResolvedSynologyChatAccount;
     }) => string[];
   };
@@ -172,7 +175,7 @@ type SynologyChatPlugin = Omit<
 
 const collectSynologyChatRoutingWarnings = projectAccountConfigWarningCollector<
   ResolvedSynologyChatAccount,
-  GodsEyeConfig,
+  OpenClawConfig,
   SynologySecurityWarningContext
 >(
   (cfg) => cfg,
@@ -180,7 +183,7 @@ const collectSynologyChatRoutingWarnings = projectAccountConfigWarningCollector<
 );
 
 function resolveOutboundAccount(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId?: string | null,
 ): ResolvedSynologyChatAccount {
   return resolveAccount(cfg ?? {}, accountId);
@@ -203,7 +206,7 @@ export function createSynologyChatPlugin(): SynologyChatPlugin {
         selectionLabel: "Synology Chat (Webhook)",
         detailLabel: "Synology Chat (Webhook)",
         docsPath: "/channels/synology-chat",
-        blurb: "Connect your Synology NAS Chat to GodsEye",
+        blurb: "Connect your Synology NAS Chat to OpenClaw",
         order: 90,
       },
       capabilities: {
@@ -224,17 +227,22 @@ export function createSynologyChatPlugin(): SynologyChatPlugin {
       config: {
         ...synologyChatConfigAdapter,
       },
+      approvalCapability: synologyChatApprovalAuth,
       messaging: {
         normalizeTarget: (target: string) => {
           const trimmed = target.trim();
-          if (!trimmed) return undefined;
+          if (!trimmed) {
+            return undefined;
+          }
           // Strip common prefixes
           return trimmed.replace(/^synology[-_]?chat:/i, "").trim();
         },
         targetResolver: {
           looksLikeId: (id: string) => {
             const trimmed = id?.trim();
-            if (!trimmed) return false;
+            if (!trimmed) {
+              return false;
+            }
             // Synology Chat user IDs are numeric
             return /^\d+$/.test(trimmed) || /^synology[-_]?chat:/i.test(trimmed);
           },
@@ -299,11 +307,13 @@ export function createSynologyChatPlugin(): SynologyChatPlugin {
     pairing: {
       text: {
         idLabel: "synologyChatUserId",
-        message: "GodsEye: your access has been approved.",
-        normalizeAllowEntry: (entry: string) => entry.toLowerCase().trim(),
+        message: "OpenClaw: your access has been approved.",
+        normalizeAllowEntry: (entry: string) => normalizeLowercaseStringOrEmpty(entry),
         notify: async ({ cfg, id, message }) => {
           const account = resolveAccount(cfg);
-          if (!account.incomingUrl) return;
+          if (!account.incomingUrl) {
+            return;
+          }
           await sendMessage(account.incomingUrl, message, id, account.allowInsecureSsl);
         },
       },
@@ -316,6 +326,7 @@ export function createSynologyChatPlugin(): SynologyChatPlugin {
         ),
         collectSynologyChatRoutingWarnings,
       ),
+      collectAuditFindings: collectSynologyChatSecurityAuditFindings,
     },
     outbound: {
       deliveryMode: "gateway" as const,

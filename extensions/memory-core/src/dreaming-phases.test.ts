@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core";
-import { resolveSessionTranscriptsDirForAgent } from "openclaw/plugin-sdk/memory-core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/memory-core";
+import { resolveSessionTranscriptsDirForAgent } from "godseye/plugin-sdk/memory-core";
 import {
   resolveMemoryCorePluginConfig,
   resolveMemoryLightDreamingConfig,
   resolveMemoryRemDreamingConfig,
-} from "openclaw/plugin-sdk/memory-core-host-status";
+} from "godseye/plugin-sdk/memory-core-host-status";
 import { describe, expect, it, vi } from "vitest";
 import { __testing } from "./dreaming-phases.js";
 import {

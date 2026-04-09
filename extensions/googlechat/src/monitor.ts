@@ -3,7 +3,8 @@ import {
   deliverTextOrMediaReply,
   resolveSendableOutboundReplyParts,
 } from "godseye/plugin-sdk/reply-payload";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "../runtime-api.js";
 import {
   createChannelReplyPipeline,
   createWebhookInFlightLimiter,
@@ -72,7 +73,7 @@ export function registerGoogleChatWebhookTarget(target: WebhookTarget): () => vo
 }
 
 function normalizeAudienceType(value?: string | null): GoogleChatAudienceType | undefined {
-  const normalized = value?.trim().toLowerCase();
+  const normalized = normalizeOptionalLowercaseString(value);
   if (normalized === "app-url" || normalized === "app_url" || normalized === "app") {
     return "app-url";
   }
@@ -117,12 +118,12 @@ async function processGoogleChatEvent(event: GoogleChatEvent, target: WebhookTar
  * Resolve bot display name with fallback chain:
  * 1. Account config name
  * 2. Agent name from config
- * 3. "Gods Eye" as generic fallback
+ * 3. "OpenClaw" as generic fallback
  */
 function resolveBotDisplayName(params: {
   accountName?: string;
   agentId: string;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
 }): string {
   const { accountName, agentId, config } = params;
   if (accountName?.trim()) {
@@ -132,13 +133,13 @@ function resolveBotDisplayName(params: {
   if (agent?.name?.trim()) {
     return agent.name.trim();
   }
-  return "Gods Eye";
+  return "OpenClaw";
 }
 
 async function processMessageWithPipeline(params: {
   event: GoogleChatEvent;
   account: ResolvedGoogleChatAccount;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   runtime: GoogleChatRuntimeEnv;
   core: GoogleChatCoreRuntime;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
@@ -373,7 +374,7 @@ async function deliverGoogleChatReply(params: {
   spaceId: string;
   runtime: GoogleChatRuntimeEnv;
   core: GoogleChatCoreRuntime;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
   typingMessageName?: string;
 }): Promise<void> {

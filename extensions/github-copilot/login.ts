@@ -1,8 +1,11 @@
 import { intro, note, outro, spinner } from "@clack/prompts";
-import { ensureAuthProfileStore, upsertAuthProfile } from "godseye/plugin-sdk/agent-runtime";
 import { stylePromptTitle } from "godseye/plugin-sdk/cli-runtime";
 import { logConfigUpdated, updateConfig } from "godseye/plugin-sdk/config-runtime";
-import { applyAuthProfileConfig } from "godseye/plugin-sdk/provider-auth";
+import {
+  applyAuthProfileConfig,
+  ensureAuthProfileStore,
+  upsertAuthProfile,
+} from "godseye/plugin-sdk/provider-auth";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime";
 
 const CLIENT_ID = "Iv1.b507a08c87ecfe98";

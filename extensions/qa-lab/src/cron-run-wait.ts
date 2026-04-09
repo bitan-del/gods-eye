@@ -1,5 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 
 export type QaCronRunLogEntry = {
   ts?: number;

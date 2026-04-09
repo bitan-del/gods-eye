@@ -1,4 +1,4 @@
-import { normalizeOptionalString, readStringValue } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalString, readStringValue } from "godseye/plugin-sdk/text-runtime";
 import type { ResolvedBrowserProfile } from "../config.js";
 import {
   DEFAULT_AI_SNAPSHOT_EFFICIENT_DEPTH,

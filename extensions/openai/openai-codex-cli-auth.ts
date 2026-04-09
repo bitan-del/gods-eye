@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { AuthProfileStore, OAuthCredential } from "openclaw/plugin-sdk/provider-auth";
-import { resolveRequiredHomeDir } from "openclaw/plugin-sdk/provider-auth";
+import type { AuthProfileStore, OAuthCredential } from "godseye/plugin-sdk/provider-auth";
+import { resolveRequiredHomeDir } from "godseye/plugin-sdk/provider-auth";
 import {
   resolveCodexAccessTokenExpiry,
   resolveCodexAuthIdentity,

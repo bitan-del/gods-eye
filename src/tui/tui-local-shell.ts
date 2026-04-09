@@ -111,7 +111,7 @@ export function createLocalShellRunner(deps: LocalShellDeps) {
         // and is gated behind an explicit in-session approval prompt.
         shell: true,
         cwd: getCwd(),
-        env: { ...env, GODSEYE_SHELL: "tui-local" },
+        env: { ...env, OPENCLAW_SHELL: "tui-local" },
       });
 
       let stdout = "";

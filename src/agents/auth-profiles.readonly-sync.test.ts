@@ -22,6 +22,10 @@ vi.mock("./auth-profiles/external-cli-sync.js", () => ({
   syncExternalCliCredentials: mocks.syncExternalCliCredentials,
 }));
 
+vi.mock("../plugins/provider-runtime.js", () => ({
+  resolveExternalAuthProfilesWithPlugins: () => [],
+}));
+
 let clearRuntimeAuthProfileStoreSnapshots: typeof import("./auth-profiles.js").clearRuntimeAuthProfileStoreSnapshots;
 let loadAuthProfileStoreForRuntime: typeof import("./auth-profiles.js").loadAuthProfileStoreForRuntime;
 
@@ -40,7 +44,7 @@ describe("auth profiles read-only external CLI sync", () => {
   });
 
   it("syncs external CLI credentials in-memory without writing auth-profiles.json in read-only mode", () => {
-    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-auth-readonly-sync-"));
+    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-readonly-sync-"));
     try {
       const authPath = path.join(agentDir, "auth-profiles.json");
       const baseline: AuthProfileStore = {

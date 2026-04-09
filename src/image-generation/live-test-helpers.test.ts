@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   parseCaseFilter,
   parseCsvFilter,
@@ -45,7 +45,7 @@ describe("image-generation live-test helpers", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveConfiguredLiveImageModels(cfg)).toEqual(
       new Map([

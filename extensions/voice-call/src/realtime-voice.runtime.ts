@@ -1,4 +1,4 @@
 export {
   getRealtimeVoiceProvider,
   listRealtimeVoiceProviders,
-} from "openclaw/plugin-sdk/realtime-voice";
+} from "godseye/plugin-sdk/realtime-voice";

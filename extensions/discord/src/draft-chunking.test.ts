@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
 import { resolveDiscordDraftStreamingChunking } from "./draft-chunking.js";
 
@@ -23,7 +23,7 @@ describe("resolveDiscordDraftStreamingChunking", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveDiscordDraftStreamingChunking(cfg)).toEqual({
       minChars: 500,
@@ -52,7 +52,7 @@ describe("resolveDiscordDraftStreamingChunking", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveDiscordDraftStreamingChunking(cfg, "ops")).toEqual({
       minChars: 25,

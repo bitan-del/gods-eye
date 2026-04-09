@@ -2,9 +2,9 @@ import type {
   ChannelDoctorAdapter,
   ChannelDoctorConfigMutation,
   ChannelDoctorLegacyConfigRule,
-} from "openclaw/plugin-sdk/channel-contract";
-import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "openclaw/plugin-sdk/channel-policy";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+} from "godseye/plugin-sdk/channel-contract";
+import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "godseye/plugin-sdk/channel-policy";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { isZalouserMutableGroupEntry } from "./security-audit.js";
 
 type ZalouserChannelsConfig = NonNullable<OpenClawConfig["channels"]>;

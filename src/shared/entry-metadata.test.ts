@@ -5,12 +5,12 @@ describe("shared/entry-metadata", () => {
   it("prefers metadata emoji and homepage when present", () => {
     expect(
       resolveEmojiAndHomepage({
-        metadata: { emoji: "🦀", homepage: " https://gods-eye.org " },
+        metadata: { emoji: "🦀", homepage: " https://openclaw.ai " },
         frontmatter: { emoji: "🙂", homepage: "https://example.com" },
       }),
     ).toEqual({
       emoji: "🦀",
-      homepage: "https://gods-eye.org",
+      homepage: "https://openclaw.ai",
     });
   });
 
@@ -26,11 +26,11 @@ describe("shared/entry-metadata", () => {
   it("falls back through frontmatter homepage aliases and drops blanks", () => {
     expect(
       resolveEmojiAndHomepage({
-        frontmatter: { emoji: "🙂", website: " https://docs.gods-eye.org " },
+        frontmatter: { emoji: "🙂", website: " https://docs.openclaw.ai " },
       }),
     ).toEqual({
       emoji: "🙂",
-      homepage: "https://docs.gods-eye.org",
+      homepage: "https://docs.openclaw.ai",
     });
     expect(
       resolveEmojiAndHomepage({
@@ -40,10 +40,10 @@ describe("shared/entry-metadata", () => {
     ).toEqual({});
     expect(
       resolveEmojiAndHomepage({
-        frontmatter: { url: " https://gods-eye.org/install " },
+        frontmatter: { url: " https://openclaw.ai/install " },
       }),
     ).toEqual({
-      homepage: "https://gods-eye.org/install",
+      homepage: "https://openclaw.ai/install",
     });
   });
 
@@ -52,8 +52,8 @@ describe("shared/entry-metadata", () => {
       resolveEmojiAndHomepage({
         frontmatter: {
           homepage: " ",
-          website: "https://docs.gods-eye.org",
-          url: "https://gods-eye.org/install",
+          website: "https://docs.openclaw.ai",
+          url: "https://openclaw.ai/install",
         },
       }),
     ).toEqual({});

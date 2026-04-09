@@ -11,7 +11,7 @@ const BLOCKED_ENV_VAR_PATTERNS: ReadonlyArray<RegExp> = [
   /^SLACK_(BOT|APP)_TOKEN$/i,
   /^LINE_CHANNEL_SECRET$/i,
   /^LINE_CHANNEL_ACCESS_TOKEN$/i,
-  /^GODSEYE_GATEWAY_(TOKEN|PASSWORD)$/i,
+  /^OPENCLAW_GATEWAY_(TOKEN|PASSWORD)$/i,
   /^AWS_(SECRET_ACCESS_KEY|SECRET_KEY|SESSION_TOKEN)$/i,
   /^(GH|GITHUB)_TOKEN$/i,
   /^(AZURE|AZURE_OPENAI|COHERE|AI_GATEWAY|OPENROUTER)_API_KEY$/i,
@@ -60,7 +60,7 @@ function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean 
 }
 
 export function sanitizeEnvVars(
-  envVars: Record<string, string>,
+  envVars: Record<string, string | undefined>,
   options: EnvSanitizationOptions = {},
 ): EnvVarSanitizationResult {
   const allowed: Record<string, string> = {};
@@ -72,7 +72,7 @@ export function sanitizeEnvVars(
 
   for (const [rawKey, value] of Object.entries(envVars)) {
     const key = rawKey.trim();
-    if (!key) {
+    if (!key || value === undefined) {
       continue;
     }
 

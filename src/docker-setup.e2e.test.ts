@@ -1,10 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, copyFile, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { createSuiteTempRootTracker } from "./test-helpers/temp-dir.js";
 
 const repoRoot = resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 
@@ -28,7 +28,7 @@ if [[ "\${1:-}" == "build" ]]; then
     echo "build-fail $*" >>"$log"
     exit 1
   fi
-  echo "build $*" >>"$log"
+  echo "build DOCKER_BUILDKIT=\${DOCKER_BUILDKIT:-} $*" >>"$log"
   exit 0
 fi
 if [[ "\${1:-}" == "compose" ]]; then
@@ -49,7 +49,7 @@ exit 0
 }
 
 async function createDockerSetupSandbox(): Promise<DockerSetupSandbox> {
-  const rootDir = await mkdtemp(join(tmpdir(), "godseye-docker-setup-"));
+  const rootDir = await sandboxRootTracker.make("suite");
   const scriptPath = join(rootDir, "scripts", "docker", "setup.sh");
   const dockerfilePath = join(rootDir, "Dockerfile");
   const composePath = join(rootDir, "docker-compose.yml");
@@ -62,12 +62,14 @@ async function createDockerSetupSandbox(): Promise<DockerSetupSandbox> {
   await writeFile(dockerfilePath, "FROM scratch\n");
   await writeFile(
     composePath,
-    "services:\n  godseye-gateway:\n    image: noop\n  godseye-cli:\n    image: noop\n",
+    "services:\n  openclaw-gateway:\n    image: noop\n  openclaw-cli:\n    image: noop\n",
   );
   await writeDockerStub(binDir, logPath);
 
   return { rootDir, scriptPath, logPath, binDir };
 }
+
+const sandboxRootTracker = createSuiteTempRootTracker({ prefix: "openclaw-docker-setup-" });
 
 function createEnv(
   sandbox: DockerSetupSandbox,
@@ -80,9 +82,9 @@ function createEnv(
     LC_ALL: process.env.LC_ALL,
     TMPDIR: process.env.TMPDIR,
     DOCKER_STUB_LOG: sandbox.logPath,
-    GODSEYE_GATEWAY_TOKEN: "test-token",
-    GODSEYE_CONFIG_DIR: join(sandbox.rootDir, "config"),
-    GODSEYE_WORKSPACE_DIR: join(sandbox.rootDir, "godseye"),
+    OPENCLAW_GATEWAY_TOKEN: "test-token",
+    OPENCLAW_CONFIG_DIR: join(sandbox.rootDir, "config"),
+    OPENCLAW_WORKSPACE_DIR: join(sandbox.rootDir, "openclaw"),
   };
 
   for (const [key, value] of Object.entries(overrides)) {
@@ -127,7 +129,7 @@ async function readDockerLogLines(sandbox: DockerSetupSandbox) {
 }
 
 function isGatewayStartLine(line: string) {
-  return line.includes("compose") && line.includes(" up -d") && line.includes("godseye-gateway");
+  return line.includes("compose") && line.includes(" up -d") && line.includes("openclaw-gateway");
 }
 
 function findGatewayStartLineIndex(lines: string[]) {
@@ -145,9 +147,9 @@ async function runDockerSetupWithUnsetGatewayToken(
   await prepare?.(configDir);
 
   const result = runDockerSetup(sandbox, {
-    GODSEYE_GATEWAY_TOKEN: undefined,
-    GODSEYE_CONFIG_DIR: configDir,
-    GODSEYE_WORKSPACE_DIR: workspaceDir,
+    OPENCLAW_GATEWAY_TOKEN: undefined,
+    OPENCLAW_CONFIG_DIR: configDir,
+    OPENCLAW_WORKSPACE_DIR: workspaceDir,
   });
   const envFile = await readFile(join(sandbox.rootDir, ".env"), "utf8");
 
@@ -193,14 +195,17 @@ describe("scripts/docker/setup.sh", () => {
   let sandbox: DockerSetupSandbox | null = null;
 
   beforeAll(async () => {
+    await sandboxRootTracker.setup();
     sandbox = await createDockerSetupSandbox();
   });
 
   afterAll(async () => {
     if (!sandbox) {
+      await sandboxRootTracker.cleanup();
       return;
     }
     await rm(sandbox.rootDir, { recursive: true, force: true });
+    await sandboxRootTracker.cleanup();
     sandbox = null;
   });
 
@@ -208,40 +213,34 @@ describe("scripts/docker/setup.sh", () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_DOCKER_APT_PACKAGES: "ffmpeg build-essential",
-      GODSEYE_EXTRA_MOUNTS: undefined,
-      GODSEYE_HOME_VOLUME: "godseye-home",
+      OPENCLAW_DOCKER_APT_PACKAGES: "ffmpeg build-essential",
+      OPENCLAW_EXTRA_MOUNTS: undefined,
+      OPENCLAW_HOME_VOLUME: "openclaw-home",
     });
     expect(result.status).toBe(0);
     const envFile = await readFile(join(activeSandbox.rootDir, ".env"), "utf8");
-    expect(envFile).toContain("GODSEYE_DOCKER_APT_PACKAGES=ffmpeg build-essential");
-    expect(envFile).toContain("GODSEYE_EXTRA_MOUNTS=");
-    expect(envFile).toContain("GODSEYE_HOME_VOLUME=godseye-home"); // pragma: allowlist secret
+    expect(envFile).toContain("OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential");
+    expect(envFile).toContain("OPENCLAW_EXTRA_MOUNTS=");
+    expect(envFile).toContain("OPENCLAW_HOME_VOLUME=openclaw-home"); // pragma: allowlist secret
     const extraCompose = await readFile(
       join(activeSandbox.rootDir, "docker-compose.extra.yml"),
       "utf8",
     );
-    expect(extraCompose).toContain("godseye-home:/home/node");
+    expect(extraCompose).toContain("openclaw-home:/home/node");
     expect(extraCompose).toContain("volumes:");
-    expect(extraCompose).toContain("godseye-home:");
+    expect(extraCompose).toContain("openclaw-home:");
     const log = await readDockerLog(activeSandbox);
-    expect(log).toContain("--build-arg GODSEYE_DOCKER_APT_PACKAGES=ffmpeg build-essential");
+    expect(log).toContain("--build-arg OPENCLAW_DOCKER_APT_PACKAGES=ffmpeg build-essential");
     expect(log).toContain(
-      "run --rm --no-deps --entrypoint node godseye-gateway dist/index.js onboard --mode local --no-install-daemon",
+      "run --rm --no-deps --entrypoint node openclaw-gateway dist/index.js onboard --mode local --no-install-daemon",
     );
     expect(log).toContain(
-      "run --rm --no-deps --entrypoint node godseye-gateway dist/index.js config set gateway.mode local",
+      'run --rm --no-deps --entrypoint node openclaw-gateway dist/index.js config set --batch-json [{"path":"gateway.mode","value":"local"},{"path":"gateway.bind","value":"lan"},{"path":"gateway.controlUi.allowedOrigins","value":["http://localhost:18789","http://127.0.0.1:18789"]}]',
     );
-    expect(log).toContain(
-      "run --rm --no-deps --entrypoint node godseye-gateway dist/index.js config set gateway.bind lan",
-    );
-    expect(log).toContain(
-      'run --rm --no-deps --entrypoint node godseye-gateway dist/index.js config set gateway.controlUi.allowedOrigins ["http://localhost:18789","http://127.0.0.1:18789"] --strict-json',
-    );
-    expect(log).not.toContain("run --rm godseye-cli onboard --mode local --no-install-daemon");
+    expect(log).not.toContain("run --rm openclaw-cli onboard --mode local --no-install-daemon");
   });
 
-  it("avoids shared-network godseye-cli before the gateway is started", async () => {
+  it("avoids shared-network openclaw-cli before the gateway is started", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     await resetDockerLog(activeSandbox);
@@ -253,9 +252,26 @@ describe("scripts/docker/setup.sh", () => {
     expect(gatewayStartIdx).toBeGreaterThanOrEqual(0);
 
     const prestartLines = lines.slice(0, gatewayStartIdx);
-    expect(prestartLines.some((line) => /\bcompose\b.*\brun\b.*\bgodseye-cli\b/.test(line))).toBe(
+    expect(prestartLines.some((line) => /\bcompose\b.*\brun\b.*\bopenclaw-cli\b/.test(line))).toBe(
       false,
     );
+  });
+
+  it("forces BuildKit for local and sandbox docker builds", async () => {
+    const activeSandbox = requireSandbox(sandbox);
+    await writeFile(join(activeSandbox.rootDir, "Dockerfile.sandbox"), "FROM scratch\n");
+    await resetDockerLog(activeSandbox);
+
+    const result = runDockerSetup(activeSandbox, {
+      OPENCLAW_SANDBOX: "1",
+    });
+
+    expect(result.status).toBe(0);
+    const buildLines = (await readDockerLogLines(activeSandbox)).filter((line) =>
+      line.startsWith("build "),
+    );
+    expect(buildLines.length).toBeGreaterThanOrEqual(2);
+    expect(buildLines.every((line) => line.includes("DOCKER_BUILDKIT=1"))).toBe(true);
   });
 
   it("precreates config identity dir for CLI device auth writes", async () => {
@@ -264,8 +280,8 @@ describe("scripts/docker/setup.sh", () => {
     const workspaceDir = join(activeSandbox.rootDir, "workspace-identity");
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_CONFIG_DIR: configDir,
-      GODSEYE_WORKSPACE_DIR: workspaceDir,
+      OPENCLAW_CONFIG_DIR: configDir,
+      OPENCLAW_WORKSPACE_DIR: workspaceDir,
     });
 
     expect(result.status).toBe(0);
@@ -273,16 +289,16 @@ describe("scripts/docker/setup.sh", () => {
     expect(identityDirStat.isDirectory()).toBe(true);
   });
 
-  it("writes GODSEYE_TZ into .env when given a real IANA timezone", async () => {
+  it("writes OPENCLAW_TZ into .env when given a real IANA timezone", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_TZ: "Asia/Shanghai",
+      OPENCLAW_TZ: "Asia/Shanghai",
     });
 
     expect(result.status).toBe(0);
     const envFile = await readFile(join(activeSandbox.rootDir, ".env"), "utf8");
-    expect(envFile).toContain("GODSEYE_TZ=Asia/Shanghai");
+    expect(envFile).toContain("OPENCLAW_TZ=Asia/Shanghai");
   });
 
   it("precreates agent data dirs to avoid EACCES in container", async () => {
@@ -291,8 +307,8 @@ describe("scripts/docker/setup.sh", () => {
     const workspaceDir = join(activeSandbox.rootDir, "workspace-agent-dirs");
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_CONFIG_DIR: configDir,
-      GODSEYE_WORKSPACE_DIR: workspaceDir,
+      OPENCLAW_CONFIG_DIR: configDir,
+      OPENCLAW_WORKSPACE_DIR: workspaceDir,
     });
 
     expect(result.status).toBe(0);
@@ -307,31 +323,31 @@ describe("scripts/docker/setup.sh", () => {
     const onboardIdx = log.indexOf("onboard");
     expect(chownIdx).toBeGreaterThanOrEqual(0);
     expect(onboardIdx).toBeGreaterThan(chownIdx);
-    expect(log).toContain("run --rm --no-deps --user root --entrypoint sh godseye-gateway -c");
+    expect(log).toContain("run --rm --no-deps --user root --entrypoint sh openclaw-gateway -c");
   });
 
-  it("reuses existing config token when GODSEYE_GATEWAY_TOKEN is unset", async () => {
+  it("reuses existing config token when OPENCLAW_GATEWAY_TOKEN is unset", async () => {
     const activeSandbox = requireSandbox(sandbox);
     const { result, envFile } = await runDockerSetupWithUnsetGatewayToken(
       activeSandbox,
       "token-reuse",
       async (configDir) => {
         await writeFile(
-          join(configDir, "godseye.json"),
+          join(configDir, "openclaw.json"),
           JSON.stringify({ gateway: { auth: { mode: "token", token: "config-token-123" } } }),
         );
       },
     );
 
     expect(result.status).toBe(0);
-    expect(envFile).toContain("GODSEYE_GATEWAY_TOKEN=config-token-123"); // pragma: allowlist secret
+    expect(envFile).toContain("OPENCLAW_GATEWAY_TOKEN=config-token-123"); // pragma: allowlist secret
   });
 
-  it("reuses existing .env token when GODSEYE_GATEWAY_TOKEN and config token are unset", async () => {
+  it("reuses existing .env token when OPENCLAW_GATEWAY_TOKEN and config token are unset", async () => {
     const activeSandbox = requireSandbox(sandbox);
     await writeFile(
       join(activeSandbox.rootDir, ".env"),
-      "GODSEYE_GATEWAY_TOKEN=dotenv-token-123\nGODSEYE_GATEWAY_PORT=18789\n", // pragma: allowlist secret
+      "OPENCLAW_GATEWAY_TOKEN=dotenv-token-123\nOPENCLAW_GATEWAY_PORT=18789\n", // pragma: allowlist secret
     );
     const { result, envFile } = await runDockerSetupWithUnsetGatewayToken(
       activeSandbox,
@@ -339,7 +355,7 @@ describe("scripts/docker/setup.sh", () => {
     );
 
     expect(result.status).toBe(0);
-    expect(envFile).toContain("GODSEYE_GATEWAY_TOKEN=dotenv-token-123"); // pragma: allowlist secret
+    expect(envFile).toContain("OPENCLAW_GATEWAY_TOKEN=dotenv-token-123"); // pragma: allowlist secret
     expect(result.stderr).toBe("");
   });
 
@@ -348,9 +364,9 @@ describe("scripts/docker/setup.sh", () => {
     await writeFile(
       join(activeSandbox.rootDir, ".env"),
       [
-        "GODSEYE_GATEWAY_TOKEN=",
-        "GODSEYE_GATEWAY_TOKEN=first-token",
-        "GODSEYE_GATEWAY_TOKEN=last=token=value\r", // pragma: allowlist secret
+        "OPENCLAW_GATEWAY_TOKEN=",
+        "OPENCLAW_GATEWAY_TOKEN=first-token",
+        "OPENCLAW_GATEWAY_TOKEN=last=token=value\r", // pragma: allowlist secret
       ].join("\n"),
     );
     const { result, envFile } = await runDockerSetupWithUnsetGatewayToken(
@@ -359,26 +375,26 @@ describe("scripts/docker/setup.sh", () => {
     );
 
     expect(result.status).toBe(0);
-    expect(envFile).toContain("GODSEYE_GATEWAY_TOKEN=last=token=value"); // pragma: allowlist secret
-    expect(envFile).not.toContain("GODSEYE_GATEWAY_TOKEN=first-token");
+    expect(envFile).toContain("OPENCLAW_GATEWAY_TOKEN=last=token=value"); // pragma: allowlist secret
+    expect(envFile).not.toContain("OPENCLAW_GATEWAY_TOKEN=first-token");
     expect(envFile).not.toContain("\r");
   });
 
-  it("treats GODSEYE_SANDBOX=0 as disabled", async () => {
+  it("treats OPENCLAW_SANDBOX=0 as disabled", async () => {
     const activeSandbox = requireSandbox(sandbox);
     await resetDockerLog(activeSandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_SANDBOX: "0",
+      OPENCLAW_SANDBOX: "0",
     });
 
     expect(result.status).toBe(0);
     const envFile = await readFile(join(activeSandbox.rootDir, ".env"), "utf8");
-    expect(envFile).toContain("GODSEYE_SANDBOX=");
+    expect(envFile).toContain("OPENCLAW_SANDBOX=");
 
     const log = await readDockerLog(activeSandbox);
-    expect(log).toContain("--build-arg GODSEYE_INSTALL_DOCKER_CLI=");
-    expect(log).not.toContain("--build-arg GODSEYE_INSTALL_DOCKER_CLI=1");
+    expect(log).toContain("--build-arg OPENCLAW_INSTALL_DOCKER_CLI=");
+    expect(log).not.toContain("--build-arg OPENCLAW_INSTALL_DOCKER_CLI=1");
     expect(log).toContain("config set agents.defaults.sandbox.mode off");
   });
 
@@ -387,12 +403,12 @@ describe("scripts/docker/setup.sh", () => {
     await resetDockerLog(activeSandbox);
     await writeFile(
       join(activeSandbox.rootDir, "docker-compose.sandbox.yml"),
-      "services:\n  godseye-gateway:\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n",
+      "services:\n  openclaw-gateway:\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock\n",
     );
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_SANDBOX: "1",
-      DOCKER_STUB_FAIL_MATCH: "--entrypoint docker godseye-gateway --version",
+      OPENCLAW_SANDBOX: "1",
+      DOCKER_STUB_FAIL_MATCH: "--entrypoint docker openclaw-gateway --version",
     });
 
     expect(result.status).toBe(0);
@@ -409,8 +425,8 @@ describe("scripts/docker/setup.sh", () => {
 
     await withUnixSocket(socketPath, async () => {
       const result = runDockerSetup(activeSandbox, {
-        GODSEYE_SANDBOX: "1",
-        GODSEYE_DOCKER_SOCKET: socketPath,
+        OPENCLAW_SANDBOX: "1",
+        OPENCLAW_DOCKER_SOCKET: socketPath,
         DOCKER_STUB_FAIL_MATCH: "config set agents.defaults.sandbox.scope",
       });
 
@@ -424,12 +440,12 @@ describe("scripts/docker/setup.sh", () => {
       );
       expect(gatewayStarts).toHaveLength(2);
       expect(log).toContain(
-        "run --rm --no-deps godseye-cli config set agents.defaults.sandbox.mode non-main",
+        "run --rm --no-deps openclaw-cli config set agents.defaults.sandbox.mode non-main",
       );
       expect(log).toContain("config set agents.defaults.sandbox.mode off");
       const forceRecreateLine = log
         .split("\n")
-        .find((line) => line.includes("up -d --force-recreate godseye-gateway"));
+        .find((line) => line.includes("up -d --force-recreate openclaw-gateway"));
       expect(forceRecreateLine).toBeDefined();
       expect(forceRecreateLine).not.toContain("docker-compose.sandbox.yml");
       await expect(
@@ -438,48 +454,48 @@ describe("scripts/docker/setup.sh", () => {
     });
   });
 
-  it("rejects injected multiline GODSEYE_EXTRA_MOUNTS values", async () => {
+  it("rejects injected multiline OPENCLAW_EXTRA_MOUNTS values", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_EXTRA_MOUNTS: "/tmp:/tmp\n  evil-service:\n    image: alpine",
+      OPENCLAW_EXTRA_MOUNTS: "/tmp:/tmp\n  evil-service:\n    image: alpine",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("GODSEYE_EXTRA_MOUNTS cannot contain control characters");
+    expect(result.stderr).toContain("OPENCLAW_EXTRA_MOUNTS cannot contain control characters");
   });
 
-  it("rejects invalid GODSEYE_EXTRA_MOUNTS mount format", async () => {
+  it("rejects invalid OPENCLAW_EXTRA_MOUNTS mount format", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_EXTRA_MOUNTS: "bad mount spec",
+      OPENCLAW_EXTRA_MOUNTS: "bad mount spec",
     });
 
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Invalid mount format");
   });
 
-  it("rejects invalid GODSEYE_HOME_VOLUME names", async () => {
+  it("rejects invalid OPENCLAW_HOME_VOLUME names", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_HOME_VOLUME: "bad name",
+      OPENCLAW_HOME_VOLUME: "bad name",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("GODSEYE_HOME_VOLUME must match");
+    expect(result.stderr).toContain("OPENCLAW_HOME_VOLUME must match");
   });
 
-  it("rejects GODSEYE_TZ values that are not present in zoneinfo", async () => {
+  it("rejects OPENCLAW_TZ values that are not present in zoneinfo", async () => {
     const activeSandbox = requireSandbox(sandbox);
 
     const result = runDockerSetup(activeSandbox, {
-      GODSEYE_TZ: "Nope/Bad",
+      OPENCLAW_TZ: "Nope/Bad",
     });
 
     expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain("GODSEYE_TZ must match a timezone in /usr/share/zoneinfo");
+    expect(result.stderr).toContain("OPENCLAW_TZ must match a timezone in /usr/share/zoneinfo");
   });
 
   it("avoids associative arrays so the script remains Bash 3.2-compatible", async () => {
@@ -520,17 +536,19 @@ describe("scripts/docker/setup.sh", () => {
 
   it("keeps docker-compose CLI network namespace settings in sync", async () => {
     const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
-    expect(compose).toContain('network_mode: "service:godseye-gateway"');
-    expect(compose).toContain("depends_on:\n      - godseye-gateway");
+    expect(compose).toContain('network_mode: "service:openclaw-gateway"');
+    expect(compose).toContain("depends_on:\n      - openclaw-gateway");
   });
 
   it("keeps docker-compose gateway token env defaults aligned across services", async () => {
     const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
-    expect(compose.match(/GODSEYE_GATEWAY_TOKEN: \$\{GODSEYE_GATEWAY_TOKEN:-\}/g)).toHaveLength(2);
+    expect(compose.match(/OPENCLAW_GATEWAY_TOKEN: \$\{OPENCLAW_GATEWAY_TOKEN:-\}/g)).toHaveLength(
+      2,
+    );
   });
 
   it("keeps docker-compose timezone env defaults aligned across services", async () => {
     const compose = await readFile(join(repoRoot, "docker-compose.yml"), "utf8");
-    expect(compose.match(/TZ: \$\{GODSEYE_TZ:-UTC\}/g)).toHaveLength(2);
+    expect(compose.match(/TZ: \$\{OPENCLAW_TZ:-UTC\}/g)).toHaveLength(2);
   });
 });

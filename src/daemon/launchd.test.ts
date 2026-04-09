@@ -17,7 +17,9 @@ const state = vi.hoisted(() => ({
   launchctlCalls: [] as string[][],
   listOutput: "",
   printOutput: "",
+  printNotLoadedRemaining: 0,
   bootstrapError: "",
+  bootstrapCode: 1,
   kickstartError: "",
   kickstartFailuresRemaining: 0,
   dirs: new Set<string>(),
@@ -36,7 +38,7 @@ const defaultProgramArguments = ["node", "-e", "process.exit(0)"];
 
 function expectLaunchctlEnableBootstrapOrder(env: Record<string, string | undefined>) {
   const domain = typeof process.getuid === "function" ? `gui/${process.getuid()}` : "gui/501";
-  const label = "ai.godseye.gateway";
+  const label = "ai.openclaw.gateway";
   const plistPath = resolveLaunchAgentPlistPath(env);
   const serviceId = `${domain}/${label}`;
   const enableIndex = state.launchctlCalls.findIndex(
@@ -72,10 +74,14 @@ vi.mock("./exec-file.js", () => ({
       return { stdout: state.listOutput, stderr: "", code: 0 };
     }
     if (call[0] === "print") {
+      if (state.printNotLoadedRemaining > 0) {
+        state.printNotLoadedRemaining -= 1;
+        return { stdout: "", stderr: "Could not find service", code: 113 };
+      }
       return { stdout: state.printOutput, stderr: "", code: 0 };
     }
     if (call[0] === "bootstrap" && state.bootstrapError) {
-      return { stdout: "", stderr: state.bootstrapError, code: 1 };
+      return { stdout: "", stderr: state.bootstrapError, code: state.bootstrapCode };
     }
     if (call[0] === "kickstart" && state.kickstartError && state.kickstartFailuresRemaining > 0) {
       state.kickstartFailuresRemaining -= 1;
@@ -96,8 +102,8 @@ vi.mock("../infra/restart-stale-pids.js", () => ({
   cleanStaleGatewayProcessesSync: (port?: number) => cleanStaleGatewayProcessesSync(port),
 }));
 
-vi.mock("node:fs/promises", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs/promises")>();
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<typeof import("node:fs/promises")>("node:fs/promises");
   const wrapped = {
     ...actual,
     access: vi.fn(async (p: string) => {
@@ -151,7 +157,9 @@ beforeEach(() => {
   state.launchctlCalls.length = 0;
   state.listOutput = "";
   state.printOutput = "";
+  state.printNotLoadedRemaining = 0;
   state.bootstrapError = "";
+  state.bootstrapCode = 1;
   state.kickstartError = "";
   state.kickstartFailuresRemaining = 0;
   state.dirs.clear();
@@ -222,9 +230,9 @@ describe("launchd runtime parsing", () => {
 
 describe("launchctl list detection", () => {
   it("detects the resolved label in launchctl list", async () => {
-    state.listOutput = "123 0 ai.godseye.gateway\n";
+    state.listOutput = "123 0 ai.openclaw.gateway\n";
     const listed = await isLaunchAgentListed({
-      env: { HOME: "/Users/test", GODSEYE_PROFILE: "default" },
+      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "default" },
     });
     expect(listed).toBe(true);
   });
@@ -232,7 +240,7 @@ describe("launchctl list detection", () => {
   it("returns false when the label is missing", async () => {
     state.listOutput = "123 0 com.other.service\n";
     const listed = await isLaunchAgentListed({
-      env: { HOME: "/Users/test", GODSEYE_PROFILE: "default" },
+      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "default" },
     });
     expect(listed).toBe(false);
   });
@@ -242,10 +250,10 @@ describe("launchd bootstrap repair", () => {
   it("enables, bootstraps, and kickstarts the resolved label", async () => {
     const env: Record<string, string | undefined> = {
       HOME: "/Users/test",
-      GODSEYE_PROFILE: "default",
+      OPENCLAW_PROFILE: "default",
     };
     const repair = await repairLaunchAgentBootstrap({ env });
-    expect(repair.ok).toBe(true);
+    expect(repair).toEqual({ ok: true, status: "repaired" });
 
     const { serviceId, bootstrapIndex } = expectLaunchctlEnableBootstrapOrder(env);
     const kickstartIndex = state.launchctlCalls.findIndex(
@@ -255,13 +263,75 @@ describe("launchd bootstrap repair", () => {
     expect(kickstartIndex).toBeGreaterThanOrEqual(0);
     expect(bootstrapIndex).toBeLessThan(kickstartIndex);
   });
+
+  it("treats bootstrap exit 130 as success", async () => {
+    state.bootstrapError = "Service already loaded";
+    state.bootstrapCode = 130;
+    const env: Record<string, string | undefined> = {
+      HOME: "/Users/test",
+      OPENCLAW_PROFILE: "default",
+    };
+
+    const repair = await repairLaunchAgentBootstrap({ env });
+
+    expect(repair).toEqual({ ok: true, status: "already-loaded" });
+    expect(state.launchctlCalls.filter((call) => call[0] === "kickstart")).toHaveLength(1);
+  });
+
+  it("treats 'already exists in domain' bootstrap failures as success", async () => {
+    state.bootstrapError =
+      "Could not bootstrap service: 5: Input/output error: already exists in domain for gui/501";
+    const env: Record<string, string | undefined> = {
+      HOME: "/Users/test",
+      OPENCLAW_PROFILE: "default",
+    };
+
+    const repair = await repairLaunchAgentBootstrap({ env });
+
+    expect(repair).toEqual({ ok: true, status: "already-loaded" });
+    expect(state.launchctlCalls.filter((call) => call[0] === "kickstart")).toHaveLength(1);
+  });
+
+  it("keeps genuine bootstrap failures as failures", async () => {
+    state.bootstrapError = "Could not find specified service";
+    const env: Record<string, string | undefined> = {
+      HOME: "/Users/test",
+      OPENCLAW_PROFILE: "default",
+    };
+
+    const repair = await repairLaunchAgentBootstrap({ env });
+
+    expect(repair).toMatchObject({
+      ok: false,
+      status: "bootstrap-failed",
+      detail: expect.stringContaining("Could not find specified service"),
+    });
+    expect(state.launchctlCalls.some((call) => call[0] === "kickstart")).toBe(false);
+  });
+
+  it("returns a typed kickstart failure", async () => {
+    state.kickstartError = "launchctl kickstart failed: permission denied";
+    state.kickstartFailuresRemaining = 1;
+    const env: Record<string, string | undefined> = {
+      HOME: "/Users/test",
+      OPENCLAW_PROFILE: "default",
+    };
+
+    const repair = await repairLaunchAgentBootstrap({ env });
+
+    expect(repair).toEqual({
+      ok: false,
+      status: "kickstart-failed",
+      detail: "launchctl kickstart failed: permission denied",
+    });
+  });
 });
 
 describe("launchd install", () => {
   function createDefaultLaunchdEnv(): Record<string, string | undefined> {
     return {
       HOME: "/Users/test",
-      GODSEYE_PROFILE: "default",
+      OPENCLAW_PROFILE: "default",
     };
   }
 
@@ -339,7 +409,7 @@ describe("launchd install", () => {
   it("restarts LaunchAgent with kickstart and no bootout", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      GODSEYE_GATEWAY_PORT: "18789",
+      OPENCLAW_GATEWAY_PORT: "18789",
     };
     const result = await restartLaunchAgent({
       env,
@@ -347,7 +417,7 @@ describe("launchd install", () => {
     });
 
     const domain = typeof process.getuid === "function" ? `gui/${process.getuid()}` : "gui/501";
-    const label = "ai.godseye.gateway";
+    const label = "ai.openclaw.gateway";
     const serviceId = `${domain}/${label}`;
     expect(result).toEqual({ outcome: "completed" });
     expect(cleanStaleGatewayProcessesSync).toHaveBeenCalledWith(18789);
@@ -359,7 +429,7 @@ describe("launchd install", () => {
   it("uses the configured gateway port for stale cleanup", async () => {
     const env = {
       ...createDefaultLaunchdEnv(),
-      GODSEYE_GATEWAY_PORT: "19001",
+      OPENCLAW_GATEWAY_PORT: "19001",
     };
 
     await restartLaunchAgent({
@@ -418,6 +488,39 @@ describe("launchd install", () => {
     expect(state.launchctlCalls.some((call) => call[0] === "bootstrap")).toBe(false);
   });
 
+  it("re-bootstraps when kickstart failure leaves the service unloaded (#52208)", async () => {
+    const env = createDefaultLaunchdEnv();
+    state.kickstartError = "Input/output error";
+    state.kickstartFailuresRemaining = 1;
+    state.printNotLoadedRemaining = 1;
+
+    await expect(
+      restartLaunchAgent({
+        env,
+        stdout: new PassThrough(),
+      }),
+    ).rejects.toThrow("launchctl kickstart failed: Input/output error");
+
+    expect(state.launchctlCalls.some((call) => call[0] === "enable")).toBe(true);
+    expect(state.launchctlCalls.some((call) => call[0] === "bootstrap")).toBe(true);
+  });
+
+  it("skips re-bootstrap when kickstart fails but service is still loaded (#52208)", async () => {
+    const env = createDefaultLaunchdEnv();
+    state.kickstartError = "Input/output error";
+    state.kickstartFailuresRemaining = 1;
+
+    await expect(
+      restartLaunchAgent({
+        env,
+        stdout: new PassThrough(),
+      }),
+    ).rejects.toThrow("launchctl kickstart failed: Input/output error");
+
+    expect(state.launchctlCalls.some((call) => call[0] === "enable")).toBe(false);
+    expect(state.launchctlCalls.some((call) => call[0] === "bootstrap")).toBe(false);
+  });
+
   it("hands restart off to a detached helper when invoked from the current LaunchAgent", async () => {
     const env = createDefaultLaunchdEnv();
     launchdRestartHandoffState.isCurrentProcessLaunchdServiceLabel.mockReturnValue(true);
@@ -451,7 +554,7 @@ describe("launchd install", () => {
     }
     expect(message).toContain("logged-in macOS GUI session");
     expect(message).toContain("wrong user (including sudo)");
-    expect(message).toContain("https://docs.gods-eye.org/gateway");
+    expect(message).toContain("https://docs.openclaw.ai/gateway");
   });
 
   it("surfaces generic bootstrap failures without GUI-specific guidance", async () => {
@@ -471,40 +574,40 @@ describe("launchd install", () => {
 describe("resolveLaunchAgentPlistPath", () => {
   it.each([
     {
-      name: "uses default label when GODSEYE_PROFILE is unset",
+      name: "uses default label when OPENCLAW_PROFILE is unset",
       env: { HOME: "/Users/test" },
-      expected: "/Users/test/Library/LaunchAgents/ai.godseye.gateway.plist",
+      expected: "/Users/test/Library/LaunchAgents/ai.openclaw.gateway.plist",
     },
     {
-      name: "uses profile-specific label when GODSEYE_PROFILE is set to a custom value",
-      env: { HOME: "/Users/test", GODSEYE_PROFILE: "jbphoenix" },
-      expected: "/Users/test/Library/LaunchAgents/ai.godseye.jbphoenix.plist",
+      name: "uses profile-specific label when OPENCLAW_PROFILE is set to a custom value",
+      env: { HOME: "/Users/test", OPENCLAW_PROFILE: "jbphoenix" },
+      expected: "/Users/test/Library/LaunchAgents/ai.openclaw.jbphoenix.plist",
     },
     {
-      name: "prefers GODSEYE_LAUNCHD_LABEL over GODSEYE_PROFILE",
+      name: "prefers OPENCLAW_LAUNCHD_LABEL over OPENCLAW_PROFILE",
       env: {
         HOME: "/Users/test",
-        GODSEYE_PROFILE: "jbphoenix",
-        GODSEYE_LAUNCHD_LABEL: "com.custom.label",
+        OPENCLAW_PROFILE: "jbphoenix",
+        OPENCLAW_LAUNCHD_LABEL: "com.custom.label",
       },
       expected: "/Users/test/Library/LaunchAgents/com.custom.label.plist",
     },
     {
-      name: "trims whitespace from GODSEYE_LAUNCHD_LABEL",
+      name: "trims whitespace from OPENCLAW_LAUNCHD_LABEL",
       env: {
         HOME: "/Users/test",
-        GODSEYE_LAUNCHD_LABEL: "  com.custom.label  ",
+        OPENCLAW_LAUNCHD_LABEL: "  com.custom.label  ",
       },
       expected: "/Users/test/Library/LaunchAgents/com.custom.label.plist",
     },
     {
-      name: "ignores empty GODSEYE_LAUNCHD_LABEL and falls back to profile",
+      name: "ignores empty OPENCLAW_LAUNCHD_LABEL and falls back to profile",
       env: {
         HOME: "/Users/test",
-        GODSEYE_PROFILE: "myprofile",
-        GODSEYE_LAUNCHD_LABEL: "   ",
+        OPENCLAW_PROFILE: "myprofile",
+        OPENCLAW_LAUNCHD_LABEL: "   ",
       },
-      expected: "/Users/test/Library/LaunchAgents/ai.godseye.myprofile.plist",
+      expected: "/Users/test/Library/LaunchAgents/ai.openclaw.myprofile.plist",
     },
   ])("$name", ({ env, expected }) => {
     expect(resolveLaunchAgentPlistPath(env)).toBe(expected);

@@ -1,4 +1,4 @@
-import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-models";
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import { buildMistralCatalogModels, MISTRAL_BASE_URL } from "./model-definitions.js";
 
 export function buildMistralProvider(): ModelProviderConfig {

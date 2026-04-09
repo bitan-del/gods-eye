@@ -12,7 +12,11 @@ import {
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../../agents/agent-scope.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+} from "../../shared/string-coerce.js";
 import type {
   ConfiguredBindingRuleConfig,
   ConfiguredBindingTargetFactory,
@@ -20,14 +24,15 @@ import type {
 import type { ConfiguredBindingConsumer } from "./configured-binding-consumers.js";
 import type { ChannelConfiguredBindingConversationRef } from "./types.adapters.js";
 
-function resolveAgentRuntimeAcpDefaults(params: { cfg: GodsEyeConfig; ownerAgentId: string }): {
+function resolveAgentRuntimeAcpDefaults(params: { cfg: OpenClawConfig; ownerAgentId: string }): {
   acpAgentId?: string;
   mode?: string;
   cwd?: string;
   backend?: string;
 } {
+  const ownerAgentId = normalizeLowercaseStringOrEmpty(params.ownerAgentId);
   const agent = params.cfg.agents?.list?.find(
-    (entry) => entry.id?.trim().toLowerCase() === params.ownerAgentId.toLowerCase(),
+    (entry) => normalizeOptionalLowercaseString(entry.id) === ownerAgentId,
   );
   if (!agent || agent.runtime?.type !== "acp") {
     return {};
@@ -41,7 +46,7 @@ function resolveAgentRuntimeAcpDefaults(params: { cfg: GodsEyeConfig; ownerAgent
 }
 
 function resolveConfiguredBindingWorkspaceCwd(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId: string;
 }): string | undefined {
   const explicitAgentWorkspace = normalizeText(
@@ -85,7 +90,7 @@ function buildConfiguredAcpSpec(params: {
 }
 
 function buildAcpTargetFactory(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   binding: ConfiguredBindingRuleConfig;
   channel: string;
   agentId: string;

@@ -93,7 +93,7 @@ export async function runDaemonInstall(opts: DaemonInstallOptions) {
         if (!json) {
           defaultRuntime.log(`Gateway service already ${service.loadedText}.`);
           defaultRuntime.log(
-            `Reinstall with: ${formatCliCommand("godseye gateway install --force")}`,
+            `Reinstall with: ${formatCliCommand("openclaw gateway install --force")}`,
           );
         }
         return;
@@ -124,6 +124,7 @@ export async function runDaemonInstall(opts: DaemonInstallOptions) {
     env: installEnv,
     port,
     runtime: runtimeRaw,
+    existingEnvironment: existingServiceEnv,
     warn: (message) => {
       if (json) {
         warnings.push(message);

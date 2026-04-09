@@ -1,10 +1,16 @@
 import { URL } from "node:url";
 import type { GatewayConfig } from "../config/types.gateway.js";
 import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
+import {
   loadOrCreateDeviceIdentity,
   signDevicePayload,
   type DeviceIdentity,
 } from "./device-identity.js";
+import { formatErrorMessage } from "./errors.js";
+import { normalizeHostname } from "./net/hostname.js";
 
 export type ApnsRelayPushType = "alert" | "background";
 
@@ -40,18 +46,22 @@ export type ApnsRelayRequestSender = (params: {
 }) => Promise<ApnsRelayPushResponse>;
 
 const DEFAULT_APNS_RELAY_TIMEOUT_MS = 10_000;
-const GATEWAY_DEVICE_ID_HEADER = "x-godseye-gateway-device-id";
-const GATEWAY_SIGNATURE_HEADER = "x-godseye-gateway-signature";
-const GATEWAY_SIGNED_AT_HEADER = "x-godseye-gateway-signed-at-ms";
+const GATEWAY_DEVICE_ID_HEADER = "x-openclaw-gateway-device-id";
+const GATEWAY_SIGNATURE_HEADER = "x-openclaw-gateway-signature";
+const GATEWAY_SIGNED_AT_HEADER = "x-openclaw-gateway-signed-at-ms";
 
 function normalizeNonEmptyString(value: string | undefined): string | null {
-  const trimmed = value?.trim() ?? "";
+  const trimmed = normalizeOptionalString(value) ?? "";
   return trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeTimeoutMs(value: string | number | undefined): number {
   const raw =
-    typeof value === "number" ? value : typeof value === "string" ? value.trim() : undefined;
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? normalizeOptionalString(value)
+        : undefined;
   if (raw === undefined || raw === "") {
     return DEFAULT_APNS_RELAY_TIMEOUT_MS;
   }
@@ -63,12 +73,14 @@ function normalizeTimeoutMs(value: string | number | undefined): number {
 }
 
 function readAllowHttp(value: string | undefined): boolean {
-  const normalized = value?.trim().toLowerCase();
+  const normalized = normalizeOptionalString(value)
+    ? normalizeLowercaseStringOrEmpty(value)
+    : undefined;
   return normalized === "1" || normalized === "true" || normalized === "yes";
 }
 
 function isLoopbackRelayHostname(hostname: string): boolean {
-  const normalized = hostname.trim().toLowerCase();
+  const normalized = normalizeHostname(hostname);
   return (
     normalized === "localhost" ||
     normalized === "::1" ||
@@ -78,7 +90,7 @@ function isLoopbackRelayHostname(hostname: string): boolean {
 }
 
 function parseReason(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+  return typeof value === "string" ? normalizeOptionalString(value) : undefined;
 }
 
 function buildRelayGatewaySignaturePayload(params: {
@@ -87,7 +99,7 @@ function buildRelayGatewaySignaturePayload(params: {
   bodyJson: string;
 }): string {
   return [
-    "godseye-relay-send-v1",
+    "openclaw-relay-send-v1",
     params.gatewayDeviceId.trim(),
     String(Math.trunc(params.signedAtMs)),
     params.bodyJson,
@@ -99,17 +111,17 @@ export function resolveApnsRelayConfigFromEnv(
   gatewayConfig?: GatewayConfig,
 ): ApnsRelayConfigResolution {
   const configuredRelay = gatewayConfig?.push?.apns?.relay;
-  const envBaseUrl = normalizeNonEmptyString(env.GODSEYE_APNS_RELAY_BASE_URL);
+  const envBaseUrl = normalizeNonEmptyString(env.OPENCLAW_APNS_RELAY_BASE_URL);
   const configBaseUrl = normalizeNonEmptyString(configuredRelay?.baseUrl);
   const baseUrl = envBaseUrl ?? configBaseUrl;
   const baseUrlSource = envBaseUrl
-    ? "GODSEYE_APNS_RELAY_BASE_URL"
+    ? "OPENCLAW_APNS_RELAY_BASE_URL"
     : "gateway.push.apns.relay.baseUrl";
   if (!baseUrl) {
     return {
       ok: false,
       error:
-        "APNs relay config missing: set gateway.push.apns.relay.baseUrl or GODSEYE_APNS_RELAY_BASE_URL",
+        "APNs relay config missing: set gateway.push.apns.relay.baseUrl or OPENCLAW_APNS_RELAY_BASE_URL",
     };
   }
 
@@ -121,9 +133,9 @@ export function resolveApnsRelayConfigFromEnv(
     if (!parsed.hostname) {
       throw new Error("host required");
     }
-    if (parsed.protocol === "http:" && !readAllowHttp(env.GODSEYE_APNS_RELAY_ALLOW_HTTP)) {
+    if (parsed.protocol === "http:" && !readAllowHttp(env.OPENCLAW_APNS_RELAY_ALLOW_HTTP)) {
       throw new Error(
-        "http relay URLs require GODSEYE_APNS_RELAY_ALLOW_HTTP=true (development only)",
+        "http relay URLs require OPENCLAW_APNS_RELAY_ALLOW_HTTP=true (development only)",
       );
     }
     if (parsed.protocol === "http:" && !isLoopbackRelayHostname(parsed.hostname)) {
@@ -140,12 +152,12 @@ export function resolveApnsRelayConfigFromEnv(
       value: {
         baseUrl: parsed.toString().replace(/\/+$/, ""),
         timeoutMs: normalizeTimeoutMs(
-          env.GODSEYE_APNS_RELAY_TIMEOUT_MS ?? configuredRelay?.timeoutMs,
+          env.OPENCLAW_APNS_RELAY_TIMEOUT_MS ?? configuredRelay?.timeoutMs,
         ),
       },
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatErrorMessage(err);
     return {
       ok: false,
       error: `invalid ${baseUrlSource} (${baseUrl}): ${message}`,

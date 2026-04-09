@@ -2,14 +2,14 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
-import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
-import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { isProviderApiKeyConfigured } from "godseye/plugin-sdk/provider-auth";
+import { resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type {
   GeneratedVideoAsset,
   VideoGenerationProvider,
   VideoGenerationRequest,
-} from "openclaw/plugin-sdk/video-generation";
+} from "godseye/plugin-sdk/video-generation";
 import { normalizeGoogleApiBaseUrl } from "./api.js";
 
 const DEFAULT_GOOGLE_VIDEO_MODEL = "veo-3.1-fast-generate-preview";

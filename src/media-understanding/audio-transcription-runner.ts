@@ -1,5 +1,5 @@
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   type ActiveMediaModel,
   buildProviderRegistry,
@@ -11,7 +11,7 @@ import type { MediaAttachment, MediaUnderstandingProvider } from "./types.js";
 
 export async function runAudioTranscription(params: {
   ctx: MsgContext;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   attachments?: MediaAttachment[];
   agentDir?: string;
   providers?: Record<string, MediaUnderstandingProvider>;
@@ -23,7 +23,7 @@ export async function runAudioTranscription(params: {
     return { transcript: undefined, attachments };
   }
 
-  const providerRegistry = buildProviderRegistry(params.providers);
+  const providerRegistry = buildProviderRegistry(params.providers, params.cfg);
   const cache = createMediaAttachmentCache(
     attachments,
     params.localPathRoots ? { localPathRoots: params.localPathRoots } : undefined,

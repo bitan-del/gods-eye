@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { CONFIG_DIR, ensureDir } from "../utils.js";
 
 export function normalizeWideAreaDomain(raw?: string | null): string | null {
@@ -16,7 +17,7 @@ export function resolveWideAreaDiscoveryDomain(params?: {
   configDomain?: string | null;
 }): string | null {
   const env = params?.env ?? process.env;
-  const candidate = params?.configDomain ?? env.GODSEYE_WIDE_AREA_DOMAIN ?? null;
+  const candidate = params?.configDomain ?? env.OPENCLAW_WIDE_AREA_DOMAIN ?? null;
   return normalizeWideAreaDomain(candidate);
 }
 
@@ -29,9 +30,7 @@ export function getWideAreaZonePath(domain: string): string {
 }
 
 function dnsLabel(raw: string, fallback: string): string {
-  const normalized = raw
-    .trim()
-    .toLowerCase()
+  const normalized = normalizeLowercaseStringOrEmpty(raw)
     .replace(/[^a-z0-9-]+/g, "-")
     .replace(/^-+/, "")
     .replace(/-+$/, "");
@@ -74,7 +73,7 @@ function extractSerial(zoneText: string): number | null {
 }
 
 function extractContentHash(zoneText: string): string | null {
-  const match = zoneText.match(/^\s*;\s*godseye-content-hash:\s*(\S+)\s*$/m);
+  const match = zoneText.match(/^\s*;\s*openclaw-content-hash:\s*(\S+)\s*$/m);
   return match?.[1] ?? null;
 }
 
@@ -104,9 +103,9 @@ export type WideAreaGatewayZoneOpts = {
 };
 
 function renderZone(opts: WideAreaGatewayZoneOpts & { serial: number }): string {
-  const hostname = os.hostname().split(".")[0] ?? "godseye";
-  const hostLabel = dnsLabel(opts.hostLabel ?? hostname, "godseye");
-  const instanceLabel = dnsLabel(opts.instanceLabel ?? `${hostname}-gateway`, "godseye-gw");
+  const hostname = os.hostname().split(".")[0] ?? "openclaw";
+  const hostLabel = dnsLabel(opts.hostLabel ?? hostname, "openclaw");
+  const instanceLabel = dnsLabel(opts.instanceLabel ?? `${hostname}-gateway`, "openclaw-gw");
   const domain = normalizeWideAreaDomain(opts.domain) ?? "local.";
 
   const txt = [
@@ -144,9 +143,9 @@ function renderZone(opts: WideAreaGatewayZoneOpts & { serial: number }): string 
     records.push(`${hostLabel} IN AAAA ${opts.tailnetIPv6}`);
   }
 
-  records.push(`_godseye-gw._tcp IN PTR ${instanceLabel}._godseye-gw._tcp`);
-  records.push(`${instanceLabel}._godseye-gw._tcp IN SRV 0 0 ${opts.gatewayPort} ${hostLabel}`);
-  records.push(`${instanceLabel}._godseye-gw._tcp IN TXT ${txt.map(txtQuote).join(" ")}`);
+  records.push(`_openclaw-gw._tcp IN PTR ${instanceLabel}._openclaw-gw._tcp`);
+  records.push(`${instanceLabel}._openclaw-gw._tcp IN SRV 0 0 ${opts.gatewayPort} ${hostLabel}`);
+  records.push(`${instanceLabel}._openclaw-gw._tcp IN TXT ${txt.map(txtQuote).join(" ")}`);
 
   const contentBody = `${records.join("\n")}\n`;
   const hashBody = `${records
@@ -156,7 +155,7 @@ function renderZone(opts: WideAreaGatewayZoneOpts & { serial: number }): string 
     .join("\n")}\n`;
   const contentHash = computeContentHash(hashBody);
 
-  return `; godseye-content-hash: ${contentHash}\n${contentBody}`;
+  return `; openclaw-content-hash: ${contentHash}\n${contentBody}`;
 }
 
 export function renderWideAreaGatewayZoneText(

@@ -1,6 +1,7 @@
 import type { ChannelOutboundTargetMode } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { normalizeAccountId } from "../../utils/account-id.js";
 import {
   INTERNAL_MESSAGE_CHANNEL,
@@ -37,7 +38,7 @@ export function resolveAgentDeliveryPlan(params: {
    * overrides session-level `lastChannel` to prevent cross-channel reply
    * routing in shared sessions (dmScope="main").
    *
-   * @see https://github.com/bitan-del/gods-eye/issues/24152
+   * @see https://github.com/openclaw/openclaw/issues/24152
    */
   turnSourceChannel?: string;
   /** Turn-source `to` — paired with `turnSourceChannel`. */
@@ -47,15 +48,11 @@ export function resolveAgentDeliveryPlan(params: {
   /** Turn-source `threadId` — paired with `turnSourceChannel`. */
   turnSourceThreadId?: string | number;
 }): AgentDeliveryPlan {
-  const requestedRaw =
-    typeof params.requestedChannel === "string" ? params.requestedChannel.trim() : "";
+  const requestedRaw = normalizeOptionalString(params.requestedChannel) ?? "";
   const normalizedRequested = requestedRaw ? normalizeMessageChannel(requestedRaw) : undefined;
   const requestedChannel = normalizedRequested || "last";
 
-  const explicitTo =
-    typeof params.explicitTo === "string" && params.explicitTo.trim()
-      ? params.explicitTo.trim()
-      : undefined;
+  const explicitTo = normalizeOptionalString(params.explicitTo) ?? undefined;
 
   // Resolve turn-source channel for cross-channel safety.
   const normalizedTurnSource = params.turnSourceChannel
@@ -65,10 +62,7 @@ export function resolveAgentDeliveryPlan(params: {
     normalizedTurnSource && isDeliverableMessageChannel(normalizedTurnSource)
       ? normalizedTurnSource
       : undefined;
-  const turnSourceTo =
-    typeof params.turnSourceTo === "string" && params.turnSourceTo.trim()
-      ? params.turnSourceTo.trim()
-      : undefined;
+  const turnSourceTo = normalizeOptionalString(params.turnSourceTo) ?? undefined;
   const turnSourceAccountId = normalizeAccountId(params.turnSourceAccountId);
   const turnSourceThreadId =
     params.turnSourceThreadId != null && params.turnSourceThreadId !== ""
@@ -137,7 +131,7 @@ export function resolveAgentDeliveryPlan(params: {
 }
 
 export function resolveAgentOutboundTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   plan: AgentDeliveryPlan;
   targetMode?: ChannelOutboundTargetMode;
   validateExplicitTarget?: boolean;

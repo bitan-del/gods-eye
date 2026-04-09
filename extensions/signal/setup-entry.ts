@@ -1,6 +1,9 @@
-import { defineSetupPluginEntry } from "godseye/plugin-sdk/core";
-import { signalSetupPlugin } from "./src/channel.setup.js";
+import { defineBundledChannelSetupEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { signalSetupPlugin } from "./src/channel.setup.js";
-
-export default defineSetupPluginEntry(signalSetupPlugin);
+export default defineBundledChannelSetupEntry({
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./api.js",
+    exportName: "signalSetupPlugin",
+  },
+});

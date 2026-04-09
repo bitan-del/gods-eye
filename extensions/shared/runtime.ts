@@ -1,14 +1,1 @@
-import { createLoggerBackedRuntime } from "godseye/plugin-sdk/runtime";
-
-export function resolveLoggerBackedRuntime<TRuntime>(
-  runtime: TRuntime | undefined,
-  logger: Parameters<typeof createLoggerBackedRuntime>[0]["logger"],
-): TRuntime {
-  return (
-    runtime ??
-    (createLoggerBackedRuntime({
-      logger,
-      exitError: () => new Error("Runtime exit not available"),
-    }) as TRuntime)
-  );
-}
+export { resolveLoggerBackedRuntime } from "godseye/plugin-sdk/extension-shared";

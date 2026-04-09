@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/provider-onboard";
+import type { OpenClawConfig } from "godseye/plugin-sdk/provider-onboard";
 import { describe, expect, it } from "vitest";
 import { applyOpenAIConfig, applyOpenAIProviderConfig, OPENAI_DEFAULT_MODEL } from "./api.js";
 

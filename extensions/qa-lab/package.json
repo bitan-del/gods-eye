@@ -1,27 +1,27 @@
 {
-  "name": "@openclaw/qa-lab",
+  "name": "@godseye/qa-lab",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw QA lab plugin with private debugger UI and scenario runner",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
-    "openclaw": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*",
+    "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.4.10"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
-    "openclaw": {
+    "godseye": {
       "optional": true
     }
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ],
     "install": {
-      "npmSpec": "@openclaw/qa-lab",
+      "npmSpec": "@godseye/qa-lab",
       "defaultChoice": "npm",
       "minHostVersion": ">=2026.4.10"
     },

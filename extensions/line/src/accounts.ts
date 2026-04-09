@@ -3,9 +3,9 @@ import {
   normalizeAccountId as normalizeSharedAccountId,
   normalizeOptionalAccountId,
 } from "godseye/plugin-sdk/account-id";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/account-resolution";
+import type { OpenClawConfig } from "godseye/plugin-sdk/account-resolution";
 import { resolveAccountEntry } from "godseye/plugin-sdk/account-resolution";
-import { tryReadSecretFileSync } from "godseye/plugin-sdk/infra-runtime";
+import { tryReadSecretFileSync } from "godseye/plugin-sdk/core";
 import type {
   LineAccountConfig,
   LineConfig,
@@ -90,11 +90,11 @@ function resolveSecret(params: {
 }
 
 export function resolveLineAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string;
 }): ResolvedLineAccount {
   const cfg = params.cfg;
-  const accountId = normalizeSharedAccountId(params.accountId);
+  const accountId = normalizeSharedAccountId(params.accountId ?? resolveDefaultLineAccountId(cfg));
   const lineConfig = cfg.channels?.line as LineConfig | undefined;
   const accounts = lineConfig?.accounts;
   const accountConfig =
@@ -143,7 +143,7 @@ export function resolveLineAccount(params: {
   };
 }
 
-export function listLineAccountIds(cfg: GodsEyeConfig): string[] {
+export function listLineAccountIds(cfg: OpenClawConfig): string[] {
   const lineConfig = cfg.channels?.line as LineConfig | undefined;
   const accounts = lineConfig?.accounts;
   const ids = new Set<string>();
@@ -165,7 +165,7 @@ export function listLineAccountIds(cfg: GodsEyeConfig): string[] {
   return Array.from(ids);
 }
 
-export function resolveDefaultLineAccountId(cfg: GodsEyeConfig): string {
+export function resolveDefaultLineAccountId(cfg: OpenClawConfig): string {
   const preferred = normalizeOptionalAccountId(
     (cfg.channels?.line as LineConfig | undefined)?.defaultAccount,
   );

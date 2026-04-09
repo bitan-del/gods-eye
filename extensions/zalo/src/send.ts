@@ -1,14 +1,15 @@
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { resolveZaloAccount } from "./accounts.js";
 import type { ZaloFetch } from "./api.js";
 import { sendMessage, sendPhoto } from "./api.js";
 import { resolveZaloProxyFetch } from "./proxy.js";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 import { resolveZaloToken } from "./token.js";
 
 export type ZaloSendOptions = {
   token?: string;
   accountId?: string;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   mediaUrl?: string;
   caption?: string;
   verbose?: boolean;
@@ -39,7 +40,7 @@ async function runZaloSend(
     const result = toZaloSendResult(await send());
     return result.ok ? result : { ok: false, error: failureMessage };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    return { ok: false, error: formatErrorMessage(err) };
   }
 }
 

@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { buildNpmResolutionFields, type NpmSpecResolution } from "../infra/install-source-utils.js";
 
@@ -14,9 +14,9 @@ export function buildNpmResolutionInstallFields(
 }
 
 export function recordPluginInstall(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   update: PluginInstallUpdate,
-): GodsEyeConfig {
+): OpenClawConfig {
   const { pluginId, ...record } = update;
   const installs = {
     ...cfg.plugins?.installs,

@@ -1,14 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
 import { tryHandleRootHelpFastPath } from "./entry.js";
 
+const outputPrecomputedRootHelpTextMock = vi.hoisted(() => vi.fn(() => false));
+
+vi.mock("./cli/root-help-metadata.js", () => ({
+  outputPrecomputedRootHelpText: outputPrecomputedRootHelpTextMock,
+}));
+
 describe("entry root help fast path", () => {
-  it("renders root help without importing the full program", () => {
+  it("prefers precomputed root help text when available", async () => {
+    outputPrecomputedRootHelpTextMock.mockReturnValueOnce(true);
+
+    const handled = tryHandleRootHelpFastPath(["node", "openclaw", "--help"], {
+      env: {},
+    });
+    await vi.dynamicImportSettled();
+
+    expect(handled).toBe(true);
+    expect(outputPrecomputedRootHelpTextMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders root help without importing the full program", async () => {
     const outputRootHelpMock = vi.fn();
 
-    const handled = tryHandleRootHelpFastPath(["node", "godseye", "--help"], {
+    const handled = tryHandleRootHelpFastPath(["node", "openclaw", "--help"], {
       outputRootHelp: outputRootHelpMock,
       env: {},
     });
+    await Promise.resolve();
 
     expect(handled).toBe(true);
     expect(outputRootHelpMock).toHaveBeenCalledTimes(1);
@@ -17,7 +36,7 @@ describe("entry root help fast path", () => {
   it("ignores non-root help invocations", () => {
     const outputRootHelpMock = vi.fn();
 
-    const handled = tryHandleRootHelpFastPath(["node", "godseye", "status", "--help"], {
+    const handled = tryHandleRootHelpFastPath(["node", "openclaw", "status", "--help"], {
       outputRootHelp: outputRootHelpMock,
       env: {},
     });
@@ -30,7 +49,7 @@ describe("entry root help fast path", () => {
     const outputRootHelpMock = vi.fn();
 
     const handled = tryHandleRootHelpFastPath(
-      ["node", "godseye", "--container", "demo", "--help"],
+      ["node", "openclaw", "--container", "demo", "--help"],
       {
         outputRootHelp: outputRootHelpMock,
         env: {},

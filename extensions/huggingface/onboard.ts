@@ -1,18 +1,18 @@
 import {
+  createModelCatalogPresetAppliers,
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/provider-onboard";
+import {
   buildHuggingfaceModelDefinition,
   HUGGINGFACE_BASE_URL,
   HUGGINGFACE_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
-import {
-  createModelCatalogPresetAppliers,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/provider-onboard";
+} from "./models.js";
 
 export const HUGGINGFACE_DEFAULT_MODEL_REF = "huggingface/deepseek-ai/DeepSeek-R1";
 
 const huggingfacePresetAppliers = createModelCatalogPresetAppliers({
   primaryModelRef: HUGGINGFACE_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => ({
+  resolveParams: (_cfg: OpenClawConfig) => ({
     providerId: "huggingface",
     api: "openai-completions",
     baseUrl: HUGGINGFACE_BASE_URL,
@@ -21,10 +21,10 @@ const huggingfacePresetAppliers = createModelCatalogPresetAppliers({
   }),
 });
 
-export function applyHuggingfaceProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyHuggingfaceProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return huggingfacePresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyHuggingfaceConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyHuggingfaceConfig(cfg: OpenClawConfig): OpenClawConfig {
   return huggingfacePresetAppliers.applyConfig(cfg);
 }

@@ -1,8 +1,8 @@
 {
   "name": "@godseye/modelstudio-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.1-beta.1",
   "private": true,
-  "description": "GodsEye Model Studio provider plugin",
+  "description": "OpenClaw Model Studio provider plugin",
   "type": "module",
   "godseye": {
     "extensions": [

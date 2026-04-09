@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { normalizeConfiguredMcpServers } from "../config/mcp-config.js";
 import type { BundleMcpDiagnostic, BundleMcpServerConfig } from "../plugins/bundle-mcp.js";
 import { loadEnabledBundleMcpConfig } from "../plugins/bundle-mcp.js";
@@ -10,7 +10,7 @@ export type EmbeddedPiMcpConfig = {
 
 export function loadEmbeddedPiMcpConfig(params: {
   workspaceDir: string;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 }): EmbeddedPiMcpConfig {
   const bundleMcp = loadEnabledBundleMcpConfig({
     workspaceDir: params.workspaceDir,
@@ -19,7 +19,7 @@ export function loadEmbeddedPiMcpConfig(params: {
   const configuredMcp = normalizeConfiguredMcpServers(params.cfg?.mcp?.servers);
 
   return {
-    // GodsEye config is the owner-managed layer, so it overrides bundle defaults.
+    // OpenClaw config is the owner-managed layer, so it overrides bundle defaults.
     mcpServers: {
       ...bundleMcp.config.mcpServers,
       ...configuredMcp,

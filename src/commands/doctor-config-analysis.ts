@@ -1,8 +1,8 @@
 import path from "node:path";
 import type { ZodIssue } from "zod";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { CONFIG_PATH } from "../config/config.js";
-import { GodsEyeSchema } from "../config/zod-schema.js";
+import { OpenClawSchema } from "../config/zod-schema.js";
 import { note } from "../terminal/note.js";
 import { isRecord } from "../utils.js";
 
@@ -59,11 +59,11 @@ export function resolveConfigPathTarget(root: unknown, path: Array<string | numb
   return current;
 }
 
-export function stripUnknownConfigKeys(config: GodsEyeConfig): {
-  config: GodsEyeConfig;
+export function stripUnknownConfigKeys(config: OpenClawConfig): {
+  config: OpenClawConfig;
   removed: string[];
 } {
-  const parsed = GodsEyeSchema.safeParse(config);
+  const parsed = OpenClawSchema.safeParse(config);
   if (parsed.success) {
     return { config, removed: [] };
   }
@@ -92,7 +92,7 @@ export function stripUnknownConfigKeys(config: GodsEyeConfig): {
   return { config: next, removed };
 }
 
-export function noteOpencodeProviderOverrides(cfg: GodsEyeConfig): void {
+export function noteOpencodeProviderOverrides(cfg: OpenClawConfig): void {
   const providers = cfg.models?.providers;
   if (!providers) {
     return;

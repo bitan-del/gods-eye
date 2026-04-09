@@ -1,4 +1,4 @@
-import type { ModelDefinitionConfig } from "openclaw/plugin-sdk/provider-model-types";
+import type { ModelDefinitionConfig } from "godseye/plugin-sdk/provider-model-types";
 import { describe, expect, it } from "vitest";
 import { applyConfigDefaults, normalizeConfig } from "./provider-policy-api.js";
 

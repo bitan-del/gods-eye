@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 
 export const BASE_TWITCH_TEST_ACCOUNT = {
   username: "testbot",
@@ -7,7 +7,7 @@ export const BASE_TWITCH_TEST_ACCOUNT = {
   channel: "#testchannel",
 };
 
-export function makeTwitchTestConfig(account: Record<string, unknown>): GodsEyeConfig {
+export function makeTwitchTestConfig(account: Record<string, unknown>): OpenClawConfig {
   return {
     channels: {
       twitch: {
@@ -16,7 +16,7 @@ export function makeTwitchTestConfig(account: Record<string, unknown>): GodsEyeC
         },
       },
     },
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig;
 }
 
 export function installTwitchTestHooks() {

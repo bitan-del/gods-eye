@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 function makeTempDir(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-command-source-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-command-source-"));
   tempDirs.push(dir);
   return dir;
 }

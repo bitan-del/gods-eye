@@ -3,13 +3,16 @@ import { listAgentIds, resolveDefaultAgentId } from "../agents/agent-scope.js";
 import { loadConfig } from "../config/config.js";
 import type { AuthRateLimiter } from "./auth-rate-limit.js";
 import type { ResolvedGatewayAuth } from "./auth.js";
-import { authorizeGatewayBearerRequestOrReply } from "./http-auth-helpers.js";
 import { sendInvalidRequest, sendJson, sendMethodNotAllowed } from "./http-common.js";
 import {
-  GODSEYE_DEFAULT_MODEL_ID,
-  GODSEYE_MODEL_ID,
+  OPENCLAW_DEFAULT_MODEL_ID,
+  OPENCLAW_MODEL_ID,
+  authorizeGatewayHttpRequestOrReply,
+  type AuthorizedGatewayHttpRequest,
   resolveAgentIdFromModel,
+  resolveOpenAiCompatibleHttpOperatorScopes,
 } from "./http-utils.js";
+import { authorizeOperatorScopesForMethod } from "./method-scopes.js";
 
 type OpenAiModelsHttpOptions = {
   auth: ResolvedGatewayAuth;
@@ -31,7 +34,7 @@ function toOpenAiModel(id: string): OpenAiModelObject {
     id,
     object: "model",
     created: 0,
-    owned_by: "godseye",
+    owned_by: "openclaw",
     permission: [],
   };
 }
@@ -40,8 +43,8 @@ async function authorizeRequest(
   req: IncomingMessage,
   res: ServerResponse,
   opts: OpenAiModelsHttpOptions,
-): Promise<boolean> {
-  return await authorizeGatewayBearerRequestOrReply({
+): Promise<AuthorizedGatewayHttpRequest | null> {
+  return await authorizeGatewayHttpRequestOrReply({
     req,
     res,
     auth: opts.auth,
@@ -54,10 +57,10 @@ async function authorizeRequest(
 function loadAgentModelIds(): string[] {
   const cfg = loadConfig();
   const defaultAgentId = resolveDefaultAgentId(cfg);
-  const ids = new Set<string>([GODSEYE_MODEL_ID, GODSEYE_DEFAULT_MODEL_ID]);
-  ids.add(`godseye/${defaultAgentId}`);
+  const ids = new Set<string>([OPENCLAW_MODEL_ID, OPENCLAW_DEFAULT_MODEL_ID]);
+  ids.add(`openclaw/${defaultAgentId}`);
   for (const agentId of listAgentIds(cfg)) {
-    ids.add(`godseye/${agentId}`);
+    ids.add(`openclaw/${agentId}`);
   }
   return Array.from(ids);
 }
@@ -81,7 +84,21 @@ export async function handleOpenAiModelsHttpRequest(
     return true;
   }
 
-  if (!(await authorizeRequest(req, res, opts))) {
+  const requestAuth = await authorizeRequest(req, res, opts);
+  if (!requestAuth) {
+    return true;
+  }
+
+  const requestedScopes = resolveOpenAiCompatibleHttpOperatorScopes(req, requestAuth);
+  const scopeAuth = authorizeOperatorScopesForMethod("models.list", requestedScopes);
+  if (!scopeAuth.allowed) {
+    sendJson(res, 403, {
+      ok: false,
+      error: {
+        type: "forbidden",
+        message: `missing scope: ${scopeAuth.missingScope}`,
+      },
+    });
     return true;
   }
 
@@ -108,7 +125,7 @@ export async function handleOpenAiModelsHttpRequest(
     return true;
   }
 
-  if (decodedId !== GODSEYE_MODEL_ID && !resolveAgentIdFromModel(decodedId)) {
+  if (decodedId !== OPENCLAW_MODEL_ID && !resolveAgentIdFromModel(decodedId)) {
     sendInvalidRequest(res, "Invalid model id.");
     return true;
   }

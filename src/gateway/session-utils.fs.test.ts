@@ -52,56 +52,52 @@ describe("readFirstUserMessageFromTranscript", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-fs-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-fs-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
 
-  test("extracts first user text across supported content formats", () => {
-    const cases = [
-      {
-        sessionId: "test-session-1",
-        lines: [
-          JSON.stringify({ type: "session", version: 1, id: "test-session-1" }),
-          JSON.stringify({ message: { role: "user", content: "Hello world" } }),
-          JSON.stringify({ message: { role: "assistant", content: "Hi there" } }),
-        ],
-        expected: "Hello world",
-      },
-      {
-        sessionId: "test-session-2",
-        lines: [
-          JSON.stringify({ type: "session", version: 1, id: "test-session-2" }),
-          JSON.stringify({
-            message: {
-              role: "user",
-              content: [{ type: "text", text: "Array message content" }],
-            },
-          }),
-        ],
-        expected: "Array message content",
-      },
-      {
-        sessionId: "test-session-2b",
-        lines: [
-          JSON.stringify({ type: "session", version: 1, id: "test-session-2b" }),
-          JSON.stringify({
-            message: {
-              role: "user",
-              content: [{ type: "input_text", text: "Input text content" }],
-            },
-          }),
-        ],
-        expected: "Input text content",
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      const transcriptPath = path.join(tmpDir, `${testCase.sessionId}.jsonl`);
-      fs.writeFileSync(transcriptPath, testCase.lines.join("\n"), "utf-8");
-      const result = readFirstUserMessageFromTranscript(testCase.sessionId, storePath);
-      expect(result, testCase.sessionId).toBe(testCase.expected);
-    }
+  test.each([
+    {
+      sessionId: "test-session-1",
+      lines: [
+        JSON.stringify({ type: "session", version: 1, id: "test-session-1" }),
+        JSON.stringify({ message: { role: "user", content: "Hello world" } }),
+        JSON.stringify({ message: { role: "assistant", content: "Hi there" } }),
+      ],
+      expected: "Hello world",
+    },
+    {
+      sessionId: "test-session-2",
+      lines: [
+        JSON.stringify({ type: "session", version: 1, id: "test-session-2" }),
+        JSON.stringify({
+          message: {
+            role: "user",
+            content: [{ type: "text", text: "Array message content" }],
+          },
+        }),
+      ],
+      expected: "Array message content",
+    },
+    {
+      sessionId: "test-session-2b",
+      lines: [
+        JSON.stringify({ type: "session", version: 1, id: "test-session-2b" }),
+        JSON.stringify({
+          message: {
+            role: "user",
+            content: [{ type: "input_text", text: "Input text content" }],
+          },
+        }),
+      ],
+      expected: "Input text content",
+    },
+  ] as const)("extracts first user text for $sessionId", ({ sessionId, lines, expected }) => {
+    const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+    fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
+    const result = readFirstUserMessageFromTranscript(sessionId, storePath);
+    expect(result, sessionId).toBe(expected);
   });
   test("skips non-user messages to find first user message", () => {
     const sessionId = "test-session-3";
@@ -184,7 +180,7 @@ describe("readLastMessagePreviewFromTranscript", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-fs-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-fs-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -198,34 +194,33 @@ describe("readLastMessagePreviewFromTranscript", () => {
     expect(result).toBeNull();
   });
 
-  test("returns the last user or assistant message from transcript", () => {
-    const cases = [
-      {
-        sessionId: "test-last-user",
-        lines: [
-          JSON.stringify({ message: { role: "user", content: "First user" } }),
-          JSON.stringify({ message: { role: "assistant", content: "First assistant" } }),
-          JSON.stringify({ message: { role: "user", content: "Last user message" } }),
-        ],
-        expected: "Last user message",
-      },
-      {
-        sessionId: "test-last-assistant",
-        lines: [
-          JSON.stringify({ message: { role: "user", content: "User question" } }),
-          JSON.stringify({ message: { role: "assistant", content: "Final assistant reply" } }),
-        ],
-        expected: "Final assistant reply",
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      const transcriptPath = path.join(tmpDir, `${testCase.sessionId}.jsonl`);
-      fs.writeFileSync(transcriptPath, testCase.lines.join("\n"), "utf-8");
-      const result = readLastMessagePreviewFromTranscript(testCase.sessionId, storePath);
-      expect(result).toBe(testCase.expected);
-    }
-  });
+  test.each([
+    {
+      sessionId: "test-last-user",
+      lines: [
+        JSON.stringify({ message: { role: "user", content: "First user" } }),
+        JSON.stringify({ message: { role: "assistant", content: "First assistant" } }),
+        JSON.stringify({ message: { role: "user", content: "Last user message" } }),
+      ],
+      expected: "Last user message",
+    },
+    {
+      sessionId: "test-last-assistant",
+      lines: [
+        JSON.stringify({ message: { role: "user", content: "User question" } }),
+        JSON.stringify({ message: { role: "assistant", content: "Final assistant reply" } }),
+      ],
+      expected: "Final assistant reply",
+    },
+  ] as const)(
+    "returns the last user or assistant message from transcript for $sessionId",
+    ({ sessionId, lines, expected }) => {
+      const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+      fs.writeFileSync(transcriptPath, lines.join("\n"), "utf-8");
+      const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
+      expect(result).toBe(expected);
+    },
+  );
 
   test("skips system messages to find last user/assistant", () => {
     const sessionId = "test-last-skip-system";
@@ -266,32 +261,32 @@ describe("readLastMessagePreviewFromTranscript", () => {
     expect(result).toBe("Valid first");
   });
 
-  test("handles array/output_text content formats", () => {
-    const cases = [
-      {
-        sessionId: "test-last-array",
-        message: {
-          role: "assistant",
-          content: [{ type: "text", text: "Array content response" }],
-        },
-        expected: "Array content response",
+  test.each([
+    {
+      sessionId: "test-last-array",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "Array content response" }],
       },
-      {
-        sessionId: "test-last-output-text",
-        message: {
-          role: "assistant",
-          content: [{ type: "output_text", text: "Output text response" }],
-        },
-        expected: "Output text response",
+      expected: "Array content response",
+    },
+    {
+      sessionId: "test-last-output-text",
+      message: {
+        role: "assistant",
+        content: [{ type: "output_text", text: "Output text response" }],
       },
-    ] as const;
-    for (const testCase of cases) {
-      const transcriptPath = path.join(tmpDir, `${testCase.sessionId}.jsonl`);
-      fs.writeFileSync(transcriptPath, JSON.stringify({ message: testCase.message }), "utf-8");
-      const result = readLastMessagePreviewFromTranscript(testCase.sessionId, storePath);
-      expect(result, testCase.sessionId).toBe(testCase.expected);
-    }
-  });
+      expected: "Output text response",
+    },
+  ] as const)(
+    "handles array/output_text content format for $sessionId",
+    ({ sessionId, message, expected }) => {
+      const transcriptPath = path.join(tmpDir, `${sessionId}.jsonl`);
+      fs.writeFileSync(transcriptPath, JSON.stringify({ message }), "utf-8");
+      const result = readLastMessagePreviewFromTranscript(sessionId, storePath);
+      expect(result, sessionId).toBe(expected);
+    },
+  );
 
   test("skips empty content to find previous message", () => {
     const sessionId = "test-last-skip-empty";
@@ -355,7 +350,7 @@ describe("shared transcript read behaviors", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-fs-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-fs-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -416,7 +411,7 @@ describe("readSessionTitleFieldsFromTranscript cache", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-fs-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-fs-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -468,7 +463,7 @@ describe("readSessionMessages", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-fs-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-fs-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -496,73 +491,57 @@ describe("readSessionMessages", () => {
     const marker = out[1] as {
       role: string;
       content?: Array<{ text?: string }>;
-      __godseye?: { kind?: string; id?: string };
+      __openclaw?: { kind?: string; id?: string };
       timestamp?: number;
     };
     expect(marker.role).toBe("system");
     expect(marker.content?.[0]?.text).toBe("Compaction");
-    expect(marker.__godseye?.kind).toBe("compaction");
-    expect(marker.__godseye?.id).toBe("comp-1");
+    expect(marker.__openclaw?.kind).toBe("compaction");
+    expect(marker.__openclaw?.id).toBe("comp-1");
     expect(typeof marker.timestamp).toBe("number");
   });
 
-  test("reads cross-agent absolute sessionFile across store-root layouts", () => {
-    const cases = [
-      {
-        sessionId: "cross-agent-default-root",
-        sessionFile: path.join(
-          tmpDir,
-          "agents",
-          "ops",
-          "sessions",
-          "cross-agent-default-root.jsonl",
-        ),
-        wrongStorePath: path.join(tmpDir, "agents", "main", "sessions", "sessions.json"),
-        message: { role: "user", content: "from-ops" },
-      },
-      {
-        sessionId: "cross-agent-custom-root",
-        sessionFile: path.join(
-          tmpDir,
-          "custom",
-          "agents",
-          "ops",
-          "sessions",
-          "cross-agent-custom-root.jsonl",
-        ),
-        wrongStorePath: path.join(tmpDir, "custom", "agents", "main", "sessions", "sessions.json"),
-        message: { role: "assistant", content: "from-custom-ops" },
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      fs.mkdirSync(path.dirname(testCase.sessionFile), { recursive: true });
+  test.each([
+    {
+      sessionId: "cross-agent-default-root",
+      sessionFileParts: ["agents", "ops", "sessions", "cross-agent-default-root.jsonl"],
+      wrongStorePathParts: ["agents", "main", "sessions", "sessions.json"],
+      message: { role: "user", content: "from-ops" },
+    },
+    {
+      sessionId: "cross-agent-custom-root",
+      sessionFileParts: ["custom", "agents", "ops", "sessions", "cross-agent-custom-root.jsonl"],
+      wrongStorePathParts: ["custom", "agents", "main", "sessions", "sessions.json"],
+      message: { role: "assistant", content: "from-custom-ops" },
+    },
+  ] as const)(
+    "reads cross-agent absolute sessionFile across store-root layouts for $sessionId",
+    ({ sessionId, sessionFileParts, wrongStorePathParts, message }) => {
+      const sessionFile = path.join(tmpDir, ...sessionFileParts);
+      const wrongStorePath = path.join(tmpDir, ...wrongStorePathParts);
+      fs.mkdirSync(path.dirname(sessionFile), { recursive: true });
       fs.writeFileSync(
-        testCase.sessionFile,
+        sessionFile,
         [
-          JSON.stringify({ type: "session", version: 1, id: testCase.sessionId }),
-          JSON.stringify({ message: testCase.message }),
+          JSON.stringify({ type: "session", version: 1, id: sessionId }),
+          JSON.stringify({ message }),
         ].join("\n"),
         "utf-8",
       );
 
-      const out = readSessionMessages(
-        testCase.sessionId,
-        testCase.wrongStorePath,
-        testCase.sessionFile,
-      );
+      const out = readSessionMessages(sessionId, wrongStorePath, sessionFile);
       expect(out).toHaveLength(1);
-      expect(out[0]).toMatchObject(testCase.message);
-      expect((out[0] as { __godseye?: { seq?: number } }).__godseye?.seq).toBe(1);
-    }
-  });
+      expect(out[0]).toMatchObject(message);
+      expect((out[0] as { __openclaw?: { seq?: number } }).__openclaw?.seq).toBe(1);
+    },
+  );
 });
 
 describe("readSessionPreviewItemsFromTranscript", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-preview-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-preview-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -649,13 +628,63 @@ describe("readSessionPreviewItemsFromTranscript", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.text).toBe("A  B");
   });
+
+  test("prefers final_answer text for assistant preview items", () => {
+    const sessionId = "preview-final-answer";
+    const lines = [
+      JSON.stringify({
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: "thinking like caveman",
+              textSignature: JSON.stringify({ v: 1, id: "msg_commentary", phase: "commentary" }),
+            },
+            {
+              type: "text",
+              text: "Actual final answer",
+              textSignature: JSON.stringify({ v: 1, id: "msg_final", phase: "final_answer" }),
+            },
+          ],
+        },
+      }),
+    ];
+    writeTranscriptLines(sessionId, lines);
+    const result = readPreview(sessionId, 1, 120);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.text).toBe("Actual final answer");
+  });
+
+  test("hides commentary-only assistant preview items", () => {
+    const sessionId = "preview-commentary-only";
+    const lines = [
+      JSON.stringify({
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "text",
+              text: "thinking like caveman",
+              textSignature: JSON.stringify({ v: 1, id: "msg_commentary", phase: "commentary" }),
+            },
+          ],
+        },
+      }),
+    ];
+    writeTranscriptLines(sessionId, lines);
+    const result = readPreview(sessionId, 1, 120);
+
+    expect(result).toHaveLength(0);
+  });
 });
 
 describe("readLatestSessionUsageFromTranscript", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-session-usage-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-session-usage-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
@@ -680,7 +709,7 @@ describe("readLatestSessionUsageFromTranscript", () => {
       {
         message: {
           role: "assistant",
-          provider: "godseye",
+          provider: "openclaw",
           model: "delivery-mirror",
           usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         },
@@ -806,54 +835,47 @@ describe("resolveSessionTranscriptCandidates", () => {
     vi.unstubAllEnvs();
   });
 
-  test("fallback candidate uses GODSEYE_HOME instead of os.homedir()", () => {
-    vi.stubEnv("GODSEYE_HOME", "/srv/godseye-home");
+  test("fallback candidate uses OPENCLAW_HOME instead of os.homedir()", () => {
+    vi.stubEnv("OPENCLAW_HOME", "/srv/openclaw-home");
     vi.stubEnv("HOME", "/home/other");
 
     const candidates = resolveSessionTranscriptCandidates("sess-1", undefined);
     const fallback = candidates[candidates.length - 1];
     expect(fallback).toBe(
-      path.join(path.resolve("/srv/godseye-home"), ".godseye", "sessions", "sess-1.jsonl"),
+      path.join(path.resolve("/srv/openclaw-home"), ".openclaw", "sessions", "sess-1.jsonl"),
     );
   });
 });
 
 describe("resolveSessionTranscriptCandidates safety", () => {
-  test("keeps cross-agent absolute sessionFile for standard and custom store roots", () => {
-    const cases = [
-      {
-        storePath: "/tmp/godseye/agents/main/sessions/sessions.json",
-        sessionFile: "/tmp/godseye/agents/ops/sessions/sess-safe.jsonl",
-      },
-      {
-        storePath: "/srv/custom/agents/main/sessions/sessions.json",
-        sessionFile: "/srv/custom/agents/ops/sessions/sess-safe.jsonl",
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      const candidates = resolveSessionTranscriptCandidates(
-        "sess-safe",
-        testCase.storePath,
-        testCase.sessionFile,
-      );
-      expect(candidates.map((value) => path.resolve(value))).toContain(
-        path.resolve(testCase.sessionFile),
-      );
-    }
-  });
+  test.each([
+    {
+      storePath: "/tmp/openclaw/agents/main/sessions/sessions.json",
+      sessionFile: "/tmp/openclaw/agents/ops/sessions/sess-safe.jsonl",
+    },
+    {
+      storePath: "/srv/custom/agents/main/sessions/sessions.json",
+      sessionFile: "/srv/custom/agents/ops/sessions/sess-safe.jsonl",
+    },
+  ] as const)(
+    "keeps cross-agent absolute sessionFile candidate for $storePath",
+    ({ storePath, sessionFile }) => {
+      const candidates = resolveSessionTranscriptCandidates("sess-safe", storePath, sessionFile);
+      expect(candidates.map((value) => path.resolve(value))).toContain(path.resolve(sessionFile));
+    },
+  );
 
   test("drops unsafe session IDs instead of producing traversal paths", () => {
     const candidates = resolveSessionTranscriptCandidates(
       "../etc/passwd",
-      "/tmp/godseye/agents/main/sessions/sessions.json",
+      "/tmp/openclaw/agents/main/sessions/sessions.json",
     );
 
     expect(candidates).toEqual([]);
   });
 
   test("drops unsafe sessionFile candidates and keeps safe fallbacks", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const candidates = resolveSessionTranscriptCandidates(
       "sess-safe",
       storePath,
@@ -867,24 +889,24 @@ describe("resolveSessionTranscriptCandidates safety", () => {
   });
 
   test("prefers the current sessionId transcript before a stale sessionFile candidate", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const candidates = resolveSessionTranscriptCandidates(
       "11111111-1111-4111-8111-111111111111",
       storePath,
-      "/tmp/godseye/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl",
+      "/tmp/openclaw/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl",
     );
 
     expect(candidates[0]).toBe(
-      path.resolve("/tmp/godseye/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
+      path.resolve("/tmp/openclaw/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
     );
     expect(candidates).toContain(
-      path.resolve("/tmp/godseye/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl"),
+      path.resolve("/tmp/openclaw/agents/main/sessions/22222222-2222-4222-8222-222222222222.jsonl"),
     );
   });
 
   test("keeps explicit custom sessionFile ahead of synthesized fallback", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
-    const sessionFile = "/tmp/godseye/agents/main/sessions/custom-transcript.jsonl";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
+    const sessionFile = "/tmp/openclaw/agents/main/sessions/custom-transcript.jsonl";
     const candidates = resolveSessionTranscriptCandidates(
       "11111111-1111-4111-8111-111111111111",
       storePath,
@@ -895,8 +917,8 @@ describe("resolveSessionTranscriptCandidates safety", () => {
   });
 
   test("keeps custom topic-like transcript paths ahead of synthesized fallback", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
-    const sessionFile = "/tmp/godseye/agents/main/sessions/custom-topic-notes.jsonl";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
+    const sessionFile = "/tmp/openclaw/agents/main/sessions/custom-topic-notes.jsonl";
     const candidates = resolveSessionTranscriptCandidates(
       "11111111-1111-4111-8111-111111111111",
       storePath,
@@ -907,33 +929,33 @@ describe("resolveSessionTranscriptCandidates safety", () => {
   });
 
   test("keeps forked transcript paths ahead of synthesized fallback", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const sessionId = "11111111-1111-4111-8111-111111111111";
     const sessionFile =
-      "/tmp/godseye/agents/main/sessions/2026-03-23T16-30-00-000Z_11111111-1111-4111-8111-111111111111.jsonl";
+      "/tmp/openclaw/agents/main/sessions/2026-03-23T16-30-00-000Z_11111111-1111-4111-8111-111111111111.jsonl";
     const candidates = resolveSessionTranscriptCandidates(sessionId, storePath, sessionFile);
 
     expect(candidates[0]).toBe(path.resolve(sessionFile));
   });
 
   test("keeps timestamped custom transcript paths ahead of synthesized fallback", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const sessionId = "11111111-1111-4111-8111-111111111111";
-    const sessionFile = "/tmp/godseye/agents/main/sessions/2026-03-23T16-30-00-000Z_notes.jsonl";
+    const sessionFile = "/tmp/openclaw/agents/main/sessions/2026-03-23T16-30-00-000Z_notes.jsonl";
     const candidates = resolveSessionTranscriptCandidates(sessionId, storePath, sessionFile);
 
     expect(candidates[0]).toBe(path.resolve(sessionFile));
   });
 
   test("still treats generated topic transcripts from another session as stale", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const sessionId = "11111111-1111-4111-8111-111111111111";
     const staleSessionFile =
-      "/tmp/godseye/agents/main/sessions/22222222-2222-4222-8222-222222222222-topic-thread.jsonl";
+      "/tmp/openclaw/agents/main/sessions/22222222-2222-4222-8222-222222222222-topic-thread.jsonl";
     const candidates = resolveSessionTranscriptCandidates(sessionId, storePath, staleSessionFile);
 
     expect(candidates[0]).toBe(
-      path.resolve("/tmp/godseye/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
+      path.resolve("/tmp/openclaw/agents/main/sessions/11111111-1111-4111-8111-111111111111.jsonl"),
     );
     expect(candidates).toContain(path.resolve(staleSessionFile));
   });
@@ -943,47 +965,48 @@ describe("archiveSessionTranscripts", () => {
   let tmpDir: string;
   let storePath: string;
 
-  registerTempSessionStore("godseye-archive-test-", (nextTmpDir, nextStorePath) => {
+  registerTempSessionStore("openclaw-archive-test-", (nextTmpDir, nextStorePath) => {
     tmpDir = nextTmpDir;
     storePath = nextStorePath;
   });
 
   beforeAll(() => {
-    vi.stubEnv("GODSEYE_HOME", tmpDir);
+    vi.stubEnv("OPENCLAW_HOME", tmpDir);
   });
 
   afterAll(() => {
     vi.unstubAllEnvs();
   });
 
-  test("archives transcript from default and explicit sessionFile paths", () => {
-    const cases = [
-      {
-        sessionId: "sess-archive-1",
-        transcriptPath: path.join(tmpDir, "sess-archive-1.jsonl"),
-        args: { sessionId: "sess-archive-1", storePath, reason: "reset" as const },
-      },
-      {
+  test.each([
+    {
+      sessionId: "sess-archive-1",
+      transcriptFileName: "sess-archive-1.jsonl",
+      buildArgs: () => ({ sessionId: "sess-archive-1", storePath, reason: "reset" as const }),
+    },
+    {
+      sessionId: "sess-archive-2",
+      transcriptFileName: "custom-transcript.jsonl",
+      buildArgs: () => ({
         sessionId: "sess-archive-2",
-        transcriptPath: path.join(tmpDir, "custom-transcript.jsonl"),
-        args: {
-          sessionId: "sess-archive-2",
-          storePath: undefined,
-          sessionFile: path.join(tmpDir, "custom-transcript.jsonl"),
-          reason: "reset" as const,
-        },
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      fs.writeFileSync(testCase.transcriptPath, '{"type":"session"}\n', "utf-8");
-      const archived = archiveSessionTranscripts(testCase.args);
+        storePath: undefined,
+        sessionFile: path.join(tmpDir, "custom-transcript.jsonl"),
+        reason: "reset" as const,
+      }),
+    },
+  ] as const)(
+    "archives transcript from default and explicit sessionFile path for $sessionId",
+    ({ transcriptFileName, buildArgs }) => {
+      const transcriptPath = path.join(tmpDir, transcriptFileName);
+      const args = buildArgs();
+      fs.writeFileSync(transcriptPath, '{"type":"session"}\n', "utf-8");
+      const archived = archiveSessionTranscripts(args);
       expect(archived).toHaveLength(1);
       expect(archived[0]).toContain(".reset.");
-      expect(fs.existsSync(testCase.transcriptPath)).toBe(false);
+      expect(fs.existsSync(transcriptPath)).toBe(false);
       expect(fs.existsSync(archived[0])).toBe(true);
-    }
-  });
+    },
+  );
 
   test("returns empty array when no transcript files exist", () => {
     const archived = archiveSessionTranscripts({

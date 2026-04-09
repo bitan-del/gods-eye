@@ -1,6 +1,6 @@
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import { vi } from "vitest";
-import type { GodsEyeConfig, TelegramAccountConfig } from "../runtime-api.js";
+import type { OpenClawConfig, TelegramAccountConfig } from "../runtime-api.js";
 import type { RegisterTelegramNativeCommandsParams } from "./bot-native-commands.js";
 
 export type NativeCommandTestParams = RegisterTelegramNativeCommandsParams;
@@ -27,7 +27,7 @@ export function createNativeCommandTestParams(
         },
         command: vi.fn(),
       } as unknown as NativeCommandTestParams["bot"]),
-    cfg: params.cfg ?? ({} as GodsEyeConfig),
+    cfg: params.cfg ?? ({} as OpenClawConfig),
     runtime:
       params.runtime ??
       ({
@@ -98,7 +98,7 @@ export function createTelegramTopicCommandContext(params?: {
       chat: {
         id: params?.chatId ?? -1001234567890,
         type: "supergroup" as const,
-        title: params?.title ?? "Gods Eye",
+        title: params?.title ?? "OpenClaw",
         is_forum: true,
       },
       message_thread_id: params?.threadId ?? 42,

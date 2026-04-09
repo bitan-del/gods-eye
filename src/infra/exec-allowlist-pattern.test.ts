@@ -25,20 +25,20 @@ describe("matchesExecAllowlistPattern", () => {
   });
 
   it("expands home-prefix patterns", () => {
-    const prevGodsEyeHome = process.env.GODSEYE_HOME;
+    const prevOpenClawHome = process.env.OPENCLAW_HOME;
     const prevHome = process.env.HOME;
-    process.env.GODSEYE_HOME = "/srv/godseye-home";
+    process.env.OPENCLAW_HOME = "/srv/openclaw-home";
     process.env.HOME = "/home/other";
-    const godsEyeHome = path.join(path.resolve("/srv/godseye-home"), "bin", "tool");
+    const openClawHome = path.join(path.resolve("/srv/openclaw-home"), "bin", "tool");
     const fallbackHome = path.join(path.resolve("/home/other"), "bin", "tool");
     try {
-      expect(matchesExecAllowlistPattern("~/bin/tool", godsEyeHome)).toBe(true);
+      expect(matchesExecAllowlistPattern("~/bin/tool", openClawHome)).toBe(true);
       expect(matchesExecAllowlistPattern("~/bin/tool", fallbackHome)).toBe(false);
     } finally {
-      if (prevGodsEyeHome === undefined) {
-        delete process.env.GODSEYE_HOME;
+      if (prevOpenClawHome === undefined) {
+        delete process.env.OPENCLAW_HOME;
       } else {
-        process.env.GODSEYE_HOME = prevGodsEyeHome;
+        process.env.OPENCLAW_HOME = prevOpenClawHome;
       }
       if (prevHome === undefined) {
         delete process.env.HOME;

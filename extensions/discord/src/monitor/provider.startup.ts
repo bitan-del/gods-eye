@@ -8,11 +8,11 @@ import {
 } from "@buape/carbon";
 import type { GatewayPlugin } from "@buape/carbon/gateway";
 import { VoicePlugin } from "@buape/carbon/voice";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { isDangerousNameMatchingEnabled } from "openclaw/plugin-sdk/config-runtime";
-import { danger } from "openclaw/plugin-sdk/runtime-env";
-import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { isDangerousNameMatchingEnabled } from "godseye/plugin-sdk/config-runtime";
+import { danger } from "godseye/plugin-sdk/runtime-env";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { createDiscordRequestClient } from "../proxy-request-client.js";
 import type { DiscordGuildEntryResolved } from "./allow-list.js";
 import { createDiscordAutoPresenceController } from "./auto-presence.js";

@@ -9,14 +9,14 @@ import { applyCliProfileEnv, parseCliProfileArgs } from "./cli/profile.js";
 import { normalizeWindowsArgv } from "./cli/windows-argv.js";
 import { buildCliRespawnPlan } from "./entry.respawn.js";
 import { isTruthyEnvValue, normalizeEnv } from "./infra/env.js";
-import { ensureGodsEyeExecMarkerOnProcess } from "./infra/godseye-exec-env.js";
 import { isMainModule } from "./infra/is-main.js";
+import { ensureOpenClawExecMarkerOnProcess } from "./infra/openclaw-exec-env.js";
 import { installProcessWarningFilter } from "./infra/warning-filter.js";
 import { attachChildProcessBridge } from "./process/child-process-bridge.js";
 
 const ENTRY_WRAPPER_PAIRS = [
-  { wrapperBasename: "godseye.mjs", entryBasename: "entry.js" },
-  { wrapperBasename: "godseye.js", entryBasename: "entry.js" },
+  { wrapperBasename: "openclaw.mjs", entryBasename: "entry.js" },
+  { wrapperBasename: "openclaw.js", entryBasename: "entry.js" },
 ] as const;
 
 function shouldForceReadOnlyAuthStore(argv: string[]): boolean {
@@ -45,8 +45,8 @@ if (
   const { installGaxiosFetchCompat } = await import("./infra/gaxios-fetch-compat.js");
 
   await installGaxiosFetchCompat();
-  process.title = "godseye";
-  ensureGodsEyeExecMarkerOnProcess();
+  process.title = "openclaw";
+  ensureOpenClawExecMarkerOnProcess();
   installProcessWarningFilter();
   normalizeEnv();
   if (!isTruthyEnvValue(process.env.NODE_DISABLE_COMPILE_CACHE)) {
@@ -58,7 +58,7 @@ if (
   }
 
   if (shouldForceReadOnlyAuthStore(process.argv)) {
-    process.env.GODSEYE_AUTH_STORE_READONLY = "1";
+    process.env.OPENCLAW_AUTH_STORE_READONLY = "1";
   }
 
   if (process.argv.includes("--no-color")) {
@@ -89,7 +89,7 @@ if (
 
     child.once("error", (error) => {
       console.error(
-        "[godseye] Failed to respawn CLI:",
+        "[openclaw] Failed to respawn CLI:",
         error instanceof Error ? (error.stack ?? error.message) : error,
       );
       process.exit(1);
@@ -109,12 +109,12 @@ if (
     Promise.all([import("./version.js"), import("./infra/git-commit.js")])
       .then(([{ VERSION }, { resolveCommitHash }]) => {
         const commit = resolveCommitHash({ moduleUrl: import.meta.url });
-        console.log(commit ? `GodsEye ${VERSION} (${commit})` : `GodsEye ${VERSION}`);
+        console.log(commit ? `OpenClaw ${VERSION} (${commit})` : `OpenClaw ${VERSION}`);
         process.exit(0);
       })
       .catch((error) => {
         console.error(
-          "[godseye] Failed to resolve version:",
+          "[openclaw] Failed to resolve version:",
           error instanceof Error ? (error.stack ?? error.message) : error,
         );
         process.exitCode = 1;
@@ -127,20 +127,20 @@ if (
   if (!ensureCliRespawnReady()) {
     const parsedContainer = parseCliContainerArgs(process.argv);
     if (!parsedContainer.ok) {
-      console.error(`[godseye] ${parsedContainer.error}`);
+      console.error(`[openclaw] ${parsedContainer.error}`);
       process.exit(2);
     }
 
     const parsed = parseCliProfileArgs(parsedContainer.argv);
     if (!parsed.ok) {
       // Keep it simple; Commander will handle rich help/errors after we strip flags.
-      console.error(`[godseye] ${parsed.error}`);
+      console.error(`[openclaw] ${parsed.error}`);
       process.exit(2);
     }
 
     const containerTargetName = resolveCliContainerTarget(process.argv);
     if (containerTargetName && parsed.profile) {
-      console.error("[godseye] --container cannot be combined with --profile/--dev");
+      console.error("[openclaw] --container cannot be combined with --profile/--dev");
       process.exit(2);
     }
 
@@ -159,7 +159,7 @@ if (
 export function tryHandleRootHelpFastPath(
   argv: string[],
   deps: {
-    outputRootHelp?: () => void;
+    outputRootHelp?: () => void | Promise<void>;
     onError?: (error: unknown) => void;
     env?: NodeJS.ProcessEnv;
   } = {},
@@ -174,22 +174,24 @@ export function tryHandleRootHelpFastPath(
     deps.onError ??
     ((error: unknown) => {
       console.error(
-        "[godseye] Failed to display help:",
+        "[openclaw] Failed to display help:",
         error instanceof Error ? (error.stack ?? error.message) : error,
       );
       process.exitCode = 1;
     });
   if (deps.outputRootHelp) {
-    try {
-      deps.outputRootHelp();
-    } catch (error) {
-      handleError(error);
-    }
+    Promise.resolve()
+      .then(() => deps.outputRootHelp?.())
+      .catch(handleError);
     return true;
   }
-  import("./cli/program/root-help.js")
-    .then(({ outputRootHelp }) => {
-      outputRootHelp();
+  import("./cli/root-help-metadata.js")
+    .then(async ({ outputPrecomputedRootHelpText }) => {
+      if (outputPrecomputedRootHelpText()) {
+        return;
+      }
+      const { outputRootHelp } = await import("./cli/program/root-help.js");
+      await outputRootHelp();
     })
     .catch(handleError);
   return true;
@@ -203,7 +205,7 @@ function runMainOrRootHelp(argv: string[]): void {
     .then(({ runCli }) => runCli(argv))
     .catch((error) => {
       console.error(
-        "[godseye] Failed to start CLI:",
+        "[openclaw] Failed to start CLI:",
         error instanceof Error ? (error.stack ?? error.message) : error,
       );
       process.exitCode = 1;

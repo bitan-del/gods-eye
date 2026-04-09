@@ -1,9 +1,10 @@
 import { formatCliCommand } from "../../cli/command-format.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   canonicalizeMainSessionAlias,
   resolveAgentMainSessionKey,
 } from "../../config/sessions/main-session.js";
+import { normalizeOptionalLowercaseString } from "../../shared/string-coerce.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
 import { resolveSandboxConfigForAgent } from "./config.js";
 import {
@@ -22,7 +23,10 @@ function shouldSandboxSession(cfg: SandboxConfig, sessionKey: string, mainSessio
   return sessionKey.trim() !== mainSessionKey.trim();
 }
 
-function resolveMainSessionKeyForSandbox(params: { cfg?: GodsEyeConfig; agentId: string }): string {
+function resolveMainSessionKeyForSandbox(params: {
+  cfg?: OpenClawConfig;
+  agentId: string;
+}): string {
   if (params.cfg?.session?.scope === "global") {
     return "global";
   }
@@ -33,7 +37,7 @@ function resolveMainSessionKeyForSandbox(params: { cfg?: GodsEyeConfig; agentId:
 }
 
 function resolveComparableSessionKeyForSandbox(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   agentId: string;
   sessionKey: string;
 }): string {
@@ -44,7 +48,10 @@ function resolveComparableSessionKeyForSandbox(params: {
   });
 }
 
-export function resolveSandboxRuntimeStatus(params: { cfg?: GodsEyeConfig; sessionKey?: string }): {
+export function resolveSandboxRuntimeStatus(params: {
+  cfg?: OpenClawConfig;
+  sessionKey?: string;
+}): {
   agentId: string;
   sessionKey: string;
   mainSessionKey: string;
@@ -119,11 +126,11 @@ function shellEscapeSingleArg(value: string): string {
 }
 
 export function formatSandboxToolPolicyBlockedMessage(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   sessionKey?: string;
   toolName: string;
 }): string | undefined {
-  const tool = params.toolName.trim().toLowerCase();
+  const tool = normalizeOptionalLowercaseString(params.toolName);
   if (!tool) {
     return undefined;
   }
@@ -171,9 +178,9 @@ export function formatSandboxToolPolicyBlockedMessage(params: {
   }
   const explainCommand = runtime.sessionKey
     ? hasUnsafeControlChars(runtime.sessionKey)
-      ? `godseye sandbox explain --agent ${runtime.agentId}`
-      : `godseye sandbox explain --session ${shellEscapeSingleArg(runtime.sessionKey)}`
-    : "godseye sandbox explain";
+      ? `openclaw sandbox explain --agent ${runtime.agentId}`
+      : `openclaw sandbox explain --session ${shellEscapeSingleArg(runtime.sessionKey)}`
+    : "openclaw sandbox explain";
   lines.push(`- See: ${formatCliCommand(explainCommand)}`);
 
   return lines.join("\n");

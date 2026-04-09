@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { readPostCompactionContext } from "./post-compaction-context.js";
 
 describe("readPostCompactionContext", () => {
@@ -27,7 +27,7 @@ describe("readPostCompactionContext", () => {
           compaction: { postCompactionSections },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = await readPostCompactionContext(tmpDir, cfg);
     expect(result).not.toBeNull();
     expect(result).toContain("Do startup things");
@@ -226,7 +226,7 @@ Never modify memory/YYYY-MM-DD.md destructively.
     fs.writeFileSync(path.join(tmpDir, "AGENTS.md"), content);
     const cfg = {
       agents: { defaults: { userTimezone: "America/New_York", timeFormat: "12" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     // 2026-03-03 14:00 UTC = 2026-03-03 09:00 EST
     const nowMs = Date.UTC(2026, 2, 3, 14, 0, 0);
     const result = await readPostCompactionContext(tmpDir, cfg, nowMs);
@@ -234,7 +234,7 @@ Never modify memory/YYYY-MM-DD.md destructively.
     expect(result).toContain("memory/2026-03-03.md");
     expect(result).not.toContain("memory/YYYY-MM-DD.md");
     expect(result).toContain(
-      "Current time: Tuesday, March 3rd, 2026 — 9:00 AM (America/New_York) / 2026-03-03 14:00 UTC",
+      "Current time: Tuesday, March 3rd, 2026 - 9:00 AM (America/New_York) / 2026-03-03 14:00 UTC",
     );
   });
 
@@ -272,7 +272,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: ["Critical Rules"] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       expect(result).not.toBeNull();
       expect(result).toContain("Critical Rules");
@@ -291,7 +291,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: ["Onboarding", "Safety"] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       expect(result).not.toBeNull();
       expect(result).toContain("Onboard things");
@@ -308,7 +308,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: [] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       // Empty array = opt-out: no post-compaction context injection
       expect(result).toBeNull();
@@ -323,7 +323,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: ["Nonexistent Section"] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       expect(result).toBeNull();
     });
@@ -340,7 +340,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: ["Boot Sequence"] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       expect(result).not.toBeNull();
       // Must not reference the hardcoded default section name
@@ -377,7 +377,7 @@ Read WORKFLOW.md on startup.
             compaction: { postCompactionSections: ["workflow init"] },
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const result = await readPostCompactionContext(tmpDir, cfg);
       expect(result).not.toBeNull();
       expect(result).toContain("Init things");

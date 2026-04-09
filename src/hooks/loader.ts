@@ -7,14 +7,16 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { openBoundaryFile } from "../infra/boundary-file-read.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { sanitizeForLog } from "../terminal/ansi.js";
 import { shouldIncludeHook } from "./config.js";
 import { buildImportUrl } from "./import-url.js";
 import type { InternalHookHandler } from "./internal-hooks.js";
 import { registerInternalHook } from "./internal-hooks.js";
+import { getLegacyInternalHookHandlers } from "./legacy-config.js";
 import { resolveFunctionModuleExport } from "./module-loader.js";
 import { loadWorkspaceHookEntries } from "./workspace.js";
 
@@ -25,13 +27,13 @@ function safeLogValue(value: string): string {
 }
 
 function maybeWarnTrustedHookSource(source: string): void {
-  if (source === "godseye-workspace") {
+  if (source === "openclaw-workspace") {
     log.warn(
       "Loading workspace hook code into the gateway process. Workspace hooks are trusted local code.",
     );
     return;
   }
-  if (source === "godseye-managed") {
+  if (source === "openclaw-managed") {
     log.warn(
       "Loading managed hook code into the gateway process. Managed hooks are trusted local code.",
     );
@@ -45,7 +47,7 @@ function maybeWarnTrustedHookSource(source: string): void {
  * 1. Directory-based discovery (bundled, managed, workspace)
  * 2. Legacy config handlers (backwards compatibility)
  *
- * @param cfg - GodsEye configuration
+ * @param cfg - OpenClaw configuration
  * @param workspaceDir - Workspace directory for hook discovery
  * @returns Number of handlers successfully loaded
  *
@@ -58,15 +60,15 @@ function maybeWarnTrustedHookSource(source: string): void {
  * ```
  */
 export async function loadInternalHooks(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   workspaceDir: string,
   opts?: {
     managedHooksDir?: string;
     bundledHooksDir?: string;
   },
 ): Promise<number> {
-  // Check if hooks are enabled
-  if (!cfg.hooks?.internal?.enabled) {
+  // Hooks are on by default; only skip when explicitly disabled.
+  if (cfg.hooks?.internal?.enabled === false) {
     return 0;
   }
 
@@ -136,24 +138,22 @@ export async function loadInternalHooks(
           registerInternalHook(event, handler);
         }
 
-        log.info(
+        log.debug(
           `Registered hook: ${safeLogValue(entry.hook.name)} -> ${events.map((event) => safeLogValue(event)).join(", ")}${exportName !== "default" ? ` (export: ${safeLogValue(exportName)})` : ""}`,
         );
         loadedCount++;
       } catch (err) {
         log.error(
-          `Failed to load hook ${safeLogValue(entry.hook.name)}: ${safeLogValue(err instanceof Error ? err.message : String(err))}`,
+          `Failed to load hook ${safeLogValue(entry.hook.name)}: ${safeLogValue(formatErrorMessage(err))}`,
         );
       }
     }
   } catch (err) {
-    log.error(
-      `Failed to load directory-based hooks: ${safeLogValue(err instanceof Error ? err.message : String(err))}`,
-    );
+    log.error(`Failed to load directory-based hooks: ${safeLogValue(formatErrorMessage(err))}`);
   }
 
   // 2. Load legacy config handlers (backwards compatibility)
-  const handlers = cfg.hooks.internal.handlers ?? [];
+  const handlers = getLegacyInternalHookHandlers(cfg);
   for (const handlerConfig of handlers) {
     try {
       // Legacy handler paths: keep them workspace-relative.
@@ -207,7 +207,7 @@ export async function loadInternalHooks(
       );
 
       // Legacy handlers are always workspace-relative, so use mtime-based cache busting
-      const importUrl = buildImportUrl(safeModulePath, "godseye-workspace");
+      const importUrl = buildImportUrl(safeModulePath, "openclaw-workspace");
       const mod = (await import(importUrl)) as Record<string, unknown>;
 
       // Get the handler function
@@ -225,13 +225,13 @@ export async function loadInternalHooks(
       }
 
       registerInternalHook(handlerConfig.event, handler);
-      log.info(
+      log.debug(
         `Registered hook (legacy): ${safeLogValue(handlerConfig.event)} -> ${safeLogValue(modulePath)}${exportName !== "default" ? `#${safeLogValue(exportName)}` : ""}`,
       );
       loadedCount++;
     } catch (err) {
       log.error(
-        `Failed to load hook handler from ${safeLogValue(handlerConfig.module)}: ${safeLogValue(err instanceof Error ? err.message : String(err))}`,
+        `Failed to load hook handler from ${safeLogValue(handlerConfig.module)}: ${safeLogValue(formatErrorMessage(err))}`,
       );
     }
   }

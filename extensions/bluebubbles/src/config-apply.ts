@@ -1,5 +1,5 @@
 import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 
 type BlueBubblesConfigPatch = {
   serverUrl?: string;
@@ -8,6 +8,10 @@ type BlueBubblesConfigPatch = {
 };
 
 type AccountEnabledMode = boolean | "preserve-or-true";
+type BlueBubblesAccountEntry = {
+  enabled?: boolean;
+  [key: string]: unknown;
+};
 
 function normalizePatch(
   patch: BlueBubblesConfigPatch,
@@ -30,12 +34,12 @@ function normalizePatch(
 }
 
 export function applyBlueBubblesConnectionConfig(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   patch: BlueBubblesConfigPatch;
   onlyDefinedFields?: boolean;
   accountEnabled?: AccountEnabledMode;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const patch = normalizePatch(params.patch, params.onlyDefinedFields === true);
   if (params.accountId === DEFAULT_ACCOUNT_ID) {
     return {
@@ -51,7 +55,9 @@ export function applyBlueBubblesConnectionConfig(params: {
     };
   }
 
-  const currentAccount = params.cfg.channels?.bluebubbles?.accounts?.[params.accountId];
+  const currentAccount = params.cfg.channels?.bluebubbles?.accounts?.[params.accountId] as
+    | BlueBubblesAccountEntry
+    | undefined;
   const enabled =
     params.accountEnabled === "preserve-or-true"
       ? (currentAccount?.enabled ?? true)

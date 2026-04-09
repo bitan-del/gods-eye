@@ -1,5 +1,5 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { discoverOpenAICompatibleLocalModels } from "openclaw/plugin-sdk/provider-setup";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { discoverOpenAICompatibleLocalModels } from "godseye/plugin-sdk/provider-setup";
 import { VLLM_DEFAULT_BASE_URL, VLLM_PROVIDER_LABEL } from "./defaults.js";
 
 type ModelsConfig = NonNullable<OpenClawConfig["models"]>;

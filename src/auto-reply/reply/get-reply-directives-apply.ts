@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry, SessionScope } from "../../config/sessions/types.js";
 import { enqueueSystemEvent } from "../../infra/system-events.js";
 import type { MsgContext } from "../templating.js";
@@ -11,8 +11,8 @@ import { clearInlineDirectives } from "./get-reply-directives-utils.js";
 import type { createModelSelectionState } from "./model-selection.js";
 import type { TypingController } from "./typing.js";
 
-type AgentDefaults = NonNullable<GodsEyeConfig["agents"]>["defaults"];
-type AgentEntry = NonNullable<NonNullable<GodsEyeConfig["agents"]>["list"]>[number];
+type AgentDefaults = NonNullable<OpenClawConfig["agents"]>["defaults"];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
 let commandsStatusPromise: Promise<typeof import("./commands-status.runtime.js")> | null = null;
 let directiveLevelsPromise: Promise<typeof import("./directive-handling.levels.js")> | null = null;
@@ -67,7 +67,7 @@ export type ApplyDirectiveResult =
 
 export async function applyInlineDirectiveOverrides(params: {
   ctx: MsgContext;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   agentDir: string;
   agentCfg: AgentDefaults;
@@ -233,6 +233,7 @@ export async function applyInlineDirectiveOverrides(params: {
       currentVerboseLevel,
       currentReasoningLevel,
       currentElevatedLevel,
+      messageProvider: ctx.Provider,
       surface: ctx.Surface,
       gatewayClientScopes: ctx.GatewayClientScopes,
     });
@@ -328,6 +329,7 @@ export async function applyInlineDirectiveOverrides(params: {
     initialModelLabel,
     formatModelSwitchEvent,
     agentCfg,
+    messageProvider: ctx.Provider,
     surface: ctx.Surface,
     gatewayClientScopes: ctx.GatewayClientScopes,
   });

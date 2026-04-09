@@ -4,8 +4,8 @@ import { formatBackupCreateSummary, type BackupCreateResult } from "./backup-cre
 function makeResult(overrides: Partial<BackupCreateResult> = {}): BackupCreateResult {
   return {
     createdAt: "2026-01-01T00:00:00.000Z",
-    archiveRoot: "godseye-backup-2026-01-01",
-    archivePath: "/tmp/godseye-backup.tar.gz",
+    archiveRoot: "openclaw-backup-2026-01-01",
+    archivePath: "/tmp/openclaw-backup.tar.gz",
     dryRun: false,
     includeWorkspace: true,
     onlyConfig: false,
@@ -17,68 +17,69 @@ function makeResult(overrides: Partial<BackupCreateResult> = {}): BackupCreateRe
 }
 
 describe("formatBackupCreateSummary", () => {
-  it("formats created archives with included and skipped paths", () => {
-    const lines = formatBackupCreateSummary(
-      makeResult({
+  const backupArchiveLine = "Backup archive: /tmp/openclaw-backup.tar.gz";
+
+  it.each([
+    {
+      name: "formats created archives with included and skipped paths",
+      result: makeResult({
         verified: true,
         assets: [
           {
             kind: "state",
             sourcePath: "/state",
             archivePath: "archive/state",
-            displayPath: "~/.godseye",
+            displayPath: "~/.openclaw",
           },
         ],
         skipped: [
           {
             kind: "workspace",
             sourcePath: "/workspace",
-            displayPath: "~/Projects/godseye",
+            displayPath: "~/Projects/openclaw",
             reason: "covered",
-            coveredBy: "~/.godseye",
+            coveredBy: "~/.openclaw",
           },
         ],
       }),
-    );
-
-    expect(lines).toEqual([
-      "Backup archive: /tmp/godseye-backup.tar.gz",
-      "Included 1 path:",
-      "- state: ~/.godseye",
-      "Skipped 1 path:",
-      "- workspace: ~/Projects/godseye (covered by ~/.godseye)",
-      "Created /tmp/godseye-backup.tar.gz",
-      "Archive verification: passed",
-    ]);
-  });
-
-  it("formats dry runs and pluralized counts", () => {
-    const lines = formatBackupCreateSummary(
-      makeResult({
+      expected: [
+        backupArchiveLine,
+        "Included 1 path:",
+        "- state: ~/.openclaw",
+        "Skipped 1 path:",
+        "- workspace: ~/Projects/openclaw (covered by ~/.openclaw)",
+        "Created /tmp/openclaw-backup.tar.gz",
+        "Archive verification: passed",
+      ],
+    },
+    {
+      name: "formats dry runs and pluralized counts",
+      result: makeResult({
         dryRun: true,
         assets: [
           {
             kind: "config",
             sourcePath: "/config",
             archivePath: "archive/config",
-            displayPath: "~/.godseye/config.json",
+            displayPath: "~/.openclaw/config.json",
           },
           {
             kind: "credentials",
             sourcePath: "/oauth",
             archivePath: "archive/oauth",
-            displayPath: "~/.godseye/oauth",
+            displayPath: "~/.openclaw/oauth",
           },
         ],
       }),
-    );
-
-    expect(lines).toEqual([
-      "Backup archive: /tmp/godseye-backup.tar.gz",
-      "Included 2 paths:",
-      "- config: ~/.godseye/config.json",
-      "- credentials: ~/.godseye/oauth",
-      "Dry run only; archive was not written.",
-    ]);
+      expected: [
+        backupArchiveLine,
+        "Included 2 paths:",
+        "- config: ~/.openclaw/config.json",
+        "- credentials: ~/.openclaw/oauth",
+        "Dry run only; archive was not written.",
+      ],
+    },
+  ])("$name", ({ result, expected }) => {
+    expect(formatBackupCreateSummary(result)).toEqual(expected);
   });
 });

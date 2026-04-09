@@ -1,31 +1,55 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import type { ChunkMode } from "godseye/plugin-sdk/reply-runtime";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../runtime-api.js";
+import type { OpenClawConfig, PluginRuntime } from "../../runtime-api.js";
 import { deliverMattermostReplyPayload } from "./reply-delivery.js";
+
+type DeliverMattermostReplyPayloadParams = Parameters<typeof deliverMattermostReplyPayload>[0];
+type ReplyDeliveryMarkdownTableMode = Parameters<
+  DeliverMattermostReplyPayloadParams["core"]["channel"]["text"]["convertMarkdownTables"]
+>[1];
+
+function createReplyDeliveryCore(): DeliverMattermostReplyPayloadParams["core"] {
+  return {
+    channel: {
+      text: {
+        chunkByNewline: vi.fn((text: string) => [text]),
+        chunkMarkdownText: vi.fn((text: string) => [text]),
+        convertMarkdownTables: vi.fn((text: string) => text),
+        chunkText: vi.fn((text: string) => [text]),
+        chunkTextWithMode: vi.fn((text: string) => [text]),
+        resolveMarkdownTableMode: vi.fn<() => ReplyDeliveryMarkdownTableMode>(() => "off"),
+        resolveChunkMode: vi.fn<() => ChunkMode>(() => "length"),
+        resolveTextChunkLimit: vi.fn(
+          (
+            _cfg: OpenClawConfig | undefined,
+            _provider?: string,
+            _accountId?: string | null,
+            opts?: { fallbackLimit?: number },
+          ) => opts?.fallbackLimit ?? 4000,
+        ),
+        hasControlCommand: vi.fn(() => false),
+        chunkMarkdownTextWithMode: vi.fn((text: string) => [text]),
+      },
+    },
+  } as unknown as PluginRuntime;
+}
 
 describe("deliverMattermostReplyPayload", () => {
   it("passes agent-scoped mediaLocalRoots when sending media paths", async () => {
-    const previousStateDir = process.env.GODSEYE_STATE_DIR;
-    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-mm-state-"));
-    process.env.GODSEYE_STATE_DIR = stateDir;
+    const previousStateDir = process.env.OPENCLAW_STATE_DIR;
+    const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-mm-state-"));
+    process.env.OPENCLAW_STATE_DIR = stateDir;
 
     try {
       const sendMessage = vi.fn(async () => undefined);
-      const core = {
-        channel: {
-          text: {
-            convertMarkdownTables: vi.fn((text: string) => text),
-            resolveChunkMode: vi.fn(() => "length"),
-            chunkMarkdownTextWithMode: vi.fn((text: string) => [text]),
-          },
-        },
-      } as any;
+      const core = createReplyDeliveryCore();
 
       const agentId = "agent-1";
       const mediaUrl = `file://${path.join(stateDir, `workspace-${agentId}`, "photo.png")}`;
-      const cfg = {} satisfies GodsEyeConfig;
+      const cfg = {} satisfies OpenClawConfig;
 
       await deliverMattermostReplyPayload({
         core,
@@ -54,9 +78,9 @@ describe("deliverMattermostReplyPayload", () => {
       );
     } finally {
       if (previousStateDir === undefined) {
-        delete process.env.GODSEYE_STATE_DIR;
+        delete process.env.OPENCLAW_STATE_DIR;
       } else {
-        process.env.GODSEYE_STATE_DIR = previousStateDir;
+        process.env.OPENCLAW_STATE_DIR = previousStateDir;
       }
       await fs.rm(stateDir, { recursive: true, force: true });
     }
@@ -64,16 +88,9 @@ describe("deliverMattermostReplyPayload", () => {
 
   it("forwards replyToId for text-only chunked replies", async () => {
     const sendMessage = vi.fn(async () => undefined);
-    const cfg = {} satisfies GodsEyeConfig;
-    const core = {
-      channel: {
-        text: {
-          convertMarkdownTables: vi.fn((text: string) => text),
-          resolveChunkMode: vi.fn(() => "length"),
-          chunkMarkdownTextWithMode: vi.fn(() => ["hello"]),
-        },
-      },
-    } as any;
+    const cfg = {} satisfies OpenClawConfig;
+    const core = createReplyDeliveryCore();
+    core.channel.text.chunkMarkdownTextWithMode = vi.fn(() => ["hello"]);
 
     await deliverMattermostReplyPayload({
       core,

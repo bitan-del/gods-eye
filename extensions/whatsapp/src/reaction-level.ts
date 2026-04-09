@@ -1,9 +1,9 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   resolveReactionLevel,
   type ReactionLevel,
   type ResolvedReactionLevel,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 import { resolveMergedWhatsAppAccountConfig } from "./account-config.js";
 
 export type WhatsAppReactionLevel = ReactionLevel;

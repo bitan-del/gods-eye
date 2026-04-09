@@ -3,15 +3,15 @@ import {
   noteChannelLookupFailure,
   noteChannelLookupSummary,
   resolveEntriesWithOptionalToken,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   parseMentionOrPrefixedId,
   promptLegacyChannelAllowFromForAccount,
   type WizardPrompter,
-} from "godseye/plugin-sdk/setup";
+} from "godseye/plugin-sdk/setup-runtime";
 import type {
   ChannelSetupWizard,
   ChannelSetupWizardAllowFromEntry,
-} from "godseye/plugin-sdk/setup";
+} from "godseye/plugin-sdk/setup-runtime";
 import { formatDocsLink } from "godseye/plugin-sdk/setup-tools";
 import {
   resolveDefaultSlackAccountId,
@@ -50,10 +50,10 @@ async function resolveSlackAllowFromEntries(params: {
 }
 
 async function promptSlackAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   const parseId = (value: string) =>
     parseMentionOrPrefixedId({
       value,
@@ -101,7 +101,7 @@ async function promptSlackAllowFrom(params: {
 }
 
 async function resolveSlackGroupAllowlist(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   credentialValues: { botToken?: string };
   entries: string[];

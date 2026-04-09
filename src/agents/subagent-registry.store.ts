@@ -2,6 +2,7 @@ import os from "node:os";
 import path from "node:path";
 import { resolveStateDir } from "../config/paths.js";
 import { loadJsonFile, saveJsonFile } from "../infra/json-file.js";
+import { readStringValue } from "../shared/string-coerce.js";
 import { normalizeDeliveryContext } from "../utils/delivery-context.js";
 import type { SubagentRunRecord } from "./subagent-registry.types.js";
 
@@ -31,12 +32,12 @@ type LegacySubagentRunRecord = PersistedSubagentRunRecord & {
 };
 
 function resolveSubagentStateDir(env: NodeJS.ProcessEnv = process.env): string {
-  const explicit = env.GODSEYE_STATE_DIR?.trim();
+  const explicit = env.OPENCLAW_STATE_DIR?.trim();
   if (explicit) {
     return resolveStateDir(env);
   }
   if (env.VITEST || env.NODE_ENV === "test") {
-    return path.join(os.tmpdir(), "godseye-test-state", String(process.pid));
+    return path.join(os.tmpdir(), "openclaw-test-state", String(process.pid));
   }
   return resolveStateDir(env);
 }
@@ -84,9 +85,8 @@ export function loadSubagentRegistryFromDisk(): Map<string, SubagentRunRecord> {
           : undefined;
     const requesterOrigin = normalizeDeliveryContext(
       typed.requesterOrigin ?? {
-        channel: typeof typed.requesterChannel === "string" ? typed.requesterChannel : undefined,
-        accountId:
-          typeof typed.requesterAccountId === "string" ? typed.requesterAccountId : undefined,
+        channel: readStringValue(typed.requesterChannel),
+        accountId: readStringValue(typed.requesterAccountId),
       },
     );
     const {

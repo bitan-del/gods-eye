@@ -1,9 +1,9 @@
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import {
   buildTogetherModelDefinition,
-  type ModelProviderConfig,
   TOGETHER_BASE_URL,
   TOGETHER_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
+} from "./models.js";
 
 export function buildTogetherProvider(): ModelProviderConfig {
   return {

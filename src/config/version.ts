@@ -3,7 +3,7 @@ import {
   normalizeLegacyDotBetaVersion,
 } from "../infra/semver-compare.js";
 
-export type GodsEyeVersion = {
+export type OpenClawVersion = {
   major: number;
   minor: number;
   patch: number;
@@ -13,7 +13,7 @@ export type GodsEyeVersion = {
 
 const VERSION_RE = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
-export function parseGodsEyeVersion(raw: string | null | undefined): GodsEyeVersion | null {
+export function parseOpenClawVersion(raw: string | null | undefined): OpenClawVersion | null {
   if (!raw) {
     return null;
   }
@@ -33,20 +33,20 @@ export function parseGodsEyeVersion(raw: string | null | undefined): GodsEyeVers
   };
 }
 
-export function normalizeGodsEyeVersionBase(raw: string | null | undefined): string | null {
-  const parsed = parseGodsEyeVersion(raw);
+export function normalizeOpenClawVersionBase(raw: string | null | undefined): string | null {
+  const parsed = parseOpenClawVersion(raw);
   if (!parsed) {
     return null;
   }
   return `${parsed.major}.${parsed.minor}.${parsed.patch}`;
 }
 
-export function isSameGodsEyeStableFamily(
+export function isSameOpenClawStableFamily(
   a: string | null | undefined,
   b: string | null | undefined,
 ): boolean {
-  const parsedA = parseGodsEyeVersion(a);
-  const parsedB = parseGodsEyeVersion(b);
+  const parsedA = parseOpenClawVersion(a);
+  const parsedB = parseOpenClawVersion(b);
   if (!parsedA || !parsedB) {
     return false;
   }
@@ -60,12 +60,12 @@ export function isSameGodsEyeStableFamily(
   );
 }
 
-export function compareGodsEyeVersions(
+export function compareOpenClawVersions(
   a: string | null | undefined,
   b: string | null | undefined,
 ): number | null {
-  const parsedA = parseGodsEyeVersion(a);
-  const parsedB = parseGodsEyeVersion(b);
+  const parsedA = parseOpenClawVersion(a);
+  const parsedB = parseOpenClawVersion(b);
   if (!parsedA || !parsedB) {
     return null;
   }
@@ -104,8 +104,8 @@ export function shouldWarnOnTouchedVersion(
   current: string | null | undefined,
   touched: string | null | undefined,
 ): boolean {
-  const parsedCurrent = parseGodsEyeVersion(current);
-  const parsedTouched = parseGodsEyeVersion(touched);
+  const parsedCurrent = parseOpenClawVersion(current);
+  const parsedTouched = parseOpenClawVersion(touched);
   if (
     parsedCurrent &&
     parsedTouched &&
@@ -116,14 +116,14 @@ export function shouldWarnOnTouchedVersion(
   ) {
     return false;
   }
-  if (isSameGodsEyeStableFamily(current, touched)) {
+  if (isSameOpenClawStableFamily(current, touched)) {
     return false;
   }
-  const cmp = compareGodsEyeVersions(current, touched);
+  const cmp = compareOpenClawVersions(current, touched);
   return cmp !== null && cmp < 0;
 }
 
-function releaseRank(version: GodsEyeVersion): number {
+function releaseRank(version: OpenClawVersion): number {
   if (version.prerelease?.length) {
     return 0;
   }

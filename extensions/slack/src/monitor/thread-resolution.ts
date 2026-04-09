@@ -1,5 +1,5 @@
 import type { WebClient as SlackWebClient } from "@slack/web-api";
-import { pruneMapToMaxSize } from "godseye/plugin-sdk/infra-runtime";
+import { pruneMapToMaxSize } from "godseye/plugin-sdk/collection-runtime";
 import { logVerbose, shouldLogVerbose } from "godseye/plugin-sdk/runtime-env";
 import type { SlackMessageEvent } from "../types.js";
 

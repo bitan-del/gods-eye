@@ -1,4 +1,4 @@
-import { isDangerousNameMatchingEnabled } from "openclaw/plugin-sdk/config-runtime";
+import { isDangerousNameMatchingEnabled } from "godseye/plugin-sdk/config-runtime";
 import type { ResolvedZalouserAccount } from "./accounts.js";
 
 export function isZalouserMutableGroupEntry(raw: string): boolean {

@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveGatewayPort } from "../config/config.js";
 import { isValidEnvSecretRefId, type SecretInput } from "../config/types.secrets.js";
 import {
@@ -11,6 +11,8 @@ import { findTailscaleBinary } from "../infra/tailscale.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { resolveDefaultSecretProviderAlias } from "../secrets/ref-contract.js";
 import { validateIPv4AddressInput } from "../shared/net/ipv4.js";
+import { normalizeOptionalString, readStringValue } from "../shared/string-coerce.js";
+import { normalizeStringEntries } from "../shared/string-normalization.js";
 import { note } from "../terminal/note.js";
 import { buildGatewayAuthConfig } from "./configure.gateway-auth.js";
 import { confirm, select, text } from "./configure.shared.js";
@@ -25,10 +27,10 @@ type GatewayAuthChoice = "token" | "password" | "trusted-proxy";
 type GatewayTokenInputMode = "plaintext" | "ref";
 
 export async function promptGatewayConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   runtime: RuntimeEnv,
 ): Promise<{
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   port: number;
   token?: string;
 }> {
@@ -86,7 +88,7 @@ export async function promptGatewayConfig(
       }),
       runtime,
     );
-    customBindHost = typeof input === "string" ? input : undefined;
+    customBindHost = readStringValue(input);
   }
 
   let authMode = guardCancel(
@@ -192,12 +194,12 @@ export async function promptGatewayConfig(
       const envVar = guardCancel(
         await text({
           message: "Gateway token env var",
-          initialValue: "GODSEYE_GATEWAY_TOKEN",
-          placeholder: "GODSEYE_GATEWAY_TOKEN",
+          initialValue: "OPENCLAW_GATEWAY_TOKEN",
+          placeholder: "OPENCLAW_GATEWAY_TOKEN",
           validate: (value) => {
-            const candidate = String(value ?? "").trim();
+            const candidate = normalizeOptionalString(value) ?? "";
             if (!isValidEnvSecretRefId(candidate)) {
-              return "Use an env var name like GODSEYE_GATEWAY_TOKEN.";
+              return "Use an env var name like OPENCLAW_GATEWAY_TOKEN.";
             }
             const resolved = process.env[candidate]?.trim();
             if (!resolved) {
@@ -208,7 +210,7 @@ export async function promptGatewayConfig(
         }),
         runtime,
       );
-      const envVarName = String(envVar ?? "").trim();
+      const envVarName = normalizeOptionalString(envVar) ?? "";
       gatewayToken = {
         source: "env",
         provider: resolveDefaultSecretProviderAlias(cfg, "env", {
@@ -216,7 +218,7 @@ export async function promptGatewayConfig(
         }),
         id: envVarName,
       };
-      note(`Validated ${envVarName}. GodsEye will store a token SecretRef.`, "Gateway token");
+      note(`Validated ${envVarName}. OpenClaw will store a token SecretRef.`, "Gateway token");
     } else {
       const tokenInput = guardCancel(
         await text({
@@ -238,18 +240,18 @@ export async function promptGatewayConfig(
       }),
       runtime,
     );
-    gatewayPassword = String(password ?? "").trim();
+    gatewayPassword = normalizeOptionalString(password) ?? "";
   }
 
   if (authMode === "trusted-proxy") {
     note(
       [
-        "Trusted proxy mode: GodsEye trusts user identity from a reverse proxy.",
+        "Trusted proxy mode: OpenClaw trusts user identity from a reverse proxy.",
         "The proxy must authenticate users and pass identity via headers.",
         "Only requests from specified proxy IPs will be trusted.",
         "",
         "Common use cases: Pomerium, Caddy + OAuth, Traefik + forward auth",
-        "Docs: https://docs.gods-eye.org/gateway/trusted-proxy-auth",
+        "Docs: https://docs.openclaw.ai/gateway/trusted-proxy-auth",
       ].join("\n"),
       "Trusted Proxy Auth",
     );
@@ -272,10 +274,7 @@ export async function promptGatewayConfig(
       runtime,
     );
     const requiredHeaders = requiredHeadersRaw
-      ? String(requiredHeadersRaw)
-          .split(",")
-          .map((h) => h.trim())
-          .filter(Boolean)
+      ? normalizeStringEntries(String(requiredHeadersRaw).split(","))
       : [];
 
     const allowUsersRaw = guardCancel(
@@ -286,10 +285,7 @@ export async function promptGatewayConfig(
       runtime,
     );
     const allowUsers = allowUsersRaw
-      ? String(allowUsersRaw)
-          .split(",")
-          .map((u) => u.trim())
-          .filter(Boolean)
+      ? normalizeStringEntries(String(allowUsersRaw).split(","))
       : [];
 
     const trustedProxiesRaw = guardCancel(
@@ -297,7 +293,7 @@ export async function promptGatewayConfig(
         message: "Trusted proxy IPs (comma-separated)",
         placeholder: "10.0.1.10,192.168.1.5",
         validate: (value) => {
-          if (!value || String(value).trim() === "") {
+          if (!normalizeOptionalString(value)) {
             return "At least one trusted proxy IP is required";
           }
           return undefined;
@@ -305,13 +301,10 @@ export async function promptGatewayConfig(
       }),
       runtime,
     );
-    trustedProxies = String(trustedProxiesRaw)
-      .split(",")
-      .map((ip) => ip.trim())
-      .filter(Boolean);
+    trustedProxies = normalizeStringEntries(String(trustedProxiesRaw).split(","));
 
     trustedProxyConfig = {
-      userHeader: String(userHeader).trim(),
+      userHeader: normalizeOptionalString(userHeader) ?? "",
       requiredHeaders: requiredHeaders.length > 0 ? requiredHeaders : undefined,
       allowUsers: allowUsers.length > 0 ? allowUsers : undefined,
     };

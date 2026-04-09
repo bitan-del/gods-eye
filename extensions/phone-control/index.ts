@@ -1,9 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+} from "godseye/plugin-sdk/text-runtime";
+import {
   definePluginEntry,
-  type GodsEyePluginApi,
-  type GodsEyePluginService,
+  type OpenClawPluginApi,
+  type OpenClawPluginService,
 } from "./runtime-api.js";
 
 type ArmGroup = "camera" | "screen" | "writes" | "all";
@@ -29,6 +33,7 @@ type ArmStateFile = ArmStateFileV1 | ArmStateFileV2;
 
 const STATE_VERSION = 2;
 const STATE_REL_PATH = ["plugins", "phone-control", "armed.json"] as const;
+const PHONE_ADMIN_SCOPE = "operator.admin";
 
 const GROUP_COMMANDS: Record<Exclude<ArmGroup, "all">, string[]> = {
   camera: ["camera.snap", "camera.clip"],
@@ -52,10 +57,7 @@ function formatGroupList(): string {
 }
 
 function parseDurationMs(input: string | undefined): number | null {
-  if (!input) {
-    return null;
-  }
-  const raw = input.trim().toLowerCase();
+  const raw = normalizeOptionalLowercaseString(input);
   if (!raw) {
     return null;
   }
@@ -159,18 +161,18 @@ async function writeArmState(statePath: string, state: ArmStateFile | null): Pro
   await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
 }
 
-function normalizeDenyList(cfg: GodsEyePluginApi["config"]): string[] {
+function normalizeDenyList(cfg: OpenClawPluginApi["config"]): string[] {
   return uniqSorted([...(cfg.gateway?.nodes?.denyCommands ?? [])]);
 }
 
-function normalizeAllowList(cfg: GodsEyePluginApi["config"]): string[] {
+function normalizeAllowList(cfg: OpenClawPluginApi["config"]): string[] {
   return uniqSorted([...(cfg.gateway?.nodes?.allowCommands ?? [])]);
 }
 
 function patchConfigNodeLists(
-  cfg: GodsEyePluginApi["config"],
+  cfg: OpenClawPluginApi["config"],
   next: { allowCommands: string[]; denyCommands: string[] },
-): GodsEyePluginApi["config"] {
+): OpenClawPluginApi["config"] {
   return {
     ...cfg,
     gateway: {
@@ -185,7 +187,7 @@ function patchConfigNodeLists(
 }
 
 async function disarmNow(params: {
-  api: GodsEyePluginApi;
+  api: OpenClawPluginApi;
   stateDir: string;
   statePath: string;
   reason: string;
@@ -258,7 +260,7 @@ function formatHelp(): string {
 }
 
 function parseGroup(raw: string | undefined): ArmGroup | null {
-  const value = (raw ?? "").trim().toLowerCase();
+  const value = normalizeOptionalLowercaseString(raw) ?? "";
   if (!value) {
     return null;
   }
@@ -266,6 +268,16 @@ function parseGroup(raw: string | undefined): ArmGroup | null {
     return value;
   }
   return null;
+}
+
+function requiresAdminToMutatePhoneControl(
+  channel: string,
+  gatewayClientScopes?: readonly string[],
+): boolean {
+  if (Array.isArray(gatewayClientScopes)) {
+    return !gatewayClientScopes.includes(PHONE_ADMIN_SCOPE);
+  }
+  return channel === "webchat";
 }
 
 function formatStatus(state: ArmStateFile | null): string {
@@ -291,10 +303,10 @@ export default definePluginEntry({
   id: "phone-control",
   name: "Phone Control",
   description: "Temporary allowlist control for phone automation commands",
-  register(api: GodsEyePluginApi) {
+  register(api: OpenClawPluginApi) {
     let expiryInterval: ReturnType<typeof setInterval> | null = null;
 
-    const timerService: GodsEyePluginService = {
+    const timerService: OpenClawPluginService = {
       id: "phone-control-expiry",
       start: async (ctx) => {
         const statePath = resolveStatePath(ctx.stateDir);
@@ -342,7 +354,7 @@ export default definePluginEntry({
       handler: async (ctx) => {
         const args = ctx.args?.trim() ?? "";
         const tokens = args.split(/\s+/).filter(Boolean);
-        const action = tokens[0]?.toLowerCase() ?? "";
+        const action = normalizeLowercaseStringOrEmpty(tokens[0]);
 
         const stateDir = api.runtime.state.resolveStateDir();
         const statePath = resolveStatePath(stateDir);
@@ -358,9 +370,9 @@ export default definePluginEntry({
         }
 
         if (action === "disarm") {
-          if (ctx.channel === "webchat" && !ctx.gatewayClientScopes?.includes("operator.admin")) {
+          if (requiresAdminToMutatePhoneControl(ctx.channel, ctx.gatewayClientScopes)) {
             return {
-              text: "⚠️ /phone disarm requires operator.admin for internal gateway callers.",
+              text: "⚠️ /phone disarm requires operator.admin.",
             };
           }
           const res = await disarmNow({
@@ -380,9 +392,9 @@ export default definePluginEntry({
         }
 
         if (action === "arm") {
-          if (ctx.channel === "webchat" && !ctx.gatewayClientScopes?.includes("operator.admin")) {
+          if (requiresAdminToMutatePhoneControl(ctx.channel, ctx.gatewayClientScopes)) {
             return {
-              text: "⚠️ /phone arm requires operator.admin for internal gateway callers.",
+              text: "⚠️ /phone arm requires operator.admin.",
             };
           }
           const group = parseGroup(tokens[1]);

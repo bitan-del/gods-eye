@@ -1,6 +1,7 @@
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeEnv } from "../runtime.js";
+import { onboardCommand, setupWizardCommand } from "./onboard.js";
 
 const mocks = vi.hoisted(() => ({
   runInteractiveSetup: vi.fn(async () => {}),
@@ -22,11 +23,9 @@ vi.mock("../config/config.js", () => ({
 }));
 
 vi.mock("./onboard-helpers.js", () => ({
-  DEFAULT_WORKSPACE: "~/.godseye/workspace",
+  DEFAULT_WORKSPACE: "~/.openclaw/workspace",
   handleReset: mocks.handleReset,
 }));
-
-const { onboardCommand, setupWizardCommand } = await import("./onboard.js");
 
 function makeRuntime(): RuntimeEnv {
   return {
@@ -69,10 +68,10 @@ describe("setupWizardCommand", () => {
 
       expect(runtime.log).toHaveBeenCalledWith(
         [
-          "Windows detected - GodsEye runs great on WSL2!",
+          "Windows detected - OpenClaw runs great on WSL2!",
           "Native Windows might be trickier.",
           "Quick setup: wsl --install (one command, one reboot)",
-          "Guide: https://docs.gods-eye.org/windows",
+          "Guide: https://docs.openclaw.ai/windows",
         ].join("\n"),
       );
     } finally {
@@ -105,7 +104,7 @@ describe("setupWizardCommand", () => {
       config: {
         agents: {
           defaults: {
-            workspace: "/tmp/godseye-custom-workspace",
+            workspace: "/tmp/openclaw-custom-workspace",
           },
         },
       },
@@ -120,7 +119,7 @@ describe("setupWizardCommand", () => {
 
     expect(mocks.handleReset).toHaveBeenCalledWith(
       "config+creds+sessions",
-      path.resolve("/tmp/godseye-custom-workspace"),
+      path.resolve("/tmp/openclaw-custom-workspace"),
       runtime,
     );
   });

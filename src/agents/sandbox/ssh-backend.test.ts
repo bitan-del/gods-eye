@@ -1,7 +1,12 @@
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import {
+  createSandboxBrowserConfig,
+  createSandboxPruneConfig,
+  createSandboxSshConfig,
+} from "../../../test/helpers/sandbox-fixtures.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SandboxConfig } from "./types.js";
 
 const sshMocks = vi.hoisted(() => ({
@@ -12,8 +17,8 @@ const sshMocks = vi.hoisted(() => ({
   buildSshSandboxArgv: vi.fn(),
 }));
 
-vi.mock("./ssh.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./ssh.js")>();
+vi.mock("./ssh.js", async () => {
+  const actual = await vi.importActual<typeof import("./ssh.js")>("./ssh.js");
   return {
     ...actual,
     createSshSandboxSessionFromSettings: sshMocks.createSshSandboxSessionFromSettings,
@@ -24,26 +29,9 @@ vi.mock("./ssh.js", async (importOriginal) => {
   };
 });
 
-let createSshSandboxBackend: typeof import("./ssh-backend.js").createSshSandboxBackend;
-let sshSandboxBackendManager: typeof import("./ssh-backend.js").sshSandboxBackendManager;
+const { createSshSandboxBackend, sshSandboxBackendManager } = await import("./ssh-backend.js");
 
-async function loadFreshSshBackendModuleForTest() {
-  vi.resetModules();
-  vi.doMock("./ssh.js", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("./ssh.js")>();
-    return {
-      ...actual,
-      createSshSandboxSessionFromSettings: sshMocks.createSshSandboxSessionFromSettings,
-      disposeSshSandboxSession: sshMocks.disposeSshSandboxSession,
-      runSshSandboxCommand: sshMocks.runSshSandboxCommand,
-      uploadDirectoryToSshTarget: sshMocks.uploadDirectoryToSshTarget,
-      buildSshSandboxArgv: sshMocks.buildSshSandboxArgv,
-    };
-  });
-  ({ createSshSandboxBackend, sshSandboxBackendManager } = await import("./ssh-backend.js"));
-}
-
-function createConfig(): GodsEyeConfig {
+function createConfig(): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -55,7 +43,7 @@ function createConfig(): GodsEyeConfig {
           ssh: {
             target: "peter@example.com:2222",
             command: "ssh",
-            workspaceRoot: "/remote/godseye",
+            workspaceRoot: "/remote/openclaw",
             strictHostKeyChecking: true,
             updateHostKeys: true,
           },
@@ -68,8 +56,8 @@ function createConfig(): GodsEyeConfig {
 function createSession() {
   return {
     command: "ssh",
-    configPath: path.join(os.tmpdir(), "godseye-test-ssh-config"),
-    host: "godseye-sandbox",
+    configPath: path.join(os.tmpdir(), "openclaw-test-ssh-config"),
+    host: "openclaw-sandbox",
   };
 }
 
@@ -79,7 +67,7 @@ function createBackendSandboxConfig(params?: { binds?: string[]; target?: string
     backend: "ssh",
     scope: "session",
     workspaceAccess: "rw" as const,
-    workspaceRoot: "~/.godseye/sandboxes",
+    workspaceRoot: "~/.openclaw/sandboxes",
     docker: {
       image: "img",
       containerPrefix: "prefix-",
@@ -92,28 +80,21 @@ function createBackendSandboxConfig(params?: { binds?: string[]; target?: string
       ...(params?.binds ? { binds: params.binds } : {}),
     },
     ssh: {
-      ...(params?.target ? { target: params.target } : {}),
-      command: "ssh",
-      workspaceRoot: "/remote/godseye",
-      strictHostKeyChecking: true,
-      updateHostKeys: true,
+      ...createSandboxSshConfig(
+        "/remote/openclaw",
+        params?.target ? { target: params.target } : {},
+      ),
     },
-    browser: {
-      enabled: false,
+    browser: createSandboxBrowserConfig({
       image: "img",
       containerPrefix: "prefix-",
-      network: "bridge",
       cdpPort: 1,
       vncPort: 2,
       noVncPort: 3,
-      headless: true,
-      enableNoVnc: false,
-      allowHostControl: false,
-      autoStart: false,
       autoStartTimeoutMs: 1,
-    },
+    }),
     tools: { allow: [], deny: [] },
-    prune: { idleHours: 24, maxAgeDays: 7 },
+    prune: createSandboxPruneConfig(),
   };
 }
 
@@ -137,7 +118,9 @@ async function expectBackendCreationToReject(params: {
 }
 
 describe("ssh sandbox backend", () => {
-  beforeEach(async () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
     vi.clearAllMocks();
     sshMocks.createSshSandboxSessionFromSettings.mockResolvedValue(createSession());
     sshMocks.disposeSshSandboxSession.mockResolvedValue(undefined);
@@ -155,19 +138,24 @@ describe("ssh sandbox backend", () => {
       session.host,
       remoteCommand,
     ]);
-    await loadFreshSshBackendModuleForTest();
   });
 
   afterEach(() => {
+    for (const key of Object.keys(process.env)) {
+      if (!(key in originalEnv)) {
+        delete process.env[key];
+      }
+    }
+    Object.assign(process.env, originalEnv);
     vi.restoreAllMocks();
   });
 
   it("describes runtimes via the configured ssh target", async () => {
     const result = await sshSandboxBackendManager.describeRuntime({
       entry: {
-        containerName: "godseye-ssh-worker-abcd1234",
+        containerName: "openclaw-ssh-worker-abcd1234",
         backendId: "ssh",
-        runtimeLabel: "godseye-ssh-worker-abcd1234",
+        runtimeLabel: "openclaw-ssh-worker-abcd1234",
         sessionKey: "agent:worker",
         createdAtMs: 1,
         lastUsedAtMs: 1,
@@ -185,12 +173,12 @@ describe("ssh sandbox backend", () => {
     expect(sshMocks.createSshSandboxSessionFromSettings).toHaveBeenCalledWith(
       expect.objectContaining({
         target: "peter@example.com:2222",
-        workspaceRoot: "/remote/godseye",
+        workspaceRoot: "/remote/openclaw",
       }),
     );
     expect(sshMocks.runSshSandboxCommand).toHaveBeenCalledWith(
       expect.objectContaining({
-        remoteCommand: expect.stringContaining("/remote/godseye/godseye-ssh-agent-worker"),
+        remoteCommand: expect.stringContaining("/remote/openclaw/openclaw-ssh-agent-worker"),
       }),
     );
   });
@@ -198,9 +186,9 @@ describe("ssh sandbox backend", () => {
   it("removes runtimes by deleting the remote scope root", async () => {
     await sshSandboxBackendManager.removeRuntime({
       entry: {
-        containerName: "godseye-ssh-worker-abcd1234",
+        containerName: "openclaw-ssh-worker-abcd1234",
         backendId: "ssh",
-        runtimeLabel: "godseye-ssh-worker-abcd1234",
+        runtimeLabel: "openclaw-ssh-worker-abcd1234",
         sessionKey: "agent:worker",
         createdAtMs: 1,
         lastUsedAtMs: 1,
@@ -246,10 +234,10 @@ describe("ssh sandbox backend", () => {
         backend: "ssh",
         scope: "session",
         workspaceAccess: "rw",
-        workspaceRoot: "~/.godseye/sandboxes",
+        workspaceRoot: "~/.openclaw/sandboxes",
         docker: {
-          image: "godseye-sandbox:bookworm-slim",
-          containerPrefix: "godseye-sbx-",
+          image: "openclaw-sandbox:bookworm-slim",
+          containerPrefix: "openclaw-sbx-",
           workdir: "/workspace",
           readOnlyRoot: true,
           tmpfs: ["/tmp"],
@@ -260,14 +248,14 @@ describe("ssh sandbox backend", () => {
         ssh: {
           target: "peter@example.com:2222",
           command: "ssh",
-          workspaceRoot: "/remote/godseye",
+          workspaceRoot: "/remote/openclaw",
           strictHostKeyChecking: true,
           updateHostKeys: true,
         },
         browser: {
           enabled: false,
-          image: "godseye-browser",
-          containerPrefix: "godseye-browser-",
+          image: "openclaw-browser",
+          containerPrefix: "openclaw-browser-",
           network: "bridge",
           cdpPort: 9222,
           vncPort: 5900,
@@ -292,7 +280,7 @@ describe("ssh sandbox backend", () => {
     expect(execSpec.argv).toEqual(
       expect.arrayContaining(["ssh", "-F", createSession().configPath, "-T", createSession().host]),
     );
-    expect(execSpec.argv.at(-1)).toContain("/remote/godseye/godseye-ssh-agent-worker");
+    expect(execSpec.argv.at(-1)).toContain("/remote/openclaw/openclaw-ssh-agent-worker");
     expect(sshMocks.uploadDirectoryToSshTarget).toHaveBeenCalledTimes(2);
     expect(sshMocks.uploadDirectoryToSshTarget).toHaveBeenNthCalledWith(
       1,
@@ -316,6 +304,29 @@ describe("ssh sandbox backend", () => {
       token: execSpec.finalizeToken,
     });
     expect(sshMocks.disposeSshSandboxSession).toHaveBeenCalled();
+  });
+
+  it("filters blocked secrets from exec subprocess env", async () => {
+    process.env.OPENAI_API_KEY = "sk-test-secret";
+    process.env.LANG = "en_US.UTF-8";
+    const backend = await createSshSandboxBackend({
+      sessionKey: "agent:worker:task",
+      scopeKey: "agent:worker",
+      workspaceDir: "/tmp/workspace",
+      agentWorkspaceDir: "/tmp/agent",
+      cfg: createBackendSandboxConfig({
+        target: "peter@example.com:2222",
+      }),
+    });
+
+    const execSpec = await backend.buildExecSpec({
+      command: "pwd",
+      env: {},
+      usePty: false,
+    });
+
+    expect(execSpec.env?.OPENAI_API_KEY).toBeUndefined();
+    expect(execSpec.env?.LANG).toBe("en_US.UTF-8");
   });
 
   it("rejects docker binds and missing ssh target", async () => {

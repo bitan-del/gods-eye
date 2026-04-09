@@ -11,38 +11,18 @@ const mocks = vi.hoisted(() => ({
   resolveStorePathMock: vi.fn(),
 }));
 
-vi.mock("godseye/plugin-sdk/reply-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/reply-runtime")>();
+vi.mock("./slash-dispatch.runtime.js", async () => {
+  const actual = await vi.importActual<typeof import("./slash-dispatch.runtime.js")>(
+    "./slash-dispatch.runtime.js",
+  );
   return {
     ...actual,
     dispatchReplyWithDispatcher: (...args: unknown[]) => mocks.dispatchMock(...args),
     finalizeInboundContext: (...args: unknown[]) => mocks.finalizeInboundContextMock(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/routing", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/routing")>();
-  return {
-    ...actual,
     resolveAgentRoute: (...args: unknown[]) => mocks.resolveAgentRouteMock(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/conversation-runtime")>();
-  return {
-    ...actual,
     resolveConversationLabel: (...args: unknown[]) => mocks.resolveConversationLabelMock(...args),
     recordInboundSessionMetaSafe: (...args: unknown[]) =>
       mocks.recordSessionMetaFromInboundMock(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/config-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/config-runtime")>();
-  return {
-    ...actual,
-    resolveStorePath: (...args: unknown[]) => mocks.resolveStorePathMock(...args),
   };
 });
 
@@ -73,5 +53,5 @@ export function resetSlackSlashMocks() {
   mocks.finalizeInboundContextMock.mockReset().mockImplementation((ctx: unknown) => ctx);
   mocks.resolveConversationLabelMock.mockReset().mockReturnValue(undefined);
   mocks.recordSessionMetaFromInboundMock.mockReset().mockResolvedValue(undefined);
-  mocks.resolveStorePathMock.mockReset().mockReturnValue("/tmp/godseye-sessions.json");
+  mocks.resolveStorePathMock.mockReset().mockReturnValue("/tmp/openclaw-sessions.json");
 }

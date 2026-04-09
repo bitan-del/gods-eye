@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/core";
 import { sendMessage } from "./client.js";
 import { buildSynologyChatInboundContext, type SynologyInboundMessage } from "./inbound-context.js";
 import { getSynologyRuntime } from "./runtime.js";
@@ -12,7 +12,7 @@ type SynologyChannelLog = {
 };
 
 function resolveSynologyChatInboundRoute(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedSynologyChatAccount;
   userId: string;
 }) {
@@ -61,7 +61,7 @@ export async function dispatchSynologyChatInboundTurn(params: {
   log?: SynologyChannelLog;
 }): Promise<null> {
   const rt = getSynologyRuntime();
-  const currentCfg = await rt.config.loadConfig();
+  const currentCfg = rt.config.loadConfig();
 
   // The Chat API user_id (for sending) may differ from the webhook
   // user_id (used for sessions/pairing). Use chatUserId for API calls.

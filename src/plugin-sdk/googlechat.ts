@@ -1,5 +1,5 @@
 // Private helper surface for the bundled googlechat plugin.
-// Keep this list additive and scoped to symbols used under extensions/googlechat.
+// Keep this list additive and scoped to the bundled Google Chat surface.
 
 import { resolveChannelGroupRequireMention } from "./channel-policy.js";
 import { createOptionalChannelSetupSurface } from "./channel-setup.js";
@@ -11,7 +11,11 @@ export {
   readReactionParams,
   readStringParam,
 } from "../agents/tools/common.js";
-export { resolveMentionGatingWithBypass } from "../channels/mention-gating.js";
+export {
+  resolveMentionGating,
+  resolveMentionGatingWithBypass,
+  resolveInboundMentionDecision,
+} from "../channels/mention-gating.js";
 export {
   deleteAccountFromConfigSection,
   setAccountEnabledInConfigSection,
@@ -22,9 +26,13 @@ export {
 } from "../channels/plugins/directory-config-helpers.js";
 export { buildComputedAccountStatusSnapshot } from "./status-helpers.js";
 export { buildChannelConfigSchema } from "../channels/plugins/config-schema.js";
-export { createAccountStatusSink, runPassiveAccountLifecycle } from "./channel-lifecycle.js";
+export { createAccountStatusSink, runPassiveAccountLifecycle } from "./channel-lifecycle.core.js";
 export { formatPairingApproveHint } from "../channels/plugins/helpers.js";
+export { fetchRemoteMedia } from "../media/fetch.js";
 export { resolveChannelMediaMaxBytes } from "../channels/plugins/media-limits.js";
+export { loadOutboundMediaFromUrl } from "./outbound-media.js";
+export { loadWebMedia } from "./web-media.js";
+export { chunkTextForOutbound } from "./text-chunking.js";
 export {
   addWildcardAllowFrom,
   mergeAllowFromEntries,
@@ -47,7 +55,7 @@ export type {
 export type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 export { getChatChannelMeta } from "../channels/registry.js";
 export { createChannelReplyPipeline } from "./channel-reply-pipeline.js";
-export type { GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig } from "../config/config.js";
 export { isDangerousNameMatchingEnabled } from "../config/dangerous-name-matching.js";
 export {
   GROUP_POLICY_BLOCKED_LABEL,
@@ -62,7 +70,7 @@ export { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 export { missingTargetError } from "../infra/outbound/target-errors.js";
 export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { PluginRuntime } from "../plugins/runtime/types.js";
-export type { GodsEyePluginApi } from "../plugins/types.js";
+export type { OpenClawPluginApi } from "../plugins/types.js";
 export { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../routing/session-key.js";
 export { resolveDmGroupAccessWithLists } from "../security/dm-policy-shared.js";
 export { formatDocsLink } from "../terminal/links.js";
@@ -87,7 +95,7 @@ export {
 } from "./webhook-ingress.js";
 
 type GoogleChatGroupContext = {
-  cfg: import("../config/config.js").GodsEyeConfig;
+  cfg: import("../config/config.js").OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
 };

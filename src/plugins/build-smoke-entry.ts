@@ -4,4 +4,4 @@ export {
   getPluginCommandSpecs,
   matchPluginCommand,
 } from "./commands.js";
-export { loadGodsEyePlugins } from "./loader.js";
+export { loadOpenClawPlugins } from "./loader.js";

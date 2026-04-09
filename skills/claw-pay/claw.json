@@ -1,0 +1,56 @@
+{
+  "name": "claw-pay",
+  "version": "0.2.5",
+  "description": "Autonomous x402 payments for OpenClaw agents — pay for AI services with USDC on Base L2, within your configured spending limit. Facilitator: https://claw-pay.org · Info: https://clawpay.eu",
+  "author": "orca-labs",
+  "license": "BSL-1.1",
+  "entry": "src/pay.js",
+  "skills": [
+    {
+      "id": "pay",
+      "description": "Make an HTTP request and automatically pay if a 402 Payment Required is returned. Supports x402 / ERC-3009 on Base L2.",
+      "module": "src/pay.js",
+      "export": "payAndFetch"
+    },
+    {
+      "id": "wallet.create",
+      "description": "Create a new USDC wallet and save it encrypted to disk.",
+      "module": "src/wallet.js",
+      "export": "createWallet"
+    },
+    {
+      "id": "wallet.load",
+      "description": "Load an existing wallet from disk using a password.",
+      "module": "src/wallet.js",
+      "export": "loadWallet"
+    },
+    {
+      "id": "wallet.address",
+      "description": "Get the stored wallet address without decrypting (no password needed).",
+      "module": "src/wallet.js",
+      "export": "getStoredAddress"
+    },
+    {
+      "id": "wallet.balance",
+      "description": "Check USDC balance for a given address.",
+      "module": "src/wallet.js",
+      "export": "getTokenBalance"
+    }
+  ],
+  "permissions": {
+    "network": true,
+    "filesystem": {
+      "read": ["~/.claw-pay/"],
+      "write": ["~/.claw-pay/"]
+    },
+    "env": ["CLAW_PAY_WALLET_PASSWORD", "CLAW_PAY_FACILITATOR_URL", "CLAW_PAY_NETWORK"]
+  },
+  "dependencies": {
+    "ethers": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": "https://github.com/orca-labs-sudo/claw-pay",
+  "tags": ["x402", "payments", "usdc", "base", "web3", "autonomous"]
+}

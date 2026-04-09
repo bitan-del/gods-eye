@@ -32,7 +32,7 @@ export type ActiveWebListener = {
 // chunks. Keep this on a direct globalThis symbol lookup; the generic
 // singleton helper was previously inlined during code-splitting and split the
 // listener state back into per-chunk Maps.
-const WHATSAPP_ACTIVE_LISTENER_STATE_KEY = Symbol.for("godseye.whatsapp.activeListenerState");
+const WHATSAPP_ACTIVE_LISTENER_STATE_KEY = Symbol.for("openclaw.whatsapp.activeListenerState");
 
 type ActiveListenerState = {
   listeners: Map<string, ActiveWebListener>;
@@ -46,7 +46,7 @@ if (!g[WHATSAPP_ACTIVE_LISTENER_STATE_KEY]) {
     current: null,
   };
 }
-const state = g[WHATSAPP_ACTIVE_LISTENER_STATE_KEY]!;
+const state = g[WHATSAPP_ACTIVE_LISTENER_STATE_KEY];
 
 function setCurrentListener(listener: ActiveWebListener | null): void {
   state.current = listener;
@@ -64,7 +64,7 @@ export function requireActiveWebListener(accountId?: string | null): {
   const listener = state.listeners.get(id) ?? null;
   if (!listener) {
     throw new Error(
-      `No active WhatsApp Web listener (account: ${id}). Start the gateway, then link WhatsApp with: ${formatCliCommand(`godseye channels login --channel whatsapp --account ${id}`)}.`,
+      `No active WhatsApp Web listener (account: ${id}). Start the gateway, then link WhatsApp with: ${formatCliCommand(`openclaw channels login --channel whatsapp --account ${id}`)}.`,
     );
   }
   return { accountId: id, listener };

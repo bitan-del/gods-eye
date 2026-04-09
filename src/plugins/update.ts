@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   expectedIntegrityForUpdate,
   readInstalledPackageVersion,
@@ -32,7 +32,7 @@ export type PluginUpdateOutcome = {
 };
 
 export type PluginUpdateSummary = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   changed: boolean;
   outcomes: PluginUpdateOutcome[];
 };
@@ -55,7 +55,7 @@ export type PluginChannelSyncSummary = {
 };
 
 export type PluginChannelSyncResult = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   changed: boolean;
   summary: PluginChannelSyncSummary;
 };
@@ -171,7 +171,7 @@ function replacePluginIdInList(
   return next;
 }
 
-function migratePluginConfigId(cfg: GodsEyeConfig, fromId: string, toId: string): GodsEyeConfig {
+function migratePluginConfigId(cfg: OpenClawConfig, fromId: string, toId: string): OpenClawConfig {
   if (fromId === toId) {
     return cfg;
   }
@@ -253,11 +253,12 @@ function createPluginUpdateIntegrityDriftHandler(params: {
 }
 
 export async function updateNpmInstalledPlugins(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   logger?: PluginUpdateLogger;
   pluginIds?: string[];
   skipIds?: Set<string>;
   dryRun?: boolean;
+  dangerouslyForceUnsafeInstall?: boolean;
   specOverrides?: Record<string, string>;
   onIntegrityDrift?: (params: PluginUpdateIntegrityDriftParams) => boolean | Promise<boolean>;
 }): Promise<PluginUpdateSummary> {
@@ -359,6 +360,7 @@ export async function updateNpmInstalledPlugins(params: {
                 spec: effectiveSpec!,
                 mode: "update",
                 dryRun: true,
+                dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
                 expectedPluginId: pluginId,
                 expectedIntegrity,
                 onIntegrityDrift: createPluginUpdateIntegrityDriftHandler({
@@ -375,6 +377,7 @@ export async function updateNpmInstalledPlugins(params: {
                   baseUrl: record.clawhubUrl,
                   mode: "update",
                   dryRun: true,
+                  dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
                   expectedPluginId: pluginId,
                   logger,
                 })
@@ -383,6 +386,7 @@ export async function updateNpmInstalledPlugins(params: {
                   plugin: record.marketplacePlugin!,
                   mode: "update",
                   dryRun: true,
+                  dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
                   expectedPluginId: pluginId,
                   logger,
                 });
@@ -456,6 +460,7 @@ export async function updateNpmInstalledPlugins(params: {
           ? await installPluginFromNpmSpec({
               spec: effectiveSpec!,
               mode: "update",
+              dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
               expectedPluginId: pluginId,
               expectedIntegrity,
               onIntegrityDrift: createPluginUpdateIntegrityDriftHandler({
@@ -471,6 +476,7 @@ export async function updateNpmInstalledPlugins(params: {
                 spec: effectiveSpec ?? `clawhub:${record.clawhubPackage!}`,
                 baseUrl: record.clawhubUrl,
                 mode: "update",
+                dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
                 expectedPluginId: pluginId,
                 logger,
               })
@@ -478,6 +484,7 @@ export async function updateNpmInstalledPlugins(params: {
                 marketplace: record.marketplaceSource!,
                 plugin: record.marketplacePlugin!,
                 mode: "update",
+                dangerouslyForceUnsafeInstall: params.dangerouslyForceUnsafeInstall,
                 expectedPluginId: pluginId,
                 logger,
               });
@@ -594,7 +601,7 @@ export async function updateNpmInstalledPlugins(params: {
 }
 
 export async function syncPluginsForUpdateChannel(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   channel: UpdateChannel;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;

@@ -1,7 +1,7 @@
 import {
   createWebSearchProviderContractFields,
   type WebSearchProviderPlugin,
-} from "openclaw/plugin-sdk/provider-web-search-config-contract";
+} from "godseye/plugin-sdk/provider-web-search-config-contract";
 
 export function createPerplexityWebSearchProvider(): WebSearchProviderPlugin {
   const credentialPath = "plugins.entries.perplexity.config.webSearch.apiKey";

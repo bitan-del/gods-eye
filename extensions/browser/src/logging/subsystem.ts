@@ -1,1 +1,1 @@
-export { createSubsystemLogger } from "openclaw/plugin-sdk/logging-core";
+export { createSubsystemLogger } from "godseye/plugin-sdk/logging-core";

@@ -1,6 +1,7 @@
 import { ChannelType, Routes } from "discord-api-types/v10";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { createDiscordRestClient } from "../client.js";
 import { sendMessageDiscord, sendWebhookMessageDiscord } from "../send.js";
 import { createThreadDiscord } from "../send.messages.js";
@@ -123,7 +124,7 @@ export function isDiscordThreadGoneError(err: unknown): boolean {
 }
 
 export async function maybeSendBindingMessage(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   record: ThreadBindingRecord;
   text: string;
   preferWebhook?: boolean;
@@ -159,7 +160,7 @@ export async function maybeSendBindingMessage(params: {
 }
 
 export async function createWebhookForChannel(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   accountId: string;
   token?: string;
   channelId: string;
@@ -174,11 +175,11 @@ export async function createWebhookForChannel(params: {
     ).rest;
     const created = (await rest.post(Routes.channelWebhooks(params.channelId), {
       body: {
-        name: "GodsEye Agents",
+        name: "OpenClaw Agents",
       },
     })) as { id?: string; token?: string };
-    const webhookId = typeof created?.id === "string" ? created.id.trim() : "";
-    const webhookToken = typeof created?.token === "string" ? created.token.trim() : "";
+    const webhookId = normalizeOptionalString(created?.id) ?? "";
+    const webhookToken = normalizeOptionalString(created?.token) ?? "";
     if (!webhookId || !webhookToken) {
       return {};
     }
@@ -226,7 +227,7 @@ export function findReusableWebhook(params: { accountId: string; channelId: stri
 }
 
 export async function resolveChannelIdForBinding(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   accountId: string;
   token?: string;
   threadId: string;
@@ -250,7 +251,7 @@ export async function resolveChannelIdForBinding(params: {
       parent_id?: string;
       parentId?: string;
     };
-    const channelId = typeof channel?.id === "string" ? channel.id.trim() : "";
+    const channelId = normalizeOptionalString(channel?.id) ?? "";
     const type = channel?.type;
     const parentId =
       typeof channel?.parent_id === "string"
@@ -273,7 +274,7 @@ export async function resolveChannelIdForBinding(params: {
 }
 
 export async function createThreadForBinding(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   accountId: string;
   token?: string;
   channelId: string;
@@ -292,7 +293,7 @@ export async function createThreadForBinding(params: {
         token: params.token,
       },
     );
-    const createdId = typeof created?.id === "string" ? created.id.trim() : "";
+    const createdId = normalizeOptionalString(created?.id) ?? "";
     return createdId || null;
   } catch (err) {
     logVerbose(

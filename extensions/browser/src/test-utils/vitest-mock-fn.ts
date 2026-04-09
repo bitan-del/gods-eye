@@ -1,1 +1,1 @@
-export type { MockFn } from "openclaw/plugin-sdk/browser-setup-tools";
+export type { MockFn } from "godseye/plugin-sdk/browser-setup-tools";

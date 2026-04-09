@@ -7,7 +7,7 @@ import {
   DEFAULT_ACCOUNT_ID,
   listCombinedAccountIds,
   resolveMergedAccountConfig,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/account-resolution";
 import { resolveDangerousNameMatchingEnabled } from "godseye/plugin-sdk/config-runtime";
 import type {
@@ -16,9 +16,9 @@ import type {
   SynologyWebhookPathSource,
 } from "./types.js";
 
-/** Extract the channel config from the full GodsEye config object. */
-function getChannelConfig(cfg: GodsEyeConfig): SynologyChatChannelConfig | undefined {
-  return cfg?.channels?.["synology-chat"];
+/** Extract the channel config from the full OpenClaw config object. */
+function getChannelConfig(cfg: OpenClawConfig): SynologyChatChannelConfig | undefined {
+  return cfg?.channels?.["synology-chat"] as SynologyChatChannelConfig | undefined;
 }
 
 function resolveImplicitAccountId(channelCfg: SynologyChatChannelConfig): string | undefined {
@@ -55,8 +55,12 @@ function resolveWebhookPathSource(params: {
 
 /** Parse allowedUserIds from string or array to string[]. */
 function parseAllowedUserIds(raw: string | string[] | undefined): string[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw.filter(Boolean);
+  if (!raw) {
+    return [];
+  }
+  if (Array.isArray(raw)) {
+    return raw.filter(Boolean);
+  }
   return raw
     .split(",")
     .map((s) => s.trim())
@@ -78,7 +82,7 @@ function parseRateLimitPerMinute(raw: string | undefined): number {
  * List all configured account IDs for this channel.
  * Returns ["default"] if there's a base config, plus any named accounts.
  */
-export function listAccountIds(cfg: GodsEyeConfig): string[] {
+export function listAccountIds(cfg: OpenClawConfig): string[] {
   const channelCfg = getChannelConfig(cfg);
   if (!channelCfg) {
     return [];
@@ -95,7 +99,7 @@ export function listAccountIds(cfg: GodsEyeConfig): string[] {
  * Falls back to env vars for the "default" account.
  */
 export function resolveAccount(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId?: string | null,
 ): ResolvedSynologyChatAccount {
   const channelCfg = getChannelConfig(cfg) ?? {};
@@ -117,7 +121,7 @@ export function resolveAccount(
   const envNasHost = process.env.SYNOLOGY_NAS_HOST ?? "localhost";
   const envAllowedUserIds = process.env.SYNOLOGY_ALLOWED_USER_IDS ?? "";
   const envRateLimitValue = parseRateLimitPerMinute(process.env.SYNOLOGY_RATE_LIMIT);
-  const envBotName = process.env.GODSEYE_BOT_NAME ?? "Gods Eye";
+  const envBotName = process.env.OPENCLAW_BOT_NAME ?? "OpenClaw";
   const webhookPathSource = resolveWebhookPathSource({ accountId: id, channelCfg, rawAccount });
   const dangerouslyAllowInheritedWebhookPath =
     rawAccount.dangerouslyAllowInheritedWebhookPath ??

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { ensureOwnerDisplaySecret, resolveOwnerDisplaySetting } from "./owner-display.js";
 
 describe("resolveOwnerDisplaySetting", () => {
@@ -9,7 +9,7 @@ describe("resolveOwnerDisplaySetting", () => {
         ownerDisplay: "hash",
         ownerDisplaySecret: "  owner-secret  ",
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveOwnerDisplaySetting(cfg)).toEqual({
       ownerDisplay: "hash",
@@ -26,7 +26,7 @@ describe("resolveOwnerDisplaySetting", () => {
         auth: { token: "gateway-auth-token" },
         remote: { token: "gateway-remote-token" },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveOwnerDisplaySetting(cfg)).toEqual({
       ownerDisplay: "hash",
@@ -40,7 +40,7 @@ describe("resolveOwnerDisplaySetting", () => {
         ownerDisplay: "raw",
         ownerDisplaySecret: "owner-secret", // pragma: allowlist secret
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveOwnerDisplaySetting(cfg)).toEqual({
       ownerDisplay: "raw",
@@ -55,7 +55,7 @@ describe("ensureOwnerDisplaySecret", () => {
       commands: {
         ownerDisplay: "hash",
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const result = ensureOwnerDisplaySecret(cfg, () => "generated-owner-secret");
     expect(result.generatedSecret).toBe("generated-owner-secret");
@@ -69,7 +69,7 @@ describe("ensureOwnerDisplaySecret", () => {
         ownerDisplay: "hash",
         ownerDisplaySecret: "existing-owner-secret", // pragma: allowlist secret
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const result = ensureOwnerDisplaySecret(cfg, () => "generated-owner-secret");
     expect(result.generatedSecret).toBeUndefined();

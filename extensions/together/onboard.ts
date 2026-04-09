@@ -1,18 +1,18 @@
 import {
+  createModelCatalogPresetAppliers,
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/provider-onboard";
+import {
   buildTogetherModelDefinition,
   TOGETHER_BASE_URL,
   TOGETHER_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
-import {
-  createModelCatalogPresetAppliers,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/provider-onboard";
+} from "./models.js";
 
 export const TOGETHER_DEFAULT_MODEL_REF = "together/moonshotai/Kimi-K2.5";
 
 const togetherPresetAppliers = createModelCatalogPresetAppliers({
   primaryModelRef: TOGETHER_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => ({
+  resolveParams: (_cfg: OpenClawConfig) => ({
     providerId: "together",
     api: "openai-completions",
     baseUrl: TOGETHER_BASE_URL,
@@ -21,10 +21,10 @@ const togetherPresetAppliers = createModelCatalogPresetAppliers({
   }),
 });
 
-export function applyTogetherProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyTogetherProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return togetherPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyTogetherConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyTogetherConfig(cfg: OpenClawConfig): OpenClawConfig {
   return togetherPresetAppliers.applyConfig(cfg);
 }

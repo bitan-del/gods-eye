@@ -1,7 +1,7 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 
 export function buildEmbeddedMessageActionDiscoveryInput(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   channel: string;
   currentChannelId?: string | null;
   currentThreadTs?: string | null;

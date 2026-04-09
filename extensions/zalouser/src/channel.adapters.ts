@@ -1,13 +1,13 @@
-import { createScopedDmSecurityResolver } from "openclaw/plugin-sdk/channel-config-helpers";
-import { createPairingPrefixStripper } from "openclaw/plugin-sdk/channel-pairing";
+import { createScopedDmSecurityResolver } from "godseye/plugin-sdk/channel-config-helpers";
+import { createPairingPrefixStripper } from "godseye/plugin-sdk/channel-pairing";
 import {
   createEmptyChannelResult,
   createRawChannelSendResultAdapter,
-} from "openclaw/plugin-sdk/channel-send-result";
-import { createStaticReplyToModeResolver } from "openclaw/plugin-sdk/conversation-runtime";
-import { createLazyRuntimeModule } from "openclaw/plugin-sdk/lazy-runtime";
-import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/channel-send-result";
+import { createStaticReplyToModeResolver } from "godseye/plugin-sdk/conversation-runtime";
+import { createLazyRuntimeModule } from "godseye/plugin-sdk/lazy-runtime";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   checkZcaAuthenticated,
   listZalouserAccountIds,

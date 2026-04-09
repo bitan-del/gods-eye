@@ -1,4 +1,4 @@
-import type { Skill } from "@mariozechner/pi-coding-agent";
+import type { Skill } from "./skill-contract.js";
 
 export type SkillInstallSpec = {
   id?: string;
@@ -16,7 +16,7 @@ export type SkillInstallSpec = {
   targetDir?: string;
 };
 
-export type GodsEyeSkillMetadata = {
+export type OpenClawSkillMetadata = {
   always?: boolean;
   skillKey?: string;
   primaryEnv?: string;
@@ -67,11 +67,18 @@ export type SkillsInstallPreferences = {
 
 export type ParsedSkillFrontmatter = Record<string, string>;
 
+export type SkillExposure = {
+  includeInRuntimeRegistry: boolean;
+  includeInAvailableSkillsPrompt: boolean;
+  userInvocable: boolean;
+};
+
 export type SkillEntry = {
   skill: Skill;
   frontmatter: ParsedSkillFrontmatter;
-  metadata?: GodsEyeSkillMetadata;
+  metadata?: OpenClawSkillMetadata;
   invocation?: SkillInvocationPolicy;
+  exposure?: SkillExposure;
 };
 
 export type SkillEligibilityContext = {

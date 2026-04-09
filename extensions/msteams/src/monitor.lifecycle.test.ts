@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
+import type { Request, Response } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig, RuntimeEnv } from "../runtime-api.js";
+import type { OpenClawConfig, RuntimeEnv } from "../runtime-api.js";
 import type { MSTeamsConversationStore } from "./conversation-store.js";
 import type { MSTeamsPollStore } from "./polls.js";
 
@@ -13,6 +14,11 @@ type FakeServer = EventEmitter & {
 
 const expressControl = vi.hoisted(() => ({
   mode: { value: "listening" as "listening" | "error" },
+  apps: [] as Array<{
+    use: ReturnType<typeof vi.fn>;
+    post: ReturnType<typeof vi.fn>;
+    listen: ReturnType<typeof vi.fn>;
+  }>,
 }));
 
 vi.mock("../runtime-api.js", () => ({
@@ -72,8 +78,14 @@ vi.mock("express", () => {
     }),
   });
 
+  const wrappedFactory = () => {
+    const app = factory();
+    expressControl.apps.push(app);
+    return app;
+  };
+
   return {
-    default: factory,
+    default: wrappedFactory,
     json,
   };
 });
@@ -88,6 +100,7 @@ const createMSTeamsAdapter = vi.hoisted(() =>
     process: vi.fn(async () => {}),
   })),
 );
+const jwtValidate = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const loadMSTeamsSdkWithAuth = vi.hoisted(() =>
   vi.fn(async () => ({
     sdk: {
@@ -117,7 +130,7 @@ vi.mock("./sdk.js", () => ({
     getAccessToken: vi.fn().mockResolvedValue("mock-token"),
   }),
   createBotFrameworkJwtValidator: vi.fn().mockResolvedValue({
-    validate: vi.fn().mockResolvedValue(true),
+    validate: jwtValidate,
   }),
 }));
 
@@ -140,7 +153,7 @@ vi.mock("./runtime.js", () => ({
 
 import { monitorMSTeamsProvider } from "./monitor.js";
 
-function createConfig(port: number): GodsEyeConfig {
+function createConfig(port: number): OpenClawConfig {
   return {
     channels: {
       msteams: {
@@ -154,7 +167,7 @@ function createConfig(port: number): GodsEyeConfig {
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 function createRuntime(): RuntimeEnv {
@@ -178,6 +191,8 @@ describe("monitorMSTeamsProvider lifecycle", () => {
   afterEach(() => {
     vi.clearAllMocks();
     expressControl.mode.value = "listening";
+    expressControl.apps.length = 0;
+    jwtValidate.mockReset().mockResolvedValue(true);
   });
 
   it("stays active until aborted", async () => {
@@ -214,5 +229,50 @@ describe("monitorMSTeamsProvider lifecycle", () => {
         pollStore: createStores().pollStore,
       }),
     ).rejects.toThrow(/EADDRINUSE/);
+  });
+
+  it("runs JWT validation before JSON body parsing", async () => {
+    const abort = new AbortController();
+    const task = monitorMSTeamsProvider({
+      cfg: createConfig(0),
+      runtime: createRuntime(),
+      abortSignal: abort.signal,
+      conversationStore: createStores().conversationStore,
+      pollStore: createStores().pollStore,
+    });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const app = expressControl.apps.at(-1);
+    expect(app).toBeDefined();
+    expect(app!.use).toHaveBeenCalledTimes(4);
+
+    const jsonMiddleware = vi.mocked((await import("express")).json).mock.results[0]?.value;
+    expect(jsonMiddleware).toBeDefined();
+    expect(app!.use.mock.calls[1]?.[0]).not.toBe(jsonMiddleware);
+    expect(app!.use.mock.calls[2]?.[0]).toBe(jsonMiddleware);
+
+    const jwtMiddleware = app!.use.mock.calls[1]?.[0] as (
+      req: Request,
+      res: Response,
+      next: (err?: unknown) => void,
+    ) => void;
+    const next = vi.fn();
+    jwtMiddleware(
+      { headers: { authorization: "Bearer token" } } as Request,
+      {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+      } as unknown as Response,
+      next,
+    );
+
+    await vi.waitFor(() => {
+      expect(jwtValidate).toHaveBeenCalledWith("Bearer token");
+      expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    abort.abort();
+    await task;
   });
 });

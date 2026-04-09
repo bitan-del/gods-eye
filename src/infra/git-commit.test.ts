@@ -1,13 +1,15 @@
 import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { createTrackedTempDirs } from "../test-utils/tracked-temp-dirs.js";
+
+const tempDirs = createTrackedTempDirs();
 
 async function makeTempDir(label: string): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), `godseye-${label}-`));
+  return await tempDirs.make(`openclaw-${label}-`);
 }
 
 async function makeFakeGitRepo(
@@ -61,6 +63,7 @@ describe("git commit resolution", () => {
     vi.doUnmock("node:fs");
     vi.doUnmock("node:module");
     __testing.clearCachedGitCommits();
+    await tempDirs.cleanup();
   });
 
   it("resolves commit metadata from the caller module root instead of the caller cwd", async () => {
@@ -177,7 +180,7 @@ describe("git commit resolution", () => {
     );
   });
 
-  it("does not walk out of the godseye package into a host repo", async () => {
+  it("does not walk out of the openclaw package into a host repo", async () => {
     const temp = await makeTempDir("git-commit-package-boundary");
     const hostRepo = path.join(temp, "host");
     await fs.mkdir(hostRepo, { recursive: true });
@@ -190,11 +193,11 @@ describe("git commit resolution", () => {
       { cwd: hostRepo },
     );
 
-    const packageRoot = path.join(hostRepo, "node_modules", "godseye");
+    const packageRoot = path.join(hostRepo, "node_modules", "openclaw");
     await fs.mkdir(path.join(packageRoot, "dist"), { recursive: true });
     await fs.writeFile(
       path.join(packageRoot, "package.json"),
-      JSON.stringify({ name: "godseye", version: "2026.3.10" }),
+      JSON.stringify({ name: "openclaw", version: "2026.3.10" }),
       "utf-8",
     );
     const moduleUrl = pathToFileURL(path.join(packageRoot, "dist", "entry.js")).href;

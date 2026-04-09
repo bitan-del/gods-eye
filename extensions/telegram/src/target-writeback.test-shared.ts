@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/testing";
+import type { OpenClawConfig } from "godseye/plugin-sdk/testing";
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 type UnknownMock = Mock<(...args: unknown[]) => unknown>;
@@ -10,9 +10,9 @@ export const loadCronStore: AsyncUnknownMock = vi.fn();
 export const resolveCronStorePath: UnknownMock = vi.fn();
 export const saveCronStore: AsyncUnknownMock = vi.fn();
 
-vi.mock("openclaw/plugin-sdk/config-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/config-runtime")>(
-    "openclaw/plugin-sdk/config-runtime",
+vi.mock("godseye/plugin-sdk/config-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/config-runtime")>(
+    "godseye/plugin-sdk/config-runtime",
   );
   return {
     ...actual,

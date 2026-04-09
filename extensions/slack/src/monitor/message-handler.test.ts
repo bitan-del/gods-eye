@@ -1,14 +1,16 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const enqueueMock = vi.fn(async (_entry: unknown) => {});
 const flushKeyMock = vi.fn(async (_key: string) => {});
 const resolveThreadTsMock = vi.fn(async ({ message }: { message: Record<string, unknown> }) => ({
   ...message,
 }));
-let createSlackMessageHandler: typeof import("./message-handler.js").createSlackMessageHandler;
+const { createSlackMessageHandler } = await import("./message-handler.js");
 
-vi.mock("godseye/plugin-sdk/channel-inbound", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/channel-inbound")>();
+vi.mock("godseye/plugin-sdk/channel-inbound", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/channel-inbound")>(
+    "godseye/plugin-sdk/channel-inbound",
+  );
   return {
     ...actual,
     createChannelInboundDebouncer: () => ({
@@ -70,11 +72,6 @@ async function handleDirectMessage(
 }
 
 describe("createSlackMessageHandler", () => {
-  beforeAll(async () => {
-    vi.resetModules();
-    ({ createSlackMessageHandler } = await import("./message-handler.js"));
-  });
-
   beforeEach(() => {
     enqueueMock.mockClear();
     flushKeyMock.mockClear();

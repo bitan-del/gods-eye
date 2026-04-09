@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const loadConfigMock = vi.hoisted(() => vi.fn());
 
-vi.mock("openclaw/plugin-sdk/config-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/config-runtime")>(
-    "openclaw/plugin-sdk/config-runtime",
+vi.mock("godseye/plugin-sdk/config-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/config-runtime")>(
+    "godseye/plugin-sdk/config-runtime",
   );
   return {
     ...actual,
@@ -13,14 +13,14 @@ vi.mock("openclaw/plugin-sdk/config-runtime", async () => {
   };
 });
 
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   getSessionBindingService,
   registerSessionBindingAdapter,
   type SessionBindingBindInput,
   type SessionBindingRecord,
-} from "openclaw/plugin-sdk/conversation-runtime";
-import { __testing as sessionBindingTesting } from "openclaw/plugin-sdk/conversation-runtime";
+} from "godseye/plugin-sdk/conversation-runtime";
+import { __testing as sessionBindingTesting } from "godseye/plugin-sdk/conversation-runtime";
 import { preflightDiscordMessage } from "./message-handler.preflight.js";
 import {
   createDiscordMessage,

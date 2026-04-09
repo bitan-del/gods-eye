@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   collectTelegramAllowFromUsernameWarnings,
@@ -14,9 +14,9 @@ const listTelegramAccountIdsMock = vi.hoisted(() => vi.fn());
 const inspectTelegramAccountMock = vi.hoisted(() => vi.fn());
 const lookupTelegramChatIdMock = vi.hoisted(() => vi.fn());
 
-vi.mock("openclaw/plugin-sdk/runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/runtime")>(
-    "openclaw/plugin-sdk/runtime",
+vi.mock("godseye/plugin-sdk/runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/runtime")>(
+    "godseye/plugin-sdk/runtime",
   );
   return {
     ...actual,

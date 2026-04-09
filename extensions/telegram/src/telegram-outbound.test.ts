@@ -1,4 +1,4 @@
-import { chunkMarkdownText } from "openclaw/plugin-sdk/reply-runtime";
+import { chunkMarkdownText } from "godseye/plugin-sdk/reply-runtime";
 import { describe, expect, it } from "vitest";
 import { telegramOutboundBaseAdapter } from "./outbound-base.js";
 import { clearTelegramRuntime } from "./runtime.js";

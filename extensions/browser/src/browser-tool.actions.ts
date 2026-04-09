@@ -1,5 +1,5 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { normalizeOptionalString, readStringValue } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalString, readStringValue } from "godseye/plugin-sdk/text-runtime";
 import {
   DEFAULT_AI_SNAPSHOT_MAX_CHARS,
   browserAct,

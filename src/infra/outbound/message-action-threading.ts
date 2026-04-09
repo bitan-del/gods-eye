@@ -4,7 +4,7 @@ import type {
   ChannelThreadingAdapter,
   ChannelThreadingToolContext,
 } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type {
   OutboundSessionRoute,
   ResolveOutboundSessionRouteParams,
@@ -16,7 +16,7 @@ type ResolveAutoThreadId = NonNullable<ChannelThreadingAdapter["resolveAutoThrea
 export function resolveAndApplyOutboundThreadId(
   actionParams: Record<string, unknown>,
   context: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     to: string;
     accountId?: string | null;
     toolContext?: ChannelThreadingToolContext;
@@ -40,13 +40,14 @@ export function resolveAndApplyOutboundThreadId(
 }
 
 export async function prepareOutboundMirrorRoute(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   to: string;
   actionParams: Record<string, unknown>;
   accountId?: string | null;
   toolContext?: ChannelThreadingToolContext;
   agentId?: string;
+  currentSessionKey?: string;
   dryRun?: boolean;
   resolvedTarget?: ResolvedMessagingTarget;
   resolveAutoThreadId?: ResolveAutoThreadId;
@@ -54,8 +55,7 @@ export async function prepareOutboundMirrorRoute(params: {
     params: ResolveOutboundSessionRouteParams,
   ) => Promise<OutboundSessionRoute | null>;
   ensureOutboundSessionEntry: (params: {
-    cfg: GodsEyeConfig;
-    agentId: string;
+    cfg: OpenClawConfig;
     channel: ChannelId;
     accountId?: string | null;
     route: OutboundSessionRoute;
@@ -80,6 +80,7 @@ export async function prepareOutboundMirrorRoute(params: {
           agentId: params.agentId,
           accountId: params.accountId,
           target: params.to,
+          currentSessionKey: params.currentSessionKey,
           resolvedTarget: params.resolvedTarget,
           replyToId,
           threadId: resolvedThreadId,
@@ -88,7 +89,6 @@ export async function prepareOutboundMirrorRoute(params: {
   if (outboundRoute && params.agentId && !params.dryRun) {
     await params.ensureOutboundSessionEntry({
       cfg: params.cfg,
-      agentId: params.agentId,
       channel: params.channel,
       accountId: params.accountId,
       route: outboundRoute,

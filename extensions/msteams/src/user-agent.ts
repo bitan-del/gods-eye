@@ -13,7 +13,7 @@ function resolveTeamsSdkVersion(): string {
   }
 }
 
-function resolveGodsEyeVersion(): string {
+function resolveOpenClawVersion(): string {
   try {
     return getMSTeamsRuntime().version;
   } catch {
@@ -23,10 +23,10 @@ function resolveGodsEyeVersion(): string {
 
 /**
  * Build a combined User-Agent string that preserves the Teams SDK identity
- * and appends the GodsEye version.
+ * and appends the OpenClaw version.
  *
- * Format: "teams.ts[apps]/<sdk-version> GodsEye/<godseye-version>"
- * Example: "teams.ts[apps]/2.0.5 GodsEye/2026.3.22"
+ * Format: "teams.ts[apps]/<sdk-version> OpenClaw/<openclaw-version>"
+ * Example: "teams.ts[apps]/2.0.5 OpenClaw/2026.3.22"
  *
  * This lets the Teams backend track SDK usage while also identifying the
  * host application.
@@ -40,6 +40,14 @@ export function buildUserAgent(): string {
   if (cachedUserAgent) {
     return cachedUserAgent;
   }
-  cachedUserAgent = `teams.ts[apps]/${resolveTeamsSdkVersion()} GodsEye/${resolveGodsEyeVersion()}`;
+  cachedUserAgent = `teams.ts[apps]/${resolveTeamsSdkVersion()} OpenClaw/${resolveOpenClawVersion()}`;
   return cachedUserAgent;
+}
+
+export function ensureUserAgentHeader(headers?: HeadersInit): Headers {
+  const nextHeaders = new Headers(headers);
+  if (!nextHeaders.has("User-Agent")) {
+    nextHeaders.set("User-Agent", buildUserAgent());
+  }
+  return nextHeaders;
 }

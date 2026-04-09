@@ -1,10 +1,10 @@
-export { loadConfig, resolveMarkdownTableMode } from "openclaw/plugin-sdk/config-runtime";
-export type { PollInput, MediaKind } from "openclaw/plugin-sdk/media-runtime";
+export { loadConfig, resolveMarkdownTableMode } from "godseye/plugin-sdk/config-runtime";
+export type { PollInput, MediaKind } from "godseye/plugin-sdk/media-runtime";
 export {
   buildOutboundMediaLoadOptions,
   getImageMetadata,
   isGifMedia,
   kindFromMime,
   normalizePollInput,
-} from "openclaw/plugin-sdk/media-runtime";
-export { loadWebMedia } from "openclaw/plugin-sdk/web-media";
+} from "godseye/plugin-sdk/media-runtime";
+export { loadWebMedia } from "godseye/plugin-sdk/web-media";

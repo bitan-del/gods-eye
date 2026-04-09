@@ -1,8 +1,7 @@
 import type { Command } from "commander";
 import JSON5 from "json5";
-import { OLLAMA_DEFAULT_BASE_URL } from "../agents/ollama-defaults.js";
-import type { GodsEyeConfig } from "../config/config.js";
-import { readConfigFileSnapshot, writeConfigFile } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { readConfigFileSnapshot, replaceConfigFile } from "../config/config.js";
 import { formatConfigIssueLines, normalizeConfigIssues } from "../config/issue-format.js";
 import { CONFIG_PATH } from "../config/paths.js";
 import { isBlockedObjectKey } from "../config/prototype-keys.js";
@@ -16,7 +15,10 @@ import {
   type SecretRef,
   type SecretRefSource,
 } from "../config/types.secrets.js";
-import { validateConfigObjectRaw } from "../config/validation.js";
+import {
+  collectUnsupportedSecretRefPolicyIssues,
+  validateConfigObjectRaw,
+} from "../config/validation.js";
 import { SecretProviderSchema } from "../config/zod-schema.core.js";
 import { danger, info, success } from "../globals.js";
 import { type RuntimeEnv, writeRuntimeJson } from "../runtime.js";
@@ -34,6 +36,7 @@ import {
   discoverConfigSecretTargets,
   resolveConfigSecretTargetByPath,
 } from "../secrets/target-registry.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { shortenHomePath } from "../utils.js";
@@ -69,21 +72,19 @@ type ConfigSetOperation = {
   assignedRef?: SecretRef;
 };
 
-const OLLAMA_API_KEY_PATH: PathSegment[] = ["models", "providers", "ollama", "apiKey"];
-const OLLAMA_PROVIDER_PATH: PathSegment[] = ["models", "providers", "ollama"];
 const GATEWAY_AUTH_MODE_PATH: PathSegment[] = ["gateway", "auth", "mode"];
 const SECRET_PROVIDER_PATH_PREFIX: PathSegment[] = ["secrets", "providers"];
 const CONFIG_SET_EXAMPLE_VALUE = formatCliCommand(
-  "godseye config set gateway.port 19001 --strict-json",
+  "openclaw config set gateway.port 19001 --strict-json",
 );
 const CONFIG_SET_EXAMPLE_REF = formatCliCommand(
-  "godseye config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN",
+  "openclaw config set channels.discord.token --ref-provider default --ref-source env --ref-id DISCORD_BOT_TOKEN",
 );
 const CONFIG_SET_EXAMPLE_PROVIDER = formatCliCommand(
-  "godseye config set secrets.providers.vault --provider-source file --provider-path /etc/godseye/secrets.json --provider-mode json",
+  "openclaw config set secrets.providers.vault --provider-source file --provider-path /etc/openclaw/secrets.json --provider-mode json",
 );
 const CONFIG_SET_EXAMPLE_BATCH = formatCliCommand(
-  "godseye config set --batch-file ./config-set.batch.json --dry-run",
+  "openclaw config set --batch-file ./config-set.batch.json --dry-run",
 );
 const CONFIG_SET_DESCRIPTION = [
   "Set config values by path (value mode, ref/provider builder mode, or batch JSON mode).",
@@ -93,6 +94,7 @@ const CONFIG_SET_DESCRIPTION = [
   CONFIG_SET_EXAMPLE_PROVIDER,
   CONFIG_SET_EXAMPLE_BATCH,
 ].join("\n");
+const CONFIG_SET_POLICY_ERROR_MAX_ISSUES = 5;
 
 class ConfigSetDryRunValidationError extends Error {
   constructor(readonly result: ConfigSetDryRunResult) {
@@ -179,7 +181,18 @@ function hasOwnPathKey(value: Record<string, unknown>, key: string): boolean {
 }
 
 function formatDoctorHint(message: string): string {
-  return `Run \`${formatCliCommand("godseye doctor")}\` ${message}`;
+  return `Run \`${formatCliCommand("openclaw doctor")}\` ${message}`;
+}
+
+function formatUnsupportedSecretRefPolicyFailureMessage(issues: string[]): string {
+  const lines = [
+    "Config policy validation failed: unsupported SecretRef usage was detected.",
+    ...issues.slice(0, CONFIG_SET_POLICY_ERROR_MAX_ISSUES).map((issue) => `- ${issue}`),
+  ];
+  if (issues.length > CONFIG_SET_POLICY_ERROR_MAX_ISSUES) {
+    lines.push(`- ... ${issues.length - CONFIG_SET_POLICY_ERROR_MAX_ISSUES} more`);
+  }
+  return lines.join("\n");
 }
 
 function validatePathSegments(path: PathSegment[]): void {
@@ -337,24 +350,6 @@ function pathEquals(path: PathSegment[], expected: PathSegment[]): boolean {
   );
 }
 
-function ensureValidOllamaProviderForApiKeySet(
-  root: Record<string, unknown>,
-  path: PathSegment[],
-): void {
-  if (!pathEquals(path, OLLAMA_API_KEY_PATH)) {
-    return;
-  }
-  const existing = getAtPath(root, OLLAMA_PROVIDER_PATH);
-  if (existing.found) {
-    return;
-  }
-  setAtPath(root, OLLAMA_PROVIDER_PATH, {
-    baseUrl: OLLAMA_DEFAULT_BASE_URL,
-    api: "ollama",
-    models: [],
-  });
-}
-
 function pruneInactiveGatewayAuthCredentials(params: {
   root: Record<string, unknown>;
   operations: ConfigSetOperation[];
@@ -376,7 +371,7 @@ function pruneInactiveGatewayAuthCredentials(params: {
     return [];
   }
   const auth = authRaw as Record<string, unknown>;
-  const mode = typeof auth.mode === "string" ? auth.mode.trim() : "";
+  const mode = normalizeOptionalString(auth.mode) ?? "";
 
   const removedPaths: string[] = [];
   const remove = (key: "token" | "password") => {
@@ -799,7 +794,7 @@ function buildSingleSetOperations(params: {
 }
 
 function collectDryRunRefs(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   operations: ConfigSetOperation[];
 }): SecretRef[] {
   const refsByKey = new Map<string, SecretRef>();
@@ -841,7 +836,7 @@ function collectDryRunRefs(params: {
 
 async function collectDryRunResolvabilityErrors(params: {
   refs: SecretRef[];
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
 }): Promise<ConfigSetDryRunError[]> {
   const failures: ConfigSetDryRunError[] = [];
   for (const ref of params.refs) {
@@ -863,7 +858,7 @@ async function collectDryRunResolvabilityErrors(params: {
 
 function collectDryRunStaticErrorsForSkippedExecRefs(params: {
   refs: SecretRef[];
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
 }): ConfigSetDryRunError[] {
   const failures: ConfigSetDryRunError[] = [];
   for (const ref of params.refs) {
@@ -921,7 +916,7 @@ function selectDryRunRefsForResolution(params: { refs: SecretRef[]; allowExecInD
   return { refsToResolve, skippedExecRefs };
 }
 
-function collectDryRunSchemaErrors(config: GodsEyeConfig): ConfigSetDryRunError[] {
+function collectDryRunSchemaErrors(config: OpenClawConfig): ConfigSetDryRunError[] {
   const validated = validateConfigObjectRaw(config);
   if (validated.ok) {
     return [];
@@ -930,6 +925,23 @@ function collectDryRunSchemaErrors(config: GodsEyeConfig): ConfigSetDryRunError[
     kind: "schema",
     message,
   }));
+}
+
+function dedupeDryRunErrors(errors: ConfigSetDryRunError[]): ConfigSetDryRunError[] {
+  const deduped: ConfigSetDryRunError[] = [];
+  const seen = new Set<string>();
+  for (const error of errors) {
+    const key =
+      error.kind === "resolvability"
+        ? `${error.kind}\u0000${error.ref ?? ""}\u0000${error.message}`
+        : `${error.kind}\u0000${error.message}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    deduped.push(error);
+  }
+  return deduped;
 }
 
 function formatDryRunFailureMessage(params: {
@@ -1006,14 +1018,17 @@ export async function runConfigSet(opts: {
     // This prevents runtime defaults from leaking into the written config file (issue #6070)
     const next = structuredClone(snapshot.resolved) as Record<string, unknown>;
     for (const operation of operations) {
-      ensureValidOllamaProviderForApiKeySet(next, operation.setPath);
       setAtPath(next, operation.setPath, operation.value);
     }
     const removedGatewayAuthPaths = pruneInactiveGatewayAuthCredentials({
       root: next,
       operations,
     });
-    const nextConfig = next as GodsEyeConfig;
+    const nextConfig = next as OpenClawConfig;
+    const policyIssues = collectUnsupportedSecretRefPolicyIssues(nextConfig);
+    const policyIssueLines = formatConfigIssueLines(policyIssues, "", { normalizeRoot: true }).map(
+      (line) => line.trim(),
+    );
 
     if (opts.cliOptions.dryRun) {
       const hasJsonMode = operations.some((operation) => operation.inputMode === "json");
@@ -1030,6 +1045,14 @@ export async function runConfigSet(opts: {
         allowExecInDryRun: Boolean(opts.cliOptions.allowExec),
       });
       const errors: ConfigSetDryRunError[] = [];
+      if (!hasJsonMode && policyIssueLines.length > 0) {
+        errors.push(
+          ...policyIssueLines.map((message) => ({
+            kind: "schema" as const,
+            message,
+          })),
+        );
+      }
       if (hasJsonMode) {
         errors.push(...collectDryRunSchemaErrors(nextConfig));
       }
@@ -1047,28 +1070,29 @@ export async function runConfigSet(opts: {
           })),
         );
       }
+      const dedupedErrors = dedupeDryRunErrors(errors);
       const dryRunResult: ConfigSetDryRunResult = {
-        ok: errors.length === 0,
+        ok: dedupedErrors.length === 0,
         operations: operations.length,
         configPath: shortenHomePath(snapshot.path),
         inputModes: [...new Set(operations.map((operation) => operation.inputMode))],
         checks: {
-          schema: hasJsonMode,
+          schema: hasJsonMode || policyIssueLines.length > 0,
           resolvability: hasJsonMode || hasBuilderMode,
           resolvabilityComplete:
             (hasJsonMode || hasBuilderMode) && selectedDryRunRefs.skippedExecRefs.length === 0,
         },
         refsChecked: selectedDryRunRefs.refsToResolve.length,
         skippedExecRefs: selectedDryRunRefs.skippedExecRefs.length,
-        ...(errors.length > 0 ? { errors } : {}),
+        ...(dedupedErrors.length > 0 ? { errors: dedupedErrors } : {}),
       };
-      if (errors.length > 0) {
+      if (dedupedErrors.length > 0) {
         if (opts.cliOptions.json) {
           throw new ConfigSetDryRunValidationError(dryRunResult);
         }
         throw new Error(
           formatDryRunFailureMessage({
-            errors,
+            errors: dedupedErrors,
             skippedExecRefs: selectedDryRunRefs.skippedExecRefs.length,
           }),
         );
@@ -1098,8 +1122,14 @@ export async function runConfigSet(opts: {
       }
       return;
     }
+    if (policyIssueLines.length > 0) {
+      throw new Error(formatUnsupportedSecretRefPolicyFailureMessage(policyIssueLines));
+    }
 
-    await writeConfigFile(next);
+    await replaceConfigFile({
+      nextConfig: next,
+      ...(snapshot.hash !== undefined ? { baseHash: snapshot.hash } : {}),
+    });
     if (removedGatewayAuthPaths.length > 0) {
       runtime.log(
         info(
@@ -1177,7 +1207,11 @@ export async function runConfigUnset(opts: { path: string; runtime?: RuntimeEnv 
       runtime.exit(1);
       return;
     }
-    await writeConfigFile(next, { unsetPaths: [parsedPath] });
+    await replaceConfigFile({
+      nextConfig: next,
+      ...(snapshot.hash !== undefined ? { baseHash: snapshot.hash } : {}),
+      writeOptions: { unsetPaths: [parsedPath] },
+    });
     runtime.log(info(`Removed ${opts.path}. Restart the gateway to apply.`));
   } catch (err) {
     runtime.error(danger(String(err)));
@@ -1222,7 +1256,7 @@ export async function runConfigSchema(opts: { runtime?: RuntimeEnv } = {}) {
 
 export async function runConfigValidate(opts: { json?: boolean; runtime?: RuntimeEnv } = {}) {
   const runtime = opts.runtime ?? defaultRuntime;
-  let outputPath = CONFIG_PATH ?? "godseye.json";
+  let outputPath = CONFIG_PATH ?? "openclaw.json";
 
   try {
     const snapshot = await readConfigFileSnapshot();
@@ -1280,7 +1314,7 @@ export function registerConfigCli(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/config", "docs.gods-eye.org/cli/config")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/config", "docs.openclaw.ai/cli/config")}\n`,
     )
     .option(
       "--section <section>",
@@ -1310,7 +1344,7 @@ export function registerConfigCli(program: Command) {
     .option("--json", "Legacy alias for --strict-json", false)
     .option(
       "--dry-run",
-      "Validate changes without writing godseye.json (checks run in builder/json/batch modes; exec SecretRefs are skipped unless --allow-exec is set)",
+      "Validate changes without writing openclaw.json (checks run in builder/json/batch modes; exec SecretRefs are skipped unless --allow-exec is set)",
       false,
     )
     .option(
@@ -1397,7 +1431,7 @@ export function registerConfigCli(program: Command) {
 
   cmd
     .command("schema")
-    .description("Print the JSON schema for godseye.json")
+    .description("Print the JSON schema for openclaw.json")
     .action(async () => {
       await runConfigSchema({});
     });

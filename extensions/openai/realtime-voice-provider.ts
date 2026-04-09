@@ -4,8 +4,8 @@ import type {
   RealtimeVoiceProviderConfig,
   RealtimeVoiceProviderPlugin,
   RealtimeVoiceTool,
-} from "openclaw/plugin-sdk/realtime-voice";
-import { normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
+} from "godseye/plugin-sdk/realtime-voice";
+import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
 import WebSocket from "ws";
 import {
   asFiniteNumber,

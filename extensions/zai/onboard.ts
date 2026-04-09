@@ -1,7 +1,8 @@
 import {
   applyProviderConfigWithModelCatalogPreset,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   buildZaiModelDefinition,
   resolveZaiBaseUrl,
@@ -11,8 +12,10 @@ import {
 export const ZAI_DEFAULT_MODEL_REF = `zai/${ZAI_DEFAULT_MODEL_ID}`;
 
 const ZAI_DEFAULT_MODELS = [
+  buildZaiModelDefinition({ id: "glm-5.1" }),
   buildZaiModelDefinition({ id: "glm-5" }),
   buildZaiModelDefinition({ id: "glm-5-turbo" }),
+  buildZaiModelDefinition({ id: "glm-5v-turbo" }),
   buildZaiModelDefinition({ id: "glm-4.7" }),
   buildZaiModelDefinition({ id: "glm-4.7-flash" }),
   buildZaiModelDefinition({ id: "glm-4.7-flashx" }),
@@ -24,19 +27,18 @@ const ZAI_DEFAULT_MODELS = [
   buildZaiModelDefinition({ id: "glm-4.5v" }),
 ];
 
-function resolveZaiPresetBaseUrl(cfg: GodsEyeConfig, endpoint?: string): string {
+function resolveZaiPresetBaseUrl(cfg: OpenClawConfig, endpoint?: string): string {
   const existingProvider = cfg.models?.providers?.zai;
-  const existingBaseUrl =
-    typeof existingProvider?.baseUrl === "string" ? existingProvider.baseUrl.trim() : "";
+  const existingBaseUrl = normalizeOptionalString(existingProvider?.baseUrl) ?? "";
   return endpoint ? resolveZaiBaseUrl(endpoint) : existingBaseUrl || resolveZaiBaseUrl();
 }
 
 function applyZaiPreset(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { endpoint?: string; modelId?: string },
   primaryModelRef?: string,
-): GodsEyeConfig {
-  const modelId = params?.modelId?.trim() || ZAI_DEFAULT_MODEL_ID;
+): OpenClawConfig {
+  const modelId = normalizeOptionalString(params?.modelId) ?? ZAI_DEFAULT_MODEL_ID;
   const modelRef = `zai/${modelId}`;
   return applyProviderConfigWithModelCatalogPreset(cfg, {
     providerId: "zai",
@@ -49,17 +51,17 @@ function applyZaiPreset(
 }
 
 export function applyZaiProviderConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { endpoint?: string; modelId?: string },
-): GodsEyeConfig {
+): OpenClawConfig {
   return applyZaiPreset(cfg, params);
 }
 
 export function applyZaiConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { endpoint?: string; modelId?: string },
-): GodsEyeConfig {
-  const modelId = params?.modelId?.trim() || ZAI_DEFAULT_MODEL_ID;
+): OpenClawConfig {
+  const modelId = normalizeOptionalString(params?.modelId) ?? ZAI_DEFAULT_MODEL_ID;
   const modelRef = modelId === ZAI_DEFAULT_MODEL_ID ? ZAI_DEFAULT_MODEL_REF : `zai/${modelId}`;
   return applyZaiPreset(cfg, params, modelRef);
 }

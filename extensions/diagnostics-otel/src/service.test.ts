@@ -106,11 +106,11 @@ vi.mock("../api.js", async () => {
   };
 });
 
-import type { GodsEyePluginServiceContext } from "../api.js";
+import type { OpenClawPluginServiceContext } from "../api.js";
 import { emitDiagnosticEvent } from "../api.js";
 import { createDiagnosticsOtelService } from "./service.js";
 
-const OTEL_TEST_STATE_DIR = "/tmp/godseye-diagnostics-otel-test";
+const OTEL_TEST_STATE_DIR = "/tmp/openclaw-diagnostics-otel-test";
 const OTEL_TEST_ENDPOINT = "http://otel-collector:4318";
 const OTEL_TEST_PROTOCOL = "http/protobuf";
 
@@ -131,7 +131,7 @@ type OtelContextFlags = {
 function createOtelContext(
   endpoint: string,
   { traces = false, metrics = false, logs = false }: OtelContextFlags = {},
-): GodsEyePluginServiceContext {
+): OpenClawPluginServiceContext {
   return {
     config: {
       diagnostics: {
@@ -151,7 +151,7 @@ function createOtelContext(
   };
 }
 
-function createTraceOnlyContext(endpoint: string): GodsEyePluginServiceContext {
+function createTraceOnlyContext(endpoint: string): OpenClawPluginServiceContext {
   return createOtelContext(endpoint, { traces: true });
 }
 
@@ -241,22 +241,26 @@ describe("diagnostics-otel service", () => {
       attempt: 2,
     });
 
-    expect(telemetryState.counters.get("godseye.webhook.received")?.add).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("godseye.webhook.duration_ms")?.record).toHaveBeenCalled();
-    expect(telemetryState.counters.get("godseye.message.queued")?.add).toHaveBeenCalled();
-    expect(telemetryState.counters.get("godseye.message.processed")?.add).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("godseye.message.duration_ms")?.record).toHaveBeenCalled();
-    expect(telemetryState.histograms.get("godseye.queue.wait_ms")?.record).toHaveBeenCalled();
-    expect(telemetryState.counters.get("godseye.session.stuck")?.add).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.webhook.received")?.add).toHaveBeenCalled();
     expect(
-      telemetryState.histograms.get("godseye.session.stuck_age_ms")?.record,
+      telemetryState.histograms.get("openclaw.webhook.duration_ms")?.record,
     ).toHaveBeenCalled();
-    expect(telemetryState.counters.get("godseye.run.attempt")?.add).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.message.queued")?.add).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.message.processed")?.add).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("openclaw.message.duration_ms")?.record,
+    ).toHaveBeenCalled();
+    expect(telemetryState.histograms.get("openclaw.queue.wait_ms")?.record).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.session.stuck")?.add).toHaveBeenCalled();
+    expect(
+      telemetryState.histograms.get("openclaw.session.stuck_age_ms")?.record,
+    ).toHaveBeenCalled();
+    expect(telemetryState.counters.get("openclaw.run.attempt")?.add).toHaveBeenCalled();
 
     const spanNames = telemetryState.tracer.startSpan.mock.calls.map((call) => call[0]);
-    expect(spanNames).toContain("godseye.webhook.processed");
-    expect(spanNames).toContain("godseye.message.processed");
-    expect(spanNames).toContain("godseye.session.stuck");
+    expect(spanNames).toContain("openclaw.webhook.processed");
+    expect(spanNames).toContain("openclaw.message.processed");
+    expect(spanNames).toContain("openclaw.session.stuck");
 
     expect(registerLogTransportMock).toHaveBeenCalledTimes(1);
     expect(registeredTransports).toHaveLength(1);
@@ -328,7 +332,7 @@ describe("diagnostics-otel service", () => {
       _meta: { logLevelName: "DEBUG", date: new Date() },
     });
 
-    const tokenAttr = emitCall?.attributes?.["godseye.token"];
+    const tokenAttr = emitCall?.attributes?.["openclaw.token"];
     expect(tokenAttr).not.toBe("ghp_abcdefghijklmnopqrstuvwxyz123456"); // pragma: allowlist secret
     if (typeof tokenAttr === "string") {
       expect(tokenAttr).toContain("…");
@@ -346,16 +350,16 @@ describe("diagnostics-otel service", () => {
       reason: "token=ghp_abcdefghijklmnopqrstuvwxyz123456", // pragma: allowlist secret
     });
 
-    const sessionCounter = telemetryState.counters.get("godseye.session.state");
+    const sessionCounter = telemetryState.counters.get("openclaw.session.state");
     expect(sessionCounter?.add).toHaveBeenCalledWith(
       1,
       expect.objectContaining({
-        "godseye.reason": expect.stringContaining("…"),
+        "openclaw.reason": expect.stringContaining("…"),
       }),
     );
     const attrs = sessionCounter?.add.mock.calls[0]?.[1] as Record<string, unknown> | undefined;
-    expect(typeof attrs?.["godseye.reason"]).toBe("string");
-    expect(String(attrs?.["godseye.reason"])).not.toContain(
+    expect(typeof attrs?.["openclaw.reason"]).toBe("string");
+    expect(String(attrs?.["openclaw.reason"])).not.toContain(
       "ghp_abcdefghijklmnopqrstuvwxyz123456", // pragma: allowlist secret
     );
     await service.stop?.(ctx);

@@ -1,14 +1,16 @@
-import { defineChannelPluginEntry } from "godseye/plugin-sdk/core";
-import { synologyChatPlugin } from "./src/channel.js";
-import { setSynologyRuntime } from "./src/runtime.js";
+import { defineBundledChannelEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { synologyChatPlugin } from "./src/channel.js";
-export { setSynologyRuntime } from "./src/runtime.js";
-
-export default defineChannelPluginEntry({
+export default defineBundledChannelEntry({
   id: "synology-chat",
   name: "Synology Chat",
-  description: "Native Synology Chat channel plugin for GodsEye",
-  plugin: synologyChatPlugin,
-  setRuntime: setSynologyRuntime,
+  description: "Native Synology Chat channel plugin for OpenClaw",
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./api.js",
+    exportName: "synologyChatPlugin",
+  },
+  runtime: {
+    specifier: "./api.js",
+    exportName: "setSynologyRuntime",
+  },
 });

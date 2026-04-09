@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { resolveMemoryHostEventLogPath } from "openclaw/plugin-sdk/memory-core-host-events";
-import { resolveMemoryDreamingWorkspaces } from "openclaw/plugin-sdk/memory-core-host-status";
-import type { MemoryPluginPublicArtifact } from "openclaw/plugin-sdk/memory-host-core";
+import { resolveMemoryHostEventLogPath } from "godseye/plugin-sdk/memory-core-host-events";
+import { resolveMemoryDreamingWorkspaces } from "godseye/plugin-sdk/memory-core-host-status";
+import type { MemoryPluginPublicArtifact } from "godseye/plugin-sdk/memory-host-core";
 import type { OpenClawConfig } from "../api.js";
 
 async function pathExists(inputPath: string): Promise<boolean> {

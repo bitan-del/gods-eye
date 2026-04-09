@@ -1,22 +1,31 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import {
+  resolveAgentEffectiveModelPrimary,
+  resolveAgentModelFallbacksOverride,
+  resolveAgentWorkspaceDir,
+  resolveDefaultAgentId,
+} from "../agents/agent-scope.js";
 import { lookupContextTokens, resolveContextTokensForModel } from "../agents/context.js";
 import { DEFAULT_CONTEXT_TOKENS, DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
+import type { ModelCatalogEntry } from "../agents/model-catalog.js";
 import {
   inferUniqueProviderFromConfiguredModels,
+  normalizeStoredOverrideModel,
   parseModelRef,
   resolveConfiguredModelRef,
   resolveDefaultModelForAgent,
+  resolvePersistedSelectedModelRef,
 } from "../agents/model-selection.js";
 import {
-  getLatestSubagentRunByChildSessionKey,
+  getSessionDisplaySubagentRunByChildSessionKey,
   getSubagentSessionRuntimeMs,
   getSubagentSessionStartedAt,
   listSubagentRunsForController,
   resolveSubagentSessionStatus,
-} from "../agents/subagent-registry.js";
-import { type GodsEyeConfig, loadConfig } from "../config/config.js";
+} from "../agents/subagent-registry-read.js";
+import { type OpenClawConfig, loadConfig } from "../config/config.js";
+import { resolveAgentModelFallbackValues } from "../config/model-input.js";
 import { resolveStateDir } from "../config/paths.js";
 import {
   buildGroupDisplayName,
@@ -46,6 +55,11 @@ import {
   isWorkspaceRelativeAvatarPath,
   resolveAvatarMime,
 } from "../shared/avatar-policy.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { normalizeSessionDeliveryFields } from "../utils/delivery-context.js";
 import { estimateUsageCost, resolveModelCostConfig } from "../utils/usage-format.js";
 import {
@@ -62,7 +76,7 @@ import type {
 export {
   archiveFileOnDisk,
   archiveSessionTranscripts,
-  attachGodsEyeTranscriptMeta,
+  attachOpenClawTranscriptMeta,
   capArrayByJsonBytes,
   readFirstUserMessageFromTranscript,
   readLastMessagePreviewFromTranscript,
@@ -93,14 +107,14 @@ function tryResolveExistingPath(value: string): string | null {
 }
 
 function resolveIdentityAvatarUrl(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
   avatar: string | undefined,
 ): string | undefined {
   if (!avatar) {
     return undefined;
   }
-  const trimmed = avatar.trim();
+  const trimmed = normalizeOptionalString(avatar) ?? "";
   if (!trimmed) {
     return undefined;
   }
@@ -170,12 +184,12 @@ export function deriveSessionTitle(
     return undefined;
   }
 
-  if (entry.displayName?.trim()) {
-    return entry.displayName.trim();
+  if (normalizeOptionalString(entry.displayName)) {
+    return normalizeOptionalString(entry.displayName);
   }
 
-  if (entry.subject?.trim()) {
-    return entry.subject.trim();
+  if (normalizeOptionalString(entry.subject)) {
+    return normalizeOptionalString(entry.subject);
   }
 
   if (firstUserMessage?.trim()) {
@@ -205,8 +219,20 @@ function resolveNonNegativeNumber(value: number | null | undefined): number | un
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
 }
 
+function resolveLatestCompactionCheckpoint(
+  entry?: Pick<SessionEntry, "compactionCheckpoints"> | null,
+): NonNullable<SessionEntry["compactionCheckpoints"]>[number] | undefined {
+  const checkpoints = entry?.compactionCheckpoints;
+  if (!Array.isArray(checkpoints) || checkpoints.length === 0) {
+    return undefined;
+  }
+  return checkpoints.reduce((latest, checkpoint) =>
+    !latest || checkpoint.createdAt > latest.createdAt ? checkpoint : latest,
+  );
+}
+
 function resolveEstimatedSessionCostUsd(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   provider?: string;
   model?: string;
   entry?: Pick<
@@ -259,13 +285,14 @@ function resolveChildSessionKeys(
 ): string[] | undefined {
   const childSessionKeys = new Set<string>();
   for (const entry of listSubagentRunsForController(controllerSessionKey)) {
-    const childSessionKey = entry.childSessionKey?.trim();
+    const childSessionKey = normalizeOptionalString(entry.childSessionKey);
     if (!childSessionKey) {
       continue;
     }
-    const latest = getLatestSubagentRunByChildSessionKey(childSessionKey);
+    const latest = getSessionDisplaySubagentRunByChildSessionKey(childSessionKey);
     const latestControllerSessionKey =
-      latest?.controllerSessionKey?.trim() || latest?.requesterSessionKey?.trim();
+      normalizeOptionalString(latest?.controllerSessionKey) ||
+      normalizeOptionalString(latest?.requesterSessionKey);
     if (latestControllerSessionKey !== controllerSessionKey) {
       continue;
     }
@@ -275,15 +302,16 @@ function resolveChildSessionKeys(
     if (!entry || key === controllerSessionKey) {
       continue;
     }
-    const spawnedBy = entry.spawnedBy?.trim();
-    const parentSessionKey = entry.parentSessionKey?.trim();
+    const spawnedBy = normalizeOptionalString(entry.spawnedBy);
+    const parentSessionKey = normalizeOptionalString(entry.parentSessionKey);
     if (spawnedBy !== controllerSessionKey && parentSessionKey !== controllerSessionKey) {
       continue;
     }
-    const latest = getLatestSubagentRunByChildSessionKey(key);
+    const latest = getSessionDisplaySubagentRunByChildSessionKey(key);
     if (latest) {
       const latestControllerSessionKey =
-        latest.controllerSessionKey?.trim() || latest.requesterSessionKey?.trim();
+        normalizeOptionalString(latest.controllerSessionKey) ||
+        normalizeOptionalString(latest.requesterSessionKey);
       if (latestControllerSessionKey !== controllerSessionKey) {
         continue;
       }
@@ -295,7 +323,7 @@ function resolveChildSessionKeys(
 }
 
 function resolveTranscriptUsageFallback(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   key: string;
   entry?: SessionEntry;
   storePath: string;
@@ -306,6 +334,8 @@ function resolveTranscriptUsageFallback(params: {
   totalTokens?: number;
   totalTokensFresh?: boolean;
   contextTokens?: number;
+  modelProvider?: string;
+  model?: string;
 } | null {
   const entry = params.entry;
   if (!entry?.sessionId) {
@@ -346,6 +376,8 @@ function resolveTranscriptUsageFallback(params: {
     },
   });
   return {
+    modelProvider,
+    model,
     totalTokens: resolvePositiveNumber(snapshot.totalTokens),
     totalTokensFresh: snapshot.totalTokensFresh === true,
     contextTokens: resolvePositiveNumber(contextTokens),
@@ -359,13 +391,13 @@ export function loadSessionEntry(sessionKey: string) {
   const agentId = resolveSessionStoreAgentId(cfg, canonicalKey);
   const { storePath, store } = resolveGatewaySessionStoreLookup({
     cfg,
-    key: sessionKey.trim(),
+    key: normalizeOptionalString(sessionKey) ?? "",
     canonicalKey,
     agentId,
   });
   const target = resolveGatewaySessionStoreTarget({
     cfg,
-    key: sessionKey.trim(),
+    key: normalizeOptionalString(sessionKey) ?? "",
     store,
   });
   const freshestMatch = resolveFreshestSessionStoreMatchFromStoreKeys(store, target.storeKeys);
@@ -399,29 +431,33 @@ export function resolveFreshestSessionEntryFromStoreKeys(
   return resolveFreshestSessionStoreMatchFromStoreKeys(store, storeKeys)?.entry;
 }
 
-/**
- * Find a session entry by exact or case-insensitive key match.
- * Returns both the entry and the actual store key it was found under,
- * so callers can clean up legacy mixed-case keys when they differ from canonicalKey.
- */
-function findStoreMatch(
+function findFreshestStoreMatch(
   store: Record<string, SessionEntry>,
   ...candidates: string[]
 ): { entry: SessionEntry; key: string } | undefined {
-  // Exact match first.
+  const matches = new Map<string, { entry: SessionEntry; key: string }>();
   for (const candidate of candidates) {
-    if (candidate && store[candidate]) {
-      return { entry: store[candidate], key: candidate };
+    const trimmed = normalizeOptionalString(candidate) ?? "";
+    if (!trimmed) {
+      continue;
+    }
+    const exact = store[trimmed];
+    if (exact) {
+      matches.set(trimmed, { entry: exact, key: trimmed });
+    }
+    for (const key of findStoreKeysIgnoreCase(store, trimmed)) {
+      const entry = store[key];
+      if (entry) {
+        matches.set(key, { entry, key });
+      }
     }
   }
-  // Case-insensitive scan for ALL candidates.
-  const loweredSet = new Set(candidates.filter(Boolean).map((c) => c.toLowerCase()));
-  for (const key of Object.keys(store)) {
-    if (loweredSet.has(key.toLowerCase())) {
-      return { entry: store[key], key };
-    }
+  if (matches.size === 0) {
+    return undefined;
   }
-  return undefined;
+  return [...matches.values()].toSorted(
+    (a, b) => (b.entry.updatedAt ?? 0) - (a.entry.updatedAt ?? 0),
+  )[0];
 }
 
 /**
@@ -432,10 +468,10 @@ export function findStoreKeysIgnoreCase(
   store: Record<string, unknown>,
   targetKey: string,
 ): string[] {
-  const lowered = targetKey.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(targetKey);
   const matches: string[] = [];
   for (const key of Object.keys(store)) {
-    if (key.toLowerCase() === lowered) {
+    if (normalizeLowercaseStringOrEmpty(key) === lowered) {
       matches.push(key);
     }
   }
@@ -453,7 +489,7 @@ export function pruneLegacyStoreKeys(params: {
 }) {
   const keysToDelete = new Set<string>();
   for (const candidate of params.candidates) {
-    const trimmed = String(candidate ?? "").trim();
+    const trimmed = normalizeOptionalString(String(candidate ?? "")) ?? "";
     if (!trimmed) {
       continue;
     }
@@ -550,7 +586,7 @@ function listExistingAgentIdsFromDisk(): string[] {
   }
 }
 
-function listConfiguredAgentIds(cfg: GodsEyeConfig): string[] {
+function listConfiguredAgentIds(cfg: OpenClawConfig): string[] {
   const ids = new Set<string>();
   const defaultId = normalizeAgentId(resolveDefaultAgentId(cfg));
   ids.add(defaultId);
@@ -572,7 +608,42 @@ function listConfiguredAgentIds(cfg: GodsEyeConfig): string[] {
     : sorted;
 }
 
-export function listAgentsForGateway(cfg: GodsEyeConfig): {
+function normalizeFallbackList(values: readonly string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      continue;
+    }
+    const key = normalizeLowercaseStringOrEmpty(trimmed);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+function resolveGatewayAgentModel(
+  cfg: OpenClawConfig,
+  agentId: string,
+): GatewayAgentRow["model"] | undefined {
+  const primary = resolveAgentEffectiveModelPrimary(cfg, agentId)?.trim();
+  const fallbackOverride = resolveAgentModelFallbacksOverride(cfg, agentId);
+  const defaultFallbacks = resolveAgentModelFallbackValues(cfg.agents?.defaults?.model);
+  const fallbacks = normalizeFallbackList(fallbackOverride ?? defaultFallbacks);
+  if (!primary && fallbacks.length === 0) {
+    return undefined;
+  }
+  return {
+    ...(primary ? { primary } : {}),
+    ...(fallbacks.length > 0 ? { fallbacks } : {}),
+  };
+}
+
+export function listAgentsForGateway(cfg: OpenClawConfig): {
   defaultId: string;
   mainKey: string;
   scope: SessionScope;
@@ -591,19 +662,19 @@ export function listAgentsForGateway(cfg: GodsEyeConfig): {
     }
     const identity = entry.identity
       ? {
-          name: entry.identity.name?.trim() || undefined,
-          theme: entry.identity.theme?.trim() || undefined,
-          emoji: entry.identity.emoji?.trim() || undefined,
-          avatar: entry.identity.avatar?.trim() || undefined,
+          name: normalizeOptionalString(entry.identity.name),
+          theme: normalizeOptionalString(entry.identity.theme),
+          emoji: normalizeOptionalString(entry.identity.emoji),
+          avatar: normalizeOptionalString(entry.identity.avatar),
           avatarUrl: resolveIdentityAvatarUrl(
             cfg,
             normalizeAgentId(entry.id),
-            entry.identity.avatar?.trim(),
+            normalizeOptionalString(entry.identity.avatar),
           ),
         }
       : undefined;
     configuredById.set(normalizeAgentId(entry.id), {
-      name: typeof entry.name === "string" && entry.name.trim() ? entry.name.trim() : undefined,
+      name: normalizeOptionalString(entry.name),
       identity,
     });
   }
@@ -621,17 +692,20 @@ export function listAgentsForGateway(cfg: GodsEyeConfig): {
   }
   const agents = agentIds.map((id) => {
     const meta = configuredById.get(id);
+    const model = resolveGatewayAgentModel(cfg, id);
     return {
       id,
       name: meta?.name,
       identity: meta?.identity,
+      workspace: resolveAgentWorkspaceDir(cfg, id),
+      ...(model ? { model } : {}),
     };
   });
   return { defaultId, mainKey, scope, agents };
 }
 
 function canonicalizeSessionKeyForAgent(agentId: string, key: string): string {
-  const lowered = key.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(key);
   if (lowered === "global" || lowered === "unknown") {
     return lowered;
   }
@@ -641,16 +715,19 @@ function canonicalizeSessionKeyForAgent(agentId: string, key: string): string {
   return `agent:${normalizeAgentId(agentId)}:${lowered}`;
 }
 
-function resolveDefaultStoreAgentId(cfg: GodsEyeConfig): string {
+function resolveDefaultStoreAgentId(cfg: OpenClawConfig): string {
   return normalizeAgentId(resolveDefaultAgentId(cfg));
 }
 
-export function resolveSessionStoreKey(params: { cfg: GodsEyeConfig; sessionKey: string }): string {
-  const raw = (params.sessionKey ?? "").trim();
+export function resolveSessionStoreKey(params: {
+  cfg: OpenClawConfig;
+  sessionKey: string;
+}): string {
+  const raw = normalizeOptionalString(params.sessionKey) ?? "";
   if (!raw) {
     return raw;
   }
-  const rawLower = raw.toLowerCase();
+  const rawLower = normalizeLowercaseStringOrEmpty(raw);
   if (rawLower === "global" || rawLower === "unknown") {
     return rawLower;
   }
@@ -658,7 +735,7 @@ export function resolveSessionStoreKey(params: { cfg: GodsEyeConfig; sessionKey:
   const parsed = parseAgentSessionKey(raw);
   if (parsed) {
     const agentId = normalizeAgentId(parsed.agentId);
-    const lowered = raw.toLowerCase();
+    const lowered = normalizeLowercaseStringOrEmpty(raw);
     const canonical = canonicalizeMainSessionAlias({
       cfg: params.cfg,
       agentId,
@@ -670,7 +747,7 @@ export function resolveSessionStoreKey(params: { cfg: GodsEyeConfig; sessionKey:
     return lowered;
   }
 
-  const lowered = raw.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(raw);
   const rawMainKey = normalizeMainKey(params.cfg.session?.mainKey);
   if (lowered === "main" || lowered === rawMainKey) {
     return resolveMainSessionKey(params.cfg);
@@ -679,7 +756,7 @@ export function resolveSessionStoreKey(params: { cfg: GodsEyeConfig; sessionKey:
   return canonicalizeSessionKeyForAgent(agentId, lowered);
 }
 
-function resolveSessionStoreAgentId(cfg: GodsEyeConfig, canonicalKey: string): string {
+function resolveSessionStoreAgentId(cfg: OpenClawConfig, canonicalKey: string): string {
   if (canonicalKey === "global" || canonicalKey === "unknown") {
     return resolveDefaultStoreAgentId(cfg);
   }
@@ -691,21 +768,21 @@ function resolveSessionStoreAgentId(cfg: GodsEyeConfig, canonicalKey: string): s
 }
 
 export function canonicalizeSpawnedByForAgent(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
   spawnedBy?: string,
 ): string | undefined {
-  const raw = spawnedBy?.trim();
+  const raw = normalizeOptionalString(spawnedBy) ?? "";
   if (!raw) {
     return undefined;
   }
-  const lower = raw.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(raw);
   if (lower === "global" || lower === "unknown") {
     return lower;
   }
   let result: string;
-  if (raw.toLowerCase().startsWith("agent:")) {
-    result = raw.toLowerCase();
+  if (lower.startsWith("agent:")) {
+    result = lower;
   } else {
     result = `agent:${normalizeAgentId(agentId)}:${lower}`;
   }
@@ -716,7 +793,7 @@ export function canonicalizeSpawnedByForAgent(
 }
 
 function buildGatewaySessionStoreScanTargets(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   key: string;
   canonicalKey: string;
   agentId: string;
@@ -739,7 +816,7 @@ function buildGatewaySessionStoreScanTargets(params: {
 }
 
 function resolveGatewaySessionStoreCandidates(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
 ): SessionStoreTarget[] {
   const storeConfig = cfg.session?.store;
@@ -761,7 +838,7 @@ function resolveGatewaySessionStoreCandidates(
 }
 
 function resolveGatewaySessionStoreLookup(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   key: string;
   canonicalKey: string;
   agentId: string;
@@ -779,7 +856,7 @@ function resolveGatewaySessionStoreLookup(params: {
   };
   let selectedStorePath = fallback.storePath;
   let selectedStore = params.initialStore ?? loadSessionStore(fallback.storePath);
-  let selectedMatch = findStoreMatch(selectedStore, ...scanTargets);
+  let selectedMatch = findFreshestStoreMatch(selectedStore, ...scanTargets);
   let selectedUpdatedAt = selectedMatch?.entry.updatedAt ?? Number.NEGATIVE_INFINITY;
 
   for (let index = 1; index < candidates.length; index += 1) {
@@ -788,7 +865,7 @@ function resolveGatewaySessionStoreLookup(params: {
       continue;
     }
     const store = loadSessionStore(candidate.storePath);
-    const match = findStoreMatch(store, ...scanTargets);
+    const match = findFreshestStoreMatch(store, ...scanTargets);
     if (!match) {
       continue;
     }
@@ -811,7 +888,7 @@ function resolveGatewaySessionStoreLookup(params: {
 }
 
 export function resolveGatewaySessionStoreTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   key: string;
   scanLegacyKeys?: boolean;
   store?: Record<string, SessionEntry>;
@@ -821,7 +898,7 @@ export function resolveGatewaySessionStoreTarget(params: {
   canonicalKey: string;
   storeKeys: string[];
 } {
-  const key = params.key.trim();
+  const key = normalizeOptionalString(params.key) ?? "";
   const canonicalKey = resolveSessionStoreKey({
     cfg: params.cfg,
     sessionKey: key,
@@ -870,7 +947,7 @@ export function resolveGatewaySessionStoreTarget(params: {
 
 // Merge with existing entry based on latest timestamp to ensure data consistency and avoid overwriting with less complete data.
 function mergeSessionEntryIntoCombined(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   combined: Record<string, SessionEntry>;
   entry: SessionEntry;
   agentId: string;
@@ -898,7 +975,7 @@ function mergeSessionEntryIntoCombined(params: {
   }
 }
 
-export function loadCombinedSessionStoreForGateway(cfg: GodsEyeConfig): {
+export function loadCombinedSessionStoreForGateway(cfg: OpenClawConfig): {
   storePath: string;
   store: Record<string, SessionEntry>;
 } {
@@ -944,7 +1021,7 @@ export function loadCombinedSessionStoreForGateway(cfg: GodsEyeConfig): {
   return { storePath, store: combined };
 }
 
-export function getSessionDefaults(cfg: GodsEyeConfig): GatewaySessionsDefaults {
+export function getSessionDefaults(cfg: OpenClawConfig): GatewaySessionsDefaults {
   const resolved = resolveConfiguredModelRef({
     cfg,
     defaultProvider: DEFAULT_PROVIDER,
@@ -962,7 +1039,7 @@ export function getSessionDefaults(cfg: GodsEyeConfig): GatewaySessionsDefaults 
 }
 
 export function resolveSessionModelRef(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   entry?:
     | SessionEntry
     | Pick<SessionEntry, "model" | "modelProvider" | "modelOverride" | "providerOverride">,
@@ -976,51 +1053,97 @@ export function resolveSessionModelRef(
         defaultModel: DEFAULT_MODEL,
       });
 
-  // Prefer the last runtime model recorded on the session entry.
-  // This is the actual model used by the latest run and must win over defaults.
-  let provider = resolved.provider;
-  let model = resolved.model;
-  const runtimeModel = entry?.model?.trim();
-  const runtimeProvider = entry?.modelProvider?.trim();
-  if (runtimeModel) {
-    if (runtimeProvider) {
-      // Provider is explicitly recorded — use it directly. Re-parsing the
-      // model string through parseModelRef would incorrectly split OpenRouter
-      // vendor-prefixed model names (e.g. model="anthropic/claude-haiku-4.5"
-      // with provider="openrouter") into { provider: "anthropic" }, discarding
-      // the stored OpenRouter provider and causing direct API calls to a
-      // provider the user has no credentials for.
-      return { provider: runtimeProvider, model: runtimeModel };
-    }
-    const parsedRuntime = parseModelRef(runtimeModel, provider || DEFAULT_PROVIDER);
-    if (parsedRuntime) {
-      provider = parsedRuntime.provider;
-      model = parsedRuntime.model;
-    } else {
-      model = runtimeModel;
-    }
-    return { provider, model };
+  const normalizedOverride = normalizeStoredOverrideModel({
+    providerOverride: entry?.providerOverride,
+    modelOverride: entry?.modelOverride,
+  });
+
+  const persisted = resolvePersistedSelectedModelRef({
+    defaultProvider: resolved.provider || DEFAULT_PROVIDER,
+    runtimeProvider: entry?.modelProvider,
+    runtimeModel: entry?.model,
+    overrideProvider: normalizedOverride.providerOverride,
+    overrideModel: normalizedOverride.modelOverride,
+  });
+  if (persisted) {
+    return persisted;
+  }
+  return resolved;
+}
+
+export async function resolveGatewayModelSupportsImages(params: {
+  loadGatewayModelCatalog: () => Promise<ModelCatalogEntry[]>;
+  provider?: string;
+  model?: string;
+}): Promise<boolean> {
+  if (!params.model) {
+    return true;
   }
 
-  // Fall back to explicit per-session override (set at spawn/model-patch time),
-  // then finally to configured defaults.
-  const storedModelOverride = entry?.modelOverride?.trim();
-  if (storedModelOverride) {
-    const overrideProvider = entry?.providerOverride?.trim() || provider || DEFAULT_PROVIDER;
-    const parsedOverride = parseModelRef(storedModelOverride, overrideProvider);
-    if (parsedOverride) {
-      provider = parsedOverride.provider;
-      model = parsedOverride.model;
-    } else {
-      provider = overrideProvider;
-      model = storedModelOverride;
+  try {
+    const catalog = await params.loadGatewayModelCatalog();
+    const modelEntry = catalog.find(
+      (entry) =>
+        entry.id === params.model && (!params.provider || entry.provider === params.provider),
+    );
+    const normalizedProvider = normalizeOptionalLowercaseString(params.provider);
+    const normalizedCandidates = [
+      normalizeLowercaseStringOrEmpty(params.model),
+      normalizeLowercaseStringOrEmpty(modelEntry?.name),
+    ].filter(Boolean);
+    if (modelEntry) {
+      if (modelEntry.input?.includes("image")) {
+        return true;
+      }
+      // Legacy safety shim for stale persisted Foundry rows that predate
+      // provider-owned capability normalization.
+      if (
+        normalizedProvider === "microsoft-foundry" &&
+        normalizedCandidates.some(
+          (candidate) =>
+            candidate.startsWith("gpt-") ||
+            candidate.startsWith("o1") ||
+            candidate.startsWith("o3") ||
+            candidate.startsWith("o4") ||
+            candidate === "computer-use-preview",
+        )
+      ) {
+        return true;
+      }
+      if (
+        normalizedProvider === "claude-cli" &&
+        normalizedCandidates.some(
+          (candidate) =>
+            candidate === "opus" ||
+            candidate === "sonnet" ||
+            candidate === "haiku" ||
+            candidate.startsWith("claude-"),
+        )
+      ) {
+        return true;
+      }
+      return false;
     }
+    if (
+      normalizedProvider === "claude-cli" &&
+      normalizedCandidates.some(
+        (candidate) =>
+          candidate === "opus" ||
+          candidate === "sonnet" ||
+          candidate === "haiku" ||
+          candidate.startsWith("claude-"),
+      )
+    ) {
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
   }
-  return { provider, model };
 }
 
 export function resolveSessionModelIdentityRef(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   entry?:
     | SessionEntry
     | Pick<SessionEntry, "model" | "modelProvider" | "modelOverride" | "providerOverride">,
@@ -1069,7 +1192,7 @@ export function resolveSessionModelIdentityRef(
 }
 
 export function buildGatewaySessionRow(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   storePath: string;
   store: Record<string, SessionEntry>;
   key: string;
@@ -1106,39 +1229,63 @@ export function buildGatewaySessionRow(params: {
   const deliveryFields = normalizeSessionDeliveryFields(entry);
   const parsedAgent = parseAgentSessionKey(key);
   const sessionAgentId = normalizeAgentId(parsedAgent?.agentId ?? resolveDefaultAgentId(cfg));
-  const subagentRun = getLatestSubagentRunByChildSessionKey(key);
+  const subagentRun = getSessionDisplaySubagentRunByChildSessionKey(key);
   const subagentOwner =
-    subagentRun?.controllerSessionKey?.trim() || subagentRun?.requesterSessionKey?.trim();
+    normalizeOptionalString(subagentRun?.controllerSessionKey) ||
+    normalizeOptionalString(subagentRun?.requesterSessionKey);
   const subagentStatus = subagentRun ? resolveSubagentSessionStatus(subagentRun) : undefined;
   const subagentStartedAt = subagentRun ? getSubagentSessionStartedAt(subagentRun) : undefined;
   const subagentEndedAt = subagentRun ? subagentRun.endedAt : undefined;
   const subagentRuntimeMs = subagentRun ? resolveSessionRuntimeMs(subagentRun, now) : undefined;
+  const selectedModel = entry?.modelOverride?.trim()
+    ? resolveSessionModelRef(cfg, entry, sessionAgentId)
+    : null;
   const resolvedModel = resolveSessionModelIdentityRef(
     cfg,
     entry,
     sessionAgentId,
     subagentRun?.model,
   );
-  const modelProvider = resolvedModel.provider;
-  const model = resolvedModel.model ?? DEFAULT_MODEL;
-  const transcriptUsage =
-    resolvePositiveNumber(resolveFreshSessionTotalTokens(entry)) === undefined ||
-    resolvePositiveNumber(entry?.contextTokens) === undefined ||
+  const runtimeModelPresent =
+    Boolean(entry?.model?.trim()) || Boolean(entry?.modelProvider?.trim());
+  const needsTranscriptTotalTokens =
+    resolvePositiveNumber(resolveFreshSessionTotalTokens(entry)) === undefined;
+  const needsTranscriptContextTokens = resolvePositiveNumber(entry?.contextTokens) === undefined;
+  const needsTranscriptEstimatedCostUsd =
     resolveEstimatedSessionCostUsd({
       cfg,
-      provider: modelProvider,
-      model,
+      provider: resolvedModel.provider,
+      model: resolvedModel.model ?? DEFAULT_MODEL,
       entry,
-    }) === undefined
+    }) === undefined;
+  const transcriptUsage =
+    needsTranscriptTotalTokens || needsTranscriptContextTokens || needsTranscriptEstimatedCostUsd
       ? resolveTranscriptUsageFallback({
           cfg,
           key,
           entry,
           storePath,
-          fallbackProvider: modelProvider,
-          fallbackModel: model,
+          fallbackProvider: resolvedModel.provider,
+          fallbackModel: resolvedModel.model ?? DEFAULT_MODEL,
         })
       : null;
+  const preferLiveSubagentModelIdentity =
+    Boolean(subagentRun?.model?.trim()) && subagentStatus === "running";
+  const shouldUseTranscriptModelIdentity =
+    runtimeModelPresent &&
+    !preferLiveSubagentModelIdentity &&
+    (needsTranscriptTotalTokens || needsTranscriptContextTokens);
+  const resolvedModelIdentity = {
+    provider: resolvedModel.provider,
+    model: resolvedModel.model ?? DEFAULT_MODEL,
+  };
+  const modelIdentity = shouldUseTranscriptModelIdentity
+    ? {
+        provider: transcriptUsage?.modelProvider ?? resolvedModelIdentity.provider,
+        model: transcriptUsage?.model ?? resolvedModelIdentity.model,
+      }
+    : resolvedModelIdentity;
+  const { provider: modelProvider, model } = modelIdentity;
   const totalTokens =
     resolvePositiveNumber(resolveFreshSessionTotalTokens(entry)) ??
     resolvePositiveNumber(transcriptUsage?.totalTokens);
@@ -1147,6 +1294,7 @@ export function buildGatewaySessionRow(params: {
       ? true
       : transcriptUsage?.totalTokensFresh === true;
   const childSessions = resolveChildSessionKeys(key, store);
+  const latestCompactionCheckpoint = resolveLatestCompactionCheckpoint(entry);
   const estimatedCostUsd =
     resolveEstimatedSessionCostUsd({
       cfg,
@@ -1187,6 +1335,11 @@ export function buildGatewaySessionRow(params: {
   return {
     key,
     spawnedBy: subagentOwner || entry?.spawnedBy,
+    spawnedWorkspaceDir: entry?.spawnedWorkspaceDir,
+    forkedFromParent: entry?.forkedFromParent,
+    spawnDepth: entry?.spawnDepth,
+    subagentRole: entry?.subagentRole,
+    subagentControlScope: entry?.subagentControlScope,
     kind: classifySessionKey(key, entry),
     label: entry?.label,
     displayName,
@@ -1203,6 +1356,7 @@ export function buildGatewaySessionRow(params: {
     systemSent: entry?.systemSent,
     abortedLastRun: entry?.abortedLastRun,
     thinkingLevel: entry?.thinkingLevel,
+    fastMode: entry?.fastMode,
     verboseLevel: entry?.verboseLevel,
     reasoningLevel: entry?.reasoningLevel,
     elevatedLevel: entry?.elevatedLevel,
@@ -1219,13 +1373,16 @@ export function buildGatewaySessionRow(params: {
     parentSessionKey: subagentOwner || entry?.parentSessionKey,
     childSessions,
     responseUsage: entry?.responseUsage,
-    modelProvider,
-    model,
+    modelProvider: selectedModel?.provider ?? modelProvider,
+    model: selectedModel?.model ?? model,
     contextTokens,
     deliveryContext: deliveryFields.deliveryContext,
     lastChannel: deliveryFields.lastChannel ?? entry?.lastChannel,
     lastTo: deliveryFields.lastTo ?? entry?.lastTo,
     lastAccountId: deliveryFields.lastAccountId ?? entry?.lastAccountId,
+    lastThreadId: deliveryFields.lastThreadId ?? entry?.lastThreadId,
+    compactionCheckpointCount: entry?.compactionCheckpoints?.length,
+    latestCompactionCheckpoint,
   };
 }
 
@@ -1250,7 +1407,7 @@ export function loadGatewaySessionRow(
 }
 
 export function listSessionsFromStore(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   storePath: string;
   store: Record<string, SessionEntry>;
   opts: import("./protocol/index.js").SessionsListParams;
@@ -1263,9 +1420,9 @@ export function listSessionsFromStore(params: {
   const includeDerivedTitles = opts.includeDerivedTitles === true;
   const includeLastMessage = opts.includeLastMessage === true;
   const spawnedBy = typeof opts.spawnedBy === "string" ? opts.spawnedBy : "";
-  const label = typeof opts.label === "string" ? opts.label.trim() : "";
+  const label = normalizeOptionalString(opts.label) ?? "";
   const agentId = typeof opts.agentId === "string" ? normalizeAgentId(opts.agentId) : "";
-  const search = typeof opts.search === "string" ? opts.search.trim().toLowerCase() : "";
+  const search = normalizeLowercaseStringOrEmpty(opts.search);
   const activeMinutes =
     typeof opts.activeMinutes === "number" && Number.isFinite(opts.activeMinutes)
       ? Math.max(1, Math.floor(opts.activeMinutes))
@@ -1301,13 +1458,14 @@ export function listSessionsFromStore(params: {
       if (key === "unknown" || key === "global") {
         return false;
       }
-      const latest = getLatestSubagentRunByChildSessionKey(key);
+      const latest = getSessionDisplaySubagentRunByChildSessionKey(key);
       if (latest) {
         const latestControllerSessionKey =
-          latest.controllerSessionKey?.trim() || latest.requesterSessionKey?.trim();
+          normalizeOptionalString(latest.controllerSessionKey) ||
+          normalizeOptionalString(latest.requesterSessionKey);
         return latestControllerSessionKey === spawnedBy;
       }
-      return entry?.spawnedBy === spawnedBy;
+      return entry?.spawnedBy === spawnedBy || entry?.parentSessionKey === spawnedBy;
     })
     .filter(([, entry]) => {
       if (!label) {
@@ -1332,7 +1490,9 @@ export function listSessionsFromStore(params: {
   if (search) {
     sessions = sessions.filter((s) => {
       const fields = [s.displayName, s.label, s.subject, s.sessionId, s.key];
-      return fields.some((f) => typeof f === "string" && f.toLowerCase().includes(search));
+      return fields.some(
+        (f) => typeof f === "string" && normalizeLowercaseStringOrEmpty(f).includes(search),
+      );
     });
   }
 

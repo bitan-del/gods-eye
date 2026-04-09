@@ -1,20 +1,20 @@
 {
   "name": "@godseye/tlon",
-  "version": "2026.3.22",
-  "description": "GodsEye Tlon/Urbit channel plugin",
+  "version": "2026.4.10",
+  "description": "OpenClaw Tlon/Urbit channel plugin",
   "type": "module",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1014.0",
-    "@aws-sdk/s3-request-presigner": "3.1014.0",
-    "@tloncorp/tlon-skill": "0.3.0",
-    "@urbit/aura": "^3.0.0",
-    "zod": "^4.3.6"
+    "@aws-sdk/client-s3": "3.1024.0",
+    "@aws-sdk/s3-request-presigner": "3.1024.0",
+    "@tloncorp/tlon-skill": "0.3.2",
+    "@urbit/aura": "^3.0.0"
   },
   "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*",
     "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "godseye": ">=2026.3.22"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
     "godseye": {
@@ -38,9 +38,8 @@
     },
     "install": {
       "npmSpec": "@godseye/tlon",
-      "localPath": "extensions/tlon",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.3.22"
+      "minHostVersion": ">=2026.4.10"
     }
   }
 }

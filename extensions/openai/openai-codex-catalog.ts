@@ -1,4 +1,4 @@
-import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-models";
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 
 export const OPENAI_CODEX_BASE_URL = "https://chatgpt.com/backend-api";
 

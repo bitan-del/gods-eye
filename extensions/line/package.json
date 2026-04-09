@@ -1,14 +1,15 @@
 {
   "name": "@godseye/line",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye LINE channel plugin",
+  "description": "OpenClaw LINE channel plugin",
   "type": "module",
   "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*",
     "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "godseye": ">=2026.3.22"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
     "godseye": {
@@ -24,17 +25,18 @@
       "id": "line",
       "label": "LINE",
       "selectionLabel": "LINE (Messaging API)",
+      "detailLabel": "LINE Bot",
       "docsPath": "/channels/line",
       "docsLabel": "line",
-      "blurb": "LINE Messaging API bot for Japan/Taiwan/Thailand markets.",
+      "blurb": "LINE Messaging API webhook bot.",
+      "systemImage": "message",
       "order": 75,
       "quickstartAllowFrom": true
     },
     "install": {
       "npmSpec": "@godseye/line",
-      "localPath": "extensions/line",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.3.22"
+      "minHostVersion": ">=2026.4.10"
     }
   }
 }

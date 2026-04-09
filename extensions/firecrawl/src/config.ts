@@ -1,19 +1,21 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { normalizeSecretInput } from "godseye/plugin-sdk/provider-auth";
-import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import {
+  normalizeResolvedSecretInputString,
+  normalizeSecretInput,
+} from "godseye/plugin-sdk/secret-input";
 
 export const DEFAULT_FIRECRAWL_BASE_URL = "https://api.firecrawl.dev";
 export const DEFAULT_FIRECRAWL_SEARCH_TIMEOUT_SECONDS = 30;
 export const DEFAULT_FIRECRAWL_SCRAPE_TIMEOUT_SECONDS = 60;
 export const DEFAULT_FIRECRAWL_MAX_AGE_MS = 172_800_000;
 
-type WebSearchConfig = NonNullable<GodsEyeConfig["tools"]>["web"] extends infer Web
+type WebSearchConfig = NonNullable<OpenClawConfig["tools"]>["web"] extends infer Web
   ? Web extends { search?: infer Search }
     ? Search
     : undefined
   : undefined;
 
-type WebFetchConfig = NonNullable<GodsEyeConfig["tools"]>["web"] extends infer Web
+type WebFetchConfig = NonNullable<OpenClawConfig["tools"]>["web"] extends infer Web
   ? Web extends { fetch?: infer Fetch }
     ? Fetch
     : undefined
@@ -32,6 +34,13 @@ type PluginEntryConfig =
         apiKey?: unknown;
         baseUrl?: string;
       };
+      webFetch?: {
+        apiKey?: unknown;
+        baseUrl?: string;
+        onlyMainContent?: boolean;
+        maxAgeMs?: number;
+        timeoutSeconds?: number;
+      };
     }
   | undefined;
 
@@ -45,23 +54,23 @@ type FirecrawlFetchConfig =
     }
   | undefined;
 
-function resolveSearchConfig(cfg?: GodsEyeConfig): WebSearchConfig {
+function resolveSearchConfig(cfg?: OpenClawConfig): WebSearchConfig {
   const search = cfg?.tools?.web?.search;
   if (!search || typeof search !== "object") {
     return undefined;
   }
-  return search as WebSearchConfig;
+  return search;
 }
 
-function resolveFetchConfig(cfg?: GodsEyeConfig): WebFetchConfig {
+function resolveFetchConfig(cfg?: OpenClawConfig): WebFetchConfig {
   const fetch = cfg?.tools?.web?.fetch;
   if (!fetch || typeof fetch !== "object") {
     return undefined;
   }
-  return fetch as WebFetchConfig;
+  return fetch;
 }
 
-export function resolveFirecrawlSearchConfig(cfg?: GodsEyeConfig): FirecrawlSearchConfig {
+export function resolveFirecrawlSearchConfig(cfg?: OpenClawConfig): FirecrawlSearchConfig {
   const pluginConfig = cfg?.plugins?.entries?.firecrawl?.config as PluginEntryConfig;
   const pluginWebSearch = pluginConfig?.webSearch;
   if (pluginWebSearch && typeof pluginWebSearch === "object" && !Array.isArray(pluginWebSearch)) {
@@ -78,7 +87,12 @@ export function resolveFirecrawlSearchConfig(cfg?: GodsEyeConfig): FirecrawlSear
   return firecrawl as FirecrawlSearchConfig;
 }
 
-export function resolveFirecrawlFetchConfig(cfg?: GodsEyeConfig): FirecrawlFetchConfig {
+export function resolveFirecrawlFetchConfig(cfg?: OpenClawConfig): FirecrawlFetchConfig {
+  const pluginConfig = cfg?.plugins?.entries?.firecrawl?.config as PluginEntryConfig;
+  const pluginWebFetch = pluginConfig?.webFetch;
+  if (pluginWebFetch && typeof pluginWebFetch === "object" && !Array.isArray(pluginWebFetch)) {
+    return pluginWebFetch;
+  }
   const fetch = resolveFetchConfig(cfg);
   if (!fetch || typeof fetch !== "object") {
     return undefined;
@@ -99,10 +113,15 @@ function normalizeConfiguredSecret(value: unknown, path: string): string | undef
   );
 }
 
-export function resolveFirecrawlApiKey(cfg?: GodsEyeConfig): string | undefined {
+export function resolveFirecrawlApiKey(cfg?: OpenClawConfig): string | undefined {
+  const pluginConfig = cfg?.plugins?.entries?.firecrawl?.config as PluginEntryConfig;
   const search = resolveFirecrawlSearchConfig(cfg);
   const fetch = resolveFirecrawlFetchConfig(cfg);
   return (
+    normalizeConfiguredSecret(
+      pluginConfig?.webFetch?.apiKey,
+      "plugins.entries.firecrawl.config.webFetch.apiKey",
+    ) ||
     normalizeConfiguredSecret(
       search?.apiKey,
       "plugins.entries.firecrawl.config.webSearch.apiKey",
@@ -114,7 +133,7 @@ export function resolveFirecrawlApiKey(cfg?: GodsEyeConfig): string | undefined 
   );
 }
 
-export function resolveFirecrawlBaseUrl(cfg?: GodsEyeConfig): string {
+export function resolveFirecrawlBaseUrl(cfg?: OpenClawConfig): string {
   const search = resolveFirecrawlSearchConfig(cfg);
   const fetch = resolveFirecrawlFetchConfig(cfg);
   const configured =
@@ -125,7 +144,7 @@ export function resolveFirecrawlBaseUrl(cfg?: GodsEyeConfig): string {
   return configured || DEFAULT_FIRECRAWL_BASE_URL;
 }
 
-export function resolveFirecrawlOnlyMainContent(cfg?: GodsEyeConfig, override?: boolean): boolean {
+export function resolveFirecrawlOnlyMainContent(cfg?: OpenClawConfig, override?: boolean): boolean {
   if (typeof override === "boolean") {
     return override;
   }
@@ -136,7 +155,7 @@ export function resolveFirecrawlOnlyMainContent(cfg?: GodsEyeConfig, override?: 
   return true;
 }
 
-export function resolveFirecrawlMaxAgeMs(cfg?: GodsEyeConfig, override?: number): number {
+export function resolveFirecrawlMaxAgeMs(cfg?: OpenClawConfig, override?: number): number {
   if (typeof override === "number" && Number.isFinite(override) && override >= 0) {
     return Math.floor(override);
   }
@@ -152,7 +171,7 @@ export function resolveFirecrawlMaxAgeMs(cfg?: GodsEyeConfig, override?: number)
 }
 
 export function resolveFirecrawlScrapeTimeoutSeconds(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   override?: number,
 ): number {
   if (typeof override === "number" && Number.isFinite(override) && override > 0) {

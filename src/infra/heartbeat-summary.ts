@@ -5,9 +5,10 @@ import {
   resolveHeartbeatPrompt as resolveHeartbeatPromptText,
 } from "../auto-reply/heartbeat.js";
 import { parseDurationMs } from "../cli/parse-duration.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { AgentDefaultsConfig } from "../config/types.agent-defaults.js";
 import { normalizeAgentId } from "../routing/session-key.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 
 type HeartbeatConfig = AgentDefaultsConfig["heartbeat"];
 
@@ -23,12 +24,12 @@ export type HeartbeatSummary = {
 
 const DEFAULT_HEARTBEAT_TARGET = "none";
 
-function hasExplicitHeartbeatAgents(cfg: GodsEyeConfig) {
+function hasExplicitHeartbeatAgents(cfg: OpenClawConfig) {
   const list = cfg.agents?.list ?? [];
   return list.some((entry) => Boolean(entry?.heartbeat));
 }
 
-export function isHeartbeatEnabledForAgent(cfg: GodsEyeConfig, agentId?: string): boolean {
+export function isHeartbeatEnabledForAgent(cfg: OpenClawConfig, agentId?: string): boolean {
   const resolvedAgentId = normalizeAgentId(agentId ?? resolveDefaultAgentId(cfg));
   const list = cfg.agents?.list ?? [];
   const hasExplicit = hasExplicitHeartbeatAgents(cfg);
@@ -41,7 +42,7 @@ export function isHeartbeatEnabledForAgent(cfg: GodsEyeConfig, agentId?: string)
 }
 
 export function resolveHeartbeatIntervalMs(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   overrideEvery?: string,
   heartbeat?: HeartbeatConfig,
 ) {
@@ -53,7 +54,7 @@ export function resolveHeartbeatIntervalMs(
   if (!raw) {
     return null;
   }
-  const trimmed = String(raw).trim();
+  const trimmed = normalizeOptionalString(String(raw)) ?? "";
   if (!trimmed) {
     return null;
   }
@@ -70,7 +71,7 @@ export function resolveHeartbeatIntervalMs(
 }
 
 export function resolveHeartbeatSummaryForAgent(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId?: string,
 ): HeartbeatSummary {
   const defaults = cfg.agents?.defaults?.heartbeat;

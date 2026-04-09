@@ -16,7 +16,7 @@ function shouldEmitRuntimeLog(env: NodeJS.ProcessEnv = process.env): boolean {
   if (env.VITEST !== "true") {
     return true;
   }
-  if (env.GODSEYE_TEST_RUNTIME_LOG === "1") {
+  if (env.OPENCLAW_TEST_RUNTIME_LOG === "1") {
     return true;
   }
   const maybeMockedLog = console.log as unknown as { mock?: unknown };
@@ -27,7 +27,7 @@ function shouldEmitRuntimeStdout(env: NodeJS.ProcessEnv = process.env): boolean 
   if (env.VITEST !== "true") {
     return true;
   }
-  if (env.GODSEYE_TEST_RUNTIME_LOG === "1") {
+  if (env.OPENCLAW_TEST_RUNTIME_LOG === "1") {
     return true;
   }
   const stdout = process.stdout as NodeJS.WriteStream & {
@@ -101,14 +101,6 @@ export function createNonExitingRuntime(): OutputRuntimeEnv {
       throw new Error(`exit ${code}`);
     },
   };
-}
-
-export function writeRuntimeStdout(runtime: RuntimeEnv | OutputRuntimeEnv, value: string): void {
-  if (hasRuntimeOutputWriter(runtime)) {
-    runtime.writeStdout(value);
-    return;
-  }
-  runtime.log(value);
 }
 
 export function writeRuntimeJson(

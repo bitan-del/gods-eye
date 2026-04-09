@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import { getSlashCommands, parseCommand } from "./commands.js";
 import {
   createBackspaceDeduper,
+  drainAndStopTuiSafely,
   isIgnorableTuiStopError,
   resolveCtrlCAction,
   resolveFinalAssistantText,
@@ -110,11 +111,11 @@ describe("resolveTuiSessionKey", () => {
 });
 
 describe("resolveInitialTuiAgentId", () => {
-  const cfg: GodsEyeConfig = {
+  const cfg: OpenClawConfig = {
     agents: {
       list: [
-        { id: "main", workspace: "/tmp/godseye" },
-        { id: "ops", workspace: "/tmp/godseye/projects/ops" },
+        { id: "main", workspace: "/tmp/openclaw" },
+        { id: "ops", workspace: "/tmp/openclaw/projects/ops" },
       ],
     },
   };
@@ -125,7 +126,7 @@ describe("resolveInitialTuiAgentId", () => {
         cfg,
         fallbackAgentId: "main",
         initialSessionInput: "",
-        cwd: "/tmp/godseye/projects/ops/src",
+        cwd: "/tmp/openclaw/projects/ops/src",
       }),
     ).toBe("ops");
   });
@@ -136,7 +137,7 @@ describe("resolveInitialTuiAgentId", () => {
         cfg,
         fallbackAgentId: "main",
         initialSessionInput: "agent:main:incident",
-        cwd: "/tmp/godseye/projects/ops/src",
+        cwd: "/tmp/openclaw/projects/ops/src",
       }),
     ).toBe("main");
   });
@@ -157,8 +158,8 @@ describe("resolveGatewayDisconnectState", () => {
   it("returns pairing recovery guidance when disconnect reason requires pairing", () => {
     const state = resolveGatewayDisconnectState("gateway closed (1008): pairing required");
     expect(state.connectionStatus).toContain("pairing required");
-    expect(state.activityStatus).toBe("pairing required: run godseye devices list");
-    expect(state.pairingHint).toContain("godseye devices list");
+    expect(state.activityStatus).toBe("pairing required: run openclaw devices list");
+    expect(state.pairingHint).toContain("openclaw devices list");
   });
 
   it("falls back to idle for generic disconnect reasons", () => {
@@ -231,6 +232,53 @@ describe("resolveCtrlCAction", () => {
 });
 
 describe("TUI shutdown safety", () => {
+  it("drains terminal input before stopping the TUI", async () => {
+    const calls: string[] = [];
+    const drainInput = vi.fn(async () => {
+      calls.push("drain");
+    });
+    const stop = vi.fn(() => {
+      calls.push("stop");
+    });
+
+    await drainAndStopTuiSafely({
+      stop,
+      terminal: { drainInput },
+    });
+
+    expect(drainInput).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledOnce();
+    expect(calls).toEqual(["drain", "stop"]);
+  });
+
+  it("still stops when the terminal does not support drainInput", async () => {
+    const stop = vi.fn();
+
+    await drainAndStopTuiSafely({
+      stop,
+      terminal: {},
+    });
+
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
+  it("rethrows non-ignorable stop errors after draining", async () => {
+    const drainInput = vi.fn(async () => {});
+    const stop = vi.fn(() => {
+      throw new Error("boom");
+    });
+
+    await expect(
+      drainAndStopTuiSafely({
+        stop,
+        terminal: { drainInput },
+      }),
+    ).rejects.toThrow("boom");
+
+    expect(drainInput).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledOnce();
+  });
+
   it("treats setRawMode EBADF errors as ignorable", () => {
     expect(isIgnorableTuiStopError(new Error("setRawMode EBADF"))).toBe(true);
     expect(

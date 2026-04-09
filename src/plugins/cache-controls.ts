@@ -1,18 +1,20 @@
+import { normalizeOptionalString } from "../shared/string-coerce.js";
+
 export const DEFAULT_PLUGIN_DISCOVERY_CACHE_MS = 1000;
 export const DEFAULT_PLUGIN_MANIFEST_CACHE_MS = 1000;
 
 export function shouldUsePluginSnapshotCache(env: NodeJS.ProcessEnv): boolean {
-  if (env.GODSEYE_DISABLE_PLUGIN_DISCOVERY_CACHE?.trim()) {
+  if (normalizeOptionalString(env.OPENCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE)) {
     return false;
   }
-  if (env.GODSEYE_DISABLE_PLUGIN_MANIFEST_CACHE?.trim()) {
+  if (normalizeOptionalString(env.OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE)) {
     return false;
   }
-  const discoveryCacheMs = env.GODSEYE_PLUGIN_DISCOVERY_CACHE_MS?.trim();
+  const discoveryCacheMs = normalizeOptionalString(env.OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS);
   if (discoveryCacheMs === "0") {
     return false;
   }
-  const manifestCacheMs = env.GODSEYE_PLUGIN_MANIFEST_CACHE_MS?.trim();
+  const manifestCacheMs = normalizeOptionalString(env.OPENCLAW_PLUGIN_MANIFEST_CACHE_MS);
   if (manifestCacheMs === "0") {
     return false;
   }
@@ -20,7 +22,7 @@ export function shouldUsePluginSnapshotCache(env: NodeJS.ProcessEnv): boolean {
 }
 
 export function resolvePluginCacheMs(rawValue: string | undefined, defaultMs: number): number {
-  const raw = rawValue?.trim();
+  const raw = normalizeOptionalString(rawValue);
   if (raw === "" || raw === "0") {
     return 0;
   }
@@ -36,33 +38,28 @@ export function resolvePluginCacheMs(rawValue: string | undefined, defaultMs: nu
 
 export function resolvePluginSnapshotCacheTtlMs(env: NodeJS.ProcessEnv): number {
   const discoveryCacheMs = resolvePluginCacheMs(
-    env.GODSEYE_PLUGIN_DISCOVERY_CACHE_MS,
+    env.OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS,
     DEFAULT_PLUGIN_DISCOVERY_CACHE_MS,
   );
   const manifestCacheMs = resolvePluginCacheMs(
-    env.GODSEYE_PLUGIN_MANIFEST_CACHE_MS,
+    env.OPENCLAW_PLUGIN_MANIFEST_CACHE_MS,
     DEFAULT_PLUGIN_MANIFEST_CACHE_MS,
   );
   return Math.min(discoveryCacheMs, manifestCacheMs);
 }
 
-export function buildPluginSnapshotCacheEnvKey(
-  env: NodeJS.ProcessEnv,
-  options: { includeProcessVitestFallback?: boolean } = {},
-) {
-  return {
-    GODSEYE_BUNDLED_PLUGINS_DIR: env.GODSEYE_BUNDLED_PLUGINS_DIR ?? "",
-    GODSEYE_DISABLE_PLUGIN_DISCOVERY_CACHE: env.GODSEYE_DISABLE_PLUGIN_DISCOVERY_CACHE ?? "",
-    GODSEYE_DISABLE_PLUGIN_MANIFEST_CACHE: env.GODSEYE_DISABLE_PLUGIN_MANIFEST_CACHE ?? "",
-    GODSEYE_PLUGIN_DISCOVERY_CACHE_MS: env.GODSEYE_PLUGIN_DISCOVERY_CACHE_MS ?? "",
-    GODSEYE_PLUGIN_MANIFEST_CACHE_MS: env.GODSEYE_PLUGIN_MANIFEST_CACHE_MS ?? "",
-    GODSEYE_HOME: env.GODSEYE_HOME ?? "",
-    GODSEYE_STATE_DIR: env.GODSEYE_STATE_DIR ?? "",
-    GODSEYE_CONFIG_PATH: env.GODSEYE_CONFIG_PATH ?? "",
+export function buildPluginSnapshotCacheEnvKey(env: NodeJS.ProcessEnv): string {
+  return JSON.stringify({
+    OPENCLAW_BUNDLED_PLUGINS_DIR: env.OPENCLAW_BUNDLED_PLUGINS_DIR ?? "",
+    OPENCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE: env.OPENCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE ?? "",
+    OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE: env.OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE ?? "",
+    OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS: env.OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS ?? "",
+    OPENCLAW_PLUGIN_MANIFEST_CACHE_MS: env.OPENCLAW_PLUGIN_MANIFEST_CACHE_MS ?? "",
+    OPENCLAW_HOME: env.OPENCLAW_HOME ?? "",
+    OPENCLAW_STATE_DIR: env.OPENCLAW_STATE_DIR ?? "",
+    OPENCLAW_CONFIG_PATH: env.OPENCLAW_CONFIG_PATH ?? "",
     HOME: env.HOME ?? "",
     USERPROFILE: env.USERPROFILE ?? "",
-    VITEST: options.includeProcessVitestFallback
-      ? (env.VITEST ?? process.env.VITEST ?? "")
-      : (env.VITEST ?? ""),
-  };
+    VITEST: env.VITEST ?? "",
+  });
 }

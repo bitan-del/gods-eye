@@ -1,5 +1,5 @@
 /**
- * Hook system for GodsEye agent events
+ * Hook system for OpenClaw agent events
  *
  * Provides an extensible event-driven hook system for agent events
  * like command processing, session lifecycle, etc.
@@ -7,9 +7,10 @@
 
 import type { WorkspaceBootstrapFile } from "../agents/workspace.js";
 import type { CliDeps } from "../cli/deps.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import type { SessionsPatchParams } from "../gateway/protocol/index.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { resolveGlobalSingleton } from "../shared/global-singleton.js";
 
@@ -18,7 +19,7 @@ export type InternalHookEventType = "command" | "session" | "agent" | "gateway" 
 export type AgentBootstrapHookContext = {
   workspaceDir: string;
   bootstrapFiles: WorkspaceBootstrapFile[];
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   sessionKey?: string;
   sessionId?: string;
   agentId?: string;
@@ -31,7 +32,7 @@ export type AgentBootstrapHookEvent = InternalHookEvent & {
 };
 
 export type GatewayStartupHookContext = {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   deps?: CliDeps;
   workspaceDir?: string;
 };
@@ -162,7 +163,7 @@ export type MessagePreprocessedHookEvent = InternalHookEvent & {
 export type SessionPatchHookContext = {
   sessionEntry: SessionEntry;
   patch: SessionsPatchParams;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 };
 
 export type SessionPatchHookEvent = InternalHookEvent & {
@@ -198,7 +199,7 @@ export type InternalHookHandler = (event: InternalHookEvent) => Promise<void> | 
  * are invisible to triggerInternalHook in another chunk, causing hooks
  * to silently fire with zero handlers.
  */
-const INTERNAL_HOOK_HANDLERS_KEY = Symbol.for("godseye.internalHookHandlers");
+const INTERNAL_HOOK_HANDLERS_KEY = Symbol.for("openclaw.internalHookHandlers");
 const handlers = resolveGlobalSingleton<Map<string, InternalHookHandler[]>>(
   INTERNAL_HOOK_HANDLERS_KEY,
   () => new Map<string, InternalHookHandler[]>(),
@@ -299,7 +300,7 @@ export async function triggerInternalHook(event: InternalHookEvent): Promise<voi
     try {
       await handler(event);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = formatErrorMessage(err);
       log.error(`Hook error [${event.type}:${event.action}]: ${message}`);
     }
   }

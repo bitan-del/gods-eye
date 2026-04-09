@@ -1,17 +1,18 @@
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import { isValidEnvSecretRefId } from "../../../config/types.secrets.js";
 import type { RuntimeEnv } from "../../../runtime.js";
 import { resolveDefaultSecretProviderAlias } from "../../../secrets/ref-contract.js";
+import { normalizeOptionalString } from "../../../shared/string-coerce.js";
 import { normalizeGatewayTokenInput, randomToken } from "../../onboard-helpers.js";
 import type { OnboardOptions } from "../../onboard-types.js";
 
 export function applyNonInteractiveGatewayConfig(params: {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   opts: OnboardOptions;
   runtime: RuntimeEnv;
   defaultPort: number;
 }): {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   port: number;
   bind: string;
   authMode: string;
@@ -52,15 +53,15 @@ export function applyNonInteractiveGatewayConfig(params: {
 
   let nextConfig = params.nextConfig;
   const explicitGatewayToken = normalizeGatewayTokenInput(opts.gatewayToken);
-  const envGatewayToken = normalizeGatewayTokenInput(process.env.GODSEYE_GATEWAY_TOKEN);
+  const envGatewayToken = normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN);
   let gatewayToken = explicitGatewayToken || envGatewayToken || undefined;
-  const gatewayTokenRefEnv = String(opts.gatewayTokenRefEnv ?? "").trim();
+  const gatewayTokenRefEnv = normalizeOptionalString(String(opts.gatewayTokenRefEnv ?? "")) ?? "";
 
   if (authMode === "token") {
     if (gatewayTokenRefEnv) {
       if (!isValidEnvSecretRefId(gatewayTokenRefEnv)) {
         runtime.error(
-          "Invalid --gateway-token-ref-env (use env var name like GODSEYE_GATEWAY_TOKEN).",
+          "Invalid --gateway-token-ref-env (use env var name like OPENCLAW_GATEWAY_TOKEN).",
         );
         runtime.exit(1);
         return null;

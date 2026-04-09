@@ -2,22 +2,22 @@ export type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
   ChannelGatewayContext,
-} from "openclaw/plugin-sdk/channel-contract";
-export type { ChannelPlugin } from "openclaw/plugin-sdk/channel-core";
-export type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-export type { RuntimeEnv } from "openclaw/plugin-sdk/runtime";
-export type { PluginRuntime } from "openclaw/plugin-sdk/runtime-store";
+} from "godseye/plugin-sdk/channel-contract";
+export type { ChannelPlugin } from "godseye/plugin-sdk/channel-core";
+export type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+export type { RuntimeEnv } from "godseye/plugin-sdk/runtime";
+export type { PluginRuntime } from "godseye/plugin-sdk/runtime-store";
 export {
   buildChannelConfigSchema,
   buildChannelOutboundSessionRoute,
   createChatChannelPlugin,
   defineChannelPluginEntry,
-} from "openclaw/plugin-sdk/channel-core";
-export { jsonResult, readStringParam } from "openclaw/plugin-sdk/channel-actions";
-export { getChatChannelMeta } from "openclaw/plugin-sdk/channel-plugin-common";
+} from "godseye/plugin-sdk/channel-core";
+export { jsonResult, readStringParam } from "godseye/plugin-sdk/channel-actions";
+export { getChatChannelMeta } from "godseye/plugin-sdk/channel-plugin-common";
 export {
   createComputedAccountStatusAdapter,
   createDefaultChannelRuntimeState,
-} from "openclaw/plugin-sdk/status-helpers";
-export { createPluginRuntimeStore } from "openclaw/plugin-sdk/runtime-store";
-export { dispatchInboundReplyWithBase } from "openclaw/plugin-sdk/inbound-reply-dispatch";
+} from "godseye/plugin-sdk/status-helpers";
+export { createPluginRuntimeStore } from "godseye/plugin-sdk/runtime-store";
+export { dispatchInboundReplyWithBase } from "godseye/plugin-sdk/inbound-reply-dispatch";

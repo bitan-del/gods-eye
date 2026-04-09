@@ -3,18 +3,25 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resetLogger, setLoggerOverride } from "../logging/logger.js";
-import type { AuthProfileStore } from "./auth-profiles.js";
-import { saveAuthProfileStore } from "./auth-profiles.js";
+import { createWarnLogCapture } from "../logging/test-helpers/warn-log-capture.js";
 import { AUTH_STORE_VERSION } from "./auth-profiles/constants.js";
+import { saveAuthProfileStore } from "./auth-profiles/store.js";
+import type { AuthProfileStore } from "./auth-profiles/types.js";
 import { isAnthropicBillingError } from "./live-auth-keys.js";
+import { LiveSessionModelSwitchError } from "./live-model-switch-error.js";
 import { runWithImageModelFallback, runWithModelFallback } from "./model-fallback.js";
 import { makeModelFallbackCfg } from "./test-helpers/model-fallback-config-fixture.js";
 
+vi.mock("../plugins/provider-runtime.js", () => ({
+  buildProviderMissingAuthMessageWithPlugin: () => undefined,
+  resolveExternalAuthProfilesWithPlugins: () => [],
+}));
+
 const makeCfg = makeModelFallbackCfg;
 
-function makeFallbacksOnlyCfg(): GodsEyeConfig {
+function makeFallbacksOnlyCfg(): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -23,10 +30,10 @@ function makeFallbacksOnlyCfg(): GodsEyeConfig {
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
-function makeProviderFallbackCfg(provider: string): GodsEyeConfig {
+function makeProviderFallbackCfg(provider: string): OpenClawConfig {
   return makeCfg({
     agents: {
       defaults: {
@@ -43,7 +50,7 @@ async function withTempAuthStore<T>(
   store: AuthProfileStore,
   run: (tempDir: string) => Promise<T>,
 ): Promise<T> {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-auth-"));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-auth-"));
   saveAuthProfileStore(store, tempDir);
   try {
     return await run(tempDir);
@@ -53,7 +60,7 @@ async function withTempAuthStore<T>(
 }
 
 async function runWithStoredAuth(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   store: AuthProfileStore;
   provider: string;
   run: (provider: string, model: string) => Promise<string>;
@@ -181,10 +188,10 @@ const OPENAI_RATE_LIMIT_MESSAGE =
 const ANTHROPIC_OVERLOADED_PAYLOAD =
   '{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"},"request_id":"req_test"}';
 // Issue-backed Anthropic/OpenAI-compatible insufficient_quota payload under HTTP 400:
-// https://github.com/bitan-del/gods-eye/issues/23440
+// https://github.com/openclaw/openclaw/issues/23440
 const INSUFFICIENT_QUOTA_PAYLOAD =
   '{"type":"error","error":{"type":"insufficient_quota","message":"Your account has insufficient quota balance to run this request."}}';
-// Internal GodsEye compatibility marker, not a provider API contract.
+// Internal OpenClaw compatibility marker, not a provider API contract.
 const MODEL_COOLDOWN_MESSAGE = "model_cooldown: All credentials for model gpt-5 are cooling down";
 // SDK/transport compatibility marker, not a provider API contract.
 const CONNECTION_ERROR_MESSAGE = "Connection error.";
@@ -261,6 +268,50 @@ describe("runWithModelFallback", () => {
       }),
     ).rejects.toThrow("something weird");
     expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("treats LiveSessionModelSwitchError as failover on last candidate (#58466)", async () => {
+    const cfg = makeCfg();
+    const switchError = new LiveSessionModelSwitchError({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+    });
+    const run = vi.fn().mockRejectedValue(switchError);
+
+    // With no fallbacks, the single candidate is also the last one.
+    // Previously this would re-throw LiveSessionModelSwitchError, causing
+    // the outer retry loop to restart with the overloaded model indefinitely.
+    // Now it should surface as a FailoverError instead.
+    const err = await runWithModelFallback({
+      cfg,
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      run,
+      fallbacksOverride: [],
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    // Should NOT be a LiveSessionModelSwitchError — the outer retry loop must
+    // not restart with the conflicting model.
+    expect(err).not.toBeInstanceOf(LiveSessionModelSwitchError);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("continues fallback chain past LiveSessionModelSwitchError to next candidate (#58466)", async () => {
+    const cfg = makeCfg();
+    const switchError = new LiveSessionModelSwitchError({
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+    });
+    const run = vi.fn().mockRejectedValueOnce(switchError).mockResolvedValueOnce("ok");
+
+    const result = await runWithModelFallback({
+      cfg,
+      provider: "openai",
+      model: "gpt-4.1-mini",
+      run,
+    });
+    expect(result.result).toBe("ok");
+    expect(run).toHaveBeenCalledTimes(2);
   });
 
   it("falls back on auth errors", async () => {
@@ -519,8 +570,7 @@ describe("runWithModelFallback", () => {
   });
 
   it("sanitizes model identifiers in model_not_found warnings", async () => {
-    setLoggerOverride({ level: "silent", consoleLevel: "warn" });
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnLogs = createWarnLogCapture("openclaw-model-fallback-test");
     try {
       const cfg = makeCfg();
       const run = vi
@@ -536,16 +586,12 @@ describe("runWithModelFallback", () => {
       });
 
       expect(result.result).toBe("ok");
-      const warning = warnSpy.mock.calls
-        .map((call) => call[0] as string)
-        .find((value) => value.includes('Model "openai/gpt-6spoof" not found'));
+      const warning = warnLogs.findText('Model "openai/gpt-6spoof" not found');
       expect(warning).toContain('Model "openai/gpt-6spoof" not found');
       expect(warning).not.toContain("\u001B");
       expect(warning).not.toContain("\n");
     } finally {
-      warnSpy.mockRestore();
-      setLoggerOverride(null);
-      resetLogger();
+      warnLogs.cleanup();
     }
   });
 
@@ -1237,7 +1283,7 @@ describe("runWithModelFallback", () => {
       provider: string,
       reason: "rate_limit" | "overloaded" | "auth" | "billing",
     ): Promise<{ store: AuthProfileStore; dir: string }> {
-      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-test-"));
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-"));
       const now = Date.now();
       const store: AuthProfileStore = {
         version: AUTH_STORE_VERSION,
@@ -1382,7 +1428,7 @@ describe("runWithModelFallback", () => {
 
     it("tries cross-provider fallbacks when same provider has rate limit", async () => {
       // Anthropic in rate limit cooldown, Groq available
-      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-test-"));
+      const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-test-"));
       const store: AuthProfileStore = {
         version: AUTH_STORE_VERSION,
         profiles: {

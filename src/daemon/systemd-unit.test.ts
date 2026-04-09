@@ -4,18 +4,18 @@ import { buildSystemdUnit } from "./systemd-unit.js";
 describe("buildSystemdUnit", () => {
   it("quotes arguments with whitespace", () => {
     const unit = buildSystemdUnit({
-      description: "GodsEye Gateway",
-      programArguments: ["/usr/bin/godseye", "gateway", "--name", "My Bot"],
+      description: "OpenClaw Gateway",
+      programArguments: ["/usr/bin/openclaw", "gateway", "--name", "My Bot"],
       environment: {},
     });
     const execStart = unit.split("\n").find((line) => line.startsWith("ExecStart="));
-    expect(execStart).toBe('ExecStart=/usr/bin/godseye gateway --name "My Bot"');
+    expect(execStart).toBe('ExecStart=/usr/bin/openclaw gateway --name "My Bot"');
   });
 
   it("renders control-group kill mode for child-process cleanup", () => {
     const unit = buildSystemdUnit({
-      description: "GodsEye Gateway",
-      programArguments: ["/usr/bin/godseye", "gateway", "run"],
+      description: "OpenClaw Gateway",
+      programArguments: ["/usr/bin/openclaw", "gateway", "run"],
       environment: {},
     });
     expect(unit).toContain("KillMode=control-group");
@@ -27,8 +27,8 @@ describe("buildSystemdUnit", () => {
   it("rejects environment values with line breaks", () => {
     expect(() =>
       buildSystemdUnit({
-        description: "GodsEye Gateway",
-        programArguments: ["/usr/bin/godseye", "gateway", "start"],
+        description: "OpenClaw Gateway",
+        programArguments: ["/usr/bin/openclaw", "gateway", "start"],
         environment: {
           INJECT: "ok\nExecStartPre=/bin/touch /tmp/oc15789_rce",
         },

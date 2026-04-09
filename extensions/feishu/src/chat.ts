@@ -1,5 +1,6 @@
 import type * as Lark from "@larksuiteoapi/node-sdk";
-import type { GodsEyePluginApi } from "../runtime-api.js";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import type { OpenClawPluginApi } from "../runtime-api.js";
 import { listEnabledFeishuAccounts } from "./accounts.js";
 import { FeishuChatSchema, type FeishuChatParams } from "./chat-schema.js";
 import { createFeishuClient } from "./client.js";
@@ -120,7 +121,7 @@ export async function getFeishuMemberInfo(
   };
 }
 
-export function registerFeishuChatTools(api: GodsEyePluginApi) {
+export function registerFeishuChatTools(api: OpenClawPluginApi) {
   if (!api.config) {
     api.logger.debug?.("feishu_chat: No config available, skipping chat tools");
     return;
@@ -181,7 +182,7 @@ export function registerFeishuChatTools(api: GodsEyePluginApi) {
               return json({ error: `Unknown action: ${String(p.action)}` });
           }
         } catch (err) {
-          return json({ error: err instanceof Error ? err.message : String(err) });
+          return json({ error: formatErrorMessage(err) });
         }
       },
     },

@@ -1,6 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNonExitingRuntime } from "../runtime.js";
-
 const resolveCleanupPlanFromDisk = vi.fn();
 const removePath = vi.fn();
 const listAgentSessionDirs = vi.fn();
@@ -22,23 +21,26 @@ vi.mock("./cleanup-utils.js", () => ({
   removeWorkspaceDirs,
 }));
 
-const { resetCommand } = await import("./reset.js");
-
 describe("resetCommand", () => {
   const runtime = createNonExitingRuntime();
+  let resetCommand: typeof import("./reset.js").resetCommand;
+
+  beforeAll(async () => {
+    ({ resetCommand } = await import("./reset.js"));
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
     resolveCleanupPlanFromDisk.mockReturnValue({
-      stateDir: "/tmp/.godseye",
-      configPath: "/tmp/.godseye/godseye.json",
-      oauthDir: "/tmp/.godseye/credentials",
+      stateDir: "/tmp/.openclaw",
+      configPath: "/tmp/.openclaw/openclaw.json",
+      oauthDir: "/tmp/.openclaw/credentials",
       configInsideState: true,
       oauthInsideState: true,
-      workspaceDirs: ["/tmp/.godseye/workspace"],
+      workspaceDirs: ["/tmp/.openclaw/workspace"],
     });
     removePath.mockResolvedValue({ ok: true });
-    listAgentSessionDirs.mockResolvedValue(["/tmp/.godseye/agents/main/sessions"]);
+    listAgentSessionDirs.mockResolvedValue(["/tmp/.openclaw/agents/main/sessions"]);
     removeStateAndLinkedPaths.mockResolvedValue(undefined);
     removeWorkspaceDirs.mockResolvedValue(undefined);
     vi.spyOn(runtime, "log").mockImplementation(() => {});
@@ -53,7 +55,7 @@ describe("resetCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("godseye backup create"));
+    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
   });
 
   it("does not recommend backup for config-only reset", async () => {
@@ -64,6 +66,6 @@ describe("resetCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("godseye backup create"));
+    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
   });
 });

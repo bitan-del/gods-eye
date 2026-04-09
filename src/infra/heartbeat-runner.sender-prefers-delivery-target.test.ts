@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
 import { installHeartbeatRunnerTestRuntime } from "./heartbeat-runner.test-harness.js";
 import { seedMainSessionStore, withTempHeartbeatSandbox } from "./heartbeat-runner.test-utils.js";
@@ -10,7 +10,7 @@ describe("runHeartbeatOnce", () => {
   it("uses the delivery target as sender when lastTo differs", async () => {
     await withTempHeartbeatSandbox(
       async ({ tmpDir, storePath, replySpy }) => {
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           agents: {
             defaults: {
               workspace: tmpDir,
@@ -44,6 +44,7 @@ describe("runHeartbeatOnce", () => {
         await runHeartbeatOnce({
           cfg,
           deps: {
+            getReplyFromConfig: replySpy,
             slack: sendSlack,
             getQueueSize: () => 0,
             nowMs: () => 0,
@@ -52,7 +53,7 @@ describe("runHeartbeatOnce", () => {
 
         expect(sendSlack).toHaveBeenCalled();
       },
-      { prefix: "godseye-hb-" },
+      { prefix: "openclaw-hb-" },
     );
   });
 });

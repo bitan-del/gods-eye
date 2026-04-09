@@ -3,12 +3,13 @@ import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { bundledPluginFile } from "../../../../test/helpers/bundled-plugin-paths.js";
 
 const tempDirs: string[] = [];
-const proxyPath = path.resolve("extensions/acpx/src/runtime-internals/mcp-proxy.mjs");
+const proxyPath = path.resolve(bundledPluginFile("acpx", "src/runtime-internals/mcp-proxy.mjs"));
 
 async function makeTempScript(name: string, content: string): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "godseye-acpx-mcp-proxy-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "openclaw-acpx-mcp-proxy-"));
   tempDirs.push(dir);
   const scriptPath = path.join(dir, name);
   await writeFile(scriptPath, content, "utf8");
@@ -34,7 +35,6 @@ describe("mcp-proxy", () => {
 const { createInterface } = require("node:readline");
 const rl = createInterface({ input: process.stdin });
 rl.on("line", (line) => process.stdout.write(line + "\n"));
-rl.on("close", () => process.exit(0));
 `,
     );
 

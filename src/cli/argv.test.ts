@@ -20,47 +20,47 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "help flag",
-      argv: ["node", "godseye", "--help"],
+      argv: ["node", "openclaw", "--help"],
       expected: true,
     },
     {
       name: "version flag",
-      argv: ["node", "godseye", "-V"],
+      argv: ["node", "openclaw", "-V"],
       expected: true,
     },
     {
       name: "normal command",
-      argv: ["node", "godseye", "status"],
+      argv: ["node", "openclaw", "status"],
       expected: false,
     },
     {
       name: "root -v alias",
-      argv: ["node", "godseye", "-v"],
+      argv: ["node", "openclaw", "-v"],
       expected: true,
     },
     {
       name: "root -v alias with profile",
-      argv: ["node", "godseye", "--profile", "work", "-v"],
+      argv: ["node", "openclaw", "--profile", "work", "-v"],
       expected: true,
     },
     {
       name: "root -v alias with log-level",
-      argv: ["node", "godseye", "--log-level", "debug", "-v"],
+      argv: ["node", "openclaw", "--log-level", "debug", "-v"],
       expected: true,
     },
     {
       name: "subcommand -v should not be treated as version",
-      argv: ["node", "godseye", "acp", "-v"],
+      argv: ["node", "openclaw", "acp", "-v"],
       expected: false,
     },
     {
       name: "root -v alias with equals profile",
-      argv: ["node", "godseye", "--profile=work", "-v"],
+      argv: ["node", "openclaw", "--profile=work", "-v"],
       expected: true,
     },
     {
       name: "subcommand path after global root flags should not be treated as version",
-      argv: ["node", "godseye", "--dev", "skills", "list", "-v"],
+      argv: ["node", "openclaw", "--dev", "skills", "list", "-v"],
       expected: false,
     },
   ])("detects help/version flags: $name", ({ argv, expected }) => {
@@ -70,27 +70,27 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "root --version",
-      argv: ["node", "godseye", "--version"],
+      argv: ["node", "openclaw", "--version"],
       expected: true,
     },
     {
       name: "root -V",
-      argv: ["node", "godseye", "-V"],
+      argv: ["node", "openclaw", "-V"],
       expected: true,
     },
     {
       name: "root -v alias with profile",
-      argv: ["node", "godseye", "--profile", "work", "-v"],
+      argv: ["node", "openclaw", "--profile", "work", "-v"],
       expected: true,
     },
     {
       name: "subcommand version flag",
-      argv: ["node", "godseye", "status", "--version"],
+      argv: ["node", "openclaw", "status", "--version"],
       expected: false,
     },
     {
       name: "unknown root flag with version",
-      argv: ["node", "godseye", "--unknown", "--version"],
+      argv: ["node", "openclaw", "--unknown", "--version"],
       expected: false,
     },
   ])("detects root-only version invocations: $name", ({ argv, expected }) => {
@@ -100,42 +100,42 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "root --help",
-      argv: ["node", "godseye", "--help"],
+      argv: ["node", "openclaw", "--help"],
       expected: true,
     },
     {
       name: "root -h",
-      argv: ["node", "godseye", "-h"],
+      argv: ["node", "openclaw", "-h"],
       expected: true,
     },
     {
       name: "root --help with profile",
-      argv: ["node", "godseye", "--profile", "work", "--help"],
+      argv: ["node", "openclaw", "--profile", "work", "--help"],
       expected: true,
     },
     {
       name: "subcommand --help",
-      argv: ["node", "godseye", "status", "--help"],
+      argv: ["node", "openclaw", "status", "--help"],
       expected: false,
     },
     {
       name: "help before subcommand token",
-      argv: ["node", "godseye", "--help", "status"],
+      argv: ["node", "openclaw", "--help", "status"],
       expected: false,
     },
     {
       name: "help after -- terminator",
-      argv: ["node", "godseye", "nodes", "run", "--", "git", "--help"],
+      argv: ["node", "openclaw", "nodes", "invoke", "--", "device.status", "--help"],
       expected: false,
     },
     {
       name: "unknown root flag before help",
-      argv: ["node", "godseye", "--unknown", "--help"],
+      argv: ["node", "openclaw", "--unknown", "--help"],
       expected: false,
     },
     {
       name: "unknown root flag after help",
-      argv: ["node", "godseye", "--help", "--unknown"],
+      argv: ["node", "openclaw", "--help", "--unknown"],
       expected: false,
     },
   ])("detects root-only help invocations: $name", ({ argv, expected }) => {
@@ -145,17 +145,17 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "single command with trailing flag",
-      argv: ["node", "godseye", "status", "--json"],
+      argv: ["node", "openclaw", "status", "--json"],
       expected: ["status"],
     },
     {
       name: "two-part command",
-      argv: ["node", "godseye", "agents", "list"],
+      argv: ["node", "openclaw", "agents", "list"],
       expected: ["agents", "list"],
     },
     {
       name: "terminator cuts parsing",
-      argv: ["node", "godseye", "status", "--", "ignored"],
+      argv: ["node", "openclaw", "status", "--", "ignored"],
       expected: ["status"],
     },
   ])("extracts command path: $name", ({ argv, expected }) => {
@@ -167,7 +167,7 @@ describe("argv helpers", () => {
       getCommandPathWithRootOptions(
         [
           "node",
-          "godseye",
+          "openclaw",
           "--profile",
           "work",
           "--container",
@@ -184,7 +184,7 @@ describe("argv helpers", () => {
   it("extracts routed config get positionals with interleaved root options", () => {
     expect(
       getCommandPositionalsWithRootOptions(
-        ["node", "godseye", "config", "get", "--log-level", "debug", "update.channel", "--json"],
+        ["node", "openclaw", "config", "get", "--log-level", "debug", "update.channel", "--json"],
         {
           commandPath: ["config", "get"],
           booleanFlags: ["--json"],
@@ -196,7 +196,7 @@ describe("argv helpers", () => {
   it("extracts routed config unset positionals with interleaved root options", () => {
     expect(
       getCommandPositionalsWithRootOptions(
-        ["node", "godseye", "config", "unset", "--profile", "work", "update.channel"],
+        ["node", "openclaw", "config", "unset", "--profile", "work", "update.channel"],
         {
           commandPath: ["config", "unset"],
         },
@@ -207,7 +207,7 @@ describe("argv helpers", () => {
   it("returns null when routed command sees unknown options", () => {
     expect(
       getCommandPositionalsWithRootOptions(
-        ["node", "godseye", "config", "get", "--mystery", "value", "update.channel"],
+        ["node", "openclaw", "config", "get", "--mystery", "value", "update.channel"],
         {
           commandPath: ["config", "get"],
           booleanFlags: ["--json"],
@@ -219,17 +219,17 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "returns first command token",
-      argv: ["node", "godseye", "agents", "list"],
+      argv: ["node", "openclaw", "agents", "list"],
       expected: "agents",
     },
     {
       name: "returns null when no command exists",
-      argv: ["node", "godseye"],
+      argv: ["node", "openclaw"],
       expected: null,
     },
     {
       name: "skips known root option values",
-      argv: ["node", "godseye", "--log-level", "debug", "status"],
+      argv: ["node", "openclaw", "--log-level", "debug", "status"],
       expected: "status",
     },
   ])("returns primary command: $name", ({ argv, expected }) => {
@@ -239,13 +239,13 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "detects flag before terminator",
-      argv: ["node", "godseye", "status", "--json"],
+      argv: ["node", "openclaw", "status", "--json"],
       flag: "--json",
       expected: true,
     },
     {
       name: "ignores flag after terminator",
-      argv: ["node", "godseye", "--", "--json"],
+      argv: ["node", "openclaw", "--", "--json"],
       flag: "--json",
       expected: false,
     },
@@ -256,27 +256,27 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "value in next token",
-      argv: ["node", "godseye", "status", "--timeout", "5000"],
+      argv: ["node", "openclaw", "status", "--timeout", "5000"],
       expected: "5000",
     },
     {
       name: "value in equals form",
-      argv: ["node", "godseye", "status", "--timeout=2500"],
+      argv: ["node", "openclaw", "status", "--timeout=2500"],
       expected: "2500",
     },
     {
       name: "missing value",
-      argv: ["node", "godseye", "status", "--timeout"],
+      argv: ["node", "openclaw", "status", "--timeout"],
       expected: null,
     },
     {
       name: "next token is another flag",
-      argv: ["node", "godseye", "status", "--timeout", "--json"],
+      argv: ["node", "openclaw", "status", "--timeout", "--json"],
       expected: null,
     },
     {
       name: "flag appears after terminator",
-      argv: ["node", "godseye", "--", "--timeout=99"],
+      argv: ["node", "openclaw", "--", "--timeout=99"],
       expected: undefined,
     },
   ])("extracts flag values: $name", ({ argv, expected }) => {
@@ -284,9 +284,9 @@ describe("argv helpers", () => {
   });
 
   it("parses verbose flags", () => {
-    expect(getVerboseFlag(["node", "godseye", "status", "--verbose"])).toBe(true);
-    expect(getVerboseFlag(["node", "godseye", "status", "--debug"])).toBe(false);
-    expect(getVerboseFlag(["node", "godseye", "status", "--debug"], { includeDebug: true })).toBe(
+    expect(getVerboseFlag(["node", "openclaw", "status", "--verbose"])).toBe(true);
+    expect(getVerboseFlag(["node", "openclaw", "status", "--debug"])).toBe(false);
+    expect(getVerboseFlag(["node", "openclaw", "status", "--debug"], { includeDebug: true })).toBe(
       true,
     );
   });
@@ -294,125 +294,124 @@ describe("argv helpers", () => {
   it.each([
     {
       name: "missing flag",
-      argv: ["node", "godseye", "status"],
+      argv: ["node", "openclaw", "status"],
       expected: undefined,
     },
     {
       name: "missing value",
-      argv: ["node", "godseye", "status", "--timeout"],
+      argv: ["node", "openclaw", "status", "--timeout"],
       expected: null,
     },
     {
       name: "valid positive integer",
-      argv: ["node", "godseye", "status", "--timeout", "5000"],
+      argv: ["node", "openclaw", "status", "--timeout", "5000"],
       expected: 5000,
     },
     {
       name: "invalid integer",
-      argv: ["node", "godseye", "status", "--timeout", "nope"],
+      argv: ["node", "openclaw", "status", "--timeout", "nope"],
       expected: undefined,
     },
   ])("parses positive integer flag values: $name", ({ argv, expected }) => {
     expect(getPositiveIntFlagValue(argv, "--timeout")).toBe(expected);
   });
 
-  it("builds parse argv from raw args", () => {
-    const cases = [
-      {
-        rawArgs: ["node", "godseye", "status"],
-        expected: ["node", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node-22", "godseye", "status"],
-        expected: ["node-22", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node-22.2.0.exe", "godseye", "status"],
-        expected: ["node-22.2.0.exe", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node-22.2", "godseye", "status"],
-        expected: ["node-22.2", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node-22.2.exe", "godseye", "status"],
-        expected: ["node-22.2.exe", "godseye", "status"],
-      },
-      {
-        rawArgs: ["/usr/bin/node-22.2.0", "godseye", "status"],
-        expected: ["/usr/bin/node-22.2.0", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node24", "godseye", "status"],
-        expected: ["node24", "godseye", "status"],
-      },
-      {
-        rawArgs: ["/usr/bin/node24", "godseye", "status"],
-        expected: ["/usr/bin/node24", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node24.exe", "godseye", "status"],
-        expected: ["node24.exe", "godseye", "status"],
-      },
-      {
-        rawArgs: ["nodejs", "godseye", "status"],
-        expected: ["nodejs", "godseye", "status"],
-      },
-      {
-        rawArgs: ["node-dev", "godseye", "status"],
-        expected: ["node", "godseye", "node-dev", "godseye", "status"],
-      },
-      {
-        rawArgs: ["godseye", "status"],
-        expected: ["node", "godseye", "status"],
-      },
-      {
-        rawArgs: ["bun", "src/entry.ts", "status"],
-        expected: ["bun", "src/entry.ts", "status"],
-      },
-    ] as const;
-
-    for (const testCase of cases) {
-      const parsed = buildParseArgv({
-        programName: "godseye",
-        rawArgs: [...testCase.rawArgs],
-      });
-      expect(parsed).toEqual([...testCase.expected]);
-    }
+  it.each([
+    {
+      name: "keeps plain node argv",
+      rawArgs: ["node", "openclaw", "status"],
+      expected: ["node", "openclaw", "status"],
+    },
+    {
+      name: "keeps version-suffixed node binary",
+      rawArgs: ["node-22", "openclaw", "status"],
+      expected: ["node-22", "openclaw", "status"],
+    },
+    {
+      name: "keeps windows versioned node exe",
+      rawArgs: ["node-22.2.0.exe", "openclaw", "status"],
+      expected: ["node-22.2.0.exe", "openclaw", "status"],
+    },
+    {
+      name: "keeps dotted node binary",
+      rawArgs: ["node-22.2", "openclaw", "status"],
+      expected: ["node-22.2", "openclaw", "status"],
+    },
+    {
+      name: "keeps dotted node exe",
+      rawArgs: ["node-22.2.exe", "openclaw", "status"],
+      expected: ["node-22.2.exe", "openclaw", "status"],
+    },
+    {
+      name: "keeps absolute versioned node path",
+      rawArgs: ["/usr/bin/node-22.2.0", "openclaw", "status"],
+      expected: ["/usr/bin/node-22.2.0", "openclaw", "status"],
+    },
+    {
+      name: "keeps node24 shorthand",
+      rawArgs: ["node24", "openclaw", "status"],
+      expected: ["node24", "openclaw", "status"],
+    },
+    {
+      name: "keeps absolute node24 shorthand",
+      rawArgs: ["/usr/bin/node24", "openclaw", "status"],
+      expected: ["/usr/bin/node24", "openclaw", "status"],
+    },
+    {
+      name: "keeps windows node24 exe",
+      rawArgs: ["node24.exe", "openclaw", "status"],
+      expected: ["node24.exe", "openclaw", "status"],
+    },
+    {
+      name: "keeps nodejs binary",
+      rawArgs: ["nodejs", "openclaw", "status"],
+      expected: ["nodejs", "openclaw", "status"],
+    },
+    {
+      name: "prefixes fallback when first arg is not a node launcher",
+      rawArgs: ["node-dev", "openclaw", "status"],
+      expected: ["node", "openclaw", "node-dev", "openclaw", "status"],
+    },
+    {
+      name: "prefixes fallback when raw args start at program name",
+      rawArgs: ["openclaw", "status"],
+      expected: ["node", "openclaw", "status"],
+    },
+    {
+      name: "keeps bun execution argv",
+      rawArgs: ["bun", "src/entry.ts", "status"],
+      expected: ["bun", "src/entry.ts", "status"],
+    },
+  ] as const)("builds parse argv from raw args: $name", ({ rawArgs, expected }) => {
+    const parsed = buildParseArgv({
+      programName: "openclaw",
+      rawArgs: [...rawArgs],
+    });
+    expect(parsed).toEqual([...expected]);
   });
 
   it("builds parse argv from fallback args", () => {
     const fallbackArgv = buildParseArgv({
-      programName: "godseye",
+      programName: "openclaw",
       fallbackArgv: ["status"],
     });
-    expect(fallbackArgv).toEqual(["node", "godseye", "status"]);
+    expect(fallbackArgv).toEqual(["node", "openclaw", "status"]);
   });
 
-  it("decides when to migrate state", () => {
-    const nonMutatingArgv = [
-      ["node", "godseye", "status"],
-      ["node", "godseye", "health"],
-      ["node", "godseye", "sessions"],
-      ["node", "godseye", "config", "get", "update"],
-      ["node", "godseye", "config", "unset", "update"],
-      ["node", "godseye", "models", "list"],
-      ["node", "godseye", "models", "status"],
-      ["node", "godseye", "memory", "status"],
-      ["node", "godseye", "update", "status", "--json"],
-      ["node", "godseye", "agent", "--message", "hi"],
-    ] as const;
-    const mutatingArgv = [
-      ["node", "godseye", "agents", "list"],
-      ["node", "godseye", "message", "send"],
-    ] as const;
-
-    for (const argv of nonMutatingArgv) {
-      expect(shouldMigrateState([...argv])).toBe(false);
-    }
-    for (const argv of mutatingArgv) {
-      expect(shouldMigrateState([...argv])).toBe(true);
-    }
+  it.each([
+    { argv: ["node", "openclaw", "status"], expected: false },
+    { argv: ["node", "openclaw", "health"], expected: false },
+    { argv: ["node", "openclaw", "sessions"], expected: false },
+    { argv: ["node", "openclaw", "config", "get", "update"], expected: false },
+    { argv: ["node", "openclaw", "config", "unset", "update"], expected: false },
+    { argv: ["node", "openclaw", "models", "list"], expected: false },
+    { argv: ["node", "openclaw", "models", "status"], expected: false },
+    { argv: ["node", "openclaw", "update", "status", "--json"], expected: false },
+    { argv: ["node", "openclaw", "agent", "--message", "hi"], expected: false },
+    { argv: ["node", "openclaw", "agents", "list"], expected: true },
+    { argv: ["node", "openclaw", "message", "send"], expected: true },
+  ] as const)("decides when to migrate state: $argv", ({ argv, expected }) => {
+    expect(shouldMigrateState([...argv])).toBe(expected);
   });
 
   it.each([

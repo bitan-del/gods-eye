@@ -2,7 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import {
   collectExecSafeBinCoverageWarnings,
   collectExecSafeBinTrustedDirHintWarnings,
@@ -26,7 +26,7 @@ describe("doctor exec safe bin helpers", () => {
           safeBinProfiles: { jq: {} },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     expect(hits).toEqual([
       { scopePath: "tools.exec", bin: "node", kind: "missingProfile", isInterpreter: true },
@@ -52,13 +52,13 @@ describe("doctor exec safe bin helpers", () => {
             "jq supports broad jq programs and builtins (for example `env`), so prefer explicit allowlist entries or approval-gated runs instead of safeBins.",
         },
       ],
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
     });
 
     expect(warnings).toEqual([
       expect.stringContaining("tools.exec.safeBins includes interpreter/runtime 'node'"),
       expect.stringContaining("agents.list.runner.tools.exec.safeBins includes 'jq'"),
-      expect.stringContaining('Run "godseye doctor --fix"'),
+      expect.stringContaining('Run "openclaw doctor --fix"'),
     ]);
   });
 
@@ -69,7 +69,7 @@ describe("doctor exec safe bin helpers", () => {
           safeBins: ["node", "jq"],
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     expect(result.changes).toEqual([
       "- tools.exec.safeBinProfiles.jq: added scaffold profile {} (review and tighten flags/positionals).",
@@ -81,8 +81,27 @@ describe("doctor exec safe bin helpers", () => {
     expect(result.config.tools?.exec?.safeBinProfiles).toEqual({ jq: {} });
   });
 
+  it("warns on awk-family safeBins instead of scaffolding them", () => {
+    const result = maybeRepairExecSafeBinProfiles({
+      tools: {
+        exec: {
+          safeBins: ["awk", "sed"],
+        },
+      },
+    } as OpenClawConfig);
+
+    expect(result.changes).toEqual([]);
+    expect(result.warnings).toEqual([
+      "- tools.exec.safeBins includes 'awk': awk-family interpreters can execute commands, access ENVIRON, and write files, so prefer explicit allowlist entries or approval-gated runs instead of safeBins.",
+      "- tools.exec.safeBins includes 'sed': sed scripts can execute commands and write files, so prefer explicit allowlist entries or approval-gated runs instead of safeBins.",
+      "- tools.exec.safeBins includes interpreter/runtime 'awk' without profile; remove it from safeBins or use explicit allowlist entries.",
+      "- tools.exec.safeBins includes interpreter/runtime 'sed' without profile; remove it from safeBins or use explicit allowlist entries.",
+    ]);
+    expect(result.config.tools?.exec?.safeBinProfiles).toEqual({});
+  });
+
   it("flags safeBins that resolve outside trusted directories", () => {
-    const tempDir = mkdtempSync(join(tmpdir(), "godseye-safe-bin-"));
+    const tempDir = mkdtempSync(join(tmpdir(), "openclaw-safe-bin-"));
     const binPath = join(tempDir, "custom-safe-bin");
     writeFileSync(binPath, "#!/bin/sh\nexit 0\n");
     chmodSync(binPath, 0o755);
@@ -95,7 +114,7 @@ describe("doctor exec safe bin helpers", () => {
           safeBinProfiles: { "custom-safe-bin": {} },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     expect(hits).toHaveLength(1);
     expect(hits[0]).toMatchObject({

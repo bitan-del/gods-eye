@@ -13,7 +13,7 @@ const MAX_ENTRIES = 5000;
  * Keep Slack thread participation shared across bundled chunks so thread
  * auto-reply gating does not diverge between prepare/dispatch call paths.
  */
-const SLACK_THREAD_PARTICIPATION_KEY = Symbol.for("godseye.slackThreadParticipation");
+const SLACK_THREAD_PARTICIPATION_KEY = Symbol.for("openclaw.slackThreadParticipation");
 const threadParticipation = resolveGlobalDedupeCache(SLACK_THREAD_PARTICIPATION_KEY, {
   ttlMs: TTL_MS,
   maxSize: MAX_ENTRIES,

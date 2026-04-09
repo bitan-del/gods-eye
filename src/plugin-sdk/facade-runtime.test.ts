@@ -284,7 +284,7 @@ describe("plugin-sdk facade runtime", () => {
     fs.writeFileSync(
       path.join(lineDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/line",
+        name: "@godseye/line",
         version: "0.0.0",
         openclaw: {
           extensions: ["./runtime-api.js"],
@@ -332,7 +332,7 @@ describe("plugin-sdk facade runtime", () => {
     fs.writeFileSync(
       path.join(encodedDir, "package.json"),
       JSON.stringify({
-        name: "@openclaw/line",
+        name: "@godseye/line",
         version: "0.0.0",
         openclaw: {
           extensions: ["./runtime-api.js"],

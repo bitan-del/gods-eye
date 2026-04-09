@@ -1,5 +1,9 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { isSubagentSessionKey, resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../../shared/string-coerce.js";
 import {
   listSpawnedSessionKeys,
   resolveInternalSessionKey,
@@ -20,10 +24,10 @@ export type SessionAccessResult =
   | { allowed: true }
   | { allowed: false; error: string; status: "forbidden" };
 
-export function resolveSessionToolsVisibility(cfg: GodsEyeConfig): SessionToolsVisibility {
+export function resolveSessionToolsVisibility(cfg: OpenClawConfig): SessionToolsVisibility {
   const raw = (cfg.tools as { sessions?: { visibility?: unknown } } | undefined)?.sessions
     ?.visibility;
-  const value = typeof raw === "string" ? raw.trim().toLowerCase() : "";
+  const value = normalizeLowercaseStringOrEmpty(raw);
   if (value === "self" || value === "tree" || value === "agent" || value === "all") {
     return value;
   }
@@ -31,7 +35,7 @@ export function resolveSessionToolsVisibility(cfg: GodsEyeConfig): SessionToolsV
 }
 
 export function resolveEffectiveSessionToolsVisibility(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sandboxed: boolean;
 }): SessionToolsVisibility {
   const visibility = resolveSessionToolsVisibility(params.cfg);
@@ -45,12 +49,12 @@ export function resolveEffectiveSessionToolsVisibility(params: {
   return visibility;
 }
 
-export function resolveSandboxSessionToolsVisibility(cfg: GodsEyeConfig): "spawned" | "all" {
+export function resolveSandboxSessionToolsVisibility(cfg: OpenClawConfig): "spawned" | "all" {
   return cfg.agents?.defaults?.sandbox?.sessionToolsVisibility ?? "spawned";
 }
 
 export function resolveSandboxedSessionToolContext(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentSessionKey?: string;
   sandboxed?: boolean;
 }): {
@@ -63,14 +67,14 @@ export function resolveSandboxedSessionToolContext(params: {
 } {
   const { mainKey, alias } = resolveMainSessionAlias(params.cfg);
   const visibility = resolveSandboxSessionToolsVisibility(params.cfg);
-  const requesterInternalKey =
-    typeof params.agentSessionKey === "string" && params.agentSessionKey.trim()
-      ? resolveInternalSessionKey({
-          key: params.agentSessionKey,
-          alias,
-          mainKey,
-        })
-      : undefined;
+  const requesterSessionKey = normalizeOptionalString(params.agentSessionKey);
+  const requesterInternalKey = requesterSessionKey
+    ? resolveInternalSessionKey({
+        key: requesterSessionKey,
+        alias,
+        mainKey,
+      })
+    : undefined;
   const effectiveRequesterKey = requesterInternalKey ?? alias;
   const restrictToSpawned =
     params.sandboxed === true &&
@@ -87,7 +91,7 @@ export function resolveSandboxedSessionToolContext(params: {
   };
 }
 
-export function createAgentToAgentPolicy(cfg: GodsEyeConfig): AgentToAgentPolicy {
+export function createAgentToAgentPolicy(cfg: OpenClawConfig): AgentToAgentPolicy {
   const routingA2A = cfg.tools?.agentToAgent;
   const enabled = routingA2A?.enabled === true;
   const allowPatterns = Array.isArray(routingA2A?.allow) ? routingA2A.allow : [];
@@ -96,7 +100,9 @@ export function createAgentToAgentPolicy(cfg: GodsEyeConfig): AgentToAgentPolicy
       return true;
     }
     return allowPatterns.some((pattern) => {
-      const raw = String(pattern ?? "").trim();
+      const raw =
+        normalizeOptionalString(typeof pattern === "string" ? pattern : String(pattern ?? "")) ??
+        "";
       if (!raw) {
         return false;
       }

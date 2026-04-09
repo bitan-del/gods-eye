@@ -1,6 +1,11 @@
-import { AllowFromListSchema, DmPolicySchema } from "godseye/plugin-sdk/channel-config-schema";
-import { z } from "zod";
-import { MarkdownConfigSchema, buildChannelConfigSchema } from "../api.js";
+import {
+  AllowFromListSchema,
+  buildChannelConfigSchema,
+  DmPolicySchema,
+  MarkdownConfigSchema,
+} from "godseye/plugin-sdk/channel-config-primitives";
+import { buildSecretInputSchema } from "godseye/plugin-sdk/secret-input";
+import { z } from "godseye/plugin-sdk/zod";
 
 /**
  * Validates https:// URLs only (no javascript:, data:, file:, etc.)
@@ -69,7 +74,7 @@ export const NostrConfigSchema = z.object({
   markdown: MarkdownConfigSchema,
 
   /** Private key in hex or nsec bech32 format */
-  privateKey: z.string().optional(),
+  privateKey: buildSecretInputSchema().optional(),
 
   /** WebSocket relay URLs to connect to */
   relays: z.array(z.string()).optional(),

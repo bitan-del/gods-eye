@@ -1,10 +1,11 @@
-import type { ChannelPlugin } from "../api.js";
+import { describeWebhookAccountSnapshot } from "godseye/plugin-sdk/account-helpers";
+import { hasLineCredentials, parseLineAllowFromId } from "./account-helpers.js";
 import {
   resolveLineAccount,
-  type GodsEyeConfig,
+  type ChannelPlugin,
+  type OpenClawConfig,
   type ResolvedLineAccount,
-} from "../runtime-api.js";
-import { hasLineCredentials, parseLineAllowFromId } from "./account-helpers.js";
+} from "./channel-api.js";
 import { lineConfigAdapter } from "./config-adapter.js";
 import { LineChannelConfigSchema } from "./config-schema.js";
 
@@ -37,22 +38,22 @@ export const lineChannelPluginCommon = {
   config: {
     ...lineConfigAdapter,
     isConfigured: (account: ResolvedLineAccount) => hasLineCredentials(account),
-    describeAccount: (account: ResolvedLineAccount) => ({
-      accountId: account.accountId,
-      name: account.name,
-      enabled: account.enabled,
-      configured: hasLineCredentials(account),
-      tokenSource: account.tokenSource ?? undefined,
-    }),
+    describeAccount: (account: ResolvedLineAccount) =>
+      describeWebhookAccountSnapshot({
+        account,
+        configured: hasLineCredentials(account),
+        extra: {
+          tokenSource: account.tokenSource ?? undefined,
+        },
+      }),
   },
 } satisfies Pick<
   ChannelPlugin<ResolvedLineAccount>,
   "meta" | "capabilities" | "reload" | "configSchema" | "config"
 >;
 
-export function isLineConfigured(cfg: GodsEyeConfig, accountId: string): boolean {
+export function isLineConfigured(cfg: OpenClawConfig, accountId: string): boolean {
   return hasLineCredentials(resolveLineAccount({ cfg, accountId }));
 }
 
-export { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../runtime-api.js";
 export { parseLineAllowFromId };

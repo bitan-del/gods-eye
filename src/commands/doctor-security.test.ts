@@ -1,5 +1,8 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 const note = vi.hoisted(() => vi.fn());
 const pluginRegistry = vi.hoisted(() => ({ list: [] as unknown[] }));
@@ -17,33 +20,54 @@ import { noteSecurityWarnings } from "./doctor-security.js";
 describe("noteSecurityWarnings gateway exposure", () => {
   let prevToken: string | undefined;
   let prevPassword: string | undefined;
+  let prevHome: string | undefined;
 
   beforeEach(() => {
     note.mockClear();
     pluginRegistry.list = [];
-    prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-    prevPassword = process.env.GODSEYE_GATEWAY_PASSWORD;
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
+    prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+    prevPassword = process.env.OPENCLAW_GATEWAY_PASSWORD;
+    prevHome = process.env.HOME;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
   });
 
   afterEach(() => {
     if (prevToken === undefined) {
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
     } else {
-      process.env.GODSEYE_GATEWAY_TOKEN = prevToken;
+      process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
     }
     if (prevPassword === undefined) {
-      delete process.env.GODSEYE_GATEWAY_PASSWORD;
+      delete process.env.OPENCLAW_GATEWAY_PASSWORD;
     } else {
-      process.env.GODSEYE_GATEWAY_PASSWORD = prevPassword;
+      process.env.OPENCLAW_GATEWAY_PASSWORD = prevPassword;
+    }
+    if (prevHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = prevHome;
     }
   });
 
   const lastMessage = () => String(note.mock.calls.at(-1)?.[0] ?? "");
 
+  async function withExecApprovalsFile(
+    file: Record<string, unknown>,
+    run: () => Promise<void>,
+  ): Promise<void> {
+    const home = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-doctor-security-"));
+    process.env.HOME = home;
+    await fs.mkdir(path.join(home, ".openclaw"), { recursive: true });
+    await fs.writeFile(
+      path.join(home, ".openclaw", "exec-approvals.json"),
+      JSON.stringify(file, null, 2),
+    );
+    await run();
+  }
+
   it("warns when exposed without auth", async () => {
-    const cfg = { gateway: { bind: "lan" } } as GodsEyeConfig;
+    const cfg = { gateway: { bind: "lan" } } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("CRITICAL");
@@ -53,8 +77,8 @@ describe("noteSecurityWarnings gateway exposure", () => {
   });
 
   it("uses env token to avoid critical warning", async () => {
-    process.env.GODSEYE_GATEWAY_TOKEN = "token-123";
-    const cfg = { gateway: { bind: "lan" } } as GodsEyeConfig;
+    process.env.OPENCLAW_GATEWAY_TOKEN = "token-123";
+    const cfg = { gateway: { bind: "lan" } } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("WARNING");
@@ -67,10 +91,10 @@ describe("noteSecurityWarnings gateway exposure", () => {
         bind: "lan",
         auth: {
           mode: "token",
-          token: { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" },
+          token: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("WARNING");
@@ -80,14 +104,22 @@ describe("noteSecurityWarnings gateway exposure", () => {
   it("treats whitespace token as missing", async () => {
     const cfg = {
       gateway: { bind: "lan", auth: { mode: "token", token: "   " } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("CRITICAL");
   });
 
   it("skips warning for loopback bind", async () => {
-    const cfg = { gateway: { bind: "loopback" } } as GodsEyeConfig;
+    const cfg = { gateway: { bind: "loopback" } } as OpenClawConfig;
+    await noteSecurityWarnings(cfg);
+    const message = lastMessage();
+    expect(message).toContain("No channel security warnings detected");
+    expect(message).not.toContain("Gateway bound");
+  });
+
+  it("treats unset bind as loopback for host-side doctor checks", async () => {
+    const cfg = { gateway: {} } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("No channel security warnings detected");
@@ -115,7 +147,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
         },
       },
     ];
-    const cfg = { session: { dmScope: "main" } } as GodsEyeConfig;
+    const cfg = { session: { dmScope: "main" } } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain('config set session.dmScope "per-channel-peer"');
@@ -128,12 +160,261 @@ describe("noteSecurityWarnings gateway exposure", () => {
           enabled: false,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("disables approval forwarding only");
     expect(message).toContain("exec-approvals.json");
-    expect(message).toContain("godseye approvals get --gateway");
+    expect(message).toContain("openclaw approvals get --gateway");
+  });
+
+  it("warns when tools.exec is broader than host exec defaults", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        defaults: {
+          security: "allowlist",
+          ask: "on-miss",
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              security: "full",
+              ask: "off",
+            },
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("tools.exec is broader than the host exec policy");
+    expect(message).toContain('security="full"');
+    expect(message).toContain('defaults.security="allowlist"');
+    expect(message).toContain("stricter side wins");
+  });
+
+  it("attributes broader host policy warnings to wildcard agent entries", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        defaults: {
+          security: "full",
+          ask: "off",
+        },
+        agents: {
+          "*": {
+            security: "allowlist",
+            ask: "always",
+          },
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          agents: {
+            list: [
+              {
+                id: "runner",
+                tools: {
+                  exec: {
+                    security: "full",
+                    ask: "off",
+                  },
+                },
+              },
+            ],
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("agents.list.runner.tools.exec is broader than the host exec policy");
+    expect(message).toContain('agents.*.security="allowlist"');
+    expect(message).toContain('agents.*.ask="always"');
+  });
+
+  it("does not invent a deny host policy when exec-approvals defaults.security is unset", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        agents: {},
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              security: "allowlist",
+              ask: "on-miss",
+            },
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("No channel security warnings detected");
+    expect(message).not.toContain('security="deny"');
+  });
+
+  it("does not invent an on-miss host ask policy when exec-approvals defaults.ask is unset", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        agents: {},
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              ask: "always",
+            },
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("No channel security warnings detected");
+    expect(message).not.toContain('ask="on-miss"');
+  });
+
+  it("warns when a per-agent exec policy is broader than the matching host agent policy", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        agents: {
+          runner: {
+            security: "allowlist",
+            ask: "always",
+          },
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          agents: {
+            list: [
+              {
+                id: "runner",
+                tools: {
+                  exec: {
+                    security: "full",
+                    ask: "off",
+                  },
+                },
+              },
+            ],
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("agents.list.runner.tools.exec is broader than the host exec policy");
+    expect(message).toContain('agents.runner.security="allowlist"');
+    expect(message).toContain('agents.runner.ask="always"');
+  });
+
+  it("warns when an agent inherits broader global tools.exec policy than the matching host agent policy", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        agents: {
+          runner: {
+            security: "allowlist",
+            ask: "always",
+          },
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              security: "full",
+              ask: "off",
+            },
+          },
+          agents: {
+            list: [{ id: "runner" }],
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("agents.list.runner.tools.exec is broader than the host exec policy");
+    expect(message).toContain('tools.exec.security="full"');
+    expect(message).toContain('tools.exec.ask="off"');
+    expect(message).toContain('agents.runner.security="allowlist"');
+    expect(message).toContain('agents.runner.ask="always"');
+  });
+
+  it("ignores malformed host policy fields when attributing doctor conflicts", async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        defaults: {
+          ask: "always",
+        },
+        agents: {
+          runner: {
+            ask: "foo",
+          },
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              ask: "off",
+            },
+          },
+          agents: {
+            list: [{ id: "runner" }],
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).toContain("agents.list.runner.tools.exec is broader than the host exec policy");
+    expect(message).toContain('defaults.ask="always"');
+    expect(message).not.toContain('agents.runner.ask="foo"');
+  });
+
+  it('does not warn about durable allow-always trust when ask="always" is enforced', async () => {
+    await withExecApprovalsFile(
+      {
+        version: 1,
+        defaults: {
+          ask: "always",
+        },
+        agents: {
+          main: {
+            allowlist: [
+              {
+                pattern: "/usr/bin/echo",
+                source: "allow-always",
+              },
+            ],
+          },
+        },
+      },
+      async () => {
+        await noteSecurityWarnings({
+          tools: {
+            exec: {
+              ask: "always",
+            },
+          },
+        } as OpenClawConfig);
+      },
+    );
+
+    const message = lastMessage();
+    expect(message).not.toContain('tools.exec: ask="always" still bypasses future prompts');
   });
 
   it("warns when heartbeat delivery relies on implicit directPolicy defaults", async () => {
@@ -145,7 +426,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain("Heartbeat defaults");
@@ -165,7 +446,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
           },
         ],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).toContain('Heartbeat agent "ops"');
@@ -192,11 +473,11 @@ describe("noteSecurityWarnings gateway exposure", () => {
       },
     ];
 
-    await noteSecurityWarnings({} as GodsEyeConfig);
+    await noteSecurityWarnings({} as OpenClawConfig);
     const message = lastMessage();
     expect(message).toContain("[secrets]");
     expect(message).toContain("failed to resolve account");
-    expect(message).toContain("Run: godseye security audit --deep");
+    expect(message).toContain("Run: openclaw security audit --deep");
   });
 
   it("skips heartbeat directPolicy warning when delivery is internal-only or explicit", async () => {
@@ -217,7 +498,7 @@ describe("noteSecurityWarnings gateway exposure", () => {
           },
         ],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await noteSecurityWarnings(cfg);
     const message = lastMessage();
     expect(message).not.toContain("Heartbeat defaults");

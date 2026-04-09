@@ -1,16 +1,45 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import { withEnvAsync } from "../test-utils/env.js";
-import { buildProviderRegistry, runCapability } from "./runner.js";
+import { runCapability } from "./runner.js";
 import { withAudioFixture } from "./runner.test-utils.js";
+import type { AudioTranscriptionRequest, MediaUnderstandingProvider } from "./types.js";
+
+const modelAuthMocks = vi.hoisted(() => ({
+  hasAvailableAuthForProvider: vi.fn(() => true),
+  resolveApiKeyForProvider: vi.fn(async () => ({
+    apiKey: "test-key",
+    source: "test",
+    mode: "api-key",
+  })),
+  requireApiKey: vi.fn((auth: { apiKey?: string }) => auth.apiKey ?? "test-key"),
+}));
+
+vi.mock("../agents/model-auth.js", () => ({
+  hasAvailableAuthForProvider: modelAuthMocks.hasAvailableAuthForProvider,
+  resolveApiKeyForProvider: modelAuthMocks.resolveApiKeyForProvider,
+  requireApiKey: modelAuthMocks.requireApiKey,
+}));
+
+vi.mock("../plugins/capability-provider-runtime.js", () => ({
+  resolvePluginCapabilityProviders: () => [],
+}));
+
+function createProviderRegistry(
+  providers: Record<string, MediaUnderstandingProvider>,
+): Map<string, MediaUnderstandingProvider> {
+  // Keep these tests focused on auto-entry selection instead of paying the full
+  // plugin capability registry build for every stub provider setup.
+  return new Map(Object.entries(providers));
+}
 
 function createOpenAiAudioProvider(
-  transcribeAudio: (req: { model?: string }) => Promise<{ text: string; model: string }>,
+  transcribeAudio: (req: AudioTranscriptionRequest) => Promise<{ text: string; model: string }>,
 ) {
-  return buildProviderRegistry({
+  return createProviderRegistry({
     openai: {
       id: "openai",
       capabilities: ["audio"],
@@ -19,7 +48,7 @@ function createOpenAiAudioProvider(
   });
 }
 
-function createOpenAiAudioCfg(extra?: Partial<GodsEyeConfig>): GodsEyeConfig {
+function createOpenAiAudioCfg(extra?: Partial<OpenClawConfig>): OpenClawConfig {
   return {
     models: {
       providers: {
@@ -30,15 +59,15 @@ function createOpenAiAudioCfg(extra?: Partial<GodsEyeConfig>): GodsEyeConfig {
       },
     },
     ...extra,
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig;
 }
 
 async function runAutoAudioCase(params: {
-  transcribeAudio: (req: { model?: string }) => Promise<{ text: string; model: string }>;
-  cfgExtra?: Partial<GodsEyeConfig>;
+  transcribeAudio: (req: AudioTranscriptionRequest) => Promise<{ text: string; model: string }>;
+  cfgExtra?: Partial<OpenClawConfig>;
 }) {
   let runResult: Awaited<ReturnType<typeof runCapability>> | undefined;
-  await withAudioFixture("godseye-auto-audio", async ({ ctx, media, cache }) => {
+  await withAudioFixture("openclaw-auto-audio", async ({ ctx, media, cache }) => {
     const providerRegistry = createOpenAiAudioProvider(params.transcribeAudio);
     const cfg = createOpenAiAudioCfg(params.cfgExtra);
     runResult = await runCapability({
@@ -66,7 +95,7 @@ describe("runCapability auto audio entries", () => {
       },
     });
     expect(result.outputs[0]?.text).toBe("ok");
-    expect(seenModel).toBe("gpt-4o-mini-transcribe");
+    expect(seenModel).toBe("gpt-4o-transcribe");
     expect(result.decision.outcome).toBe("success");
   });
 
@@ -112,8 +141,45 @@ describe("runCapability auto audio entries", () => {
     expect(seenModel).toBe("whisper-1");
   });
 
+  it("lets per-request transcription hints override configured model-entry hints", async () => {
+    let seenLanguage: string | undefined;
+    let seenPrompt: string | undefined;
+    const result = await runAutoAudioCase({
+      transcribeAudio: async (req) => {
+        seenLanguage = req.language;
+        seenPrompt = req.prompt;
+        return { text: "ok", model: req.model ?? "unknown" };
+      },
+      cfgExtra: {
+        tools: {
+          media: {
+            audio: {
+              enabled: true,
+              prompt: "configured prompt",
+              language: "fr",
+              _requestPromptOverride: "Focus on names",
+              _requestLanguageOverride: "en",
+              models: [
+                {
+                  provider: "openai",
+                  model: "whisper-1",
+                  prompt: "entry prompt",
+                  language: "de",
+                },
+              ],
+            },
+          },
+        },
+      } as Partial<OpenClawConfig>,
+    });
+
+    expect(result.outputs[0]?.text).toBe("ok");
+    expect(seenLanguage).toBe("en");
+    expect(seenPrompt).toBe("Focus on names");
+  });
+
   it("uses mistral when only mistral key is configured", async () => {
-    const isolatedAgentDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-audio-agent-"));
+    const isolatedAgentDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-audio-agent-"));
     let runResult: Awaited<ReturnType<typeof runCapability>> | undefined;
     try {
       await withEnvAsync(
@@ -124,18 +190,18 @@ describe("runCapability auto audio entries", () => {
           GEMINI_API_KEY: undefined,
           GOOGLE_API_KEY: undefined,
           MISTRAL_API_KEY: "mistral-test-key", // pragma: allowlist secret
-          GODSEYE_AGENT_DIR: isolatedAgentDir,
+          OPENCLAW_AGENT_DIR: isolatedAgentDir,
           PI_CODING_AGENT_DIR: isolatedAgentDir,
         },
         async () => {
-          await withAudioFixture("godseye-auto-audio-mistral", async ({ ctx, media, cache }) => {
-            const providerRegistry = buildProviderRegistry({
+          await withAudioFixture("openclaw-auto-audio-mistral", async ({ ctx, media, cache }) => {
+            const providerRegistry = createProviderRegistry({
               openai: {
                 id: "openai",
                 capabilities: ["audio"],
                 transcribeAudio: async () => ({
                   text: "openai",
-                  model: "gpt-4o-mini-transcribe",
+                  model: "gpt-4o-transcribe",
                 }),
               },
               mistral: {
@@ -163,7 +229,7 @@ describe("runCapability auto audio entries", () => {
                   },
                 },
               },
-            } as unknown as GodsEyeConfig;
+            } as unknown as OpenClawConfig;
 
             runResult = await runCapability({
               capability: "audio",

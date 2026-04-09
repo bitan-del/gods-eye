@@ -7,6 +7,6 @@ export {
   KILOCODE_DEFAULT_MODEL_NAME,
   KILOCODE_DEFAULT_MODEL_REF,
   KILOCODE_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
+} from "./provider-models.js";
 
-export type { KilocodeModelCatalogEntry } from "godseye/plugin-sdk/provider-models";
+export type { KilocodeModelCatalogEntry } from "godseye/plugin-sdk/provider-model-shared";

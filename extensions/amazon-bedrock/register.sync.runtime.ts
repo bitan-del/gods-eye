@@ -1,14 +1,14 @@
 import type { StreamFn } from "@mariozechner/pi-agent-core";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-entry";
 import {
   buildProviderReplayFamilyHooks,
   normalizeProviderId,
-} from "openclaw/plugin-sdk/provider-model-shared";
+} from "godseye/plugin-sdk/provider-model-shared";
 import {
   createBedrockNoCacheWrapper,
   isAnthropicBedrockModel,
   streamWithPayloadPatch,
-} from "openclaw/plugin-sdk/provider-stream-shared";
+} from "godseye/plugin-sdk/provider-stream-shared";
 import {
   mergeImplicitBedrockProvider,
   resolveBedrockConfigApiKey,

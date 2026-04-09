@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { VoiceCallConfig } from "./config.js";
 import type { CallManagerContext } from "./manager/context.js";
 import { processEvent as processManagerEvent } from "./manager/events.js";
@@ -29,7 +30,7 @@ function resolveDefaultStoreBase(config: VoiceCallConfig, storePath?: string): s
   if (rawOverride) {
     return resolveUserPath(rawOverride);
   }
-  const preferred = path.join(os.homedir(), ".godseye", "voice-calls");
+  const preferred = path.join(os.homedir(), ".openclaw", "voice-calls");
   const candidates = [preferred].map((dir) => resolveUserPath(dir));
   const existing =
     candidates.find((dir) => {
@@ -116,7 +117,7 @@ export class CallManager {
           ctx: this.getContext(),
           callId,
           onTimeout: async (id) => {
-            await endCallWithContext(this.getContext(), id);
+            await endCallWithContext(this.getContext(), id, { reason: "timeout" });
           },
         });
         console.log(`[voice-call] Restarted max-duration timer for restored call ${callId}`);
@@ -287,8 +288,7 @@ export class CallManager {
   }
 
   private maybeSpeakInitialMessageOnAnswered(call: CallRecord): void {
-    const initialMessage =
-      typeof call.metadata?.initialMessage === "string" ? call.metadata.initialMessage.trim() : "";
+    const initialMessage = normalizeOptionalString(call.metadata?.initialMessage) ?? "";
 
     if (!initialMessage) {
       return;

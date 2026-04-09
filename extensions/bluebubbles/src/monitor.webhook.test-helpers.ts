@@ -1,10 +1,10 @@
 import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { expect, vi } from "vitest";
+import { expect, vi, type Mock } from "vitest";
 import type { ResolvedBlueBubblesAccount } from "./accounts.js";
 import { handleBlueBubblesWebhookRequest } from "./monitor.js";
 import { registerBlueBubblesWebhookTarget } from "./monitor.js";
-import type { GodsEyeConfig, PluginRuntime } from "./runtime-api.js";
+import type { OpenClawConfig, PluginRuntime } from "./runtime-api.js";
 import { setBlueBubblesRuntime } from "./runtime.js";
 
 export type WebhookRequestParams = {
@@ -16,6 +16,11 @@ export type WebhookRequestParams = {
 };
 
 export const LOOPBACK_REMOTE_ADDRESSES_FOR_TEST = ["127.0.0.1", "::1", "::ffff:127.0.0.1"] as const;
+type UnknownMock = Mock<(...args: unknown[]) => unknown>;
+type HangingWebhookRequestForTest = {
+  req: IncomingMessage;
+  destroyMock: UnknownMock;
+};
 
 export function createMockAccount(
   overrides: Partial<ResolvedBlueBubblesAccount["config"]> = {},
@@ -182,7 +187,7 @@ export function createLoopbackWebhookRequestParamsForTest(
 export function createHangingWebhookRequestForTest(
   url = "/bluebubbles-webhook?password=test-password",
   remoteAddress = "127.0.0.1",
-) {
+): HangingWebhookRequestForTest {
   const req = new EventEmitter() as IncomingMessage;
   const destroyMock = vi.fn();
   req.method = "POST";
@@ -267,7 +272,7 @@ export function trackWebhookRegistrationForTest<T extends { unregister: () => vo
 export function registerWebhookTargetForTest(params: {
   core: PluginRuntime;
   account?: ResolvedBlueBubblesAccount;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   path?: string;
   statusSink?: (event: unknown) => void;
   runtime?: {
@@ -293,7 +298,7 @@ export function registerWebhookTargetsForTest(params: {
     account: ResolvedBlueBubblesAccount;
     statusSink?: (event: unknown) => void;
   }>;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   path?: string;
   runtime?: {
     log: (...args: unknown[]) => unknown;
@@ -316,7 +321,7 @@ export function setupWebhookTargetForTest(params: {
   createCore: () => PluginRuntime;
   core?: PluginRuntime;
   account?: ResolvedBlueBubblesAccount;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   path?: string;
   statusSink?: (event: unknown) => void;
   runtime?: {
@@ -345,7 +350,7 @@ export function setupWebhookTargetsForTest(params: {
     account: ResolvedBlueBubblesAccount;
     statusSink?: (event: unknown) => void;
   }>;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   path?: string;
   runtime?: {
     log: (...args: unknown[]) => unknown;

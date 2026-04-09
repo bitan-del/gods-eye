@@ -2,7 +2,7 @@ import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import type {
   ProviderResolveDynamicModelContext,
   ProviderRuntimeModel,
-} from "openclaw/plugin-sdk/plugin-entry";
+} from "godseye/plugin-sdk/plugin-entry";
 import { describe, expect, it } from "vitest";
 import { isModernGoogleModel, resolveGoogleGeminiForwardCompatModel } from "./provider-models.js";
 

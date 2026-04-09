@@ -1,9 +1,10 @@
 import fs from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { runHeartbeatOnce, type HeartbeatDeps } from "./heartbeat-runner.js";
 import { installHeartbeatRunnerTestRuntime } from "./heartbeat-runner.test-harness.js";
 import {
+  type HeartbeatReplySpy,
   seedMainSessionStore,
   withTempHeartbeatSandbox,
   withTempTelegramHeartbeatSandbox,
@@ -21,7 +22,7 @@ describe("runHeartbeatOnce ack handling", () => {
     heartbeat: Record<string, unknown>;
     channels: Record<string, unknown>;
     messages?: Record<string, unknown>;
-  }): GodsEyeConfig {
+  }): OpenClawConfig {
     return {
       agents: {
         defaults: {
@@ -78,7 +79,7 @@ describe("runHeartbeatOnce ack handling", () => {
   async function runTelegramHeartbeatWithDefaults(params: {
     tmpDir: string;
     storePath: string;
-    replySpy: ReturnType<typeof vi.spyOn>;
+    replySpy: HeartbeatReplySpy;
     replyText: string;
     messages?: Record<string, unknown>;
     telegramOverrides?: Record<string, unknown>;
@@ -108,7 +109,10 @@ describe("runHeartbeatOnce ack handling", () => {
     const sendTelegram = createMessageSendSpy();
     await runHeartbeatOnce({
       cfg,
-      deps: makeTelegramDeps({ sendTelegram }),
+      deps: {
+        ...makeTelegramDeps({ sendTelegram }),
+        getReplyFromConfig: params.replySpy,
+      },
     });
     return sendTelegram;
   }
@@ -118,7 +122,7 @@ describe("runHeartbeatOnce ack handling", () => {
     storePath: string;
     heartbeat?: Record<string, unknown>;
     visibility?: Record<string, unknown>;
-  }): GodsEyeConfig {
+  }): OpenClawConfig {
     return createHeartbeatConfig({
       tmpDir: params.tmpDir,
       storePath: params.storePath,
@@ -141,7 +145,7 @@ describe("runHeartbeatOnce ack handling", () => {
     storePath: string;
     heartbeat?: Record<string, unknown>;
     visibility?: Record<string, unknown>;
-  }): Promise<GodsEyeConfig> {
+  }): Promise<OpenClawConfig> {
     const cfg = createWhatsAppHeartbeatConfig(params);
     await seedMainSessionStore(params.storePath, cfg, {
       lastChannel: "whatsapp",
@@ -170,7 +174,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps({ sendWhatsApp }),
+        deps: {
+          ...makeWhatsAppDeps({ sendWhatsApp }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(sendWhatsApp).toHaveBeenCalled();
@@ -196,7 +203,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps({ sendWhatsApp }),
+        deps: {
+          ...makeWhatsAppDeps({ sendWhatsApp }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(sendWhatsApp).toHaveBeenCalledTimes(1);
@@ -212,8 +222,8 @@ describe("runHeartbeatOnce ack handling", () => {
     },
     {
       title: "strips responsePrefix before HEARTBEAT_OK detection and suppresses short ack text",
-      replyText: "[godseye] HEARTBEAT_OK all good",
-      messages: { responsePrefix: "[godseye]" },
+      replyText: "[openclaw] HEARTBEAT_OK all good",
+      messages: { responsePrefix: "[openclaw]" },
       expectedCalls: 0,
     },
     {
@@ -258,7 +268,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       const result = await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps({ sendWhatsApp }),
+        deps: {
+          ...makeWhatsAppDeps({ sendWhatsApp }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(replySpy).not.toHaveBeenCalled();
@@ -279,7 +292,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps({ sendWhatsApp }),
+        deps: {
+          ...makeWhatsAppDeps({ sendWhatsApp }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(sendWhatsApp).not.toHaveBeenCalled();
@@ -317,7 +333,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps(),
+        deps: {
+          ...makeWhatsAppDeps(),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       const finalStore = JSON.parse(await fs.readFile(storePath, "utf-8")) as Record<
@@ -340,11 +359,14 @@ describe("runHeartbeatOnce ack handling", () => {
 
       const res = await runHeartbeatOnce({
         cfg,
-        deps: makeWhatsAppDeps({
-          sendWhatsApp,
-          webAuthExists: async () => false,
-          hasActiveWebListener: () => false,
-        }),
+        deps: {
+          ...makeWhatsAppDeps({
+            sendWhatsApp,
+            webAuthExists: async () => false,
+            hasActiveWebListener: () => false,
+          }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(res.status).toBe("skipped");
@@ -376,7 +398,10 @@ describe("runHeartbeatOnce ack handling", () => {
 
       await runHeartbeatOnce({
         cfg,
-        deps: makeTelegramDeps({ sendTelegram }),
+        deps: {
+          ...makeTelegramDeps({ sendTelegram }),
+          getReplyFromConfig: replySpy,
+        },
       });
 
       expect(sendTelegram).toHaveBeenCalledTimes(1);

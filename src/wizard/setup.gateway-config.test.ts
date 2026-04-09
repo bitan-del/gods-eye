@@ -97,9 +97,9 @@ describe("configureGatewayForSetup", () => {
     expect(result.nextConfig.gateway?.nodes?.denyCommands).toEqual(DEFAULT_DANGEROUS_NODE_COMMANDS);
   });
 
-  it("prefers GODSEYE_GATEWAY_TOKEN during quickstart token setup", async () => {
-    const prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-    process.env.GODSEYE_GATEWAY_TOKEN = "token-from-env";
+  it("prefers OPENCLAW_GATEWAY_TOKEN during quickstart token setup", async () => {
+    const prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+    process.env.OPENCLAW_GATEWAY_TOKEN = "token-from-env";
     mocks.randomToken.mockReturnValue("generated-token");
     mocks.randomToken.mockClear();
 
@@ -112,11 +112,69 @@ describe("configureGatewayForSetup", () => {
       expect(result.settings.gatewayToken).toBe("token-from-env");
     } finally {
       if (prevToken === undefined) {
-        delete process.env.GODSEYE_GATEWAY_TOKEN;
+        delete process.env.OPENCLAW_GATEWAY_TOKEN;
       } else {
-        process.env.GODSEYE_GATEWAY_TOKEN = prevToken;
+        process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
       }
     }
+  });
+
+  it("enables insecure local control ui auth for fresh quickstart loopback setups", async () => {
+    mocks.randomToken.mockReturnValue("generated-token");
+
+    const result = await runGatewayConfig({
+      flow: "quickstart",
+      textQueue: [],
+    });
+
+    expect(result.nextConfig.gateway?.controlUi?.allowInsecureAuth).toBe(true);
+  });
+
+  it("preserves explicit control ui auth policy in quickstart", async () => {
+    mocks.randomToken.mockReturnValue("generated-token");
+
+    const result = await runGatewayConfig({
+      flow: "quickstart",
+      textQueue: [],
+      nextConfig: {
+        gateway: {
+          controlUi: {
+            allowInsecureAuth: false,
+          },
+        },
+      },
+    });
+
+    expect(result.nextConfig.gateway?.controlUi?.allowInsecureAuth).toBe(false);
+  });
+
+  it("enables insecure local control ui auth when quickstart reuses an existing loopback config", async () => {
+    mocks.randomToken.mockReturnValue("generated-token");
+    const prompter = createPrompter({
+      selectQueue: [],
+      textQueue: [],
+    });
+    const runtime = createRuntime();
+
+    const result = await configureGatewayForSetup({
+      flow: "quickstart",
+      baseConfig: {},
+      nextConfig: {
+        gateway: {
+          port: 18789,
+          bind: "loopback",
+        },
+      },
+      localPort: 18789,
+      quickstartGateway: {
+        ...createQuickstartGateway("token"),
+        hasExisting: true,
+      },
+      prompter,
+      runtime,
+    });
+
+    expect(result.nextConfig.gateway?.controlUi?.allowInsecureAuth).toBe(true);
   });
 
   it("does not set password to literal 'undefined' when prompt returns undefined", async () => {
@@ -144,12 +202,12 @@ describe("configureGatewayForSetup", () => {
   });
 
   it("honors secretInputMode=ref for gateway password prompts", async () => {
-    const previous = process.env.GODSEYE_GATEWAY_PASSWORD;
-    process.env.GODSEYE_GATEWAY_PASSWORD = "gateway-secret"; // pragma: allowlist secret
+    const previous = process.env.OPENCLAW_GATEWAY_PASSWORD;
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "gateway-secret"; // pragma: allowlist secret
     try {
       const prompter = createPrompter({
         selectQueue: ["loopback", "password", "off", "env"],
-        textQueue: ["18789", "GODSEYE_GATEWAY_PASSWORD"],
+        textQueue: ["18789", "OPENCLAW_GATEWAY_PASSWORD"],
       });
       const runtime = createRuntime();
 
@@ -168,24 +226,24 @@ describe("configureGatewayForSetup", () => {
       expect(result.nextConfig.gateway?.auth?.password).toEqual({
         source: "env",
         provider: "default",
-        id: "GODSEYE_GATEWAY_PASSWORD",
+        id: "OPENCLAW_GATEWAY_PASSWORD",
       });
     } finally {
       if (previous === undefined) {
-        delete process.env.GODSEYE_GATEWAY_PASSWORD;
+        delete process.env.OPENCLAW_GATEWAY_PASSWORD;
       } else {
-        process.env.GODSEYE_GATEWAY_PASSWORD = previous;
+        process.env.OPENCLAW_GATEWAY_PASSWORD = previous;
       }
     }
   });
 
   it("stores gateway token as SecretRef when secretInputMode=ref", async () => {
-    const previous = process.env.GODSEYE_GATEWAY_TOKEN;
-    process.env.GODSEYE_GATEWAY_TOKEN = "token-from-env";
+    const previous = process.env.OPENCLAW_GATEWAY_TOKEN;
+    process.env.OPENCLAW_GATEWAY_TOKEN = "token-from-env";
     try {
       const prompter = createPrompter({
         selectQueue: ["loopback", "token", "off", "env"],
-        textQueue: ["18789", "GODSEYE_GATEWAY_TOKEN"],
+        textQueue: ["18789", "OPENCLAW_GATEWAY_TOKEN"],
       });
       const runtime = createRuntime();
 
@@ -204,14 +262,14 @@ describe("configureGatewayForSetup", () => {
       expect(result.nextConfig.gateway?.auth?.token).toEqual({
         source: "env",
         provider: "default",
-        id: "GODSEYE_GATEWAY_TOKEN",
+        id: "OPENCLAW_GATEWAY_TOKEN",
       });
       expect(result.settings.gatewayToken).toBe("token-from-env");
     } finally {
       if (previous === undefined) {
-        delete process.env.GODSEYE_GATEWAY_TOKEN;
+        delete process.env.OPENCLAW_GATEWAY_TOKEN;
       } else {
-        process.env.GODSEYE_GATEWAY_TOKEN = previous;
+        process.env.OPENCLAW_GATEWAY_TOKEN = previous;
       }
     }
   });

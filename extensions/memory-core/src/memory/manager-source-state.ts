@@ -1,5 +1,5 @@
 import type { SQLInputValue } from "node:sqlite";
-import type { MemorySource } from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+import type { MemorySource } from "godseye/plugin-sdk/memory-core-host-engine-storage";
 
 export type MemorySourceFileStateRow = {
   path: string;

@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 
 export type OwnerDisplaySetting = {
   ownerDisplay?: "raw" | "hash";
@@ -7,27 +8,22 @@ export type OwnerDisplaySetting = {
 };
 
 export type OwnerDisplaySecretResolution = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   generatedSecret?: string;
 };
-
-function trimToUndefined(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
 
 /**
  * Resolve owner display settings for prompt rendering.
  * Keep auth secrets decoupled from owner hash secrets.
  */
-export function resolveOwnerDisplaySetting(config?: GodsEyeConfig): OwnerDisplaySetting {
+export function resolveOwnerDisplaySetting(config?: OpenClawConfig): OwnerDisplaySetting {
   const ownerDisplay = config?.commands?.ownerDisplay;
   if (ownerDisplay !== "hash") {
     return { ownerDisplay, ownerDisplaySecret: undefined };
   }
   return {
     ownerDisplay: "hash",
-    ownerDisplaySecret: trimToUndefined(config?.commands?.ownerDisplaySecret),
+    ownerDisplaySecret: normalizeOptionalString(config?.commands?.ownerDisplaySecret),
   };
 }
 
@@ -36,7 +32,7 @@ export function resolveOwnerDisplaySetting(config?: GodsEyeConfig): OwnerDisplay
  * Returns updated config and generated secret when autofill was needed.
  */
 export function ensureOwnerDisplaySecret(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
   generateSecret: () => string = () => crypto.randomBytes(32).toString("hex"),
 ): OwnerDisplaySecretResolution {
   const settings = resolveOwnerDisplaySetting(config);

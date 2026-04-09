@@ -1,7 +1,7 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ChannelGroupPolicy } from "godseye/plugin-sdk/config-runtime";
+import type { TelegramAccountConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
-import type { ChannelGroupPolicy } from "../../../src/config/group-policy.js";
-import type { TelegramAccountConfig } from "../../../src/config/types.js";
 import {
   createNativeCommandsHarness,
   createTelegramGroupCommandContext,
@@ -10,7 +10,7 @@ import {
 
 describe("native command auth in groups", () => {
   function setup(params: {
-    cfg?: GodsEyeConfig;
+    cfg?: OpenClawConfig;
     telegramCfg?: TelegramAccountConfig;
     allowFrom?: string[];
     groupAllowFrom?: string[];
@@ -19,7 +19,7 @@ describe("native command auth in groups", () => {
     resolveGroupPolicy?: () => ChannelGroupPolicy;
   }) {
     return createNativeCommandsHarness({
-      cfg: params.cfg ?? ({} as GodsEyeConfig),
+      cfg: params.cfg ?? ({} as OpenClawConfig),
       telegramCfg: params.telegramCfg ?? ({} as TelegramAccountConfig),
       allowFrom: params.allowFrom ?? [],
       groupAllowFrom: params.groupAllowFrom ?? [],
@@ -58,7 +58,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       allowFrom: ["99999"],
       groupAllowFrom: ["99999"],
       useAccessGroups: true,
@@ -80,7 +80,7 @@ describe("native command auth in groups", () => {
             telegram: ["99999"],
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       groupAllowFrom: ["12345"],
       useAccessGroups: true,
     });
@@ -109,7 +109,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       useAccessGroups: true,
       resolveGroupPolicy: () =>
         ({
@@ -137,7 +137,7 @@ describe("native command auth in groups", () => {
             telegram: ["12345"],
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       useAccessGroups: true,
       resolveGroupPolicy: () =>
         ({

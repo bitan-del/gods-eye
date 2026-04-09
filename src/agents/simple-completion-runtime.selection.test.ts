@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveSimpleCompletionSelectionForAgent } from "./simple-completion-runtime.js";
 
 describe("resolveSimpleCompletionSelectionForAgent", () => {
   it("preserves multi-segment model ids (openrouter provider models)", () => {
     const cfg = {
       agents: {
-        defaults: { model: "openrouter/anthropic/claude-sonnet-4-5" },
+        defaults: { model: "openrouter/anthropic/claude-sonnet-4-6" },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" });
     expect(selection).toEqual(
       expect.objectContaining({
         provider: "openrouter",
-        modelId: "anthropic/claude-sonnet-4-5",
+        modelId: "anthropic/claude-sonnet-4-6",
       }),
     );
   });
@@ -25,7 +25,7 @@ describe("resolveSimpleCompletionSelectionForAgent", () => {
         defaults: { model: "anthropic/claude-opus-4-6" },
         list: [{ id: "ops", model: "openrouter/aurora-alpha" }],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "ops" });
     expect(selection).toEqual(
@@ -41,7 +41,7 @@ describe("resolveSimpleCompletionSelectionForAgent", () => {
       agents: {
         defaults: { model: "anthropic/claude-opus-4-6@work" },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" });
     expect(selection).toEqual(
@@ -59,30 +59,30 @@ describe("resolveSimpleCompletionSelectionForAgent", () => {
         defaults: {
           model: "fast@work",
           models: {
-            "openrouter/anthropic/claude-sonnet-4-5": { alias: "fast" },
+            "openrouter/anthropic/claude-sonnet-4-6": { alias: "fast" },
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" });
     expect(selection).toEqual(
       expect.objectContaining({
         provider: "openrouter",
-        modelId: "anthropic/claude-sonnet-4-5",
+        modelId: "anthropic/claude-sonnet-4-6",
         profileId: "work",
       }),
     );
   });
 
   it("falls back to runtime default model when no explicit model is configured", () => {
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" });
     expect(selection).toEqual(
       expect.objectContaining({
-        provider: "anthropic",
-        modelId: "claude-opus-4-6",
+        provider: "openai",
+        modelId: "gpt-5.4",
       }),
     );
   });
@@ -112,13 +112,13 @@ describe("resolveSimpleCompletionSelectionForAgent", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const selection = resolveSimpleCompletionSelectionForAgent({ cfg, agentId: "main" });
     expect(selection).toEqual(
       expect.objectContaining({
         provider: "openai",
-        modelId: "gpt-5",
+        modelId: "gpt-5.4",
       }),
     );
   });

@@ -1,8 +1,8 @@
 import { resolveChannelGroupRequireMention } from "godseye/plugin-sdk/channel-policy";
-import { resolveExactLineGroupConfigKey, type GodsEyeConfig } from "../runtime-api.js";
+import { resolveExactLineGroupConfigKey, type OpenClawConfig } from "./channel-api.js";
 
 type LineGroupContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
 };

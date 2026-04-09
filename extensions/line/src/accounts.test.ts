@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   resolveLineAccount,
@@ -15,7 +15,7 @@ describe("LINE accounts", () => {
   const tempDirs: string[] = [];
 
   const createSecretFile = (fileName: string, contents: string) => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-line-account-"));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-line-account-"));
     tempDirs.push(dir);
     const filePath = path.join(dir, fileName);
     fs.writeFileSync(filePath, contents, "utf8");
@@ -37,7 +37,7 @@ describe("LINE accounts", () => {
 
   describe("resolveLineAccount", () => {
     it("resolves account from config", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -62,7 +62,7 @@ describe("LINE accounts", () => {
       process.env.LINE_CHANNEL_ACCESS_TOKEN = "env-token";
       process.env.LINE_CHANNEL_SECRET = "env-secret";
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -78,7 +78,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves named account", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             enabled: true,
@@ -103,8 +103,34 @@ describe("LINE accounts", () => {
       expect(account.name).toBe("Business Bot");
     });
 
+    it("uses configured defaultAccount when accountId is omitted", () => {
+      const cfg: OpenClawConfig = {
+        channels: {
+          line: {
+            defaultAccount: "business",
+            accounts: {
+              business: {
+                enabled: true,
+                channelAccessToken: "business-token",
+                channelSecret: "business-secret",
+                name: "Business Bot",
+              },
+            },
+          },
+        },
+      };
+
+      const account = resolveLineAccount({ cfg });
+
+      expect(account.accountId).toBe("business");
+      expect(account.enabled).toBe(true);
+      expect(account.channelAccessToken).toBe("business-token");
+      expect(account.channelSecret).toBe("business-secret");
+      expect(account.name).toBe("Business Bot");
+    });
+
     it("returns empty token when not configured", () => {
-      const cfg: GodsEyeConfig = {};
+      const cfg: OpenClawConfig = {};
 
       const account = resolveLineAccount({ cfg });
 
@@ -114,7 +140,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves default account credentials from files", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             tokenFile: createSecretFile("token.txt", "file-token\n"),
@@ -131,7 +157,7 @@ describe("LINE accounts", () => {
     });
 
     it("resolves named account credentials from account-level files", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             accounts: {
@@ -152,7 +178,7 @@ describe("LINE accounts", () => {
     });
 
     it.runIf(process.platform !== "win32")("rejects symlinked token and secret files", () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-line-account-"));
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-line-account-"));
       tempDirs.push(dir);
       const tokenFile = path.join(dir, "token.txt");
       const tokenLink = path.join(dir, "token-link.txt");
@@ -163,7 +189,7 @@ describe("LINE accounts", () => {
       fs.symlinkSync(tokenFile, tokenLink);
       fs.symlinkSync(secretFile, secretLink);
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           line: {
             tokenFile: tokenLink,
@@ -193,7 +219,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: "business",
       },
       {
@@ -207,7 +233,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: "business-ops",
       },
       {
@@ -220,7 +246,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: "business",
       },
       {
@@ -234,7 +260,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: "business",
       },
       {
@@ -248,7 +274,7 @@ describe("LINE accounts", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: DEFAULT_ACCOUNT_ID,
       },
     ])("$name", ({ cfg, expected }) => {

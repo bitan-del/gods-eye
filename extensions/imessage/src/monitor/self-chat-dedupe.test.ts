@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createSentMessageCache } from "./echo-cache.js";
 import { resolveIMessageInboundDecision } from "./inbound-processing.js";

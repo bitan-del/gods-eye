@@ -1,6 +1,5 @@
-import { describe, expect, test, vi } from "vitest";
-import type { GodsEyePluginApi } from "../runtime-api.js";
-import { registerFeishuDocTools } from "./docx.js";
+import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import type { OpenClawPluginApi } from "../runtime-api.js";
 import { createToolFactoryHarness } from "./tool-factory-test-harness.js";
 
 const createFeishuClientMock = vi.fn((creds: { appId?: string } | undefined) => ({
@@ -21,7 +20,17 @@ vi.mock("@larksuiteoapi/node-sdk", () => {
 });
 
 describe("feishu_doc account selection", () => {
-  function createDocEnabledConfig(): GodsEyePluginApi["config"] {
+  let registerFeishuDocTools: typeof import("./docx.js").registerFeishuDocTools;
+
+  beforeAll(async () => {
+    ({ registerFeishuDocTools } = await import("./docx.js"));
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function createDocEnabledConfig(): OpenClawPluginApi["config"] {
     return {
       channels: {
         feishu: {
@@ -32,7 +41,7 @@ describe("feishu_doc account selection", () => {
           },
         },
       },
-    } as GodsEyePluginApi["config"];
+    } as OpenClawPluginApi["config"];
   }
 
   test("uses agentAccountId context when params omit accountId", async () => {

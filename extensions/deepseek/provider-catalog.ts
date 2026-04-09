@@ -1,9 +1,9 @@
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import {
   buildDeepSeekModelDefinition,
   DEEPSEEK_BASE_URL,
   DEEPSEEK_MODEL_CATALOG,
-  type ModelProviderConfig,
-} from "godseye/plugin-sdk/provider-models";
+} from "./models.js";
 
 export function buildDeepSeekProvider(): ModelProviderConfig {
   return {

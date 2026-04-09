@@ -1,4 +1,5 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { projectSafeChannelAccountSnapshotFields } from "../account-snapshot-fields.js";
 import { inspectReadOnlyChannelAccount } from "../read-only-account-inspect.js";
 import type { ChannelAccountSnapshot, ChannelPlugin } from "./types.js";
@@ -6,7 +7,7 @@ import type { ChannelAccountSnapshot, ChannelPlugin } from "./types.js";
 // Channel docking: status snapshots flow through plugin.status hooks here.
 async function buildSnapshotFromAccount<ResolvedAccount>(params: {
   plugin: ChannelPlugin<ResolvedAccount>;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   account: ResolvedAccount;
   runtime?: ChannelAccountSnapshot;
@@ -14,13 +15,19 @@ async function buildSnapshotFromAccount<ResolvedAccount>(params: {
   audit?: unknown;
 }): Promise<ChannelAccountSnapshot> {
   if (params.plugin.status?.buildAccountSnapshot) {
-    return await params.plugin.status.buildAccountSnapshot({
+    const snapshot = await params.plugin.status.buildAccountSnapshot({
       account: params.account,
       cfg: params.cfg,
       runtime: params.runtime,
       probe: params.probe,
       audit: params.audit,
     });
+    return normalizeOptionalString(snapshot.accountId)
+      ? snapshot
+      : {
+          ...snapshot,
+          accountId: params.accountId,
+        };
   }
   const enabled = params.plugin.config.isEnabled
     ? params.plugin.config.isEnabled(params.account, params.cfg)
@@ -43,7 +50,7 @@ async function buildSnapshotFromAccount<ResolvedAccount>(params: {
 
 async function inspectChannelAccount<ResolvedAccount>(params: {
   plugin: ChannelPlugin<ResolvedAccount>;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
 }): Promise<ResolvedAccount | null> {
   return (params.plugin.config.inspectAccount?.(params.cfg, params.accountId) ??
@@ -56,7 +63,7 @@ async function inspectChannelAccount<ResolvedAccount>(params: {
 
 export async function buildReadOnlySourceChannelAccountSnapshot<ResolvedAccount>(params: {
   plugin: ChannelPlugin<ResolvedAccount>;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   runtime?: ChannelAccountSnapshot;
   probe?: unknown;
@@ -74,7 +81,7 @@ export async function buildReadOnlySourceChannelAccountSnapshot<ResolvedAccount>
 
 export async function buildChannelAccountSnapshot<ResolvedAccount>(params: {
   plugin: ChannelPlugin<ResolvedAccount>;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   runtime?: ChannelAccountSnapshot;
   probe?: unknown;

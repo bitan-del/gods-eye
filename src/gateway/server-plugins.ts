@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { normalizeModelRef, parseModelRef } from "../agents/model-selection.js";
 import type { loadConfig } from "../config/config.js";
+import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { resolveGatewayStartupPluginIds } from "../plugins/channel-plugin-ids.js";
 import { normalizePluginsConfig } from "../plugins/config-state.js";
-import { loadGodsEyePlugins } from "../plugins/loader.js";
+import { loadOpenClawPlugins } from "../plugins/loader.js";
+import { createEmptyPluginRegistry } from "../plugins/registry-empty.js";
+import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { getPluginRuntimeGatewayRequestScope } from "../plugins/runtime/gateway-request-scope.js";
 import type { PluginRuntime } from "../plugins/runtime/types.js";
 import { resolveGlobalSingleton } from "../shared/global-singleton.js";
@@ -25,7 +28,7 @@ import type {
 // dispatchGatewayMethod can use it as a fallback.
 
 const FALLBACK_GATEWAY_CONTEXT_STATE_KEY: unique symbol = Symbol.for(
-  "godseye.fallbackGatewayContextState",
+  "openclaw.fallbackGatewayContextState",
 );
 
 type FallbackGatewayContextState = {
@@ -70,7 +73,7 @@ type PluginSubagentPolicyState = {
 };
 
 const PLUGIN_SUBAGENT_POLICY_STATE_KEY: unique symbol = Symbol.for(
-  "godseye.pluginSubagentOverridePolicyState",
+  "openclaw.pluginSubagentOverridePolicyState",
 );
 
 const getPluginSubagentPolicyState = () =>
@@ -157,7 +160,7 @@ function authorizeFallbackModelOverride(params: {
       allowed: false,
       reason:
         `plugin "${pluginId}" is not trusted for fallback provider/model override requests. ` +
-        "See https://docs.gods-eye.org/tools/plugin#runtime-helpers and search for: " +
+        "See https://docs.openclaw.ai/tools/plugin#runtime-helpers and search for: " +
         "plugins.entries.<id>.subagent.allowModelOverride",
     };
   }
@@ -367,16 +370,10 @@ export function createGatewaySubagentRuntime(): PluginRuntime["subagent"] {
       return getSessionMessages(params);
     },
     async deleteSession(params) {
-      await dispatchGatewayMethod(
-        "sessions.delete",
-        {
-          key: params.sessionKey,
-          deleteTranscript: params.deleteTranscript ?? true,
-        },
-        {
-          syntheticScopes: [ADMIN_SCOPE],
-        },
-      );
+      await dispatchGatewayMethod("sessions.delete", {
+        key: params.sessionKey,
+        deleteTranscript: params.deleteTranscript ?? true,
+      });
     },
   };
 }
@@ -385,6 +382,8 @@ export function createGatewaySubagentRuntime(): PluginRuntime["subagent"] {
 
 export function loadGatewayPlugins(params: {
   cfg: ReturnType<typeof loadConfig>;
+  activationSourceConfig?: ReturnType<typeof loadConfig>;
+  autoEnabledReasons?: Readonly<Record<string, string[]>>;
   workspaceDir: string;
   log: {
     info: (msg: string) => void;
@@ -394,16 +393,57 @@ export function loadGatewayPlugins(params: {
   };
   coreGatewayHandlers: Record<string, GatewayRequestHandler>;
   baseMethods: string[];
+  pluginIds?: string[];
   preferSetupRuntimeForChannelPlugins?: boolean;
 }) {
-  const pluginRegistry = loadGodsEyePlugins({
-    config: params.cfg,
-    workspaceDir: params.workspaceDir,
-    onlyPluginIds: resolveGatewayStartupPluginIds({
-      config: params.cfg,
+  const activationAutoEnabled =
+    params.activationSourceConfig !== undefined
+      ? applyPluginAutoEnable({
+          config: params.activationSourceConfig,
+          env: process.env,
+        })
+      : undefined;
+  const autoEnabled =
+    params.activationSourceConfig !== undefined
+      ? {
+          config: params.cfg,
+          changes: activationAutoEnabled?.changes ?? [],
+          autoEnabledReasons:
+            params.autoEnabledReasons ?? activationAutoEnabled?.autoEnabledReasons ?? {},
+        }
+      : params.autoEnabledReasons !== undefined
+        ? {
+            config: params.cfg,
+            changes: [],
+            autoEnabledReasons: params.autoEnabledReasons,
+          }
+        : applyPluginAutoEnable({
+            config: params.cfg,
+            env: process.env,
+          });
+  const resolvedConfig = autoEnabled.config;
+  const pluginIds =
+    params.pluginIds ??
+    resolveGatewayStartupPluginIds({
+      config: resolvedConfig,
+      activationSourceConfig: params.activationSourceConfig,
       workspaceDir: params.workspaceDir,
       env: process.env,
-    }),
+    });
+  if (pluginIds.length === 0) {
+    const pluginRegistry = createEmptyPluginRegistry();
+    setActivePluginRegistry(pluginRegistry, undefined, "gateway-bindable", params.workspaceDir);
+    return {
+      pluginRegistry,
+      gatewayMethods: [...params.baseMethods],
+    };
+  }
+  const pluginRegistry = loadOpenClawPlugins({
+    config: resolvedConfig,
+    activationSourceConfig: params.activationSourceConfig ?? params.cfg,
+    autoEnabledReasons: autoEnabled.autoEnabledReasons,
+    workspaceDir: params.workspaceDir,
+    onlyPluginIds: pluginIds,
     logger: {
       info: (msg) => params.log.info(msg),
       warn: (msg) => params.log.warn(msg),

@@ -1,11 +1,14 @@
 import { Command } from "commander";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProgramContext } from "./context.js";
+import { configureProgramHelp } from "./help.js";
 
-const hasEmittedCliBannerMock = vi.fn(() => false);
-const formatCliBannerLineMock = vi.fn(() => "BANNER-LINE");
-const formatDocsLinkMock = vi.fn((_path: string, full: string) => `https://${full}`);
-const resolveCommitHashMock = vi.fn<() => string | null>(() => "abc1234");
+const hasEmittedCliBannerMock = vi.hoisted(() => vi.fn(() => false));
+const formatCliBannerLineMock = vi.hoisted(() => vi.fn(() => "BANNER-LINE"));
+const formatDocsLinkMock = vi.hoisted(() =>
+  vi.fn((_path: string, full: string) => `https://${full}`),
+);
+const resolveCommitHashMock = vi.hoisted(() => vi.fn<() => string | null>(() => "abc1234"));
 
 vi.mock("../../terminal/links.js", () => ({
   formatDocsLink: formatDocsLinkMock,
@@ -32,7 +35,7 @@ vi.mock("../../infra/git-commit.js", () => ({
 }));
 
 vi.mock("../cli-name.js", () => ({
-  resolveCliName: () => "godseye",
+  resolveCliName: () => "openclaw",
   replaceCliName: (cmd: string) => cmd,
 }));
 
@@ -43,8 +46,6 @@ vi.mock("./command-registry.js", () => ({
 vi.mock("./register.subclis.js", () => ({
   getSubCliCommandsWithSubcommands: () => ["gateway"],
 }));
-
-const { configureProgramHelp } = await import("./help.js");
 
 const testProgramContext: ProgramContext = {
   programVersion: "9.9.9-test",
@@ -108,7 +109,7 @@ describe("configureProgramHelp", () => {
   }
 
   it("adds root help hint and marks commands with subcommands", () => {
-    process.argv = ["node", "godseye", "--help"];
+    process.argv = ["node", "openclaw", "--help"];
     const program = makeProgramWithCommands();
     configureProgramHelp(program, testProgramContext);
 
@@ -120,24 +121,24 @@ describe("configureProgramHelp", () => {
   });
 
   it("includes banner and docs/examples in root help output", () => {
-    process.argv = ["node", "godseye", "--help"];
+    process.argv = ["node", "openclaw", "--help"];
     const program = makeProgramWithCommands();
     configureProgramHelp(program, testProgramContext);
 
     const help = captureHelpOutput(program);
     expect(help).toContain("BANNER-LINE");
     expect(help).toContain("Examples:");
-    expect(help).toContain("https://docs.gods-eye.org/cli");
+    expect(help).toContain("https://docs.openclaw.ai/cli");
   });
 
   it("prints version and exits immediately when version flags are present", () => {
-    process.argv = ["node", "godseye", "--version"];
-    expectVersionExit({ expectedVersion: "GodsEye 9.9.9-test (abc1234)" });
+    process.argv = ["node", "openclaw", "--version"];
+    expectVersionExit({ expectedVersion: "OpenClaw 9.9.9-test (abc1234)" });
   });
 
   it("prints version and exits immediately without commit metadata", () => {
-    process.argv = ["node", "godseye", "--version"];
+    process.argv = ["node", "openclaw", "--version"];
     resolveCommitHashMock.mockReturnValue(null);
-    expectVersionExit({ expectedVersion: "GodsEye 9.9.9-test" });
+    expectVersionExit({ expectedVersion: "OpenClaw 9.9.9-test" });
   });
 });

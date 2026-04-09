@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { resolveAgentWorkspaceDir } from "./agent-scope.js";
 
 export function decodeStrictBase64(value: string, maxDecodedBytes: number): Buffer | null {
@@ -66,7 +67,7 @@ export type MaterializeSubagentAttachmentsResult =
   | { status: "forbidden"; error: string }
   | { status: "error"; error: string };
 
-function resolveAttachmentLimits(config: GodsEyeConfig): AttachmentLimits {
+function resolveAttachmentLimits(config: OpenClawConfig): AttachmentLimits {
   const attachmentsCfg = (
     config as unknown as {
       tools?: { sessions_spawn?: { attachments?: Record<string, unknown> } };
@@ -93,7 +94,7 @@ function resolveAttachmentLimits(config: GodsEyeConfig): AttachmentLimits {
 }
 
 export async function materializeSubagentAttachments(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   targetAgentId: string;
   attachments?: SubagentInlineAttachment[];
   mountPathHint?: string;
@@ -120,8 +121,8 @@ export async function materializeSubagentAttachments(params: {
 
   const attachmentId = crypto.randomUUID();
   const childWorkspaceDir = resolveAgentWorkspaceDir(params.config, params.targetAgentId);
-  const absRootDir = path.join(childWorkspaceDir, ".godseye", "attachments");
-  const relDir = path.posix.join(".godseye", "attachments", attachmentId);
+  const absRootDir = path.join(childWorkspaceDir, ".openclaw", "attachments");
+  const relDir = path.posix.join(".openclaw", "attachments", attachmentId);
   const absDir = path.join(absRootDir, attachmentId);
 
   const fail = (error: string): never => {
@@ -137,9 +138,9 @@ export async function materializeSubagentAttachments(params: {
     let totalBytes = 0;
 
     for (const raw of requestedAttachments) {
-      const name = typeof raw?.name === "string" ? raw.name.trim() : "";
+      const name = normalizeOptionalString(raw?.name) ?? "";
       const contentVal = typeof raw?.content === "string" ? raw.content : "";
-      const encodingRaw = typeof raw?.encoding === "string" ? raw.encoding.trim() : "utf8";
+      const encodingRaw = normalizeOptionalString(raw?.encoding) ?? "utf8";
       const encoding = encodingRaw === "base64" ? "base64" : "utf8";
 
       if (!name) {

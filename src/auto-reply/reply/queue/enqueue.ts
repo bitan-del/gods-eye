@@ -1,4 +1,5 @@
 import { resolveGlobalDedupeCache } from "../../../infra/dedupe.js";
+import { normalizeOptionalString } from "../../../shared/string-coerce.js";
 import { applyQueueDropPolicy, shouldSkipQueueItem } from "../../../utils/queue-helpers.js";
 import { kickFollowupDrainIfIdle, rememberFollowupDrainCallback } from "./drain.js";
 import { getExistingFollowupQueue, getFollowupQueue } from "./state.js";
@@ -8,7 +9,7 @@ import type { FollowupRun, QueueDedupeMode, QueueSettings } from "./types.js";
  * Keep queued message-id dedupe shared across bundled chunks so redeliveries
  * are rejected no matter which chunk receives the enqueue call.
  */
-const RECENT_QUEUE_MESSAGE_IDS_KEY = Symbol.for("godseye.recentQueueMessageIds");
+const RECENT_QUEUE_MESSAGE_IDS_KEY = Symbol.for("openclaw.recentQueueMessageIds");
 
 const RECENT_QUEUE_MESSAGE_IDS = resolveGlobalDedupeCache(RECENT_QUEUE_MESSAGE_IDS_KEY, {
   ttlMs: 5 * 60 * 1000,
@@ -16,7 +17,7 @@ const RECENT_QUEUE_MESSAGE_IDS = resolveGlobalDedupeCache(RECENT_QUEUE_MESSAGE_I
 });
 
 function buildRecentMessageIdKey(run: FollowupRun, queueKey: string): string | undefined {
-  const messageId = run.messageId?.trim();
+  const messageId = normalizeOptionalString(run.messageId);
   if (!messageId) {
     return undefined;
   }
@@ -44,9 +45,11 @@ function isRunAlreadyQueued(
     item.originatingAccountId === run.originatingAccountId &&
     item.originatingThreadId === run.originatingThreadId;
 
-  const messageId = run.messageId?.trim();
+  const messageId = normalizeOptionalString(run.messageId);
   if (messageId) {
-    return items.some((item) => item.messageId?.trim() === messageId && hasSameRouting(item));
+    return items.some(
+      (item) => normalizeOptionalString(item.messageId) === messageId && hasSameRouting(item),
+    );
   }
   if (!allowPromptFallback) {
     return false;
@@ -84,7 +87,7 @@ export function enqueueFollowupRun(
 
   const shouldEnqueue = applyQueueDropPolicy({
     queue,
-    summarize: (item) => item.summaryLine?.trim() || item.prompt.trim(),
+    summarize: (item) => normalizeOptionalString(item.summaryLine) || item.prompt.trim(),
   });
   if (!shouldEnqueue) {
     return false;

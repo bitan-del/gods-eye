@@ -69,16 +69,16 @@ export function registerChannelsCli(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["godseye channels list", "List configured channels and auth profiles."],
-          ["godseye channels status --probe", "Run channel status checks and probes."],
+          ["openclaw channels list", "List configured channels and auth profiles."],
+          ["openclaw channels status --probe", "Run channel status checks and probes."],
           [
-            "godseye channels add --channel telegram --token <token>",
+            "openclaw channels add --channel telegram --token <token>",
             "Add or update a channel account non-interactively.",
           ],
-          ["godseye channels login --channel whatsapp", "Link a WhatsApp Web account."],
+          ["openclaw channels login --channel whatsapp", "Link a WhatsApp Web account."],
         ])}\n\n${theme.muted("Docs:")} ${formatDocsLink(
           "/cli/channels",
-          "docs.gods-eye.org/cli/channels",
+          "docs.openclaw.ai/cli/channels",
         )}\n`,
     );
 

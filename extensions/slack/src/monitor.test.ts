@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSlackSlashCommandMatcher,
-  isSlackChannelAllowedByPolicy,
-  resolveSlackThreadTs,
-} from "./monitor.js";
+import { buildSlackSlashCommandMatcher } from "./monitor/commands.js";
+import { isSlackChannelAllowedByPolicy } from "./monitor/policy.js";
+import { resolveSlackThreadTs } from "./monitor/replies.js";
 
 describe("slack groupPolicy gating", () => {
   it("allows when policy is open", () => {
@@ -62,7 +60,7 @@ describe("resolveSlackThreadTs", () => {
   const messageTs = "9999999999.999999";
 
   it("stays in incoming threads for all replyToMode values", () => {
-    for (const replyToMode of ["off", "first", "all"] as const) {
+    for (const replyToMode of ["off", "first", "all", "batched"] as const) {
       for (const hasReplied of [false, true]) {
         expect(
           resolveSlackThreadTs({
@@ -70,6 +68,7 @@ describe("resolveSlackThreadTs", () => {
             incomingThreadTs: threadTs,
             messageTs,
             hasReplied,
+            isThreadReply: true,
           }),
         ).toBe(threadTs);
       }
@@ -129,16 +128,16 @@ describe("resolveSlackThreadTs", () => {
 
 describe("buildSlackSlashCommandMatcher", () => {
   it("matches with or without a leading slash", () => {
-    const matcher = buildSlackSlashCommandMatcher("godseye");
+    const matcher = buildSlackSlashCommandMatcher("openclaw");
 
-    expect(matcher.test("godseye")).toBe(true);
-    expect(matcher.test("/godseye")).toBe(true);
+    expect(matcher.test("openclaw")).toBe(true);
+    expect(matcher.test("/openclaw")).toBe(true);
   });
 
   it("does not match similar names", () => {
-    const matcher = buildSlackSlashCommandMatcher("godseye");
+    const matcher = buildSlackSlashCommandMatcher("openclaw");
 
-    expect(matcher.test("/godseye-bot")).toBe(false);
-    expect(matcher.test("godseye-bot")).toBe(false);
+    expect(matcher.test("/openclaw-bot")).toBe(false);
+    expect(matcher.test("openclaw-bot")).toBe(false);
   });
 });

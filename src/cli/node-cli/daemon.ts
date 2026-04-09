@@ -16,6 +16,7 @@ import {
 import type { GatewayServiceRuntime } from "../../daemon/service-runtime.js";
 import { loadNodeHostConfig } from "../../node-host/config.js";
 import { defaultRuntime } from "../../runtime.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { colorize } from "../../terminal/theme.js";
 import { formatCliCommand } from "../command-format.js";
 import {
@@ -56,8 +57,8 @@ type NodeDaemonStatusOptions = {
 
 function renderNodeServiceStartHints(): string[] {
   return buildPlatformServiceStartHints({
-    installCommand: formatCliCommand("godseye node install"),
-    startCommand: formatCliCommand("godseye node start"),
+    installCommand: formatCliCommand("openclaw node install"),
+    startCommand: formatCliCommand("openclaw node start"),
     launchAgentPlistPath: `~/Library/LaunchAgents/${resolveNodeLaunchAgentLabel()}.plist`,
     systemdServiceName: resolveNodeSystemdServiceName(),
     windowsTaskName: resolveNodeWindowsTaskName(),
@@ -76,7 +77,7 @@ function resolveNodeDefaults(
   opts: NodeDaemonInstallOptions,
   config: Awaited<ReturnType<typeof loadNodeHostConfig>>,
 ) {
-  const host = opts.host?.trim() || config?.gateway?.host || "127.0.0.1";
+  const host = normalizeOptionalString(opts.host) || config?.gateway?.host || "127.0.0.1";
   const portOverride = parsePort(opts.port);
   if (opts.port !== undefined && portOverride === null) {
     return { host, port: null };
@@ -122,12 +123,13 @@ export async function runNodeDaemonInstall(opts: NodeDaemonInstallOptions) {
     });
     if (!json) {
       defaultRuntime.log(`Node service already ${service.loadedText}.`);
-      defaultRuntime.log(`Reinstall with: ${formatCliCommand("godseye node install --force")}`);
+      defaultRuntime.log(`Reinstall with: ${formatCliCommand("openclaw node install --force")}`);
     }
     return;
   }
 
-  const tlsFingerprint = opts.tlsFingerprint?.trim() || config?.gateway?.tlsFingerprint;
+  const tlsFingerprint =
+    normalizeOptionalString(opts.tlsFingerprint) || config?.gateway?.tlsFingerprint;
   const tls = Boolean(opts.tls) || Boolean(tlsFingerprint) || Boolean(config?.gateway?.tls);
   const { programArguments, workingDirectory, environment, description } =
     await buildNodeInstallPlan({
@@ -263,7 +265,7 @@ export async function runNodeDaemonStatus(opts: NodeDaemonStatusOptions = {}) {
   };
   const hintEnv = {
     ...baseEnv,
-    GODSEYE_LOG_PREFIX: baseEnv.GODSEYE_LOG_PREFIX ?? "node",
+    OPENCLAW_LOG_PREFIX: baseEnv.OPENCLAW_LOG_PREFIX ?? "node",
   } as NodeJS.ProcessEnv;
 
   if (runtime?.missingUnit) {

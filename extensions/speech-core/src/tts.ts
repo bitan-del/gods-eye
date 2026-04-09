@@ -9,7 +9,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import path from "node:path";
-import { normalizeChannelId, type ChannelId } from "openclaw/plugin-sdk/channel-targets";
+import { normalizeChannelId, type ChannelId } from "godseye/plugin-sdk/channel-targets";
 import type {
   OpenClawConfig,
   TtsAutoMode,
@@ -17,13 +17,13 @@ import type {
   TtsMode,
   TtsModelOverrideConfig,
   TtsProvider,
-} from "openclaw/plugin-sdk/config-runtime";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
-import { redactSensitiveText } from "openclaw/plugin-sdk/logging-core";
-import { resolveSendableOutboundReplyParts } from "openclaw/plugin-sdk/reply-payload";
-import type { ReplyPayload } from "openclaw/plugin-sdk/reply-runtime";
-import { isVerbose, logVerbose } from "openclaw/plugin-sdk/runtime-env";
-import { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/sandbox";
+} from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { redactSensitiveText } from "godseye/plugin-sdk/logging-core";
+import { resolveSendableOutboundReplyParts } from "godseye/plugin-sdk/reply-payload";
+import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
+import { isVerbose, logVerbose } from "godseye/plugin-sdk/runtime-env";
+import { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/sandbox";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
@@ -31,7 +31,7 @@ import {
   resolveConfigDir,
   resolveUserPath,
   stripMarkdown,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 import {
   canonicalizeSpeechProviderId,
   getSpeechProvider,

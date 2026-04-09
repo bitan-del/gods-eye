@@ -1,7 +1,6 @@
-import { formatErrorMessage } from "godseye/plugin-sdk/infra-runtime";
-import { danger } from "godseye/plugin-sdk/runtime-env";
 import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import { formatErrorMessage } from "godseye/plugin-sdk/ssrf-runtime";
 
 export type TelegramApiLogger = (message: string) => void;
 
@@ -38,7 +37,7 @@ export async function withTelegramApiErrorLogging<T>({
     if (!shouldLog || shouldLog(err)) {
       const errText = formatErrorMessage(err);
       const log = resolveTelegramApiLogger(runtime, logger);
-      log(danger(`telegram ${operation} failed: ${errText}`));
+      log(`telegram ${operation} failed: ${errText}`);
     }
     throw err;
   }

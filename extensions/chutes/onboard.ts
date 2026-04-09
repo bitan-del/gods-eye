@@ -1,14 +1,14 @@
 import {
+  applyAgentDefaultModelPrimary,
+  applyProviderConfigWithModelCatalogPreset,
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/provider-onboard";
+import {
   CHUTES_BASE_URL,
   CHUTES_DEFAULT_MODEL_REF,
   CHUTES_MODEL_CATALOG,
   buildChutesModelDefinition,
-} from "godseye/plugin-sdk/provider-models";
-import {
-  applyAgentDefaultModelPrimary,
-  applyProviderConfigWithModelCatalogPreset,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/provider-onboard";
+} from "./models.js";
 
 export { CHUTES_DEFAULT_MODEL_REF };
 
@@ -16,7 +16,7 @@ export { CHUTES_DEFAULT_MODEL_REF };
  * Apply Chutes provider configuration without changing the default model.
  * Registers all catalog models and sets provider aliases (chutes-fast, etc.).
  */
-export function applyChutesProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyChutesProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyProviderConfigWithModelCatalogPreset(cfg, {
     providerId: "chutes",
     api: "openai-completions",
@@ -37,7 +37,7 @@ export function applyChutesProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
 /**
  * Apply Chutes provider configuration AND set Chutes as the default model.
  */
-export function applyChutesConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyChutesConfig(cfg: OpenClawConfig): OpenClawConfig {
   const next = applyChutesProviderConfig(cfg);
   return {
     ...next,
@@ -58,6 +58,6 @@ export function applyChutesConfig(cfg: GodsEyeConfig): GodsEyeConfig {
   };
 }
 
-export function applyChutesApiKeyConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyChutesApiKeyConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyAgentDefaultModelPrimary(applyChutesProviderConfig(cfg), CHUTES_DEFAULT_MODEL_REF);
 }

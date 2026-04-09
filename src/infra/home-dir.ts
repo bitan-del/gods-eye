@@ -1,8 +1,9 @@
 import os from "node:os";
 import path from "node:path";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 
 function normalize(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
+  const trimmed = normalizeOptionalString(value);
   if (!trimmed) {
     return undefined;
   }
@@ -29,7 +30,7 @@ export function resolveOsHomeDir(
 }
 
 function resolveRawHomeDir(env: NodeJS.ProcessEnv, homedir: () => string): string | undefined {
-  const explicitHome = normalize(env.GODSEYE_HOME);
+  const explicitHome = normalize(env.OPENCLAW_HOME);
   if (explicitHome) {
     if (explicitHome === "~" || explicitHome.startsWith("~/") || explicitHome.startsWith("~\\")) {
       const fallbackHome = resolveRawOsHomeDir(env, homedir);

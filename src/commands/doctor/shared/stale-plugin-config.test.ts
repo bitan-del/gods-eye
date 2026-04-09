@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import type { PluginManifestRecord } from "../../../plugins/manifest-registry.js";
 import * as manifestRegistry from "../../../plugins/manifest-registry.js";
 import {
@@ -13,12 +13,13 @@ function manifest(id: string): PluginManifestRecord {
     id,
     channels: [],
     providers: [],
+    cliBackends: [],
     skills: [],
     hooks: [],
     origin: "bundled",
     rootDir: `/plugins/${id}`,
     source: `/plugins/${id}`,
-    manifestPath: `/plugins/${id}/godseye.plugin.json`,
+    manifestPath: `/plugins/${id}/openclaw.plugin.json`,
   };
 }
 
@@ -43,7 +44,7 @@ describe("doctor stale plugin config helpers", () => {
           acpx: { enabled: true },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     expect(hits).toEqual([
       {
@@ -68,7 +69,7 @@ describe("doctor stale plugin config helpers", () => {
           acpx: { enabled: true },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     expect(result.changes).toEqual([
       "- plugins.allow: removed 1 stale plugin id (acpx)",
@@ -89,12 +90,12 @@ describe("doctor stale plugin config helpers", () => {
           surface: "allow",
         },
       ],
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
     });
 
     expect(warnings).toEqual([
       expect.stringContaining('plugins.allow: stale plugin reference "acpx"'),
-      expect.stringContaining('Run "godseye doctor --fix"'),
+      expect.stringContaining('Run "openclaw doctor --fix"'),
     ]);
   });
 
@@ -113,7 +114,7 @@ describe("doctor stale plugin config helpers", () => {
           acpx: { enabled: true },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const hits = scanStalePluginConfig(cfg);
     expect(hits).toEqual([
@@ -135,7 +136,7 @@ describe("doctor stale plugin config helpers", () => {
 
     const warnings = collectStalePluginConfigWarnings({
       hits,
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
       autoRepairBlocked: true,
     });
     expect(warnings[2]).toContain("Auto-removal is paused");
@@ -150,13 +151,23 @@ describe("doctor stale plugin config helpers", () => {
           acpx: { enabled: true },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(scanStalePluginConfig(cfg)).toEqual([
+      {
+        pluginId: "openai-codex",
+        pathLabel: "plugins.allow",
+        surface: "allow",
+      },
       {
         pluginId: "acpx",
         pathLabel: "plugins.allow",
         surface: "allow",
+      },
+      {
+        pluginId: "openai-codex",
+        pathLabel: "plugins.entries.openai-codex",
+        surface: "entries",
       },
       {
         pluginId: "acpx",
@@ -166,9 +177,7 @@ describe("doctor stale plugin config helpers", () => {
     ]);
 
     const result = maybeRepairStalePluginConfig(cfg);
-    expect(result.config.plugins?.allow).toEqual(["openai-codex"]);
-    expect(result.config.plugins?.entries).toEqual({
-      "openai-codex": { enabled: true },
-    });
+    expect(result.config.plugins?.allow).toEqual([]);
+    expect(result.config.plugins?.entries).toEqual({});
   });
 });

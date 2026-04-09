@@ -62,7 +62,7 @@ export async function buildNodeInstallPlan(params: {
     extraPathDirs: resolveDaemonNodeBinDir(nodePath),
   });
   const description = formatNodeServiceDescription({
-    version: environment.GODSEYE_SERVICE_VERSION,
+    version: environment.OPENCLAW_SERVICE_VERSION,
   });
 
   return { programArguments, workingDirectory, environment, description };

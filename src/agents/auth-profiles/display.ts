@@ -1,9 +1,9 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { resolveAuthProfileMetadata } from "./identity.js";
 import type { AuthProfileStore } from "./types.js";
 
 export function resolveAuthProfileDisplayLabel(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   profileId: string;
 }): string {

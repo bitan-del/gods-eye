@@ -1,5 +1,5 @@
 import { normalizeAccountId } from "godseye/plugin-sdk/account-id";
-import { z } from "zod";
+import { z } from "godseye/plugin-sdk/zod";
 export { z };
 import { buildSecretInputSchema, hasConfiguredSecretInput } from "./secret-input.js";
 

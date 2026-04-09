@@ -2,9 +2,9 @@ import {
   definePluginEntry,
   type OpenClawConfig,
   type ProviderCatalogContext,
-} from "openclaw/plugin-sdk/plugin-entry";
-import { createProviderApiKeyAuthMethod } from "openclaw/plugin-sdk/provider-auth-api-key";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/plugin-entry";
+import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth-api-key";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   applyStepFunPlanConfig,
   applyStepFunPlanConfigCn,

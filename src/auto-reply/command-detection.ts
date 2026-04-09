@@ -1,4 +1,8 @@
-import type { GodsEyeConfig } from "../config/types.js";
+import type { OpenClawConfig } from "../config/types.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+} from "../shared/string-coerce.js";
 import {
   type CommandNormalizeOptions,
   listChatCommands,
@@ -6,10 +10,11 @@ import {
   normalizeCommandBody,
 } from "./commands-registry.js";
 import { isAbortTrigger } from "./reply/abort-primitives.js";
+import { stripInboundMetadata } from "./reply/strip-inbound-meta.js";
 
 export function hasControlCommand(
   text?: string,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   if (!text) {
@@ -19,15 +24,19 @@ export function hasControlCommand(
   if (!trimmed) {
     return false;
   }
-  const normalizedBody = normalizeCommandBody(trimmed, options);
+  const stripped = stripInboundMetadata(trimmed);
+  if (!stripped) {
+    return false;
+  }
+  const normalizedBody = normalizeCommandBody(stripped, options);
   if (!normalizedBody) {
     return false;
   }
-  const lowered = normalizedBody.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(normalizedBody);
   const commands = cfg ? listChatCommandsForConfig(cfg) : listChatCommands();
   for (const command of commands) {
     for (const alias of command.textAliases) {
-      const normalized = alias.trim().toLowerCase();
+      const normalized = normalizeOptionalLowercaseString(alias);
       if (!normalized) {
         continue;
       }
@@ -47,7 +56,7 @@ export function hasControlCommand(
 
 export function isControlCommandMessage(
   text?: string,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   if (!text) {
@@ -60,7 +69,9 @@ export function isControlCommandMessage(
   if (hasControlCommand(trimmed, cfg, options)) {
     return true;
   }
-  const normalized = normalizeCommandBody(trimmed, options).trim().toLowerCase();
+  const stripped = stripInboundMetadata(trimmed);
+  const normalized =
+    normalizeOptionalLowercaseString(normalizeCommandBody(stripped, options)) ?? "";
   return isAbortTrigger(normalized);
 }
 
@@ -81,7 +92,7 @@ export function hasInlineCommandTokens(text?: string): boolean {
 
 export function shouldComputeCommandAuthorized(
   text?: string,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   options?: CommandNormalizeOptions,
 ): boolean {
   return isControlCommandMessage(text, cfg, options) || hasInlineCommandTokens(text);

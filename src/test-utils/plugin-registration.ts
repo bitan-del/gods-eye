@@ -1,17 +1,17 @@
 import { createCapturedPluginRegistration } from "../plugins/captured-registration.js";
-import type { GodsEyePluginApi, ProviderPlugin } from "../plugins/types.js";
+import type { OpenClawPluginApi, ProviderPlugin } from "../plugins/types.js";
 
 export { createCapturedPluginRegistration };
 
 type RegistrablePlugin = {
-  register(api: GodsEyePluginApi): void;
+  register(api: OpenClawPluginApi): void | Promise<void>;
 };
 
-export function registerSingleProviderPlugin(params: {
-  register(api: GodsEyePluginApi): void;
-}): ProviderPlugin {
+export async function registerSingleProviderPlugin(params: {
+  register(api: OpenClawPluginApi): void | Promise<void>;
+}): Promise<ProviderPlugin> {
   const captured = createCapturedPluginRegistration();
-  params.register(captured.api);
+  await params.register(captured.api);
   const provider = captured.providers[0];
   if (!provider) {
     throw new Error("provider registration missing");
@@ -19,10 +19,12 @@ export function registerSingleProviderPlugin(params: {
   return provider;
 }
 
-export function registerProviderPlugins(...plugins: RegistrablePlugin[]): ProviderPlugin[] {
+export async function registerProviderPlugins(
+  ...plugins: RegistrablePlugin[]
+): Promise<ProviderPlugin[]> {
   const captured = createCapturedPluginRegistration();
   for (const plugin of plugins) {
-    plugin.register(captured.api);
+    await plugin.register(captured.api);
   }
   return captured.providers;
 }

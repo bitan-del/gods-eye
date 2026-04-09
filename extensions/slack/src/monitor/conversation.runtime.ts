@@ -6,4 +6,4 @@ export {
   resolveConversationLabel,
   resolvePluginConversationBindingApproval,
   upsertChannelPairingRequest,
-} from "openclaw/plugin-sdk/conversation-runtime";
+} from "godseye/plugin-sdk/conversation-runtime";

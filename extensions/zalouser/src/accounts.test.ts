@@ -1,6 +1,6 @@
 import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 import {
   getZcaUserInfo,
   listEnabledZalouserAccounts,
@@ -19,8 +19,8 @@ vi.mock("./zalo-js.js", () => ({
 const mockCheckAuthenticated = vi.mocked(checkZaloAuthenticated);
 const mockGetUserInfo = vi.mocked(getZaloUserInfo);
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
 describe("zalouser account resolution", () => {
@@ -122,6 +122,27 @@ describe("zalouser account resolution", () => {
     expect(resolved.name).toBe("Work");
     expect(resolved.config.dmPolicy).toBe("allowlist");
     expect(resolved.config.allowFrom).toEqual(["123"]);
+  });
+
+  it("uses configured defaultAccount when accountId is omitted", () => {
+    const cfg = asConfig({
+      channels: {
+        zalouser: {
+          defaultAccount: "work",
+          accounts: {
+            work: {
+              name: "Work",
+              profile: "work-profile",
+            },
+          },
+        },
+      },
+    });
+
+    const resolved = resolveZalouserAccountSync({ cfg });
+    expect(resolved.accountId).toBe("work");
+    expect(resolved.name).toBe("Work");
+    expect(resolved.profile).toBe("work-profile");
   });
 
   it("resolves account config when account key casing differs from normalized id", () => {

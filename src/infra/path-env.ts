@@ -4,7 +4,7 @@ import path from "node:path";
 import { resolveBrewPathDirs } from "./brew.js";
 import { isTruthyEnvValue } from "./env.js";
 
-type EnsureGodsEyePathOpts = {
+type EnsureOpenClawPathOpts = {
   execPath?: string;
   cwd?: string;
   homeDir?: string;
@@ -49,7 +49,7 @@ function mergePath(params: { existing: string; prepend?: string[]; append?: stri
   return merged.join(path.delimiter);
 }
 
-function candidateBinDirs(opts: EnsureGodsEyePathOpts): { prepend: string[]; append: string[] } {
+function candidateBinDirs(opts: EnsureOpenClawPathOpts): { prepend: string[]; append: string[] } {
   const execPath = opts.execPath ?? process.execPath;
   const cwd = opts.cwd ?? process.cwd();
   const homeDir = opts.homeDir ?? os.homedir();
@@ -58,10 +58,21 @@ function candidateBinDirs(opts: EnsureGodsEyePathOpts): { prepend: string[]; app
   const prepend: string[] = [];
   const append: string[] = [];
 
-  // Bundled macOS app: `godseye` lives next to the executable (process.execPath).
+  // Keep the active runtime directory ahead of PATH hardening so shebang-based
+  // subprocesses keep using the same Node/Bun the current OpenClaw process is on.
   try {
     const execDir = path.dirname(execPath);
-    const siblingCli = path.join(execDir, "godseye");
+    if (isExecutable(execPath)) {
+      prepend.push(execDir);
+    }
+  } catch {
+    // ignore
+  }
+
+  // Bundled macOS app: `openclaw` lives next to the executable (process.execPath).
+  try {
+    const execDir = path.dirname(execPath);
+    const siblingCli = path.join(execDir, "openclaw");
     if (isExecutable(siblingCli)) {
       prepend.push(execDir);
     }
@@ -73,47 +84,51 @@ function candidateBinDirs(opts: EnsureGodsEyePathOpts): { prepend: string[]; app
   // disabled by default; if an operator explicitly enables it, only append (never prepend).
   const allowProjectLocalBin =
     opts.allowProjectLocalBin === true ||
-    isTruthyEnvValue(process.env.GODSEYE_ALLOW_PROJECT_LOCAL_BIN);
+    isTruthyEnvValue(process.env.OPENCLAW_ALLOW_PROJECT_LOCAL_BIN);
   if (allowProjectLocalBin) {
     const localBinDir = path.join(cwd, "node_modules", ".bin");
-    if (isExecutable(path.join(localBinDir, "godseye"))) {
+    if (isExecutable(path.join(localBinDir, "openclaw"))) {
       append.push(localBinDir);
     }
   }
 
+  // Only immutable OS directories go in prepend so they take priority over
+  // user-writable locations, preventing PATH hijack of system binaries.
+  prepend.push("/usr/bin", "/bin");
+
+  // User-writable / package-manager directories are appended so they never
+  // shadow trusted OS binaries.
+  // This includes Brew/Homebrew dirs, which are useful for finding `openclaw`
+  // in launchd/minimal environments but must not be treated as trusted.
+  append.push(...resolveBrewPathDirs({ homeDir }));
   const miseDataDir = process.env.MISE_DATA_DIR ?? path.join(homeDir, ".local", "share", "mise");
   const miseShims = path.join(miseDataDir, "shims");
   if (isDirectory(miseShims)) {
-    prepend.push(miseShims);
+    append.push(miseShims);
   }
-
-  prepend.push(...resolveBrewPathDirs({ homeDir }));
-
-  // Common global install locations (macOS first).
   if (platform === "darwin") {
-    prepend.push(path.join(homeDir, "Library", "pnpm"));
+    append.push(path.join(homeDir, "Library", "pnpm"));
   }
   if (process.env.XDG_BIN_HOME) {
-    prepend.push(process.env.XDG_BIN_HOME);
+    append.push(process.env.XDG_BIN_HOME);
   }
-  prepend.push(path.join(homeDir, ".local", "bin"));
-  prepend.push(path.join(homeDir, ".local", "share", "pnpm"));
-  prepend.push(path.join(homeDir, ".bun", "bin"));
-  prepend.push(path.join(homeDir, ".yarn", "bin"));
-  prepend.push("/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin");
+  append.push(path.join(homeDir, ".local", "bin"));
+  append.push(path.join(homeDir, ".local", "share", "pnpm"));
+  append.push(path.join(homeDir, ".bun", "bin"));
+  append.push(path.join(homeDir, ".yarn", "bin"));
 
   return { prepend: prepend.filter(isDirectory), append: append.filter(isDirectory) };
 }
 
 /**
- * Best-effort PATH bootstrap so skills that require the `godseye` CLI can run
+ * Best-effort PATH bootstrap so skills that require the `openclaw` CLI can run
  * under launchd/minimal environments (and inside the macOS app bundle).
  */
-export function ensureGodsEyeCliOnPath(opts: EnsureGodsEyePathOpts = {}) {
-  if (isTruthyEnvValue(process.env.GODSEYE_PATH_BOOTSTRAPPED)) {
+export function ensureOpenClawCliOnPath(opts: EnsureOpenClawPathOpts = {}) {
+  if (isTruthyEnvValue(process.env.OPENCLAW_PATH_BOOTSTRAPPED)) {
     return;
   }
-  process.env.GODSEYE_PATH_BOOTSTRAPPED = "1";
+  process.env.OPENCLAW_PATH_BOOTSTRAPPED = "1";
 
   const existing = opts.pathEnv ?? process.env.PATH ?? "";
   const { prepend, append } = candidateBinDirs(opts);

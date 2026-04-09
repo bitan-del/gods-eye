@@ -2,8 +2,12 @@ import {
   deliverTextOrMediaReply,
   resolveSendableOutboundReplyParts,
 } from "godseye/plugin-sdk/reply-payload";
-import type { GodsEyeConfig, PluginRuntime, ReplyPayload } from "../runtime-api.js";
-import { getAgentScopedMediaLocalRoots } from "../runtime-api.js";
+import {
+  getAgentScopedMediaLocalRoots,
+  type OpenClawConfig,
+  type PluginRuntime,
+  type ReplyPayload,
+} from "./runtime-api.js";
 
 type MarkdownTableMode = Parameters<PluginRuntime["channel"]["text"]["convertMarkdownTables"]>[1];
 
@@ -11,7 +15,7 @@ type SendMattermostMessage = (
   to: string,
   text: string,
   opts: {
-    cfg?: GodsEyeConfig;
+    cfg?: OpenClawConfig;
     accountId?: string;
     mediaUrl?: string;
     mediaLocalRoots?: readonly string[];
@@ -21,7 +25,7 @@ type SendMattermostMessage = (
 
 export async function deliverMattermostReplyPayload(params: {
   core: PluginRuntime;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   payload: ReplyPayload;
   to: string;
   accountId: string;

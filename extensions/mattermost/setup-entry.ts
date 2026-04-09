@@ -1,4 +1,13 @@
-import { defineSetupPluginEntry } from "godseye/plugin-sdk/core";
-import { mattermostPlugin } from "./src/channel.js";
+import { defineBundledChannelSetupEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export default defineSetupPluginEntry(mattermostPlugin);
+export default defineBundledChannelSetupEntry({
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./channel-plugin-api.js",
+    exportName: "mattermostSetupPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+});

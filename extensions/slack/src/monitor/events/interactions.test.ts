@@ -1,53 +1,21 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const enqueueSystemEventMock = vi.fn();
-const dispatchPluginInteractiveHandlerMock = vi.fn(async () => ({
-  matched: false,
-  handled: false,
-  duplicate: false,
-}));
-const resolvePluginConversationBindingApprovalMock = vi.fn();
-const buildPluginBindingResolvedTextMock = vi.fn(() => "Binding updated.");
-
-vi.mock("godseye/plugin-sdk/infra-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/infra-runtime")>();
-  return {
-    ...actual,
-    enqueueSystemEvent: (...args: unknown[]) =>
-      (enqueueSystemEventMock as (...innerArgs: unknown[]) => unknown)(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/plugin-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/plugin-runtime")>();
-  return {
-    ...actual,
-    dispatchPluginInteractiveHandler: (...args: unknown[]) =>
-      (dispatchPluginInteractiveHandlerMock as (...innerArgs: unknown[]) => unknown)(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/conversation-runtime", async () => {
-  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/conversation-runtime")>(
-    "godseye/plugin-sdk/conversation-runtime",
-  );
-  return {
-    ...actual,
-    resolvePluginConversationBindingApproval: (...args: unknown[]) =>
-      (resolvePluginConversationBindingApprovalMock as (...innerArgs: unknown[]) => unknown)(
-        ...args,
-      ),
-    buildPluginBindingResolvedText: (...args: unknown[]) =>
-      (buildPluginBindingResolvedTextMock as (...innerArgs: unknown[]) => unknown)(...args),
-  };
-});
+const enqueueSystemEventMock = vi.hoisted(() => vi.fn());
+const dispatchPluginInteractiveHandlerMock = vi.hoisted(() =>
+  vi.fn(async () => ({
+    matched: false,
+    handled: false,
+    duplicate: false,
+  })),
+);
+const resolvePluginConversationBindingApprovalMock = vi.hoisted(() => vi.fn());
+const buildPluginBindingResolvedTextMock = vi.hoisted(() => vi.fn(() => "Binding updated."));
 
 let registerSlackInteractionEvents: typeof import("./interactions.js").registerSlackInteractionEvents;
-
-vi.mock("../../../../../src/infra/system-events.js", () => ({
-  enqueueSystemEvent: (...args: unknown[]) =>
-    (enqueueSystemEventMock as (...innerArgs: unknown[]) => unknown)(...args),
-}));
+let enqueueSystemEventSpy: ReturnType<typeof vi.spyOn>;
+let dispatchPluginInteractiveHandlerSpy: ReturnType<typeof vi.spyOn>;
+let resolvePluginConversationBindingApprovalSpy: ReturnType<typeof vi.spyOn>;
+let buildPluginBindingResolvedTextSpy: ReturnType<typeof vi.spyOn>;
 
 type RegisteredHandler = (args: {
   ack: () => Promise<void>;
@@ -198,10 +166,49 @@ function createContext(overrides?: {
 
 describe("registerSlackInteractionEvents", () => {
   beforeAll(async () => {
+    const channelRuntime = await import("godseye/plugin-sdk/infra-runtime");
+    const pluginRuntime = await import("godseye/plugin-sdk/plugin-runtime");
+    const conversationBinding = await import("../../../../../src/plugins/conversation-binding.js");
+    enqueueSystemEventSpy = vi
+      .spyOn(channelRuntime, "enqueueSystemEvent")
+      .mockImplementation(((...args: Parameters<typeof channelRuntime.enqueueSystemEvent>) =>
+        (enqueueSystemEventMock as (...innerArgs: unknown[]) => boolean)(
+          ...args,
+        )) as typeof channelRuntime.enqueueSystemEvent);
+    dispatchPluginInteractiveHandlerSpy = vi
+      .spyOn(pluginRuntime, "dispatchPluginInteractiveHandler")
+      .mockImplementation(((
+        ...args: Parameters<typeof pluginRuntime.dispatchPluginInteractiveHandler>
+      ) =>
+        (dispatchPluginInteractiveHandlerMock as (...innerArgs: unknown[]) => Promise<unknown>)(
+          ...args,
+        )) as typeof pluginRuntime.dispatchPluginInteractiveHandler);
+    resolvePluginConversationBindingApprovalSpy = vi
+      .spyOn(conversationBinding, "resolvePluginConversationBindingApproval")
+      .mockImplementation(((
+        ...args: Parameters<typeof conversationBinding.resolvePluginConversationBindingApproval>
+      ) =>
+        (
+          resolvePluginConversationBindingApprovalMock as (
+            ...innerArgs: unknown[]
+          ) => Promise<unknown>
+        )(...args)) as typeof conversationBinding.resolvePluginConversationBindingApproval);
+    buildPluginBindingResolvedTextSpy = vi
+      .spyOn(conversationBinding, "buildPluginBindingResolvedText")
+      .mockImplementation(((
+        ...args: Parameters<typeof conversationBinding.buildPluginBindingResolvedText>
+      ) =>
+        (buildPluginBindingResolvedTextMock as (...innerArgs: unknown[]) => string)(
+          ...args,
+        )) as typeof conversationBinding.buildPluginBindingResolvedText);
     ({ registerSlackInteractionEvents } = await import("./interactions.js"));
   });
 
   beforeEach(() => {
+    enqueueSystemEventSpy.mockClear();
+    dispatchPluginInteractiveHandlerSpy.mockClear();
+    resolvePluginConversationBindingApprovalSpy.mockClear();
+    buildPluginBindingResolvedTextSpy.mockClear();
     enqueueSystemEventMock.mockClear();
     dispatchPluginInteractiveHandlerMock.mockClear();
     resolvePluginConversationBindingApprovalMock.mockClear();
@@ -241,14 +248,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "verify_block",
-              elements: [{ type: "button", action_id: "godseye:verify" }],
+              elements: [{ type: "button", action_id: "openclaw:verify" }],
             },
           ],
         },
       },
       action: {
         type: "button",
-        action_id: "godseye:verify",
+        action_id: "openclaw:verify",
         block_id: "verify_block",
         value: "approved",
         text: { type: "plain_text", text: "Approve" },
@@ -272,7 +279,7 @@ describe("registerSlackInteractionEvents", () => {
       threadTs?: string;
     };
     expect(payload).toMatchObject({
-      actionId: "godseye:verify",
+      actionId: "openclaw:verify",
       actionType: "button",
       value: "approved",
       userId: "U123",
@@ -291,13 +298,13 @@ describe("registerSlackInteractionEvents", () => {
     expect(app.client.chat.update).toHaveBeenCalledTimes(1);
   });
 
-  it("registers a matcher that accepts plugin action ids beyond the GodsEye prefix", () => {
+  it("registers a matcher that accepts plugin action ids beyond the OpenClaw prefix", () => {
     const { ctx, getActionMatcher } = createContext();
     registerSlackInteractionEvents({ ctx: ctx as never });
 
     const matcher = getActionMatcher();
     expect(matcher).toBeTruthy();
-    expect(matcher?.test("godseye:verify")).toBe(true);
+    expect(matcher?.test("openclaw:verify")).toBe(true);
     expect(matcher?.test("codex")).toBe(true);
   });
 
@@ -347,20 +354,42 @@ describe("registerSlackInteractionEvents", () => {
     });
 
     expect(ack).toHaveBeenCalled();
-    expect(dispatchPluginInteractiveHandlerMock).toHaveBeenCalledWith(
+    const dispatchCalls = dispatchPluginInteractiveHandlerMock.mock.calls as unknown[][];
+    const dispatchCall = dispatchCalls[0]?.[0] as
+      | {
+          channel?: string;
+          data?: string;
+          dedupeId?: string;
+          invoke?: (params: {
+            registration: { handler: (ctx: unknown) => unknown };
+            namespace: string;
+            payload: string;
+          }) => Promise<unknown>;
+        }
+      | undefined;
+    expect(dispatchCall).toMatchObject({
+      channel: "slack",
+      data: "codex:approve:thread-1",
+      dedupeId: "U123:C1:100.200:123.trigger:codex:approve:thread-1",
+    });
+    const registrationHandler = vi.fn();
+    await dispatchCall?.invoke?.({
+      registration: { handler: registrationHandler },
+      namespace: "codex",
+      payload: "approve:thread-1",
+    });
+    expect(registrationHandler).toHaveBeenCalledWith(
       expect.objectContaining({
-        channel: "slack",
-        data: "codex:approve:thread-1",
+        accountId: ctx.accountId,
+        conversationId: "C1",
         interactionId: "U123:C1:100.200:123.trigger:codex:approve:thread-1",
-        ctx: expect.objectContaining({
-          accountId: ctx.accountId,
-          conversationId: "C1",
-          interactionId: "U123:C1:100.200:123.trigger:codex:approve:thread-1",
-          threadId: "100.100",
-          interaction: expect.objectContaining({
-            actionId: "codex",
-            value: "approve:thread-1",
-          }),
+        threadId: "100.100",
+        interaction: expect.objectContaining({
+          actionId: "codex",
+          value: "approve:thread-1",
+          data: "codex:approve:thread-1",
+          namespace: "codex",
+          payload: "approve:thread-1",
         }),
       }),
     );
@@ -389,14 +418,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "reply_actions",
-              elements: [{ type: "button", action_id: "godseye:reply_button" }],
+              elements: [{ type: "button", action_id: "openclaw:reply_button" }],
             },
           ],
         },
       },
       action: {
         type: "button",
-        action_id: "godseye:reply_button",
+        action_id: "openclaw:reply_button",
         block_id: "reply_actions",
         value: "codex",
         text: { type: "plain_text", text: "codex" },
@@ -406,7 +435,7 @@ describe("registerSlackInteractionEvents", () => {
     expect(ack).toHaveBeenCalled();
     expect(dispatchPluginInteractiveHandlerMock).not.toHaveBeenCalled();
     expect(enqueueSystemEventMock).toHaveBeenCalledWith(
-      expect.stringContaining('"actionId":"godseye:reply_button"'),
+      expect.stringContaining('"actionId":"openclaw:reply_button"'),
       expect.any(Object),
     );
     expect(app.client.chat.update).toHaveBeenCalledTimes(1);
@@ -484,17 +513,17 @@ describe("registerSlackInteractionEvents", () => {
     const calls = dispatchPluginInteractiveHandlerMock.mock.calls as unknown[][];
     const firstCall = calls[0]?.[0] as
       | {
-          interactionId?: string;
+          dedupeId?: string;
         }
       | undefined;
     const secondCall = calls[1]?.[0] as
       | {
-          interactionId?: string;
+          dedupeId?: string;
         }
       | undefined;
-    expect(firstCall?.interactionId).toContain(":trigger-1:");
-    expect(secondCall?.interactionId).toContain(":trigger-2:");
-    expect(firstCall?.interactionId).not.toBe(secondCall?.interactionId);
+    expect(firstCall?.dedupeId).toContain(":trigger-1:");
+    expect(secondCall?.dedupeId).toContain(":trigger-2:");
+    expect(firstCall?.dedupeId).not.toBe(secondCall?.dedupeId);
   });
 
   it("resolves plugin binding approvals from shared interactive Slack actions", async () => {
@@ -529,14 +558,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "bind_actions",
-              elements: [{ type: "button", action_id: "godseye:reply_button" }],
+              elements: [{ type: "button", action_id: "openclaw:reply_button" }],
             },
           ],
         },
       },
       action: {
         type: "button",
-        action_id: "godseye:reply_button",
+        action_id: "openclaw:reply_button",
         block_id: "bind_actions",
         value: "pluginbind:approval-123:o",
         text: { type: "plain_text", text: "Allow once" },
@@ -593,7 +622,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "button",
-        action_id: "godseye:verify",
+        action_id: "openclaw:verify",
       },
     });
 
@@ -623,7 +652,7 @@ describe("registerSlackInteractionEvents", () => {
         team: { id: "T9" },
         view: {
           id: "V123",
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           private_metadata: JSON.stringify({ userId: "U123" }),
         },
       },
@@ -638,7 +667,7 @@ describe("registerSlackInteractionEvents", () => {
         team: { id: "T9" },
         view: {
           id: "V123",
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           private_metadata: JSON.stringify({ userId: "U123" }),
         },
       },
@@ -667,7 +696,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "static_select",
-        action_id: "godseye:pick",
+        action_id: "openclaw:pick",
         block_id: "select_block",
         selected_option: {
           text: { type: "plain_text", text: "Canary" },
@@ -728,7 +757,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "button",
-        action_id: "godseye:verify",
+        action_id: "openclaw:verify",
         block_id: "verify_block",
       },
     });
@@ -767,7 +796,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "button",
-        action_id: "godseye:verify",
+        action_id: "openclaw:verify",
         block_id: "verify_block",
       },
     });
@@ -801,7 +830,7 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "verify_block",
-              elements: [{ type: "button", action_id: "godseye:verify" }],
+              elements: [{ type: "button", action_id: "openclaw:verify" }],
             },
           ],
         },
@@ -835,7 +864,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "static_select",
-        action_id: "godseye:pick",
+        action_id: "openclaw:pick",
         block_id: "select_block",
         selected_option: {
           text: { type: "plain_text", text: "Canary_*`~<&>" },
@@ -881,7 +910,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "button",
-        action_id: "godseye:container",
+        action_id: "openclaw:container",
         block_id: "container_block",
         value: "ok",
         text: { type: "plain_text", text: "Container" },
@@ -931,14 +960,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "multi_block",
-              elements: [{ type: "multi_static_select", action_id: "godseye:multi" }],
+              elements: [{ type: "multi_static_select", action_id: "openclaw:multi" }],
             },
           ],
         },
       },
       action: {
         type: "multi_static_select",
-        action_id: "godseye:multi",
+        action_id: "openclaw:multi",
         block_id: "multi_block",
         selected_options: [
           { text: { type: "plain_text", text: "Alpha" }, value: "alpha" },
@@ -990,24 +1019,24 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "date_block",
-              elements: [{ type: "datepicker", action_id: "godseye:date" }],
+              elements: [{ type: "datepicker", action_id: "openclaw:date" }],
             },
             {
               type: "actions",
               block_id: "time_block",
-              elements: [{ type: "timepicker", action_id: "godseye:time" }],
+              elements: [{ type: "timepicker", action_id: "openclaw:time" }],
             },
             {
               type: "actions",
               block_id: "datetime_block",
-              elements: [{ type: "datetimepicker", action_id: "godseye:datetime" }],
+              elements: [{ type: "datetimepicker", action_id: "openclaw:datetime" }],
             },
           ],
         },
       },
       action: {
         type: "datepicker",
-        action_id: "godseye:date",
+        action_id: "openclaw:date",
         block_id: "date_block",
         selected_date: "2026-02-16",
       },
@@ -1025,14 +1054,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "time_block",
-              elements: [{ type: "timepicker", action_id: "godseye:time" }],
+              elements: [{ type: "timepicker", action_id: "openclaw:time" }],
             },
           ],
         },
       },
       action: {
         type: "timepicker",
-        action_id: "godseye:time",
+        action_id: "openclaw:time",
         block_id: "time_block",
         selected_time: "14:30",
       },
@@ -1050,14 +1079,14 @@ describe("registerSlackInteractionEvents", () => {
             {
               type: "actions",
               block_id: "datetime_block",
-              elements: [{ type: "datetimepicker", action_id: "godseye:datetime" }],
+              elements: [{ type: "datetimepicker", action_id: "openclaw:datetime" }],
             },
           ],
         },
       },
       action: {
         type: "datetimepicker",
-        action_id: "godseye:datetime",
+        action_id: "openclaw:datetime",
         block_id: "datetime_block",
         selected_date_time: selectedDateTimeEpoch,
       },
@@ -1132,7 +1161,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "multi_conversations_select",
-        action_id: "godseye:route",
+        action_id: "openclaw:route",
         selected_user: "U777",
         selected_users: ["U777", "U888"],
         selected_channel: "C777",
@@ -1202,7 +1231,7 @@ describe("registerSlackInteractionEvents", () => {
       },
       action: {
         type: "workflow_button",
-        action_id: "godseye:workflow",
+        action_id: "openclaw:workflow",
         block_id: "workflow_block",
         text: { type: "plain_text", text: "Launch workflow" },
         workflow: {
@@ -1246,7 +1275,7 @@ describe("registerSlackInteractionEvents", () => {
         team: { id: "T1" },
         view: {
           id: "V123",
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           root_view_id: "VROOT",
           previous_view_id: "VPREV",
           external_id: "deploy-ext-1",
@@ -1311,8 +1340,8 @@ describe("registerSlackInteractionEvents", () => {
     };
     expect(payload).toMatchObject({
       interactionType: "view_submission",
-      actionId: "view:godseye:deploy_form",
-      callbackId: "godseye:deploy_form",
+      actionId: "view:openclaw:deploy_form",
+      callbackId: "openclaw:deploy_form",
       viewId: "V123",
       userId: "U777",
       routedChannelId: "D123",
@@ -1343,7 +1372,7 @@ describe("registerSlackInteractionEvents", () => {
       body: {
         user: { id: "U222" },
         view: {
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           private_metadata: JSON.stringify({
             channelId: "D123",
             channelType: "im",
@@ -1370,7 +1399,7 @@ describe("registerSlackInteractionEvents", () => {
       body: {
         user: { id: "U222" },
         view: {
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           private_metadata: JSON.stringify({
             channelId: "D123",
             channelType: "im",
@@ -1397,7 +1426,7 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U444" },
         view: {
           id: "V400",
-          callback_id: "godseye:routing_form",
+          callback_id: "openclaw:routing_form",
           private_metadata: JSON.stringify({ userId: "U444" }),
           state: {
             values: {
@@ -1473,13 +1502,13 @@ describe("registerSlackInteractionEvents", () => {
               email_block: {
                 email_input: {
                   type: "email_text_input",
-                  value: "team@gods-eye.org",
+                  value: "team@openclaw.ai",
                 },
               },
               url_block: {
                 url_input: {
                   type: "url_text_input",
-                  value: "https://docs.gods-eye.org",
+                  value: "https://docs.openclaw.ai",
                 },
               },
               richtext_block: {
@@ -1570,12 +1599,12 @@ describe("registerSlackInteractionEvents", () => {
         expect.objectContaining({
           actionId: "email_input",
           inputKind: "email",
-          inputEmail: "team@gods-eye.org",
+          inputEmail: "team@openclaw.ai",
         }),
         expect.objectContaining({
           actionId: "url_input",
           inputKind: "url",
-          inputUrl: "https://docs.gods-eye.org/",
+          inputUrl: "https://docs.openclaw.ai/",
         }),
         expect.objectContaining({
           actionId: "richtext_input",
@@ -1613,7 +1642,7 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U555" },
         view: {
           id: "V555",
-          callback_id: "godseye:long_richtext",
+          callback_id: "openclaw:long_richtext",
           private_metadata: JSON.stringify({ userId: "U555" }),
           state: {
             values: {
@@ -1663,7 +1692,7 @@ describe("registerSlackInteractionEvents", () => {
         is_cleared: true,
         view: {
           id: "V900",
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           root_view_id: "VROOT900",
           previous_view_id: "VPREV900",
           external_id: "deploy-ext-900",
@@ -1713,8 +1742,8 @@ describe("registerSlackInteractionEvents", () => {
     };
     expect(payload).toMatchObject({
       interactionType: "view_closed",
-      actionId: "view:godseye:deploy_form",
-      callbackId: "godseye:deploy_form",
+      actionId: "view:openclaw:deploy_form",
+      callbackId: "openclaw:deploy_form",
       viewId: "V900",
       userId: "U900",
       isCleared: true,
@@ -1747,7 +1776,7 @@ describe("registerSlackInteractionEvents", () => {
         user: { id: "U901" },
         view: {
           id: "V901",
-          callback_id: "godseye:deploy_form",
+          callback_id: "openclaw:deploy_form",
           private_metadata: JSON.stringify({ userId: "U901" }),
         },
       },
@@ -1796,7 +1825,7 @@ describe("registerSlackInteractionEvents", () => {
         team: { id: "T1" },
         view: {
           id: "V915",
-          callback_id: "godseye:oversize",
+          callback_id: "openclaw:oversize",
           private_metadata: JSON.stringify({
             channelId: "D915",
             channelType: "im",

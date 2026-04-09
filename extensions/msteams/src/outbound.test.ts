@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 
 const mocks = vi.hoisted(() => ({
   sendMessageMSTeams: vi.fn(),
@@ -15,16 +15,6 @@ vi.mock("./send.js", () => ({
 vi.mock("./polls.js", () => ({
   createMSTeamsPollStoreFs: () => ({
     createPoll: mocks.createPoll,
-  }),
-}));
-
-vi.mock("./runtime.js", () => ({
-  getMSTeamsRuntime: () => ({
-    channel: {
-      text: {
-        chunkMarkdownText: (text: string) => [text],
-      },
-    },
   }),
 }));
 
@@ -54,7 +44,7 @@ describe("msteamsOutbound cfg threading", () => {
           appId: "resolved-app-id",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await msteamsOutbound.sendText!({
       cfg,
@@ -76,7 +66,7 @@ describe("msteamsOutbound cfg threading", () => {
           appId: "resolved-app-id",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await msteamsOutbound.sendMedia!({
       cfg,
@@ -102,7 +92,7 @@ describe("msteamsOutbound cfg threading", () => {
           appId: "resolved-app-id",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await msteamsOutbound.sendPoll!({
       cfg,
@@ -127,5 +117,14 @@ describe("msteamsOutbound cfg threading", () => {
         options: ["Pizza", "Sushi"],
       }),
     );
+  });
+
+  it("chunks outbound text without requiring MSTeams runtime initialization", () => {
+    const chunker = msteamsOutbound.chunker;
+    if (!chunker) {
+      throw new Error("msteams outbound.chunker unavailable");
+    }
+
+    expect(chunker("alpha beta", 5)).toEqual(["alpha", "beta"]);
   });
 });

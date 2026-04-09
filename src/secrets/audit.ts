@@ -6,9 +6,11 @@ import {
   isSecretRefHeaderValueMarker,
 } from "../agents/model-auth-markers.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
-import { resolveStateDir, type GodsEyeConfig } from "../config/config.js";
+import { resolveStateDir, type OpenClawConfig } from "../config/config.js";
 import { coerceSecretRef } from "../config/types.secrets.js";
 import { resolveSecretInputRef, type SecretRef } from "../config/types.secrets.js";
+import { formatErrorMessage } from "../infra/errors.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { resolveConfigDir, resolveUserPath } from "../utils.js";
 import { runTasksWithConcurrency } from "../utils/run-with-concurrency.js";
 import { iterateAuthProfileCredentials } from "./auth-profiles-scan.js";
@@ -27,7 +29,6 @@ import {
   isExpectedResolvedSecretValue,
 } from "./secret-value.js";
 import { isNonEmptyString, isRecord } from "./shared.js";
-import { describeUnknownError } from "./shared.js";
 import {
   listAgentModelsJsonPaths,
   listAuthProfileStorePaths,
@@ -127,7 +128,7 @@ const SENSITIVE_MODEL_PROVIDER_HEADER_NAME_FRAGMENTS = [
 ];
 
 function isLikelySensitiveModelProviderHeaderName(value: string): boolean {
-  const normalized = value.trim().toLowerCase();
+  const normalized = normalizeLowercaseStringOrEmpty(value);
   if (!normalized) {
     return false;
   }
@@ -207,7 +208,7 @@ function collectEnvPlaintext(params: { envPath: string; collector: AuditCollecto
 }
 
 function collectConfigSecrets(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   configPath: string;
   collector: AuditCollector;
 }): void {
@@ -460,7 +461,7 @@ function collectModelsJsonSecrets(params: {
 
 async function collectUnresolvedRefFindings(params: {
   collector: AuditCollector;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   allowExec: boolean;
 }): Promise<{ refsChecked: number; skippedExecRefs: number }> {
@@ -568,7 +569,7 @@ async function collectUnresolvedRefFindings(params: {
         severity: "error",
         file: assignment.file,
         jsonPath: assignment.path,
-        message: `Failed to resolve ${assignment.ref.source}:${assignment.ref.provider}:${assignment.ref.id} (${describeUnknownError(resolveErr)}).`,
+        message: `Failed to resolve ${assignment.ref.source}:${assignment.ref.provider}:${assignment.ref.id} (${formatErrorMessage(resolveErr)}).`,
         provider: assignment.provider,
       });
       continue;
@@ -618,7 +619,7 @@ function collectShadowingFindings(collector: AuditCollector): void {
       addFinding(collector, {
         code: "REF_SHADOWED",
         severity: "warn",
-        file: "godseye.json",
+        file: "openclaw.json",
         jsonPath: configPath,
         message: `Auth profile credentials (${modeText}) take precedence for provider "${provider}", so this config ref may never be used.`,
         provider,
@@ -659,7 +660,7 @@ export async function runSecretsAudit(
 
   const stateDir = resolveStateDir(env, os.homedir);
   const envPath = path.join(resolveConfigDir(env, os.homedir), ".env");
-  const config = snapshot.valid ? snapshot.config : ({} as GodsEyeConfig);
+  const config = snapshot.valid ? snapshot.config : ({} as OpenClawConfig);
   let resolution = {
     refsChecked: 0,
     skippedExecRefs: 0,

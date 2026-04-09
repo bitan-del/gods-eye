@@ -1,5 +1,10 @@
 import { resolveSessionAgentId } from "../../agents/agent-scope.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import type {
+  PluginHookSessionEndEvent,
+  PluginHookSessionEndReason,
+  PluginHookSessionStartEvent,
+} from "../../plugins/types.js";
 
 export type SessionHookContext = {
   sessionId: string;
@@ -10,7 +15,7 @@ export type SessionHookContext = {
 function buildSessionHookContext(params: {
   sessionId: string;
   sessionKey: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 }): SessionHookContext {
   return {
     sessionId: params.sessionId,
@@ -22,10 +27,10 @@ function buildSessionHookContext(params: {
 export function buildSessionStartHookPayload(params: {
   sessionId: string;
   sessionKey: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   resumedFrom?: string;
 }): {
-  event: { sessionId: string; sessionKey: string; resumedFrom?: string };
+  event: PluginHookSessionStartEvent;
   context: SessionHookContext;
 } {
   return {
@@ -45,10 +50,16 @@ export function buildSessionStartHookPayload(params: {
 export function buildSessionEndHookPayload(params: {
   sessionId: string;
   sessionKey: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   messageCount?: number;
+  durationMs?: number;
+  reason?: PluginHookSessionEndReason;
+  sessionFile?: string;
+  transcriptArchived?: boolean;
+  nextSessionId?: string;
+  nextSessionKey?: string;
 }): {
-  event: { sessionId: string; sessionKey: string; messageCount: number };
+  event: PluginHookSessionEndEvent;
   context: SessionHookContext;
 } {
   return {
@@ -56,6 +67,12 @@ export function buildSessionEndHookPayload(params: {
       sessionId: params.sessionId,
       sessionKey: params.sessionKey,
       messageCount: params.messageCount ?? 0,
+      durationMs: params.durationMs,
+      reason: params.reason,
+      sessionFile: params.sessionFile,
+      transcriptArchived: params.transcriptArchived,
+      nextSessionId: params.nextSessionId,
+      nextSessionKey: params.nextSessionKey,
     },
     context: buildSessionHookContext({
       sessionId: params.sessionId,

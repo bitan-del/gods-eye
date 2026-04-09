@@ -7,9 +7,9 @@ export function buildPairingReply(params: {
   code: string;
 }): string {
   const { channel, idLine, code } = params;
-  const approveCommand = formatCliCommand(`godseye pairing approve ${channel} ${code}`);
+  const approveCommand = formatCliCommand(`openclaw pairing approve ${channel} ${code}`);
   return [
-    "GodsEye: access not configured.",
+    "OpenClaw: access not configured.",
     "",
     idLine,
     "Pairing code:",
@@ -18,7 +18,7 @@ export function buildPairingReply(params: {
     "```",
     "",
     "Ask the bot owner to approve with:",
-    formatCliCommand(`godseye pairing approve ${channel} ${code}`),
+    formatCliCommand(`openclaw pairing approve ${channel} ${code}`),
     "```",
     approveCommand,
     "```",

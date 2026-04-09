@@ -1,15 +1,15 @@
-import { normalizeChatChannelId } from "../channels/registry.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import { normalizeChatChannelId } from "../channels/ids.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 export function setPluginEnabledInConfig(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
   pluginId: string,
   enabled: boolean,
-): GodsEyeConfig {
+): OpenClawConfig {
   const builtInChannelId = normalizeChatChannelId(pluginId);
   const resolvedId = builtInChannelId ?? pluginId;
 
-  const next: GodsEyeConfig = {
+  const next: OpenClawConfig = {
     ...config,
     plugins: {
       ...config.plugins,

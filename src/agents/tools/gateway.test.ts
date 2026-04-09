@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const callGatewayMock = vi.fn();
 const configState = vi.hoisted(() => ({
@@ -15,35 +15,26 @@ vi.mock("../../gateway/call.js", () => ({
 let callGatewayTool: typeof import("./gateway.js").callGatewayTool;
 let resolveGatewayOptions: typeof import("./gateway.js").resolveGatewayOptions;
 
-async function loadFreshGatewayToolModuleForTest() {
-  vi.resetModules();
-  vi.doMock("../../config/config.js", () => ({
-    loadConfig: () => configState.value,
-    resolveGatewayPort: () => 18789,
-  }));
-  vi.doMock("../../gateway/call.js", () => ({
-    callGateway: (...args: unknown[]) => callGatewayMock(...args),
-  }));
-  ({ callGatewayTool, resolveGatewayOptions } = await import("./gateway.js"));
-}
-
 describe("gateway tool defaults", () => {
   const envSnapshot = {
-    godseye: process.env.GODSEYE_GATEWAY_TOKEN,
+    openclaw: process.env.OPENCLAW_GATEWAY_TOKEN,
   };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    ({ callGatewayTool, resolveGatewayOptions } = await import("./gateway.js"));
+  });
+
+  beforeEach(() => {
     callGatewayMock.mockClear();
     configState.value = {};
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    await loadFreshGatewayToolModuleForTest();
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
   });
 
   afterAll(() => {
-    if (envSnapshot.godseye === undefined) {
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+    if (envSnapshot.openclaw === undefined) {
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
     } else {
-      process.env.GODSEYE_GATEWAY_TOKEN = envSnapshot.godseye;
+      process.env.OPENCLAW_GATEWAY_TOKEN = envSnapshot.openclaw;
     }
   });
 
@@ -69,8 +60,8 @@ describe("gateway tool defaults", () => {
     );
   });
 
-  it("uses GODSEYE_GATEWAY_TOKEN for allowlisted local overrides", () => {
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
+  it("uses OPENCLAW_GATEWAY_TOKEN for allowlisted local overrides", () => {
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
     const opts = resolveGatewayOptions({ gatewayUrl: "ws://127.0.0.1:18789" });
     expect(opts.url).toBe("ws://127.0.0.1:18789");
     expect(opts.token).toBe("env-token");
@@ -101,7 +92,7 @@ describe("gateway tool defaults", () => {
   });
 
   it("does not leak local env/config tokens to remote overrides", () => {
-    process.env.GODSEYE_GATEWAY_TOKEN = "local-env-token";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "local-env-token";
     configState.value = {
       gateway: {
         auth: { token: "local-config-token" },
@@ -136,7 +127,7 @@ describe("gateway tool defaults", () => {
   });
 
   it("explicit gatewayToken overrides fallback token resolution", () => {
-    process.env.GODSEYE_GATEWAY_TOKEN = "local-env-token";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "local-env-token";
     configState.value = {
       gateway: {
         remote: {
@@ -169,6 +160,22 @@ describe("gateway tool defaults", () => {
     expect(callGatewayMock).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "cron.add",
+        scopes: ["operator.admin"],
+      }),
+    );
+  });
+
+  it("allows explicit scope overrides for dynamic callers", async () => {
+    callGatewayMock.mockResolvedValueOnce({ ok: true });
+    await callGatewayTool(
+      "node.pair.approve",
+      {},
+      { requestId: "req-1" },
+      { scopes: ["operator.admin"] },
+    );
+    expect(callGatewayMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "node.pair.approve",
         scopes: ["operator.admin"],
       }),
     );

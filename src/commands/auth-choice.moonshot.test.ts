@@ -7,7 +7,7 @@ import {
   createExitThrowingRuntime,
   createWizardPrompter,
   readAuthProfilesForAgent,
-  requireGodsEyeAgentDir,
+  requireOpenClawAgentDir,
   setupAuthTestEnv,
 } from "./test-wizard-helpers.js";
 
@@ -17,14 +17,14 @@ function createPrompter(overrides: Partial<WizardPrompter>): WizardPrompter {
 
 describe("applyAuthChoice (moonshot)", () => {
   const lifecycle = createAuthTestLifecycle([
-    "GODSEYE_STATE_DIR",
-    "GODSEYE_AGENT_DIR",
+    "OPENCLAW_STATE_DIR",
+    "OPENCLAW_AGENT_DIR",
     "PI_CODING_AGENT_DIR",
     "MOONSHOT_API_KEY",
   ]);
 
   async function setupTempState() {
-    const env = await setupAuthTestEnv("godseye-auth-");
+    const env = await setupAuthTestEnv("openclaw-auth-");
     lifecycle.setStateDir(env.stateDir);
     delete process.env.MOONSHOT_API_KEY;
   }
@@ -32,7 +32,7 @@ describe("applyAuthChoice (moonshot)", () => {
   async function readAuthProfiles() {
     return await readAuthProfilesForAgent<{
       profiles?: Record<string, { key?: string }>;
-    }>(requireGodsEyeAgentDir());
+    }>(requireOpenClawAgentDir());
   }
 
   async function runMoonshotCnFlow(params: {
@@ -63,7 +63,7 @@ describe("applyAuthChoice (moonshot)", () => {
       config: {
         agents: {
           defaults: {
-            model: { primary: "anthropic/claude-opus-4-5" },
+            model: { primary: "anthropic/claude-opus-4-6" },
           },
         },
       },
@@ -74,7 +74,7 @@ describe("applyAuthChoice (moonshot)", () => {
       expect.objectContaining({ message: "Enter Moonshot API key (.cn)" }),
     );
     expect(resolveAgentModelPrimaryValue(result.config.agents?.defaults?.model)).toBe(
-      "anthropic/claude-opus-4-5",
+      "anthropic/claude-opus-4-6",
     );
     expect(result.config.models?.providers?.moonshot?.baseUrl).toBe("https://api.moonshot.cn/v1");
     expect(result.config.models?.providers?.moonshot?.models?.[0]?.input).toContain("image");

@@ -1,4 +1,4 @@
-import { formatErrorMessage } from "openclaw/plugin-sdk/ssrf-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/ssrf-runtime";
 
 const DECRYPT_FAILURE_WINDOW_MS = 30_000;
 const DECRYPT_FAILURE_RECONNECT_THRESHOLD = 3;

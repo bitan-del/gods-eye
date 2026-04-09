@@ -1,6 +1,6 @@
 import type { Client } from "@buape/carbon";
 import { ChannelType, MessageType } from "@buape/carbon";
-import type { loadConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import { vi } from "vitest";
 import {
   dispatchMock,

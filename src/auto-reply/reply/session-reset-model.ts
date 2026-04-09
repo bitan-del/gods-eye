@@ -6,10 +6,11 @@ import {
   resolveModelRefFromString,
   type ModelAliasIndex,
 } from "../../agents/model-selection.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import { updateSessionStore } from "../../config/sessions.js";
 import { applyModelOverrideToSessionEntry } from "../../sessions/model-overrides.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import type { MsgContext, TemplateContext } from "../templating.js";
 import { resolveModelDirectiveSelection, type ModelDirectiveSelection } from "./model-selection.js";
 
@@ -86,7 +87,7 @@ function applySelectionToSession(params: {
 }
 
 export async function applyResetModelOverride(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   resetTriggered: boolean;
   bodyStripped?: string;
@@ -104,7 +105,7 @@ export async function applyResetModelOverride(params: {
   if (!params.resetTriggered) {
     return {};
   }
-  const rawBody = params.bodyStripped?.trim();
+  const rawBody = normalizeOptionalString(params.bodyStripped);
   if (!rawBody) {
     return {};
   }

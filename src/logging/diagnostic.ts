@@ -1,5 +1,5 @@
-import { loadConfig } from "../config/config.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import { getRuntimeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { emitDiagnosticEvent } from "../infra/diagnostic-events.js";
 import {
   diagnosticSessionStates,
@@ -38,7 +38,7 @@ function markActivity() {
   lastActivityAt = Date.now();
 }
 
-export function resolveStuckSessionWarnMs(config?: GodsEyeConfig): number {
+export function resolveStuckSessionWarnMs(config?: OpenClawConfig): number {
   const raw = config?.diagnostics?.stuckSessionWarnMs;
   if (typeof raw !== "number" || !Number.isFinite(raw)) {
     return DEFAULT_STUCK_SESSION_WARN_MS;
@@ -330,7 +330,10 @@ export function logActiveRuns() {
 
 let heartbeatInterval: NodeJS.Timeout | null = null;
 
-export function startDiagnosticHeartbeat(config?: GodsEyeConfig) {
+export function startDiagnosticHeartbeat(
+  config?: OpenClawConfig,
+  opts?: { getConfig?: () => OpenClawConfig },
+) {
   if (heartbeatInterval) {
     return;
   }
@@ -338,7 +341,7 @@ export function startDiagnosticHeartbeat(config?: GodsEyeConfig) {
     let heartbeatConfig = config;
     if (!heartbeatConfig) {
       try {
-        heartbeatConfig = loadConfig();
+        heartbeatConfig = (opts?.getConfig ?? getRuntimeConfig)();
       } catch {
         heartbeatConfig = undefined;
       }

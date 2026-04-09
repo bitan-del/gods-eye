@@ -66,7 +66,7 @@ export const createTelegramMessageProcessor = (deps: TelegramMessageProcessorDep
         ? options.receivedAtMs
         : undefined;
     const ingressDebugEnabled =
-      shouldLogVerbose() || process.env.GODSEYE_DEBUG_TELEGRAM_INGRESS === "1";
+      shouldLogVerbose() || process.env.OPENCLAW_DEBUG_TELEGRAM_INGRESS === "1";
     const ingressContextStartMs = ingressReceivedAtMs ? Date.now() : undefined;
     const context = await buildTelegramMessageContext({
       primaryCtx,
@@ -95,7 +95,7 @@ export const createTelegramMessageProcessor = (deps: TelegramMessageProcessorDep
       if (ingressDebugEnabled && ingressReceivedAtMs && ingressContextStartMs) {
         logVerbose(
           `telegram ingress: chatId=${primaryCtx.message.chat.id} dropped after ${Date.now() - ingressReceivedAtMs}ms` +
-            `${options?.ingressBuffer ? ` buffer=${options.ingressBuffer}` : ""}`,
+            (options?.ingressBuffer ? ` buffer=${String(options.ingressBuffer)}` : ""),
         );
       }
       return;
@@ -104,7 +104,7 @@ export const createTelegramMessageProcessor = (deps: TelegramMessageProcessorDep
       logVerbose(
         `telegram ingress: chatId=${context.chatId} contextReadyMs=${Date.now() - ingressReceivedAtMs}` +
           ` preDispatchMs=${Date.now() - ingressContextStartMs}` +
-          `${options?.ingressBuffer ? ` buffer=${options.ingressBuffer}` : ""}`,
+          (options?.ingressBuffer ? ` buffer=${String(options.ingressBuffer)}` : ""),
       );
     }
     try {
@@ -123,7 +123,7 @@ export const createTelegramMessageProcessor = (deps: TelegramMessageProcessorDep
       if (ingressDebugEnabled && ingressReceivedAtMs) {
         logVerbose(
           `telegram ingress: chatId=${context.chatId} dispatchCompleteMs=${Date.now() - ingressReceivedAtMs}` +
-            `${options?.ingressBuffer ? ` buffer=${options.ingressBuffer}` : ""}`,
+            (options?.ingressBuffer ? ` buffer=${String(options.ingressBuffer)}` : ""),
         );
       }
     } catch (err) {

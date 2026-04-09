@@ -3,9 +3,15 @@ import fs from "node:fs/promises";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { prepareRestartScript, runRestartScript } from "./restart-helper.js";
 
-vi.mock("node:child_process", () => ({
-  spawn: vi.fn(),
-}));
+vi.mock("node:child_process", async () => {
+  const { mockNodeBuiltinModule } = await import("../../../test/helpers/node-builtin-mocks.js");
+  return mockNodeBuiltinModule(
+    () => vi.importActual<typeof import("node:child_process")>("node:child_process"),
+    {
+      spawn: vi.fn(),
+    },
+  );
+});
 
 describe("restart-helper", () => {
   const originalPlatform = process.platform;
@@ -68,21 +74,21 @@ describe("restart-helper", () => {
     it("creates a systemd restart script on Linux", async () => {
       Object.defineProperty(process, "platform", { value: "linux" });
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
       expect(scriptPath.endsWith(".sh")).toBe(true);
       expect(content).toContain("#!/bin/sh");
-      expect(content).toContain("systemctl --user restart 'godseye-gateway.service'");
+      expect(content).toContain("systemctl --user restart 'openclaw-gateway.service'");
       // Script should self-cleanup
       expect(content).toContain('rm -f "$0"');
       await cleanupScript(scriptPath);
     });
 
-    it("uses GODSEYE_SYSTEMD_UNIT override for systemd scripts", async () => {
+    it("uses OPENCLAW_SYSTEMD_UNIT override for systemd scripts", async () => {
       Object.defineProperty(process, "platform", { value: "linux" });
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
-        GODSEYE_SYSTEMD_UNIT: "custom-gateway",
+        OPENCLAW_PROFILE: "default",
+        OPENCLAW_SYSTEMD_UNIT: "custom-gateway",
       });
       expect(content).toContain("systemctl --user restart 'custom-gateway.service'");
       await cleanupScript(scriptPath);
@@ -93,27 +99,27 @@ describe("restart-helper", () => {
       process.getuid = () => 501;
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
       expect(scriptPath.endsWith(".sh")).toBe(true);
       expect(content).toContain("#!/bin/sh");
-      expect(content).toContain("launchctl kickstart -k 'gui/501/ai.godseye.gateway'");
+      expect(content).toContain("launchctl kickstart -k 'gui/501/ai.openclaw.gateway'");
       // Should clear disabled state and fall back to bootstrap when kickstart fails.
-      expect(content).toContain("launchctl enable 'gui/501/ai.godseye.gateway'");
+      expect(content).toContain("launchctl enable 'gui/501/ai.openclaw.gateway'");
       expect(content).toContain("launchctl bootstrap 'gui/501'");
       expect(content).toContain('rm -f "$0"');
       await cleanupScript(scriptPath);
     });
 
-    it("uses GODSEYE_LAUNCHD_LABEL override on macOS", async () => {
+    it("uses OPENCLAW_LAUNCHD_LABEL override on macOS", async () => {
       Object.defineProperty(process, "platform", { value: "darwin" });
       process.getuid = () => 501;
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
-        GODSEYE_LAUNCHD_LABEL: "com.custom.godseye",
+        OPENCLAW_PROFILE: "default",
+        OPENCLAW_LAUNCHD_LABEL: "com.custom.openclaw",
       });
-      expect(content).toContain("launchctl kickstart -k 'gui/501/com.custom.godseye'");
+      expect(content).toContain("launchctl kickstart -k 'gui/501/com.custom.openclaw'");
       await cleanupScript(scriptPath);
     });
 
@@ -121,27 +127,27 @@ describe("restart-helper", () => {
       Object.defineProperty(process, "platform", { value: "win32" });
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
       expect(scriptPath.endsWith(".bat")).toBe(true);
       expect(content).toContain("@echo off");
-      expect(content).toContain('schtasks /End /TN "GodsEye Gateway"');
-      expect(content).toContain('schtasks /Run /TN "GodsEye Gateway"');
+      expect(content).toContain('schtasks /End /TN "OpenClaw Gateway"');
+      expect(content).toContain('schtasks /Run /TN "OpenClaw Gateway"');
       expectWindowsRestartWaitOrdering(content);
       // Batch self-cleanup
       expect(content).toContain('del "%~f0"');
       await cleanupScript(scriptPath);
     });
 
-    it("uses GODSEYE_WINDOWS_TASK_NAME override on Windows", async () => {
+    it("uses OPENCLAW_WINDOWS_TASK_NAME override on Windows", async () => {
       Object.defineProperty(process, "platform", { value: "win32" });
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "default",
-        GODSEYE_WINDOWS_TASK_NAME: "GodsEye Gateway (custom)",
+        OPENCLAW_PROFILE: "default",
+        OPENCLAW_WINDOWS_TASK_NAME: "OpenClaw Gateway (custom)",
       });
-      expect(content).toContain('schtasks /End /TN "GodsEye Gateway (custom)"');
-      expect(content).toContain('schtasks /Run /TN "GodsEye Gateway (custom)"');
+      expect(content).toContain('schtasks /End /TN "OpenClaw Gateway (custom)"');
+      expect(content).toContain('schtasks /Run /TN "OpenClaw Gateway (custom)"');
       expectWindowsRestartWaitOrdering(content);
       await cleanupScript(scriptPath);
     });
@@ -152,7 +158,7 @@ describe("restart-helper", () => {
 
       const { scriptPath, content } = await prepareAndReadScript(
         {
-          GODSEYE_PROFILE: "default",
+          OPENCLAW_PROFILE: "default",
         },
         customPort,
       );
@@ -167,9 +173,9 @@ describe("restart-helper", () => {
     it("uses custom profile in service names", async () => {
       Object.defineProperty(process, "platform", { value: "linux" });
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "production",
+        OPENCLAW_PROFILE: "production",
       });
-      expect(content).toContain("godseye-gateway-production.service");
+      expect(content).toContain("openclaw-gateway-production.service");
       await cleanupScript(scriptPath);
     });
 
@@ -178,9 +184,9 @@ describe("restart-helper", () => {
       process.getuid = () => 502;
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "staging",
+        OPENCLAW_PROFILE: "staging",
       });
-      expect(content).toContain("gui/502/ai.godseye.staging");
+      expect(content).toContain("gui/502/ai.openclaw.staging");
       await cleanupScript(scriptPath);
     });
 
@@ -188,9 +194,9 @@ describe("restart-helper", () => {
       Object.defineProperty(process, "platform", { value: "win32" });
 
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "production",
+        OPENCLAW_PROFILE: "production",
       });
-      expect(content).toContain('schtasks /End /TN "GodsEye Gateway (production)"');
+      expect(content).toContain('schtasks /End /TN "OpenClaw Gateway (production)"');
       expectWindowsRestartWaitOrdering(content);
       await cleanupScript(scriptPath);
     });
@@ -208,7 +214,7 @@ describe("restart-helper", () => {
         .mockRejectedValueOnce(new Error("simulated write failure"));
 
       const scriptPath = await prepareRestartScript({
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
 
       expect(scriptPath).toBeNull();
@@ -218,7 +224,7 @@ describe("restart-helper", () => {
     it("escapes single quotes in profile names for shell scripts", async () => {
       Object.defineProperty(process, "platform", { value: "linux" });
       const { scriptPath, content } = await prepareAndReadScript({
-        GODSEYE_PROFILE: "it's-a-test",
+        OPENCLAW_PROFILE: "it's-a-test",
       });
       // Single quotes should be escaped with '\'' pattern
       expect(content).not.toContain("it's");
@@ -232,7 +238,7 @@ describe("restart-helper", () => {
 
       const { scriptPath, content } = await prepareAndReadScript({
         HOME: "/Users/testuser",
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
       // The plist path must contain the resolved home dir, not literal $HOME
       expect(content).toMatch(/[\\/]Users[\\/]testuser[\\/]Library[\\/]LaunchAgents[\\/]/);
@@ -246,7 +252,7 @@ describe("restart-helper", () => {
 
       const { scriptPath, content } = await prepareAndReadScript({
         HOME: "/Users/envhome",
-        GODSEYE_PROFILE: "default",
+        OPENCLAW_PROFILE: "default",
       });
       expect(content).toMatch(/[\\/]Users[\\/]envhome[\\/]Library[\\/]LaunchAgents[\\/]/);
       await cleanupScript(scriptPath);
@@ -258,17 +264,17 @@ describe("restart-helper", () => {
 
       const { scriptPath, content } = await prepareAndReadScript({
         HOME: "/Users/testuser",
-        GODSEYE_LAUNCHD_LABEL: "ai.godseye.it's-a-test",
+        OPENCLAW_LAUNCHD_LABEL: "ai.openclaw.it's-a-test",
       });
       // The plist path must also shell-escape the label to prevent injection
-      expect(content).toContain("ai.godseye.it'\\''s-a-test.plist");
+      expect(content).toContain("ai.openclaw.it'\\''s-a-test.plist");
       await cleanupScript(scriptPath);
     });
 
     it("rejects unsafe batch profile names on Windows", async () => {
       Object.defineProperty(process, "platform", { value: "win32" });
       const scriptPath = await prepareRestartScript({
-        GODSEYE_PROFILE: "test&whoami",
+        OPENCLAW_PROFILE: "test&whoami",
       });
 
       expect(scriptPath).toBeNull();

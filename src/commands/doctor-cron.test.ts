@@ -2,14 +2,14 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import * as noteModule from "../terminal/note.js";
 import { maybeRepairLegacyCronStore } from "./doctor-cron.js";
 
 let tempRoot: string | null = null;
 
 async function makeTempStorePath() {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-doctor-cron-"));
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-doctor-cron-"));
   return path.join(tempRoot, "cron", "jobs.json");
 }
 
@@ -27,7 +27,7 @@ function makePrompter(confirmResult = true) {
   };
 }
 
-function createCronConfig(storePath: string): GodsEyeConfig {
+function createCronConfig(storePath: string): OpenClawConfig {
   return {
     cron: {
       store: storePath,
@@ -244,6 +244,49 @@ describe("maybeRepairLegacyCronStore", () => {
     expect(persisted.jobs[0]?.delivery).toMatchObject({
       mode: "webhook",
       to: "https://example.invalid/cron-finished",
+    });
+  });
+
+  it("repairs legacy root delivery threadId hints into delivery", async () => {
+    const storePath = await makeTempStorePath();
+    await writeCronStore(storePath, [
+      {
+        id: "legacy-thread-hint",
+        name: "Legacy thread hint",
+        enabled: true,
+        createdAtMs: Date.parse("2026-02-01T00:00:00.000Z"),
+        updatedAtMs: Date.parse("2026-02-02T00:00:00.000Z"),
+        schedule: { kind: "cron", cron: "0 7 * * *", tz: "UTC" },
+        sessionTarget: "isolated",
+        wakeMode: "now",
+        payload: {
+          kind: "agentTurn",
+          message: "Morning brief",
+        },
+        channel: " telegram ",
+        to: "-1001234567890",
+        threadId: " 99 ",
+        state: {},
+      },
+    ]);
+
+    await maybeRepairLegacyCronStore({
+      cfg: createCronConfig(storePath),
+      options: {},
+      prompter: makePrompter(true),
+    });
+
+    const persisted = JSON.parse(await fs.readFile(storePath, "utf-8")) as {
+      jobs: Array<Record<string, unknown>>;
+    };
+    expect(persisted.jobs[0]?.channel).toBeUndefined();
+    expect(persisted.jobs[0]?.to).toBeUndefined();
+    expect(persisted.jobs[0]?.threadId).toBeUndefined();
+    expect(persisted.jobs[0]?.delivery).toMatchObject({
+      mode: "announce",
+      channel: "telegram",
+      to: "-1001234567890",
+      threadId: "99",
     });
   });
 });

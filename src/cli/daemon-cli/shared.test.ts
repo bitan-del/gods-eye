@@ -24,62 +24,62 @@ describe("renderGatewayServiceStartHints", () => {
   it("resolves daemon container context from either env key", () => {
     expect(
       resolveDaemonContainerContext({
-        GODSEYE_CONTAINER: "godseye-demo-container",
+        OPENCLAW_CONTAINER: "openclaw-demo-container",
       } as NodeJS.ProcessEnv),
-    ).toBe("godseye-demo-container");
+    ).toBe("openclaw-demo-container");
     expect(
       resolveDaemonContainerContext({
-        GODSEYE_CONTAINER_HINT: "godseye-demo-container",
+        OPENCLAW_CONTAINER_HINT: "openclaw-demo-container",
       } as NodeJS.ProcessEnv),
-    ).toBe("godseye-demo-container");
+    ).toBe("openclaw-demo-container");
   });
 
-  it("prepends a single container restart hint when GODSEYE_CONTAINER is set", () => {
+  it("prepends a single container restart hint when OPENCLAW_CONTAINER is set", () => {
     expect(
       renderGatewayServiceStartHints({
-        GODSEYE_CONTAINER: "godseye-demo-container",
+        OPENCLAW_CONTAINER: "openclaw-demo-container",
       } as NodeJS.ProcessEnv),
     ).toEqual(
       expect.arrayContaining([
-        "Restart the container or the service that manages it for godseye-demo-container.",
+        "Restart the container or the service that manages it for openclaw-demo-container.",
       ]),
     );
   });
 
-  it("prepends a single container restart hint when GODSEYE_CONTAINER_HINT is set", () => {
+  it("prepends a single container restart hint when OPENCLAW_CONTAINER_HINT is set", () => {
     expect(
       renderGatewayServiceStartHints({
-        GODSEYE_CONTAINER_HINT: "godseye-demo-container",
+        OPENCLAW_CONTAINER_HINT: "openclaw-demo-container",
       } as NodeJS.ProcessEnv),
     ).toEqual(
       expect.arrayContaining([
-        "Restart the container or the service that manages it for godseye-demo-container.",
+        "Restart the container or the service that manages it for openclaw-demo-container.",
       ]),
     );
   });
 });
 
 describe("filterContainerGenericHints", () => {
-  it("drops the generic container foreground hint when GODSEYE_CONTAINER is set", () => {
+  it("drops the generic container foreground hint when OPENCLAW_CONTAINER is set", () => {
     expect(
       filterContainerGenericHints(
         [
           "systemd user services are unavailable; install/enable systemd or run the gateway under your supervisor.",
-          "If you're in a container, run the gateway in the foreground instead of `godseye gateway`.",
+          "If you're in a container, run the gateway in the foreground instead of `openclaw gateway`.",
         ],
-        { GODSEYE_CONTAINER: "godseye-demo-container" } as NodeJS.ProcessEnv,
+        { OPENCLAW_CONTAINER: "openclaw-demo-container" } as NodeJS.ProcessEnv,
       ),
     ).toEqual([]);
   });
 
-  it("drops the generic container foreground hint when GODSEYE_CONTAINER_HINT is set", () => {
+  it("drops the generic container foreground hint when OPENCLAW_CONTAINER_HINT is set", () => {
     expect(
       filterContainerGenericHints(
         [
           "systemd user services are unavailable; install/enable systemd or run the gateway under your supervisor.",
-          "If you're in a container, run the gateway in the foreground instead of `godseye gateway`.",
+          "If you're in a container, run the gateway in the foreground instead of `openclaw gateway`.",
         ],
-        { GODSEYE_CONTAINER_HINT: "godseye-demo-container" } as NodeJS.ProcessEnv,
+        { OPENCLAW_CONTAINER_HINT: "openclaw-demo-container" } as NodeJS.ProcessEnv,
       ),
     ).toEqual([]);
   });

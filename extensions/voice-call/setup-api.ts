@@ -1,6 +1,6 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/plugin-entry";
-import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import { isRecord } from "openclaw/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/plugin-entry";
+import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
+import { isRecord } from "godseye/plugin-sdk/text-runtime";
 import { migrateVoiceCallLegacyConfigInput } from "./config-api.js";
 
 function migrateVoiceCallPluginConfig(config: OpenClawConfig): {

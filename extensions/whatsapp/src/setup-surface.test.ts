@@ -1,5 +1,5 @@
-import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
-import { DEFAULT_ACCOUNT_ID, type OpenClawConfig } from "openclaw/plugin-sdk/setup";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import { DEFAULT_ACCOUNT_ID, type OpenClawConfig } from "godseye/plugin-sdk/setup";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createPluginSetupWizardStatus,
@@ -48,9 +48,9 @@ vi.mock("./setup-finalize.js", async () => {
   };
 });
 
-vi.mock("openclaw/plugin-sdk/setup", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/setup")>(
-    "openclaw/plugin-sdk/setup",
+vi.mock("godseye/plugin-sdk/setup", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/setup")>(
+    "godseye/plugin-sdk/setup",
   );
   return {
     ...actual,

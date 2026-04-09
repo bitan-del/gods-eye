@@ -1,44 +1,52 @@
-import { resolveAgentDir } from "godseye/plugin-sdk/agent-runtime";
-import {
-  findModelInCatalog,
-  loadModelCatalog,
-  modelSupportsVision,
-} from "godseye/plugin-sdk/agent-runtime";
-import { resolveDefaultModelForAgent } from "godseye/plugin-sdk/agent-runtime";
+import type { Bot } from "grammy";
 import {
   logAckFailure,
   logTypingFailure,
   removeAckReactionAfterReply,
 } from "godseye/plugin-sdk/channel-feedback";
 import { createChannelReplyPipeline } from "godseye/plugin-sdk/channel-reply-pipeline";
-import { resolveMarkdownTableMode } from "godseye/plugin-sdk/config-runtime";
-import {
-  loadSessionStore,
-  resolveSessionStoreEntry,
-  resolveStorePath,
-} from "godseye/plugin-sdk/config-runtime";
+import { resolveChannelStreamingBlockEnabled } from "godseye/plugin-sdk/channel-streaming";
 import type {
-  GodsEyeConfig,
+  OpenClawConfig,
   ReplyToMode,
   TelegramAccountConfig,
   TelegramDirectConfig,
 } from "godseye/plugin-sdk/config-runtime";
-import { getAgentScopedMediaLocalRoots } from "godseye/plugin-sdk/media-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { clearHistoryEntriesIfEnabled } from "godseye/plugin-sdk/reply-history";
 import { resolveSendableOutboundReplyParts } from "godseye/plugin-sdk/reply-payload";
-import { resolveChunkMode } from "godseye/plugin-sdk/reply-runtime";
 import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
-import { resolveAutoTopicLabelConfig, generateTopicLabel } from "godseye/plugin-sdk/reply-runtime";
-import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
-import type { Bot } from "grammy";
+import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { defaultTelegramBotDeps, type TelegramBotDeps } from "./bot-deps.js";
 import type { TelegramMessageContext } from "./bot-message-context.js";
+import {
+  findModelInCatalog,
+  loadModelCatalog,
+  modelSupportsVision,
+  resolveAgentDir,
+  resolveDefaultModelForAgent,
+} from "./bot-message-dispatch.agent.runtime.js";
+import {
+  generateTopicLabel,
+  getAgentScopedMediaLocalRoots,
+  loadSessionStore,
+  resolveAutoTopicLabelConfig,
+  resolveChunkMode,
+  resolveMarkdownTableMode,
+  resolveSessionStoreEntry,
+} from "./bot-message-dispatch.runtime.js";
 import type { TelegramBotOptions } from "./bot.js";
 import { deliverReplies, emitInternalMessageSentHook } from "./bot/delivery.js";
 import type { TelegramStreamMode } from "./bot/types.js";
 import type { TelegramInlineButtons } from "./button-types.js";
 import { createTelegramDraftStream } from "./draft-stream.js";
+import {
+  buildTelegramErrorScopeKey,
+  isSilentErrorPolicy,
+  resolveTelegramErrorPolicy,
+  shouldSuppressTelegramError,
+} from "./error-policy.js";
 import { shouldSuppressLocalTelegramExecApprovalPrompt } from "./exec-approvals.js";
 import { renderTelegramHtmlText } from "./format.js";
 import {
@@ -62,7 +70,7 @@ const EMPTY_RESPONSE_FALLBACK = "No response generated. Please try again.";
 /** Minimum chars before sending first streaming message (improves push notification UX) */
 const DRAFT_MIN_INITIAL_CHARS = 30;
 
-async function resolveStickerVisionSupport(cfg: GodsEyeConfig, agentId: string) {
+async function resolveStickerVisionSupport(cfg: OpenClawConfig, agentId: string) {
   try {
     const catalog = await loadModelCatalog({ config: cfg });
     const defaultModel = resolveDefaultModelForAgent({ cfg, agentId });
@@ -110,7 +118,7 @@ export function pruneStickerMediaFromContext(
 type DispatchTelegramMessageParams = {
   context: TelegramMessageContext;
   bot: Bot;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   runtime: RuntimeEnv;
   replyToMode: ReplyToMode;
   streamMode: TelegramStreamMode;
@@ -123,7 +131,7 @@ type DispatchTelegramMessageParams = {
 type TelegramReasoningLevel = "off" | "on" | "stream";
 
 function resolveTelegramReasoningLevel(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey?: string;
   agentId: string;
   telegramDeps: TelegramBotDeps;
@@ -166,6 +174,7 @@ export const dispatchTelegramMessage = async ({
     chatId,
     isGroup,
     groupConfig,
+    topicConfig,
     threadSpec,
     historyKey,
     historyLimit,
@@ -191,9 +200,8 @@ export const dispatchTelegramMessage = async ({
     parseMode: "HTML" as const,
   });
   const accountBlockStreamingEnabled =
-    typeof telegramCfg.blockStreaming === "boolean"
-      ? telegramCfg.blockStreaming
-      : cfg.agents?.defaults?.blockStreamingDefault === "on";
+    resolveChannelStreamingBlockEnabled(telegramCfg) ??
+    cfg.agents?.defaults?.blockStreamingDefault === "on";
   const resolvedReasoningLevel = resolveTelegramReasoningLevel({
     cfg,
     sessionKey: ctxPayload.SessionKey,
@@ -205,7 +213,7 @@ export const dispatchTelegramMessage = async ({
   const previewStreamingEnabled = streamMode !== "off";
   const canStreamAnswerDraft =
     previewStreamingEnabled && !accountBlockStreamingEnabled && !forceBlockStreamingForReasoning;
-  const canStreamReasoningDraft = canStreamAnswerDraft || streamReasoningDraft;
+  const canStreamReasoningDraft = streamReasoningDraft;
   const draftReplyToMessageId =
     replyToMode !== "off" && typeof msg.message_id === "number" ? msg.message_id : undefined;
   const draftMinInitialChars = DRAFT_MIN_INITIAL_CHARS;
@@ -381,12 +389,13 @@ export const dispatchTelegramMessage = async ({
     await lane.stream.flush();
   };
 
+  const resolvedBlockStreamingEnabled = resolveChannelStreamingBlockEnabled(telegramCfg);
   const disableBlockStreaming = !previewStreamingEnabled
     ? true
     : forceBlockStreamingForReasoning
       ? false
-      : typeof telegramCfg.blockStreaming === "boolean"
-        ? !telegramCfg.blockStreaming
+      : typeof resolvedBlockStreamingEnabled === "boolean"
+        ? !resolvedBlockStreamingEnabled
         : canStreamAnswerDraft
           ? true
           : undefined;
@@ -560,9 +569,7 @@ export const dispatchTelegramMessage = async ({
         logVerbose("auto-topic-label: SessionKey is absent, skipping first-turn detection");
       }
     } catch (err) {
-      logVerbose(
-        `auto-topic-label: session store error: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      logVerbose(`auto-topic-label: session store error: ${formatErrorMessage(err)}`);
     }
   }
 
@@ -570,7 +577,9 @@ export const dispatchTelegramMessage = async ({
     void statusReactionController.setThinking();
   }
 
-  const { onModelSelected, ...replyPipeline } = createChannelReplyPipeline({
+  const { onModelSelected, ...replyPipeline } = (
+    telegramDeps.createChannelReplyPipeline ?? createChannelReplyPipeline
+  )({
     cfg,
     agentId: route.agentId,
     channel: "telegram",
@@ -620,7 +629,7 @@ export const dispatchTelegramMessage = async ({
           const split = splitTextIntoLaneSegments(payload.text);
           const segments = split.segments;
           const reply = resolveSendableOutboundReplyParts(payload);
-          const hasMedia = reply.hasMedia;
+          const _hasMedia = reply.hasMedia;
 
           const flushBufferedFinalAnswer = async () => {
             const buffered = reasoningStepState.takeBufferedFinalAnswer();
@@ -724,6 +733,28 @@ export const dispatchTelegramMessage = async ({
           }
         },
         onError: (err, info) => {
+          const errorPolicy = resolveTelegramErrorPolicy({
+            accountConfig: telegramCfg,
+            groupConfig,
+            topicConfig,
+          });
+          if (isSilentErrorPolicy(errorPolicy.policy)) {
+            return;
+          }
+          if (
+            errorPolicy.policy === "once" &&
+            shouldSuppressTelegramError({
+              scopeKey: buildTelegramErrorScopeKey({
+                accountId: route.accountId,
+                chatId,
+                threadId: threadSpec.id,
+              }),
+              cooldownMs: errorPolicy.cooldownMs,
+              errorMessage: String(err),
+            })
+          ) {
+            return;
+          }
           deliveryState.markNonSilentFailure();
           runtime.error?.(danger(`telegram ${info.kind} reply failed: ${String(err)}`));
         },
@@ -925,9 +956,7 @@ export const dispatchTelegramMessage = async ({
             await bot.api.editForumTopic(chatId, topicThreadId, { name: label });
             logVerbose(`auto-topic-label: renamed topic ${chatId}/${topicThreadId}`);
           } catch (err) {
-            logVerbose(
-              `auto-topic-label: failed: ${err instanceof Error ? err.message : String(err)}`,
-            );
+            logVerbose(`auto-topic-label: failed: ${formatErrorMessage(err)}`);
           }
         })();
       }
@@ -943,7 +972,8 @@ export const dispatchTelegramMessage = async ({
       removeAfterReply: removeAckAfterReply,
       ackReactionPromise,
       ackReactionValue: ackReactionPromise ? "ack" : null,
-      remove: () => reactionApi?.(chatId, msg.message_id ?? 0, []) ?? Promise.resolve(),
+      remove: () =>
+        (reactionApi?.(chatId, msg.message_id ?? 0, []) ?? Promise.resolve()).then(() => {}),
       onError: (err) => {
         if (!msg.message_id) {
           return;

@@ -1,7 +1,9 @@
+import { Command } from "commander";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   loadConfig,
+  registerPluginsCli,
   resetPluginsCliTestState,
   runPluginsCommand,
   runtimeErrors,
@@ -11,9 +13,41 @@ import {
   writeConfigFile,
 } from "./plugins-cli-test-helpers.js";
 
+function createTrackedPluginConfig(params: {
+  pluginId: string;
+  spec: string;
+  resolvedName?: string;
+}): OpenClawConfig {
+  return {
+    plugins: {
+      installs: {
+        [params.pluginId]: {
+          source: "npm",
+          spec: params.spec,
+          installPath: `/tmp/${params.pluginId}`,
+          ...(params.resolvedName ? { resolvedName: params.resolvedName } : {}),
+        },
+      },
+    },
+  } as OpenClawConfig;
+}
+
 describe("plugins cli update", () => {
   beforeEach(() => {
     resetPluginsCliTestState();
+  });
+
+  it("shows the dangerous unsafe install override in update help", () => {
+    const program = new Command();
+    registerPluginsCli(program);
+
+    const pluginsCommand = program.commands.find((command) => command.name() === "plugins");
+    const updateCommand = pluginsCommand?.commands.find((command) => command.name() === "update");
+    const helpText = updateCommand?.helpInformation() ?? "";
+
+    expect(helpText).toContain("--dangerously-force-unsafe-install");
+    expect(helpText).toContain("Bypass built-in dangerous-code update");
+    expect(helpText).toContain("blocking for plugins");
   });
 
   it("updates tracked hook packs through plugins update", async () => {
@@ -30,7 +64,7 @@ describe("plugins cli update", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const nextConfig = {
       hooks: {
         internal: {
@@ -43,7 +77,7 @@ describe("plugins cli update", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     loadConfig.mockReturnValue(cfg);
     updateNpmInstalledPlugins.mockResolvedValue({
@@ -82,7 +116,7 @@ describe("plugins cli update", () => {
       plugins: {
         installs: {},
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     await expect(runPluginsCommand(["plugins", "update"])).rejects.toThrow("__exit__:1");
 
@@ -95,7 +129,7 @@ describe("plugins cli update", () => {
       plugins: {
         installs: {},
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
 
     await runPluginsCommand(["plugins", "update", "--all"]);
 
@@ -108,15 +142,15 @@ describe("plugins cli update", () => {
     const config = {
       plugins: {
         installs: {
-          "godseye-codex-app-server": {
+          "openclaw-codex-app-server": {
             source: "npm",
-            spec: "godseye-codex-app-server",
-            installPath: "/tmp/godseye-codex-app-server",
-            resolvedName: "godseye-codex-app-server",
+            spec: "openclaw-codex-app-server",
+            installPath: "/tmp/openclaw-codex-app-server",
+            resolvedName: "openclaw-codex-app-server",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     loadConfig.mockReturnValue(config);
     updateNpmInstalledPlugins.mockResolvedValue({
       config,
@@ -124,14 +158,14 @@ describe("plugins cli update", () => {
       outcomes: [],
     });
 
-    await runPluginsCommand(["plugins", "update", "godseye-codex-app-server@beta"]);
+    await runPluginsCommand(["plugins", "update", "openclaw-codex-app-server@beta"]);
 
     expect(updateNpmInstalledPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         config,
-        pluginIds: ["godseye-codex-app-server"],
+        pluginIds: ["openclaw-codex-app-server"],
         specOverrides: {
-          "godseye-codex-app-server": "godseye-codex-app-server@beta",
+          "openclaw-codex-app-server": "openclaw-codex-app-server@beta",
         },
       }),
     );
@@ -143,13 +177,13 @@ describe("plugins cli update", () => {
         installs: {
           "voice-call": {
             source: "npm",
-            spec: "@godseye/voice-call",
+            spec: "@openclaw/voice-call",
             installPath: "/tmp/voice-call",
-            resolvedName: "@godseye/voice-call",
+            resolvedName: "@openclaw/voice-call",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     loadConfig.mockReturnValue(config);
     updateNpmInstalledPlugins.mockResolvedValue({
       config,
@@ -157,14 +191,14 @@ describe("plugins cli update", () => {
       outcomes: [],
     });
 
-    await runPluginsCommand(["plugins", "update", "@godseye/voice-call@beta"]);
+    await runPluginsCommand(["plugins", "update", "@openclaw/voice-call@beta"]);
 
     expect(updateNpmInstalledPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         config,
         pluginIds: ["voice-call"],
         specOverrides: {
-          "voice-call": "@godseye/voice-call@beta",
+          "voice-call": "@openclaw/voice-call@beta",
         },
       }),
     );
@@ -174,15 +208,15 @@ describe("plugins cli update", () => {
     const config = {
       plugins: {
         installs: {
-          "godseye-codex-app-server": {
+          "openclaw-codex-app-server": {
             source: "npm",
-            spec: "godseye-codex-app-server",
-            installPath: "/tmp/godseye-codex-app-server",
-            resolvedName: "godseye-codex-app-server",
+            spec: "openclaw-codex-app-server",
+            installPath: "/tmp/openclaw-codex-app-server",
+            resolvedName: "openclaw-codex-app-server",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     loadConfig.mockReturnValue(config);
     updateNpmInstalledPlugins.mockResolvedValue({
       config,
@@ -190,15 +224,43 @@ describe("plugins cli update", () => {
       outcomes: [],
     });
 
-    await runPluginsCommand(["plugins", "update", "godseye-codex-app-server@0.2.0-beta.4"]);
+    await runPluginsCommand(["plugins", "update", "openclaw-codex-app-server@0.2.0-beta.4"]);
 
     expect(updateNpmInstalledPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         config,
-        pluginIds: ["godseye-codex-app-server"],
+        pluginIds: ["openclaw-codex-app-server"],
         specOverrides: {
-          "godseye-codex-app-server": "godseye-codex-app-server@0.2.0-beta.4",
+          "openclaw-codex-app-server": "openclaw-codex-app-server@0.2.0-beta.4",
         },
+      }),
+    );
+  });
+
+  it("passes dangerous force unsafe install to plugin updates", async () => {
+    const config = createTrackedPluginConfig({
+      pluginId: "openclaw-codex-app-server",
+      spec: "openclaw-codex-app-server@beta",
+    });
+    loadConfig.mockReturnValue(config);
+    updateNpmInstalledPlugins.mockResolvedValue({
+      config,
+      changed: false,
+      outcomes: [],
+    });
+
+    await runPluginsCommand([
+      "plugins",
+      "update",
+      "openclaw-codex-app-server",
+      "--dangerously-force-unsafe-install",
+    ]);
+
+    expect(updateNpmInstalledPlugins).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config,
+        pluginIds: ["openclaw-codex-app-server"],
+        dangerouslyForceUnsafeInstall: true,
       }),
     );
   });
@@ -207,15 +269,15 @@ describe("plugins cli update", () => {
     const config = {
       plugins: {
         installs: {
-          "godseye-codex-app-server": {
+          "openclaw-codex-app-server": {
             source: "npm",
-            spec: "godseye-codex-app-server@beta",
-            installPath: "/tmp/godseye-codex-app-server",
-            resolvedName: "godseye-codex-app-server",
+            spec: "openclaw-codex-app-server@beta",
+            installPath: "/tmp/openclaw-codex-app-server",
+            resolvedName: "openclaw-codex-app-server",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     loadConfig.mockReturnValue(config);
     updateNpmInstalledPlugins.mockResolvedValue({
       config,
@@ -223,12 +285,12 @@ describe("plugins cli update", () => {
       outcomes: [],
     });
 
-    await runPluginsCommand(["plugins", "update", "godseye-codex-app-server"]);
+    await runPluginsCommand(["plugins", "update", "openclaw-codex-app-server"]);
 
     expect(updateNpmInstalledPlugins).toHaveBeenCalledWith(
       expect.objectContaining({
         config,
-        pluginIds: ["godseye-codex-app-server"],
+        pluginIds: ["openclaw-codex-app-server"],
       }),
     );
     expect(updateNpmInstalledPlugins).not.toHaveBeenCalledWith(
@@ -244,21 +306,21 @@ describe("plugins cli update", () => {
         installs: {
           alpha: {
             source: "npm",
-            spec: "@godseye/alpha@1.0.0",
+            spec: "@openclaw/alpha@1.0.0",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const nextConfig = {
       plugins: {
         installs: {
           alpha: {
             source: "npm",
-            spec: "@godseye/alpha@1.1.0",
+            spec: "@openclaw/alpha@1.1.0",
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     loadConfig.mockReturnValue(cfg);
     updateNpmInstalledPlugins.mockResolvedValue({
       outcomes: [{ status: "ok", message: "Updated alpha -> 1.1.0" }],

@@ -5,10 +5,15 @@ let registerSlackPinEvents: typeof import("./pins.js").registerSlackPinEvents;
 let buildPinHarness: typeof import("./system-event-test-harness.js").createSlackSystemEventTestHarness;
 type PinOverrides = import("./system-event-test-harness.js").SlackSystemEventTestOverrides;
 
-vi.mock("godseye/plugin-sdk/infra-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/infra-runtime")>();
+async function createChannelRuntimeMock() {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/infra-runtime")>(
+    "godseye/plugin-sdk/infra-runtime",
+  );
   return { ...actual, enqueueSystemEvent: pinEnqueueMock };
-});
+}
+
+vi.mock("godseye/plugin-sdk/infra-runtime", createChannelRuntimeMock);
+vi.mock("godseye/plugin-sdk/infra-runtime.js", createChannelRuntimeMock);
 
 type PinHandler = (args: { event: Record<string, unknown>; body: unknown }) => Promise<void>;
 

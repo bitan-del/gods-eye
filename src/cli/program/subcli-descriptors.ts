@@ -1,10 +1,9 @@
-export type SubCliDescriptor = {
-  name: string;
-  description: string;
-  hasSubcommands: boolean;
-};
+import { defineCommandDescriptorCatalog } from "./command-descriptor-utils.js";
+import type { NamedCommandDescriptor } from "./command-group-descriptors.js";
 
-export const SUB_CLI_DESCRIPTORS = [
+export type SubCliDescriptor = NamedCommandDescriptor;
+
+const subCliCommandCatalog = defineCommandDescriptorCatalog([
   { name: "acp", description: "Agent Control Protocol tools", hasSubcommands: true },
   {
     name: "gateway",
@@ -21,6 +20,16 @@ export const SUB_CLI_DESCRIPTORS = [
   {
     name: "models",
     description: "Discover, scan, and configure models",
+    hasSubcommands: true,
+  },
+  {
+    name: "infer",
+    description: "Run provider-backed inference commands",
+    hasSubcommands: true,
+  },
+  {
+    name: "capability",
+    description: "Run provider-backed inference commands (fallback alias: infer)",
     hasSubcommands: true,
   },
   {
@@ -65,8 +74,13 @@ export const SUB_CLI_DESCRIPTORS = [
   },
   {
     name: "docs",
-    description: "Search the live GodsEye docs",
+    description: "Search the live OpenClaw docs",
     hasSubcommands: false,
+  },
+  {
+    name: "qa",
+    description: "Run QA scenarios and launch the private QA debugger UI",
+    hasSubcommands: true,
   },
   {
     name: "hooks",
@@ -80,7 +94,7 @@ export const SUB_CLI_DESCRIPTORS = [
   },
   {
     name: "qr",
-    description: "Generate iOS pairing QR/setup code",
+    description: "Generate mobile pairing QR/setup code",
     hasSubcommands: false,
   },
   {
@@ -95,7 +109,7 @@ export const SUB_CLI_DESCRIPTORS = [
   },
   {
     name: "plugins",
-    description: "Manage GodsEye plugins and extensions",
+    description: "Manage OpenClaw plugins and extensions",
     hasSubcommands: true,
   },
   {
@@ -125,7 +139,7 @@ export const SUB_CLI_DESCRIPTORS = [
   },
   {
     name: "update",
-    description: "Update GodsEye and inspect update channel status",
+    description: "Update OpenClaw and inspect update channel status",
     hasSubcommands: true,
   },
   {
@@ -133,12 +147,14 @@ export const SUB_CLI_DESCRIPTORS = [
     description: "Generate shell completion script",
     hasSubcommands: false,
   },
-] as const satisfies ReadonlyArray<SubCliDescriptor>;
+] as const satisfies ReadonlyArray<SubCliDescriptor>);
+
+export const SUB_CLI_DESCRIPTORS = subCliCommandCatalog.descriptors;
 
 export function getSubCliEntries(): ReadonlyArray<SubCliDescriptor> {
-  return SUB_CLI_DESCRIPTORS;
+  return subCliCommandCatalog.getDescriptors();
 }
 
 export function getSubCliCommandsWithSubcommands(): string[] {
-  return SUB_CLI_DESCRIPTORS.filter((entry) => entry.hasSubcommands).map((entry) => entry.name);
+  return subCliCommandCatalog.getCommandsWithSubcommands();
 }

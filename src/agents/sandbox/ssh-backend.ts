@@ -1,4 +1,5 @@
 import path from "node:path";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import type {
   CreateSandboxBackendParams,
   SandboxBackendCommandParams,
@@ -11,6 +12,7 @@ import {
   createRemoteShellSandboxFsBridge,
   type RemoteShellSandboxHandle,
 } from "./remote-fs-bridge.js";
+import { sanitizeEnvVars } from "./sanitize-env-vars.js";
 import {
   buildExecRemoteCommand,
   buildRemoteCommand,
@@ -55,7 +57,7 @@ export const sshSandboxBackendManager: SandboxBackendManager = {
           "/bin/sh",
           "-c",
           'if [ -d "$1" ]; then printf "1\\n"; else printf "0\\n"; fi',
-          "godseye-sandbox-check",
+          "openclaw-sandbox-check",
           runtimePaths.runtimeRootDir,
         ]),
       });
@@ -85,7 +87,7 @@ export const sshSandboxBackendManager: SandboxBackendManager = {
           "/bin/sh",
           "-c",
           'rm -rf -- "$1"',
-          "godseye-sandbox-remove",
+          "openclaw-sandbox-remove",
           runtimePaths.runtimeRootDir,
         ]),
         allowFailure: true,
@@ -152,7 +154,7 @@ class SshSandboxBackendImpl {
             remoteCommand,
             tty: usePty,
           }),
-          env: process.env,
+          env: sanitizeEnvVars(process.env).allowed,
           stdinMode: "pipe-open",
           finalizeToken: { sshSession } satisfies PendingExec,
         };
@@ -202,7 +204,7 @@ class SshSandboxBackendImpl {
           "/bin/sh",
           "-c",
           'if [ -d "$1" ]; then printf "1\\n"; else printf "0\\n"; fi',
-          "godseye-sandbox-check",
+          "openclaw-sandbox-check",
           this.params.runtimePaths.runtimeRootDir,
         ]),
       });
@@ -241,7 +243,7 @@ class SshSandboxBackendImpl {
         "/bin/sh",
         "-c",
         'mkdir -p -- "$1" && find "$1" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +',
-        "godseye-sandbox-clear",
+        "openclaw-sandbox-clear",
         remoteDir,
       ]),
     });
@@ -264,7 +266,7 @@ class SshSandboxBackendImpl {
           "/bin/sh",
           "-c",
           params.script,
-          "godseye-sandbox-fs",
+          "openclaw-sandbox-fs",
           ...(params.args ?? []),
         ]),
         stdin: params.stdin,
@@ -290,8 +292,7 @@ function resolveSshRuntimePaths(workspaceRoot: string, scopeKey: string): Resolv
 
 function buildSshSandboxRuntimeId(scopeKey: string): string {
   const trimmed = scopeKey.trim() || "session";
-  const safe = trimmed
-    .toLowerCase()
+  const safe = normalizeLowercaseStringOrEmpty(trimmed)
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 32);
@@ -299,5 +300,5 @@ function buildSshSandboxRuntimeId(scopeKey: string): string {
     (acc, char) => ((acc * 33) ^ char.charCodeAt(0)) >>> 0,
     5381,
   );
-  return `godseye-ssh-${safe || "session"}-${hash.toString(16).slice(0, 8)}`;
+  return `openclaw-ssh-${safe || "session"}-${hash.toString(16).slice(0, 8)}`;
 }

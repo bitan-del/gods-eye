@@ -1,5 +1,6 @@
-import { type GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { resolveTextChunkLimit } from "godseye/plugin-sdk/reply-runtime";
+import { resolveChannelStreamingPreviewChunk } from "godseye/plugin-sdk/channel-streaming";
+import { type OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveTextChunkLimit } from "godseye/plugin-sdk/reply-chunking";
 import { resolveAccountEntry } from "godseye/plugin-sdk/routing";
 import { normalizeAccountId } from "godseye/plugin-sdk/routing";
 import { TELEGRAM_TEXT_CHUNK_LIMIT } from "./outbound-adapter.js";
@@ -8,7 +9,7 @@ const DEFAULT_TELEGRAM_DRAFT_STREAM_MIN = 200;
 const DEFAULT_TELEGRAM_DRAFT_STREAM_MAX = 800;
 
 export function resolveTelegramDraftStreamingChunking(
-  cfg: GodsEyeConfig | undefined,
+  cfg: OpenClawConfig | undefined,
   accountId?: string | null,
 ): {
   minChars: number;
@@ -20,7 +21,9 @@ export function resolveTelegramDraftStreamingChunking(
   });
   const normalizedAccountId = normalizeAccountId(accountId);
   const accountCfg = resolveAccountEntry(cfg?.channels?.telegram?.accounts, normalizedAccountId);
-  const draftCfg = accountCfg?.draftChunk ?? cfg?.channels?.telegram?.draftChunk;
+  const draftCfg =
+    resolveChannelStreamingPreviewChunk(accountCfg) ??
+    resolveChannelStreamingPreviewChunk(cfg?.channels?.telegram);
 
   const maxRequested = Math.max(
     1,

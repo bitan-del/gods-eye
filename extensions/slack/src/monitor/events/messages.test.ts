@@ -7,16 +7,23 @@ import {
 const messageQueueMock = vi.fn();
 const messageAllowMock = vi.fn();
 
-vi.mock("godseye/plugin-sdk/infra-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/infra-runtime")>();
+async function createChannelRuntimeMock() {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/infra-runtime")>(
+    "godseye/plugin-sdk/infra-runtime",
+  );
   return {
     ...actual,
     enqueueSystemEvent: (...args: unknown[]) => messageQueueMock(...args),
   };
-});
+}
 
-vi.mock("godseye/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/conversation-runtime")>();
+vi.mock("godseye/plugin-sdk/infra-runtime", createChannelRuntimeMock);
+vi.mock("godseye/plugin-sdk/infra-runtime.js", createChannelRuntimeMock);
+
+vi.mock("godseye/plugin-sdk/conversation-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/conversation-runtime")>(
+    "godseye/plugin-sdk/conversation-runtime",
+  );
   return {
     ...actual,
     readChannelAllowFromStore: (...args: unknown[]) => messageAllowMock(...args),

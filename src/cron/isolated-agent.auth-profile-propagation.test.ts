@@ -13,6 +13,10 @@ import {
 } from "./isolated-agent.test-harness.js";
 import { setupIsolatedAgentTurnMocks } from "./isolated-agent.test-setup.js";
 
+vi.mock("../plugins/provider-runtime.js", () => ({
+  resolveExternalAuthProfilesWithPlugins: () => [],
+}));
+
 describe("runCronIsolatedAgentTurn auth profile propagation (#20624)", () => {
   beforeEach(() => {
     setupIsolatedAgentTurnMocks({ fast: true });
@@ -24,8 +28,8 @@ describe("runCronIsolatedAgentTurn auth profile propagation (#20624)", () => {
 
       // 2. Write auth-profiles.json in the agent directory
       //    resolveAgentDir returns <stateDir>/agents/main/agent
-      //    stateDir = <home>/.godseye
-      const agentDir = path.join(home, ".godseye", "agents", "main", "agent");
+      //    stateDir = <home>/.openclaw
+      const agentDir = path.join(home, ".openclaw", "agents", "main", "agent");
       await fs.mkdir(agentDir, { recursive: true });
       await fs.writeFile(
         path.join(agentDir, "auth-profiles.json"),
@@ -59,7 +63,7 @@ describe("runCronIsolatedAgentTurn auth profile propagation (#20624)", () => {
         agents: {
           defaults: {
             model: { primary: "openrouter/moonshotai/kimi-k2.5" },
-            workspace: path.join(home, "godseye"),
+            workspace: path.join(home, "openclaw"),
           },
         },
       });
@@ -67,7 +71,10 @@ describe("runCronIsolatedAgentTurn auth profile propagation (#20624)", () => {
       const res = await runCronIsolatedAgentTurn({
         cfg,
         deps: createCliDeps(),
-        job: makeJob({ kind: "agentTurn", message: "check status", deliver: false }),
+        job: {
+          ...makeJob({ kind: "agentTurn", message: "check status" }),
+          delivery: { mode: "none" },
+        },
         message: "check status",
         sessionKey: "cron:job-1",
         lane: "cron",

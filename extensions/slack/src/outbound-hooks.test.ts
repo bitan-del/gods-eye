@@ -1,4 +1,4 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMessageSlackMock = vi.hoisted(() => vi.fn());
@@ -8,7 +8,7 @@ vi.mock("./send.js", () => ({
   sendMessageSlack: sendMessageSlackMock,
 }));
 
-vi.mock("openclaw/plugin-sdk/plugin-runtime", () => ({
+vi.mock("godseye/plugin-sdk/plugin-runtime", () => ({
   getGlobalHookRunner: getGlobalHookRunnerMock,
 }));
 

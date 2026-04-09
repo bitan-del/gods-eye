@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/browser-plugin",
+  "name": "@godseye/browser-plugin",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw browser tool plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*"
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ]

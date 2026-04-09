@@ -1,14 +1,20 @@
-import type { GodsEyeConfig } from "../runtime-api.js";
+import { isPrivateNetworkOptInEnabled } from "godseye/plugin-sdk/ssrf-runtime";
 import { resolveMattermostAccount } from "./accounts.js";
-import { createMattermostClient, fetchMattermostMe, type MattermostClient } from "./client.js";
+import {
+  createMattermostClient,
+  fetchMattermostMe,
+  type MattermostClient,
+  type MattermostFetch,
+} from "./client.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 
 type Result = { ok: true } | { ok: false; error: string };
 type ReactionParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   postId: string;
   emojiName: string;
   accountId?: string | null;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: MattermostFetch;
 };
 type ReactionMutation = (client: MattermostClient, params: MutationPayload) => Promise<void>;
 type MutationPayload = { userId: string; postId: string; emojiName: string };
@@ -34,11 +40,11 @@ async function resolveBotUserId(
 }
 
 export async function addMattermostReaction(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   postId: string;
   emojiName: string;
   accountId?: string | null;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: MattermostFetch;
 }): Promise<Result> {
   return runMattermostReaction(params, {
     action: "add",
@@ -47,11 +53,11 @@ export async function addMattermostReaction(params: {
 }
 
 export async function removeMattermostReaction(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   postId: string;
   emojiName: string;
   accountId?: string | null;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: MattermostFetch;
 }): Promise<Result> {
   return runMattermostReaction(params, {
     action: "remove",
@@ -81,7 +87,7 @@ async function runMattermostReaction(
     baseUrl,
     botToken,
     fetchImpl: params.fetchImpl,
-    allowPrivateNetwork: resolved.config?.allowPrivateNetwork === true,
+    allowPrivateNetwork: isPrivateNetworkOptInEnabled(resolved.config),
   });
 
   const cacheKey = `${baseUrl}:${botToken}`;

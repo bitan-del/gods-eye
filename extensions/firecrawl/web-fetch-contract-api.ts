@@ -1,7 +1,7 @@
 import {
   enablePluginInConfig,
   type WebFetchProviderPlugin,
-} from "openclaw/plugin-sdk/provider-web-fetch-contract";
+} from "godseye/plugin-sdk/provider-web-fetch-contract";
 import { FIRECRAWL_WEB_FETCH_PROVIDER_SHARED } from "./src/firecrawl-fetch-provider-shared.js";
 
 export function createFirecrawlWebFetchProvider(): WebFetchProviderPlugin {

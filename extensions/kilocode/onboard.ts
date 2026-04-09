@@ -1,15 +1,15 @@
-import { KILOCODE_BASE_URL, KILOCODE_DEFAULT_MODEL_REF } from "godseye/plugin-sdk/provider-models";
 import {
   createModelCatalogPresetAppliers,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 import { buildKilocodeProvider } from "./provider-catalog.js";
+import { KILOCODE_BASE_URL, KILOCODE_DEFAULT_MODEL_REF } from "./provider-models.js";
 
 export { KILOCODE_BASE_URL, KILOCODE_DEFAULT_MODEL_REF };
 
 const kilocodePresetAppliers = createModelCatalogPresetAppliers({
   primaryModelRef: KILOCODE_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => ({
+  resolveParams: (_cfg: OpenClawConfig) => ({
     providerId: "kilocode",
     api: "openai-completions",
     baseUrl: KILOCODE_BASE_URL,
@@ -18,10 +18,10 @@ const kilocodePresetAppliers = createModelCatalogPresetAppliers({
   }),
 });
 
-export function applyKilocodeProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyKilocodeProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return kilocodePresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyKilocodeConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyKilocodeConfig(cfg: OpenClawConfig): OpenClawConfig {
   return kilocodePresetAppliers.applyConfig(cfg);
 }

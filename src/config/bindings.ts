@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "./config.js";
+import type { OpenClawConfig } from "./config.js";
 import type { AgentAcpBinding, AgentBinding, AgentRouteBinding } from "./types.agents.js";
 
 export type ConfiguredBindingRule = AgentBinding;
@@ -15,14 +15,14 @@ export function isAcpBinding(binding: AgentBinding): binding is AgentAcpBinding 
   return normalizeBindingType(binding) === "acp";
 }
 
-export function listConfiguredBindings(cfg: GodsEyeConfig): AgentBinding[] {
+export function listConfiguredBindings(cfg: OpenClawConfig): AgentBinding[] {
   return Array.isArray(cfg.bindings) ? cfg.bindings : [];
 }
 
-export function listRouteBindings(cfg: GodsEyeConfig): AgentRouteBinding[] {
+export function listRouteBindings(cfg: OpenClawConfig): AgentRouteBinding[] {
   return listConfiguredBindings(cfg).filter(isRouteBinding);
 }
 
-export function listAcpBindings(cfg: GodsEyeConfig): AgentAcpBinding[] {
+export function listAcpBindings(cfg: OpenClawConfig): AgentAcpBinding[] {
   return listConfiguredBindings(cfg).filter(isAcpBinding);
 }

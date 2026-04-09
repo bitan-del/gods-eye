@@ -1,11 +1,11 @@
 import "./test-helpers.js";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { setLoggerOverride } from "godseye/plugin-sdk/runtime-env";
+import { withEnvAsync } from "godseye/plugin-sdk/testing";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
-import { setLoggerOverride } from "../../../src/logging.js";
 import { escapeRegExp, formatEnvelopeTimestamp } from "../../../test/helpers/envelope-timestamp.js";
-import { withEnvAsync } from "../../../test/helpers/extensions/env.js";
 import {
   createWebInboundDeliverySpies,
   createMockWebListener,
@@ -23,7 +23,7 @@ import {
 installWebAutoReplyTestHomeHooks();
 
 async function startWatchdogScenario(params: {
-  monitorWebChannel: typeof import("./auto-reply.js").monitorWebChannel;
+  monitorWebChannel: typeof import("./auto-reply/monitor.js").monitorWebChannel;
 }) {
   const sleep = vi.fn(async () => {});
   const scripted = createScriptedWebListenerFactory();
@@ -61,9 +61,9 @@ async function startWatchdogScenario(params: {
 describe("web auto-reply connection", () => {
   installWebAutoReplyUnitTestHooks();
 
-  let monitorWebChannel: typeof import("./auto-reply.js").monitorWebChannel;
+  let monitorWebChannel: typeof import("./auto-reply/monitor.js").monitorWebChannel;
   beforeAll(async () => {
-    ({ monitorWebChannel } = await import("./auto-reply.js"));
+    ({ monitorWebChannel } = await import("./auto-reply/monitor.js"));
   });
 
   it("handles helper envelope timestamps with trimmed timezones (regression)", () => {
@@ -188,7 +188,7 @@ describe("web auto-reply connection", () => {
     }
   });
 
-  it("keeps watchdog message age across reconnects", async () => {
+  it("gives a reconnected listener a fresh watchdog window", async () => {
     vi.useFakeTimers();
     try {
       const { scripted, controller, run } = await startWatchdogScenario({
@@ -203,7 +203,11 @@ describe("web auto-reply connection", () => {
         { timeout: 250, interval: 2 },
       );
 
-      await vi.advanceTimersByTimeAsync(200);
+      await vi.advanceTimersByTimeAsync(20);
+      await Promise.resolve();
+      expect(scripted.getListenerCount()).toBe(2);
+
+      await vi.advanceTimersByTimeAsync(20);
       await Promise.resolve();
       await vi.waitFor(
         () => {
@@ -283,11 +287,11 @@ describe("web auto-reply connection", () => {
         const firstPattern = escapeRegExp(firstTimestamp);
         const secondPattern = escapeRegExp(secondTimestamp);
         expect(firstArgs.Body).toMatch(
-          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${firstPattern}\\] \\[godseye\\] first`),
+          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${firstPattern}\\] \\[openclaw\\] first`),
         );
         expect(firstArgs.Body).not.toContain("second");
         expect(secondArgs.Body).toMatch(
-          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${secondPattern}\\] \\[godseye\\] second`),
+          new RegExp(`\\[WhatsApp \\+1 (\\+\\d+[smhd] )?${secondPattern}\\] \\[openclaw\\] second`),
         );
         expect(secondArgs.Body).not.toContain("first");
         expect(process.getMaxListeners?.()).toBeGreaterThanOrEqual(50);
@@ -301,7 +305,7 @@ describe("web auto-reply connection", () => {
 
   it("emits heartbeat logs with connection metadata", async () => {
     vi.useFakeTimers();
-    const logPath = `/tmp/godseye-heartbeat-${crypto.randomUUID()}.log`;
+    const logPath = `/tmp/openclaw-heartbeat-${crypto.randomUUID()}.log`;
     setLoggerOverride({ level: "trace", file: logPath });
 
     const runtime = {
@@ -343,7 +347,7 @@ describe("web auto-reply connection", () => {
   });
 
   it("logs outbound replies to file", async () => {
-    const logPath = `/tmp/godseye-log-test-${crypto.randomUUID()}.log`;
+    const logPath = `/tmp/openclaw-log-test-${crypto.randomUUID()}.log`;
     setLoggerOverride({ level: "trace", file: logPath });
 
     const capture = createWebListenerFactoryCapture();
@@ -393,7 +397,7 @@ describe("web auto-reply connection", () => {
       return { text: "final reply" };
     });
 
-    const mockConfig: GodsEyeConfig = {
+    const mockConfig: OpenClawConfig = {
       channels: { whatsapp: { allowFrom: ["*"] } },
     };
 

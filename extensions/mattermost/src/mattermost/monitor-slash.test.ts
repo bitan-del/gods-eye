@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const listSkillCommandsForAgents = vi.hoisted(() => vi.fn());
 const parseStrictPositiveInteger = vi.hoisted(() => vi.fn());
@@ -10,15 +10,19 @@ const resolveCallbackUrl = vi.hoisted(() => vi.fn());
 const resolveSlashCommandConfig = vi.hoisted(() => vi.fn());
 const activateSlashCommands = vi.hoisted(() => vi.fn());
 
-vi.mock("../runtime-api.js", () => ({
+vi.mock("./runtime-api.js", () => ({
   listSkillCommandsForAgents,
   parseStrictPositiveInteger,
 }));
 
-vi.mock("./client.js", () => ({
-  fetchMattermostUserTeams,
-  normalizeMattermostBaseUrl,
-}));
+vi.mock("./client.js", async () => {
+  const actual = await vi.importActual<typeof import("./client.js")>("./client.js");
+  return {
+    ...actual,
+    fetchMattermostUserTeams,
+    normalizeMattermostBaseUrl,
+  };
+});
 
 vi.mock("./slash-commands.js", () => ({
   DEFAULT_COMMAND_SPECS: [
@@ -36,6 +40,24 @@ vi.mock("./slash-state.js", () => ({
 }));
 
 describe("mattermost monitor slash", () => {
+  let registerMattermostMonitorSlashCommands: typeof import("./monitor-slash.js").registerMattermostMonitorSlashCommands;
+
+  beforeAll(async () => {
+    ({ registerMattermostMonitorSlashCommands } = await import("./monitor-slash.js"));
+  });
+
+  beforeEach(() => {
+    listSkillCommandsForAgents.mockReset();
+    parseStrictPositiveInteger.mockReset();
+    fetchMattermostUserTeams.mockReset();
+    normalizeMattermostBaseUrl.mockClear();
+    isSlashCommandsEnabled.mockReset();
+    registerSlashCommands.mockReset();
+    resolveCallbackUrl.mockReset();
+    resolveSlashCommandConfig.mockReset();
+    activateSlashCommands.mockReset();
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
   });
@@ -43,7 +65,6 @@ describe("mattermost monitor slash", () => {
   it("returns early when slash commands are disabled", async () => {
     resolveSlashCommandConfig.mockReturnValue({ enabled: false });
     isSlashCommandsEnabled.mockReturnValue(false);
-    const { registerMattermostMonitorSlashCommands } = await import("./monitor-slash.js");
 
     await registerMattermostMonitorSlashCommands({
       client: {} as never,
@@ -59,12 +80,12 @@ describe("mattermost monitor slash", () => {
   });
 
   it("registers deduped default and native skill commands across teams", async () => {
-    vi.stubEnv("GODSEYE_GATEWAY_PORT", "18888");
+    vi.stubEnv("OPENCLAW_GATEWAY_PORT", "18888");
     resolveSlashCommandConfig.mockReturnValue({ enabled: true, nativeSkills: true });
     isSlashCommandsEnabled.mockReturnValue(true);
     parseStrictPositiveInteger.mockReturnValue(18888);
     fetchMattermostUserTeams.mockResolvedValue([{ id: "team-1" }, { id: "team-2" }]);
-    resolveCallbackUrl.mockReturnValue("https://godseye.test/slash");
+    resolveCallbackUrl.mockReturnValue("https://openclaw.test/slash");
     listSkillCommandsForAgents.mockReturnValue([
       { name: "skill", description: "Skill run" },
       { name: "oc_ping", description: "Already prefixed" },
@@ -77,8 +98,6 @@ describe("mattermost monitor slash", () => {
       log: vi.fn(),
       error: vi.fn(),
     };
-
-    const { registerMattermostMonitorSlashCommands } = await import("./monitor-slash.js");
 
     await registerMattermostMonitorSlashCommands({
       client: {} as never,
@@ -93,7 +112,7 @@ describe("mattermost monitor slash", () => {
     expect(registerSlashCommands.mock.calls[0]?.[0]).toMatchObject({
       teamId: "team-1",
       creatorUserId: "bot-user",
-      callbackUrl: "https://godseye.test/slash",
+      callbackUrl: "https://openclaw.test/slash",
     });
     expect(registerSlashCommands.mock.calls[0]?.[0].commands).toEqual([
       { trigger: "ping", description: "ping" },
@@ -122,7 +141,7 @@ describe("mattermost monitor slash", () => {
       }),
     );
     expect(runtime.log).toHaveBeenCalledWith(
-      "mattermost: slash commands registered (2 commands across 2 teams, callback=https://godseye.test/slash)",
+      "mattermost: slash commands registered (2 commands across 2 teams, callback=https://openclaw.test/slash)",
     );
   });
 
@@ -139,8 +158,6 @@ describe("mattermost monitor slash", () => {
       log: vi.fn(),
       error: vi.fn(),
     };
-
-    const { registerMattermostMonitorSlashCommands } = await import("./monitor-slash.js");
 
     await registerMattermostMonitorSlashCommands({
       client: {} as never,

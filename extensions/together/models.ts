@@ -1,4 +1,4 @@
-import type { ModelDefinitionConfig } from "openclaw/plugin-sdk/provider-model-shared";
+import type { ModelDefinitionConfig } from "godseye/plugin-sdk/provider-model-shared";
 
 export const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 

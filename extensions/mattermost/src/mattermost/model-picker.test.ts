@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../runtime-api.js";
+import type { OpenClawConfig } from "../../runtime-api.js";
 import {
   buildMattermostAllowedModelRefs,
   parseMattermostModelPickerContext,
@@ -23,6 +23,7 @@ const data = {
     provider: "anthropic",
     model: "claude-opus-4-5",
   },
+  modelNames: new Map<string, string>(),
 };
 
 describe("Mattermost model picker", () => {
@@ -128,7 +129,7 @@ describe("Mattermost model picker", () => {
   it("falls back to the routed agent default model when no override is stored", async () => {
     const testDir = fs.mkdtempSync(path.join(os.tmpdir(), "mm-model-picker-"));
     try {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         session: {
           store: path.join(testDir, "{agentId}.json"),
         },
@@ -154,6 +155,7 @@ describe("Mattermost model picker", () => {
           provider: "openai",
           model: "gpt-5",
         },
+        modelNames: new Map<string, string>(),
       };
 
       expect(

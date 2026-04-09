@@ -1,6 +1,12 @@
+import { createAccountListHelpers } from "godseye/plugin-sdk/account-helpers";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/account-id";
 import { resolveMergedAccountConfig } from "godseye/plugin-sdk/account-resolution";
-import { createAccountListHelpers, type GodsEyeConfig } from "../runtime-api.js";
+import {
+  resolveChannelStreamingBlockCoalesce,
+  resolveChannelStreamingBlockEnabled,
+  resolveChannelStreamingChunkMode,
+} from "godseye/plugin-sdk/channel-streaming";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { normalizeResolvedSecretInputString, normalizeSecretInputString } from "../secret-input.js";
 import type {
   MattermostAccountConfig,
@@ -9,6 +15,7 @@ import type {
   MattermostReplyToMode,
 } from "../types.js";
 import { normalizeMattermostBaseUrl } from "./client.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 
 export type MattermostTokenSource = "env" | "config" | "none";
 export type MattermostBaseUrlSource = "env" | "config" | "none";
@@ -26,18 +33,23 @@ export type ResolvedMattermostAccount = {
   oncharPrefixes?: string[];
   requireMention?: boolean;
   textChunkLimit?: number;
+  chunkMode?: MattermostAccountConfig["chunkMode"];
   blockStreaming?: boolean;
   blockStreamingCoalesce?: MattermostAccountConfig["blockStreamingCoalesce"];
 };
 
-const {
-  listAccountIds: listMattermostAccountIds,
-  resolveDefaultAccountId: resolveDefaultMattermostAccountId,
-} = createAccountListHelpers("mattermost");
-export { listMattermostAccountIds, resolveDefaultMattermostAccountId };
+const mattermostAccountHelpers = createAccountListHelpers("mattermost");
+
+export function listMattermostAccountIds(cfg: OpenClawConfig): string[] {
+  return mattermostAccountHelpers.listAccountIds(cfg);
+}
+
+export function resolveDefaultMattermostAccountId(cfg: OpenClawConfig): string {
+  return mattermostAccountHelpers.resolveDefaultAccountId(cfg);
+}
 
 function mergeMattermostAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): MattermostAccountConfig {
   return resolveMergedAccountConfig<MattermostAccountConfig>({
@@ -65,11 +77,13 @@ function resolveMattermostRequireMention(config: MattermostAccountConfig): boole
 }
 
 export function resolveMattermostAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   allowUnresolvedSecretRef?: boolean;
 }): ResolvedMattermostAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultMattermostAccountId(params.cfg),
+  );
   const baseEnabled = params.cfg.channels?.mattermost?.enabled !== false;
   const merged = mergeMattermostAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -95,7 +109,7 @@ export function resolveMattermostAccount(params: {
   return {
     accountId,
     enabled,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     botToken,
     baseUrl,
     botTokenSource,
@@ -105,8 +119,10 @@ export function resolveMattermostAccount(params: {
     oncharPrefixes: merged.oncharPrefixes,
     requireMention,
     textChunkLimit: merged.textChunkLimit,
-    blockStreaming: merged.blockStreaming,
-    blockStreamingCoalesce: merged.blockStreamingCoalesce,
+    chunkMode: resolveChannelStreamingChunkMode(merged) ?? merged.chunkMode,
+    blockStreaming: resolveChannelStreamingBlockEnabled(merged) ?? merged.blockStreaming,
+    blockStreamingCoalesce:
+      resolveChannelStreamingBlockCoalesce(merged) ?? merged.blockStreamingCoalesce,
   };
 }
 
@@ -124,7 +140,7 @@ export function resolveMattermostReplyToMode(
   return account.config.replyToMode ?? "off";
 }
 
-export function listEnabledMattermostAccounts(cfg: GodsEyeConfig): ResolvedMattermostAccount[] {
+export function listEnabledMattermostAccounts(cfg: OpenClawConfig): ResolvedMattermostAccount[] {
   return listMattermostAccountIds(cfg)
     .map((accountId) => resolveMattermostAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

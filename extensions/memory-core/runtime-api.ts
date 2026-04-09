@@ -12,9 +12,9 @@ export {
   resolveMemoryFtsState,
   resolveMemoryVectorState,
   type Tone,
-} from "openclaw/plugin-sdk/memory-core-host-status";
-export { checkQmdBinaryAvailability } from "openclaw/plugin-sdk/memory-core-host-engine-qmd";
-export { hasConfiguredMemorySecretInput } from "openclaw/plugin-sdk/memory-core-host-secret";
+} from "godseye/plugin-sdk/memory-core-host-status";
+export { checkQmdBinaryAvailability } from "godseye/plugin-sdk/memory-core-host-engine-qmd";
+export { hasConfiguredMemorySecretInput } from "godseye/plugin-sdk/memory-core-host-secret";
 export {
   auditShortTermPromotionArtifacts,
   removeGroundedShortTermCandidates,

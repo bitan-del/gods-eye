@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { GodsEyeSchema } from "./zod-schema.js";
+import { OpenClawSchema } from "./zod-schema.js";
 
-describe("GodsEyeSchema cron retention and run-log validation", () => {
+describe("OpenClawSchema cron retention and run-log validation", () => {
   it("accepts valid cron.sessionRetention and runLog values", () => {
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         cron: {
           sessionRetention: "1h30m",
           runLog: {
@@ -18,7 +18,7 @@ describe("GodsEyeSchema cron retention and run-log validation", () => {
 
   it("rejects invalid cron.sessionRetention", () => {
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         cron: {
           sessionRetention: "abc",
         },
@@ -28,7 +28,7 @@ describe("GodsEyeSchema cron retention and run-log validation", () => {
 
   it("rejects invalid cron.runLog.maxBytes", () => {
     expect(() =>
-      GodsEyeSchema.parse({
+      OpenClawSchema.parse({
         cron: {
           runLog: {
             maxBytes: "wat",

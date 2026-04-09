@@ -1,9 +1,11 @@
+import type { OpenClawConfig } from "../config/config.js";
 import {
   parseBrowserMajorVersion,
   readBrowserVersion,
   resolveGoogleChromeExecutableForPlatform,
-} from "../browser/chrome.executables.js";
-import type { GodsEyeConfig } from "../config/config.js";
+} from "../plugin-sdk/browser-host-inspection.js";
+import { asNullableRecord } from "../shared/record-coerce.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { note } from "../terminal/note.js";
 
 const CHROME_MCP_MIN_MAJOR = 144;
@@ -13,42 +15,36 @@ const REMOTE_DEBUGGING_PAGES = [
   "edge://inspect/#remote-debugging",
 ].join(", ");
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 type ExistingSessionProfile = {
   name: string;
   userDataDir?: string;
 };
 
-function collectChromeMcpProfiles(cfg: GodsEyeConfig): ExistingSessionProfile[] {
-  const browser = asRecord(cfg.browser);
+function collectChromeMcpProfiles(cfg: OpenClawConfig): ExistingSessionProfile[] {
+  const browser = asNullableRecord(cfg.browser);
   if (!browser) {
     return [];
   }
 
   const profiles = new Map<string, ExistingSessionProfile>();
-  const defaultProfile =
-    typeof browser.defaultProfile === "string" ? browser.defaultProfile.trim() : "";
+  const defaultProfile = normalizeOptionalString(browser.defaultProfile) ?? "";
   if (defaultProfile === "user") {
     profiles.set("user", { name: "user" });
   }
 
-  const configuredProfiles = asRecord(browser.profiles);
+  const configuredProfiles = asNullableRecord(browser.profiles);
   if (!configuredProfiles) {
     return [...profiles.values()].toSorted((a, b) => a.name.localeCompare(b.name));
   }
 
   for (const [profileName, rawProfile] of Object.entries(configuredProfiles)) {
-    const profile = asRecord(rawProfile);
-    const driver = typeof profile?.driver === "string" ? profile.driver.trim() : "";
+    const profile = asNullableRecord(rawProfile);
+    const driver = normalizeOptionalString(profile?.driver) ?? "";
     if (driver === "existing-session") {
-      const userDataDir =
-        typeof profile?.userDataDir === "string" ? profile.userDataDir.trim() : undefined;
-      profiles.set(profileName, { name: profileName, userDataDir: userDataDir || undefined });
+      profiles.set(profileName, {
+        name: profileName,
+        userDataDir: normalizeOptionalString(profile?.userDataDir),
+      });
     }
   }
 
@@ -56,7 +52,7 @@ function collectChromeMcpProfiles(cfg: GodsEyeConfig): ExistingSessionProfile[] 
 }
 
 export async function noteChromeMcpBrowserReadiness(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   deps?: {
     platform?: NodeJS.Platform;
     noteFn?: typeof note;
@@ -85,7 +81,7 @@ export async function noteChromeMcpBrowserReadiness(
         "- These profiles use an explicit Chromium user data directory instead of Chrome's default auto-connect path.",
         `- Verify the matching Chromium-based browser is version ${CHROME_MCP_MIN_MAJOR}+ on the same host as the Gateway or node.`,
         `- Enable remote debugging in that browser's inspect page (${REMOTE_DEBUGGING_PAGES}).`,
-        "- Keep the browser running and accept the attach consent prompt the first time GodsEye connects.",
+        "- Keep the browser running and accept the attach consent prompt the first time OpenClaw connects.",
       ].join("\n"),
       "Browser",
     );
@@ -98,10 +94,10 @@ export async function noteChromeMcpBrowserReadiness(
   if (!chrome) {
     const lines = [
       `- Chrome MCP existing-session is configured for profile(s): ${profileLabel}.`,
-      `- Google Chrome was not found on this host for auto-connect profile(s): ${autoProfileLabel}. GodsEye does not bundle Chrome.`,
+      `- Google Chrome was not found on this host for auto-connect profile(s): ${autoProfileLabel}. OpenClaw does not bundle Chrome.`,
       `- Install Google Chrome ${CHROME_MCP_MIN_MAJOR}+ on the same host as the Gateway or node, or set browser.profiles.<name>.userDataDir for a different Chromium-based browser.`,
       `- Enable remote debugging in the browser inspect page (${REMOTE_DEBUGGING_PAGES}).`,
-      "- Keep the browser running and accept the attach consent prompt the first time GodsEye connects.",
+      "- Keep the browser running and accept the attach consent prompt the first time OpenClaw connects.",
       "- Docker, headless, and sandbox browser flows stay on raw CDP; this check only applies to host-local Chrome MCP attach.",
     ];
     if (explicitProfiles.length > 0) {
@@ -136,7 +132,7 @@ export async function noteChromeMcpBrowserReadiness(
 
   lines.push(`- Enable remote debugging in the browser inspect page (${REMOTE_DEBUGGING_PAGES}).`);
   lines.push(
-    "- Keep the browser running and accept the attach consent prompt the first time GodsEye connects.",
+    "- Keep the browser running and accept the attach consent prompt the first time OpenClaw connects.",
   );
   if (explicitProfiles.length > 0) {
     lines.push(

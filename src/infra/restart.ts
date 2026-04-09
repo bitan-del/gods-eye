@@ -1,21 +1,17 @@
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import { loadConfig } from "../config/config.js";
+import { getRuntimeConfig } from "../config/config.js";
 import {
   resolveGatewayLaunchAgentLabel,
   resolveGatewaySystemdServiceName,
 } from "../daemon/constants.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { cleanStaleGatewayProcessesSync, findGatewayPidsOnPortSync } from "./restart-stale-pids.js";
+import type { RestartAttempt } from "./restart.types.js";
 import { relaunchGatewayScheduledTask } from "./windows-task-restart.js";
 
-export type RestartAttempt = {
-  ok: boolean;
-  method: "launchctl" | "systemd" | "schtasks" | "supervisor";
-  detail?: string;
-  tried?: string[];
-};
+export type { RestartAttempt } from "./restart.types.js";
 
 const SPAWN_TIMEOUT_MS = 2000;
 const SIGUSR1_AUTH_GRACE_MS = 5000;
@@ -40,6 +36,7 @@ let lastRestartEmittedAt = 0;
 let pendingRestartTimer: ReturnType<typeof setTimeout> | null = null;
 let pendingRestartDueAt = 0;
 let pendingRestartReason: string | undefined;
+const activeDeferralPolls = new Set<ReturnType<typeof setInterval>>();
 
 function hasUnconsumedRestartSignal(): boolean {
   return emittedRestartToken > consumedRestartToken;
@@ -52,6 +49,13 @@ function clearPendingScheduledRestart(): void {
   pendingRestartTimer = null;
   pendingRestartDueAt = 0;
   pendingRestartReason = undefined;
+}
+
+function clearActiveDeferralPolls(): void {
+  for (const poll of activeDeferralPolls) {
+    clearInterval(poll);
+  }
+  activeDeferralPolls.clear();
 }
 
 export type RestartAuditInfo = {
@@ -111,9 +115,11 @@ export function setPreRestartDeferralCheck(fn: () => number): void {
  */
 export function emitGatewayRestart(): boolean {
   if (hasUnconsumedRestartSignal()) {
+    clearActiveDeferralPolls();
     clearPendingScheduledRestart();
     return false;
   }
+  clearActiveDeferralPolls();
   clearPendingScheduledRestart();
   const cycleToken = ++restartCycleToken;
   emittedRestartToken = cycleToken;
@@ -228,12 +234,14 @@ export function deferGatewayRestartUntilIdle(opts: {
       current = opts.getPendingCount();
     } catch (err) {
       clearInterval(poll);
+      activeDeferralPolls.delete(poll);
       opts.hooks?.onCheckError?.(err);
       emitGatewayRestart();
       return;
     }
     if (current <= 0) {
       clearInterval(poll);
+      activeDeferralPolls.delete(poll);
       opts.hooks?.onReady?.();
       emitGatewayRestart();
       return;
@@ -241,10 +249,12 @@ export function deferGatewayRestartUntilIdle(opts: {
     const elapsedMs = Date.now() - startedAt;
     if (elapsedMs >= maxWaitMs) {
       clearInterval(poll);
+      activeDeferralPolls.delete(poll);
       opts.hooks?.onTimeout?.(current, elapsedMs);
       emitGatewayRestart();
     }
   }, pollMs);
+  activeDeferralPolls.add(poll);
 }
 
 function formatSpawnDetail(result: {
@@ -292,7 +302,7 @@ function normalizeSystemdUnit(raw?: string, profile?: string): string {
   return unit.endsWith(".service") ? unit : `${unit}.service`;
 }
 
-export function triggerGodsEyeRestart(): RestartAttempt {
+export function triggerOpenClawRestart(): RestartAttempt {
   if (process.env.VITEST || process.env.NODE_ENV === "test") {
     return { ok: true, method: "supervisor", detail: "test mode" };
   }
@@ -302,8 +312,8 @@ export function triggerGodsEyeRestart(): RestartAttempt {
   const tried: string[] = [];
   if (process.platform === "linux") {
     const unit = normalizeSystemdUnit(
-      process.env.GODSEYE_SYSTEMD_UNIT,
-      process.env.GODSEYE_PROFILE,
+      process.env.OPENCLAW_SYSTEMD_UNIT,
+      process.env.OPENCLAW_PROFILE,
     );
     const userArgs = ["--user", "restart", unit];
     tried.push(`systemctl ${userArgs.join(" ")}`);
@@ -343,8 +353,8 @@ export function triggerGodsEyeRestart(): RestartAttempt {
   }
 
   const label =
-    process.env.GODSEYE_LAUNCHD_LABEL ||
-    resolveGatewayLaunchAgentLabel(process.env.GODSEYE_PROFILE);
+    process.env.OPENCLAW_LAUNCHD_LABEL ||
+    resolveGatewayLaunchAgentLabel(process.env.OPENCLAW_PROFILE);
   const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
   const domain = uid !== undefined ? `gui/${uid}` : "gui/501";
   const target = `${domain}/${label}`;
@@ -477,7 +487,7 @@ export function scheduleGatewaySigusr1Restart(opts?: {
         emitGatewayRestart();
         return;
       }
-      const cfg = loadConfig();
+      const cfg = getRuntimeConfig();
       deferGatewayRestartUntilIdle({
         getPendingCount: pendingCheck,
         maxWaitMs: cfg.gateway?.reload?.deferralTimeoutMs,
@@ -507,6 +517,7 @@ export const __testing = {
     emittedRestartToken = 0;
     consumedRestartToken = 0;
     lastRestartEmittedAt = 0;
+    clearActiveDeferralPolls();
     clearPendingScheduledRestart();
   },
 };

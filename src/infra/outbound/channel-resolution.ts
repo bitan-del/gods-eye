@@ -1,20 +1,19 @@
-import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { getChannelPlugin } from "../../channels/plugins/index.js";
 import type { ChannelPlugin } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
-import { applyPluginAutoEnable } from "../../config/plugin-auto-enable.js";
-import { loadGodsEyePlugins } from "../../plugins/loader.js";
-import { getActivePluginRegistry, getActivePluginRegistryKey } from "../../plugins/runtime.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { getActivePluginRegistry } from "../../plugins/runtime.js";
 import {
   isDeliverableMessageChannel,
   normalizeMessageChannel,
   type DeliverableMessageChannel,
 } from "../../utils/message-channel.js";
-
-const bootstrapAttempts = new Set<string>();
+import {
+  bootstrapOutboundChannelPlugin,
+  resetOutboundChannelBootstrapStateForTests,
+} from "./channel-bootstrap.runtime.js";
 
 export function resetOutboundChannelResolutionStateForTest(): void {
-  bootstrapAttempts.clear();
+  resetOutboundChannelBootstrapStateForTests();
 }
 
 export function normalizeDeliverableOutboundChannel(
@@ -29,43 +28,9 @@ export function normalizeDeliverableOutboundChannel(
 
 function maybeBootstrapChannelPlugin(params: {
   channel: DeliverableMessageChannel;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 }): void {
-  const cfg = params.cfg;
-  if (!cfg) {
-    return;
-  }
-
-  const activeRegistry = getActivePluginRegistry();
-  const activeHasRequestedChannel = activeRegistry?.channels?.some(
-    (entry) => entry?.plugin?.id === params.channel,
-  );
-  if (activeHasRequestedChannel) {
-    return;
-  }
-
-  const registryKey = getActivePluginRegistryKey() ?? "<none>";
-  const attemptKey = `${registryKey}:${params.channel}`;
-  if (bootstrapAttempts.has(attemptKey)) {
-    return;
-  }
-  bootstrapAttempts.add(attemptKey);
-
-  const autoEnabled = applyPluginAutoEnable({ config: cfg }).config;
-  const defaultAgentId = resolveDefaultAgentId(autoEnabled);
-  const workspaceDir = resolveAgentWorkspaceDir(autoEnabled, defaultAgentId);
-  try {
-    loadGodsEyePlugins({
-      config: autoEnabled,
-      workspaceDir,
-      runtimeOptions: {
-        allowGatewaySubagentBinding: true,
-      },
-    });
-  } catch {
-    // Allow a follow-up resolution attempt if bootstrap failed transiently.
-    bootstrapAttempts.delete(attemptKey);
-  }
+  bootstrapOutboundChannelPlugin(params);
 }
 
 function resolveDirectFromActiveRegistry(
@@ -86,7 +51,7 @@ function resolveDirectFromActiveRegistry(
 
 export function resolveOutboundChannelPlugin(params: {
   channel: string;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 }): ChannelPlugin | undefined {
   const normalized = normalizeDeliverableOutboundChannel(params.channel);
   if (!normalized) {

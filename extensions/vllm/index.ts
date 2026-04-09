@@ -1,26 +1,27 @@
 import {
+  definePluginEntry,
+  type OpenClawPluginApi,
+  type ProviderAuthMethodNonInteractiveContext,
+} from "godseye/plugin-sdk/plugin-entry";
+import {
+  buildVllmProvider,
   VLLM_DEFAULT_API_KEY_ENV_VAR,
   VLLM_DEFAULT_BASE_URL,
   VLLM_MODEL_PLACEHOLDER,
   VLLM_PROVIDER_LABEL,
-} from "godseye/plugin-sdk/agent-runtime";
-import {
-  definePluginEntry,
-  type GodsEyePluginApi,
-  type ProviderAuthMethodNonInteractiveContext,
-} from "godseye/plugin-sdk/plugin-entry";
+} from "./api.js";
 
 const PROVIDER_ID = "vllm";
 
 async function loadProviderSetup() {
-  return await import("godseye/plugin-sdk/self-hosted-provider-setup");
+  return await import("godseye/plugin-sdk/provider-setup");
 }
 
 export default definePluginEntry({
   id: "vllm",
   name: "vLLM Provider",
   description: "Bundled vLLM provider plugin",
-  register(api: GodsEyePluginApi) {
+  register(api: OpenClawPluginApi) {
     api.registerProvider({
       id: PROVIDER_ID,
       label: "vLLM",
@@ -64,7 +65,7 @@ export default definePluginEntry({
           return await providerSetup.discoverOpenAICompatibleSelfHostedProvider({
             ctx,
             providerId: PROVIDER_ID,
-            buildProvider: providerSetup.buildVllmProvider,
+            buildProvider: buildVllmProvider,
           });
         },
       },
@@ -84,6 +85,10 @@ export default definePluginEntry({
           methodId: "custom",
         },
       },
+      buildUnknownModelHint: () =>
+        "vLLM requires authentication to be registered as a provider. " +
+        'Set VLLM_API_KEY (any value works) or run "openclaw configure". ' +
+        "See: https://docs.openclaw.ai/providers/vllm",
     });
   },
 });

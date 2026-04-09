@@ -1,15 +1,20 @@
-import type { ChannelPlugin } from "godseye/plugin-sdk/core";
-import { defineChannelPluginEntry } from "godseye/plugin-sdk/core";
-import { googlechatPlugin } from "./src/channel.js";
-import { setGoogleChatRuntime } from "./src/runtime.js";
+import { defineBundledChannelEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { googlechatPlugin } from "./src/channel.js";
-export { setGoogleChatRuntime } from "./src/runtime.js";
-
-export default defineChannelPluginEntry({
+export default defineBundledChannelEntry({
   id: "googlechat",
   name: "Google Chat",
-  description: "GodsEye Google Chat channel plugin",
-  plugin: googlechatPlugin as ChannelPlugin,
-  setRuntime: setGoogleChatRuntime,
+  description: "OpenClaw Google Chat channel plugin",
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./api.js",
+    exportName: "googlechatPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+  runtime: {
+    specifier: "./runtime-api.js",
+    exportName: "setGoogleChatRuntime",
+  },
 });

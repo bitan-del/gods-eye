@@ -1,29 +1,18 @@
 import JSON5 from "json5";
 import { LEGACY_MANIFEST_KEYS, MANIFEST_KEY } from "../compat/legacy-names.js";
 import { parseBooleanValue } from "../utils/boolean.js";
+import { normalizeOptionalLowercaseString, readStringValue } from "./string-coerce.js";
+import { normalizeCsvOrLooseStringList } from "./string-normalization.js";
 
 export function normalizeStringList(input: unknown): string[] {
-  if (!input) {
-    return [];
-  }
-  if (Array.isArray(input)) {
-    return input.map((value) => String(value).trim()).filter(Boolean);
-  }
-  if (typeof input === "string") {
-    return input
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-  }
-  return [];
+  return normalizeCsvOrLooseStringList(input);
 }
 
 export function getFrontmatterString(
   frontmatter: Record<string, unknown>,
   key: string,
 ): string | undefined {
-  const raw = frontmatter[key];
-  return typeof raw === "string" ? raw : undefined;
+  return readStringValue(frontmatter[key]);
 }
 
 export function parseFrontmatterBool(value: string | undefined, fallback: boolean): boolean {
@@ -31,7 +20,7 @@ export function parseFrontmatterBool(value: string | undefined, fallback: boolea
   return parsed === undefined ? fallback : parsed;
 }
 
-export function resolveGodsEyeManifestBlock(params: {
+export function resolveOpenClawManifestBlock(params: {
   frontmatter: Record<string, unknown>;
   key?: string;
 }): Record<string, unknown> | undefined {
@@ -59,16 +48,16 @@ export function resolveGodsEyeManifestBlock(params: {
   }
 }
 
-export type GodsEyeManifestRequires = {
+export type OpenClawManifestRequires = {
   bins: string[];
   anyBins: string[];
   env: string[];
   config: string[];
 };
 
-export function resolveGodsEyeManifestRequires(
+export function resolveOpenClawManifestRequires(
   metadataObj: Record<string, unknown>,
-): GodsEyeManifestRequires | undefined {
+): OpenClawManifestRequires | undefined {
   const requiresRaw =
     typeof metadataObj.requires === "object" && metadataObj.requires !== null
       ? (metadataObj.requires as Record<string, unknown>)
@@ -84,7 +73,7 @@ export function resolveGodsEyeManifestRequires(
   };
 }
 
-export function resolveGodsEyeManifestInstall<T>(
+export function resolveOpenClawManifestInstall<T>(
   metadataObj: Record<string, unknown>,
   parseInstallSpec: (input: unknown) => T | undefined,
 ): T[] {
@@ -94,11 +83,11 @@ export function resolveGodsEyeManifestInstall<T>(
     .filter((entry): entry is T => Boolean(entry));
 }
 
-export function resolveGodsEyeManifestOs(metadataObj: Record<string, unknown>): string[] {
+export function resolveOpenClawManifestOs(metadataObj: Record<string, unknown>): string[] {
   return normalizeStringList(metadataObj.os);
 }
 
-export type ParsedGodsEyeManifestInstallBase = {
+export type ParsedOpenClawManifestInstallBase = {
   raw: Record<string, unknown>;
   kind: string;
   id?: string;
@@ -106,22 +95,22 @@ export type ParsedGodsEyeManifestInstallBase = {
   bins?: string[];
 };
 
-export function parseGodsEyeManifestInstallBase(
+export function parseOpenClawManifestInstallBase(
   input: unknown,
   allowedKinds: readonly string[],
-): ParsedGodsEyeManifestInstallBase | undefined {
+): ParsedOpenClawManifestInstallBase | undefined {
   if (!input || typeof input !== "object") {
     return undefined;
   }
   const raw = input as Record<string, unknown>;
   const kindRaw =
     typeof raw.kind === "string" ? raw.kind : typeof raw.type === "string" ? raw.type : "";
-  const kind = kindRaw.trim().toLowerCase();
+  const kind = normalizeOptionalLowercaseString(kindRaw) ?? "";
   if (!allowedKinds.includes(kind)) {
     return undefined;
   }
 
-  const spec: ParsedGodsEyeManifestInstallBase = {
+  const spec: ParsedOpenClawManifestInstallBase = {
     raw,
     kind,
   };
@@ -138,9 +127,9 @@ export function parseGodsEyeManifestInstallBase(
   return spec;
 }
 
-export function applyGodsEyeManifestInstallCommonFields<
+export function applyOpenClawManifestInstallCommonFields<
   T extends { id?: string; label?: string; bins?: string[] },
->(spec: T, parsed: Pick<ParsedGodsEyeManifestInstallBase, "id" | "label" | "bins">): T {
+>(spec: T, parsed: Pick<ParsedOpenClawManifestInstallBase, "id" | "label" | "bins">): T {
   if (parsed.id) {
     spec.id = parsed.id;
   }

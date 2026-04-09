@@ -4,26 +4,42 @@
 const shouldWarnCompatImport =
   process.env.VITEST !== "true" &&
   process.env.NODE_ENV !== "test" &&
-  process.env.GODSEYE_SUPPRESS_PLUGIN_SDK_COMPAT_WARNING !== "1";
+  process.env.OPENCLAW_SUPPRESS_PLUGIN_SDK_COMPAT_WARNING !== "1";
 
 if (shouldWarnCompatImport) {
   process.emitWarning(
-    "godseye/plugin-sdk/compat is deprecated for new plugins. Migrate to focused godseye/plugin-sdk/<subpath> imports. See https://docs.gods-eye.org/plugins/sdk-migration",
+    "godseye/plugin-sdk/compat is deprecated for new plugins. Migrate to focused openclaw/plugin-sdk/<subpath> imports. See https://docs.openclaw.ai/plugins/sdk-migration",
     {
-      code: "GODSEYE_PLUGIN_SDK_COMPAT_DEPRECATED",
+      code: "OPENCLAW_PLUGIN_SDK_COMPAT_DEPRECATED",
       detail:
-        "Bundled plugins must use scoped plugin-sdk subpaths. External plugins may keep compat temporarily while migrating. Migration guide: https://docs.gods-eye.org/plugins/sdk-migration",
+        "Bundled plugins must use scoped plugin-sdk subpaths. External plugins may keep compat temporarily while migrating. Migration guide: https://docs.openclaw.ai/plugins/sdk-migration",
     },
   );
 }
 
 export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
+export type {
+  MemoryPluginCapability,
+  MemoryPluginPublicArtifact,
+  MemoryPluginPublicArtifactsProvider,
+} from "../plugins/memory-state.js";
 export { resolveControlCommandGate } from "../channels/command-gating.js";
-export { delegateCompactionToRuntime } from "../context-engine/delegate.js";
+export {
+  buildMemorySystemPromptAddition,
+  delegateCompactionToRuntime,
+} from "../context-engine/delegate.js";
 export type { DiagnosticEventPayload } from "../infra/diagnostic-events.js";
 export { onDiagnosticEvent } from "../infra/diagnostic-events.js";
+export {
+  applyAuthProfileConfig,
+  buildApiKeyCredential,
+  upsertApiKeyProfile,
+  writeOAuthCredentials,
+  type ApiKeyStorageOptions,
+  type WriteOAuthCredentialsOptions,
+} from "../plugins/provider-auth-helpers.js";
 
-export { createAccountStatusSink } from "./channel-lifecycle.js";
+export { createAccountStatusSink } from "./channel-lifecycle.core.js";
 export { createPluginRuntimeStore } from "./runtime-store.js";
 export { KeyedAsyncQueue } from "./keyed-async-queue.js";
 
@@ -48,5 +64,5 @@ export { mapAllowlistResolutionInputs } from "./allow-from.js";
 export {
   resolveBlueBubblesGroupRequireMention,
   resolveBlueBubblesGroupToolPolicy,
-} from "../../extensions/bluebubbles/runtime-api.js";
-export { collectBlueBubblesStatusIssues } from "../channels/plugins/status-issues/bluebubbles.js";
+} from "./bluebubbles-policy.js";
+export { collectBlueBubblesStatusIssues } from "./bluebubbles.js";

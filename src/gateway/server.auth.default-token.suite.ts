@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { WebSocket } from "ws";
 import {
   connectReq,
@@ -20,6 +20,7 @@ import {
   startGatewayServer,
   TEST_OPERATOR_CLIENT,
   waitForWsClose,
+  withGatewayServer,
   withRuntimeVersionEnv,
 } from "./server.auth.shared.js";
 
@@ -28,12 +29,12 @@ export function registerDefaultAuthTokenSuite(): void {
     let server: Awaited<ReturnType<typeof startGatewayServer>>;
     let port: number;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
       port = await getFreePort();
       server = await startGatewayServer(port);
     });
 
-    afterAll(async () => {
+    afterEach(async () => {
       await server.close();
     });
 
@@ -77,41 +78,43 @@ export function registerDefaultAuthTokenSuite(): void {
 
     test("closes silent handshakes after timeout", async () => {
       vi.useRealTimers();
-      const prevHandshakeTimeout = process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS;
-      process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS = "20";
+      const prevHandshakeTimeout = process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS;
+      process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS = "20";
       try {
-        const ws = await openWs(port);
-        const handshakeTimeoutMs = getPreauthHandshakeTimeoutMsFromEnv();
-        const closed = await waitForWsClose(ws, handshakeTimeoutMs + 500);
-        expect(closed).toBe(true);
+        await withGatewayServer(async ({ port: isolatedPort }) => {
+          const ws = await openWs(isolatedPort);
+          const handshakeTimeoutMs = getPreauthHandshakeTimeoutMsFromEnv();
+          const closed = await waitForWsClose(ws, handshakeTimeoutMs + 2500);
+          expect(closed).toBe(true);
+        });
       } finally {
         if (prevHandshakeTimeout === undefined) {
-          delete process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS;
+          delete process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS;
         } else {
-          process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS = prevHandshakeTimeout;
+          process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS = prevHandshakeTimeout;
         }
       }
     });
 
-    test("prefers GODSEYE_HANDSHAKE_TIMEOUT_MS and falls back on empty string", () => {
-      const prevHandshakeTimeout = process.env.GODSEYE_HANDSHAKE_TIMEOUT_MS;
-      const prevTestHandshakeTimeout = process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS;
-      process.env.GODSEYE_HANDSHAKE_TIMEOUT_MS = "75";
-      process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS = "20";
+    test("prefers OPENCLAW_HANDSHAKE_TIMEOUT_MS and falls back on empty string", () => {
+      const prevHandshakeTimeout = process.env.OPENCLAW_HANDSHAKE_TIMEOUT_MS;
+      const prevTestHandshakeTimeout = process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS;
+      process.env.OPENCLAW_HANDSHAKE_TIMEOUT_MS = "75";
+      process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS = "20";
       try {
         expect(getPreauthHandshakeTimeoutMsFromEnv()).toBe(75);
-        process.env.GODSEYE_HANDSHAKE_TIMEOUT_MS = "";
+        process.env.OPENCLAW_HANDSHAKE_TIMEOUT_MS = "";
         expect(getPreauthHandshakeTimeoutMsFromEnv()).toBe(20);
       } finally {
         if (prevHandshakeTimeout === undefined) {
-          delete process.env.GODSEYE_HANDSHAKE_TIMEOUT_MS;
+          delete process.env.OPENCLAW_HANDSHAKE_TIMEOUT_MS;
         } else {
-          process.env.GODSEYE_HANDSHAKE_TIMEOUT_MS = prevHandshakeTimeout;
+          process.env.OPENCLAW_HANDSHAKE_TIMEOUT_MS = prevHandshakeTimeout;
         }
         if (prevTestHandshakeTimeout === undefined) {
-          delete process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS;
+          delete process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS;
         } else {
-          process.env.GODSEYE_TEST_HANDSHAKE_TIMEOUT_MS = prevTestHandshakeTimeout;
+          process.env.OPENCLAW_TEST_HANDSHAKE_TIMEOUT_MS = prevTestHandshakeTimeout;
         }
       }
     });
@@ -140,24 +143,24 @@ export function registerDefaultAuthTokenSuite(): void {
       for (const testCase of [
         {
           env: {
-            GODSEYE_VERSION: " ",
-            GODSEYE_SERVICE_VERSION: "2.4.6-service",
+            OPENCLAW_VERSION: " ",
+            OPENCLAW_SERVICE_VERSION: "2.4.6-service",
             npm_package_version: "1.0.0-package",
           },
           expectedVersion: VERSION,
         },
         {
           env: {
-            GODSEYE_VERSION: "9.9.9-cli",
-            GODSEYE_SERVICE_VERSION: "2.4.6-service",
+            OPENCLAW_VERSION: "9.9.9-cli",
+            OPENCLAW_SERVICE_VERSION: "2.4.6-service",
             npm_package_version: "1.0.0-package",
           },
           expectedVersion: "9.9.9-cli",
         },
         {
           env: {
-            GODSEYE_VERSION: " ",
-            GODSEYE_SERVICE_VERSION: "\t",
+            OPENCLAW_VERSION: " ",
+            OPENCLAW_SERVICE_VERSION: "\t",
             npm_package_version: "1.0.0-package",
           },
           expectedVersion: VERSION,
@@ -251,7 +254,7 @@ export function registerDefaultAuthTokenSuite(): void {
         scopes: [],
         clientId: GATEWAY_CLIENT_NAMES.TEST,
         clientMode: GATEWAY_CLIENT_MODES.TEST,
-        identityPath: path.join(os.tmpdir(), `godseye-test-device-${randomUUID()}.json`),
+        identityPath: path.join(os.tmpdir(), `openclaw-test-device-${randomUUID()}.json`),
         nonce,
       });
 

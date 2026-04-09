@@ -2,23 +2,23 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { createTestPluginApi } from "../../test/helpers/extensions/plugin-api.js";
+import { createTestPluginApi } from "../../test/helpers/plugins/plugin-api.js";
 import registerPhoneControl from "./index.js";
 import type {
-  GodsEyePluginApi,
-  GodsEyePluginCommandDefinition,
+  OpenClawPluginApi,
+  OpenClawPluginCommandDefinition,
   PluginCommandContext,
 } from "./runtime-api.js";
 
-const PHONE_CONTROL_STATE_PREFIX = "godseye-phone-control-test-";
+const PHONE_CONTROL_STATE_PREFIX = "openclaw-phone-control-test-";
 const WRITE_COMMANDS = ["calendar.add", "contacts.add", "reminders.add", "sms.send"] as const;
 
 function createApi(params: {
   stateDir: string;
   getConfig: () => Record<string, unknown>;
   writeConfig: (next: Record<string, unknown>) => Promise<void>;
-  registerCommand: (command: GodsEyePluginCommandDefinition) => void;
-}): GodsEyePluginApi {
+  registerCommand: (command: OpenClawPluginCommandDefinition) => void;
+}): OpenClawPluginApi {
   return createTestPluginApi({
     id: "phone-control",
     name: "phone-control",
@@ -33,9 +33,9 @@ function createApi(params: {
         loadConfig: () => params.getConfig(),
         writeConfigFile: (next: Record<string, unknown>) => params.writeConfig(next),
       },
-    } as GodsEyePluginApi["runtime"],
+    } as OpenClawPluginApi["runtime"],
     registerCommand: params.registerCommand,
-  }) as GodsEyePluginApi;
+  });
 }
 
 function createCommandContext(args: string): PluginCommandContext {
@@ -67,7 +67,7 @@ function createPhoneControlConfig(): Record<string, unknown> {
 
 async function withRegisteredPhoneControl(
   run: (params: {
-    command: GodsEyePluginCommandDefinition;
+    command: OpenClawPluginCommandDefinition;
     writeConfigFile: ReturnType<typeof vi.fn>;
     getConfig: () => Record<string, unknown>;
   }) => Promise<void>,
@@ -79,7 +79,7 @@ async function withRegisteredPhoneControl(
       config = next;
     });
 
-    let command: GodsEyePluginCommandDefinition | undefined;
+    let command: OpenClawPluginCommandDefinition | undefined;
     registerPhoneControl.register(
       createApi({
         stateDir,
@@ -110,7 +110,11 @@ describe("phone-control plugin", () => {
     await withRegisteredPhoneControl(async ({ command, writeConfigFile, getConfig }) => {
       expect(command.name).toBe("phone");
 
-      const res = await command.handler(createCommandContext("arm writes 30s"));
+      const res = await command.handler({
+        ...createCommandContext("arm writes 30s"),
+        channel: "webchat",
+        gatewayClientScopes: ["operator.admin"],
+      });
       const text = String(res?.text ?? "");
       const nodes = (
         getConfig().gateway as { nodes?: { allowCommands?: string[]; denyCommands?: string[] } }
@@ -139,6 +143,50 @@ describe("phone-control plugin", () => {
     });
   });
 
+  it("allows external channel callers without operator.admin to mutate phone control", async () => {
+    await withRegisteredPhoneControl(async ({ command, writeConfigFile }) => {
+      const res = await command.handler({
+        ...createCommandContext("arm writes 30s"),
+        channel: "telegram",
+      });
+
+      expect(String(res?.text ?? "")).toContain("Phone control: armed");
+      expect(writeConfigFile).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("allows external channel callers without operator.admin to disarm phone control", async () => {
+    await withRegisteredPhoneControl(async ({ command, writeConfigFile }) => {
+      const res = await command.handler({
+        ...createCommandContext("disarm"),
+        channel: "telegram",
+      });
+
+      expect(String(res?.text ?? "")).toContain("Phone control: disarmed.");
+      expect(writeConfigFile).not.toHaveBeenCalled();
+    });
+  });
+
+  it("regression: blocks non-webchat gateway callers with operator.write from arm/disarm", async () => {
+    await withRegisteredPhoneControl(async ({ command, writeConfigFile }) => {
+      const armRes = await command.handler({
+        ...createCommandContext("arm writes 30s"),
+        channel: "telegram",
+        gatewayClientScopes: ["operator.write"],
+      });
+      expect(String(armRes?.text ?? "")).toContain("requires operator.admin");
+      expect(writeConfigFile).not.toHaveBeenCalled();
+
+      const disarmRes = await command.handler({
+        ...createCommandContext("disarm"),
+        channel: "telegram",
+        gatewayClientScopes: ["operator.write"],
+      });
+      expect(String(disarmRes?.text ?? "")).toContain("requires operator.admin");
+      expect(writeConfigFile).not.toHaveBeenCalled();
+    });
+  });
+
   it("allows internal operator.admin callers to mutate phone control", async () => {
     await withRegisteredPhoneControl(async ({ command, writeConfigFile }) => {
       const res = await command.handler({
@@ -149,6 +197,25 @@ describe("phone-control plugin", () => {
 
       expect(String(res?.text ?? "")).toContain("sms.send");
       expect(writeConfigFile).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("allows external channel callers with operator.admin to disarm phone control", async () => {
+    await withRegisteredPhoneControl(async ({ command, writeConfigFile }) => {
+      await command.handler({
+        ...createCommandContext("arm writes 30s"),
+        channel: "webchat",
+        gatewayClientScopes: ["operator.admin"],
+      });
+
+      const res = await command.handler({
+        ...createCommandContext("disarm"),
+        channel: "telegram",
+        gatewayClientScopes: ["operator.admin"],
+      });
+
+      expect(String(res?.text ?? "")).toContain("disarmed");
+      expect(writeConfigFile).toHaveBeenCalledTimes(2);
     });
   });
 });

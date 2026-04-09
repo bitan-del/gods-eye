@@ -1,7 +1,7 @@
 import {
   createDefaultModelsPresetAppliers,
   type ModelApi,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 import {
   buildQianfanProvider,
@@ -11,7 +11,7 @@ import {
 
 export const QIANFAN_DEFAULT_MODEL_REF = `qianfan/${QIANFAN_DEFAULT_MODEL_ID}`;
 
-function resolveQianfanPreset(cfg: GodsEyeConfig): {
+function resolveQianfanPreset(cfg: OpenClawConfig): {
   api: ModelApi;
   baseUrl: string;
   defaultModels: NonNullable<ReturnType<typeof buildQianfanProvider>["models"]>;
@@ -39,7 +39,7 @@ function resolveQianfanPreset(cfg: GodsEyeConfig): {
 
 const qianfanPresetAppliers = createDefaultModelsPresetAppliers({
   primaryModelRef: QIANFAN_DEFAULT_MODEL_REF,
-  resolveParams: (cfg: GodsEyeConfig) => {
+  resolveParams: (cfg: OpenClawConfig) => {
     const preset = resolveQianfanPreset(cfg);
     return {
       providerId: "qianfan",
@@ -52,10 +52,10 @@ const qianfanPresetAppliers = createDefaultModelsPresetAppliers({
   },
 });
 
-export function applyQianfanProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyQianfanProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return qianfanPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyQianfanConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyQianfanConfig(cfg: OpenClawConfig): OpenClawConfig {
   return qianfanPresetAppliers.applyConfig(cfg);
 }

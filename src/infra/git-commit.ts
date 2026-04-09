@@ -2,8 +2,9 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { resolveGitHeadPath } from "./git-root.js";
-import { resolveGodsEyePackageRootSync } from "./godseye-root.js";
+import { resolveOpenClawPackageRootSync } from "./openclaw-root.js";
 
 const formatCommit = (value?: string | null) => {
   if (!value) {
@@ -17,7 +18,7 @@ const formatCommit = (value?: string | null) => {
   if (!match) {
     return null;
   }
-  return match[0].slice(0, 7).toLowerCase();
+  return normalizeLowercaseStringOrEmpty(match[0].slice(0, 7));
 };
 
 const cachedGitCommitBySearchDir = new Map<string, string | null>();
@@ -201,7 +202,7 @@ export const resolveCommitHash = (
   if (cachedGitCommitBySearchDir.has(searchDir)) {
     return cachedGitCommitBySearchDir.get(searchDir) ?? null;
   }
-  const packageRoot = resolveGodsEyePackageRootSync({
+  const packageRoot = resolveOpenClawPackageRootSync({
     cwd: options.cwd,
     moduleUrl: options.moduleUrl,
   });

@@ -2,7 +2,7 @@ import { Type } from "@sinclair/typebox";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 
 export type BraveConfig = {
   mode?: string;

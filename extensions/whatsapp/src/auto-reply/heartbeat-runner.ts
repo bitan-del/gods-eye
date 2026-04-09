@@ -1,34 +1,39 @@
-import { appendCronStyleCurrentTimeLine } from "godseye/plugin-sdk/agent-runtime";
-import { loadConfig } from "godseye/plugin-sdk/config-runtime";
-import {
-  loadSessionStore,
-  resolveSessionKey,
-  resolveStorePath,
-  updateSessionStore,
-} from "godseye/plugin-sdk/config-runtime";
-import { emitHeartbeatEvent, resolveIndicatorType } from "godseye/plugin-sdk/infra-runtime";
-import { resolveHeartbeatVisibility } from "godseye/plugin-sdk/infra-runtime";
-import {
-  hasOutboundReplyContent,
-  resolveSendableOutboundReplyParts,
-} from "godseye/plugin-sdk/reply-payload";
-import { resolveHeartbeatReplyPayload } from "godseye/plugin-sdk/reply-runtime";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
+import { newConnectionId } from "../reconnect.js";
 import {
   DEFAULT_HEARTBEAT_ACK_MAX_CHARS,
+  HEARTBEAT_TOKEN,
+  appendCronStyleCurrentTimeLine,
+  canonicalizeMainSessionAlias,
+  emitHeartbeatEvent,
+  formatError,
+  getChildLogger,
+  getReplyFromConfig,
+  hasOutboundReplyContent,
+  loadConfig,
+  loadSessionStore,
+  normalizeMainKey,
+  redactIdentifier,
   resolveHeartbeatPrompt,
+  resolveHeartbeatReplyPayload,
+  resolveHeartbeatVisibility,
+  resolveIndicatorType,
+  resolveSendableOutboundReplyParts,
+  resolveSessionKey,
+  resolveStorePath,
+  resolveWhatsAppHeartbeatRecipients,
+  sendMessageWhatsApp,
   stripHeartbeatToken,
-} from "godseye/plugin-sdk/reply-runtime";
-import { getReplyFromConfig } from "godseye/plugin-sdk/reply-runtime";
-import { HEARTBEAT_TOKEN } from "godseye/plugin-sdk/reply-runtime";
-import { normalizeMainKey } from "godseye/plugin-sdk/routing";
-import { getChildLogger } from "godseye/plugin-sdk/runtime-env";
-import { redactIdentifier } from "godseye/plugin-sdk/text-runtime";
-import { newConnectionId } from "../reconnect.js";
-import { resolveWhatsAppHeartbeatRecipients } from "../runtime-api.js";
-import { sendMessageWhatsApp } from "../send.js";
-import { formatError } from "../session.js";
-import { whatsappHeartbeatLog } from "./loggers.js";
+  updateSessionStore,
+  whatsappHeartbeatLog,
+} from "./heartbeat-runner.runtime.js";
 import { getSessionSnapshot } from "./session-snapshot.js";
+
+function resolveDefaultAgentIdFromConfig(cfg: ReturnType<typeof loadConfig>): string {
+  const agents = cfg.agents?.list ?? [];
+  const chosen = agents.find((agent) => agent?.default)?.id ?? agents[0]?.id ?? "main";
+  return normalizeOptionalLowercaseString(chosen) ?? "main";
+}
 
 export async function runWebHeartbeatOnce(opts: {
   cfg?: ReturnType<typeof loadConfig>;
@@ -82,7 +87,13 @@ export async function runWebHeartbeatOnce(opts: {
   const sessionCfg = cfg.session;
   const sessionScope = sessionCfg?.scope ?? "per-sender";
   const mainKey = normalizeMainKey(sessionCfg?.mainKey);
-  const sessionKey = resolveSessionKey(sessionScope, { From: to }, mainKey);
+  // Canonicalize so the written key matches what read paths produce (#29683).
+  const rawSessionKey = resolveSessionKey(sessionScope, { From: to }, mainKey);
+  const sessionKey = canonicalizeMainSessionAlias({
+    cfg,
+    agentId: resolveDefaultAgentIdFromConfig(cfg),
+    sessionKey: rawSessionKey,
+  });
   if (sessionId) {
     const storePath = resolveStorePath(cfg.session?.store);
     const store = loadSessionStore(storePath);
@@ -101,7 +112,7 @@ export async function runWebHeartbeatOnce(opts: {
       };
     });
   }
-  const sessionSnapshot = getSessionSnapshot(cfg, to, true);
+  const sessionSnapshot = getSessionSnapshot(cfg, to, true, { sessionKey });
   if (verbose) {
     heartbeatLogger.info(
       {
@@ -313,7 +324,7 @@ export async function runWebHeartbeatOnce(opts: {
 
 export function resolveHeartbeatRecipients(
   cfg: ReturnType<typeof loadConfig>,
-  opts: { to?: string; all?: boolean } = {},
+  opts: { to?: string; all?: boolean; accountId?: string } = {},
 ) {
   return resolveWhatsAppHeartbeatRecipients(cfg, opts);
 }

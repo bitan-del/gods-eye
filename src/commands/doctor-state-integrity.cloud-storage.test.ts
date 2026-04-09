@@ -12,8 +12,8 @@ describe("detectMacCloudSyncedStateDir", () => {
       "Library",
       "Mobile Documents",
       "com~apple~CloudDocs",
-      "Gods Eye",
-      ".godseye",
+      "OpenClaw",
+      ".openclaw",
     );
 
     const result = detectMacCloudSyncedStateDir(stateDir, {
@@ -28,7 +28,7 @@ describe("detectMacCloudSyncedStateDir", () => {
   });
 
   it("detects state dir under Library/CloudStorage", () => {
-    const stateDir = path.join(home, "Library", "CloudStorage", "Dropbox", "Gods Eye", ".godseye");
+    const stateDir = path.join(home, "Library", "CloudStorage", "Dropbox", "OpenClaw", ".openclaw");
 
     const result = detectMacCloudSyncedStateDir(stateDir, {
       platform: "darwin",
@@ -42,14 +42,14 @@ describe("detectMacCloudSyncedStateDir", () => {
   });
 
   it("detects cloud-synced target when state dir resolves via symlink", () => {
-    const symlinkPath = "/tmp/godseye-state";
+    const symlinkPath = "/tmp/openclaw-state";
     const resolvedCloudPath = path.join(
       home,
       "Library",
       "CloudStorage",
       "OneDrive-Personal",
-      "Gods Eye",
-      ".godseye",
+      "OpenClaw",
+      ".openclaw",
     );
 
     const result = detectMacCloudSyncedStateDir(symlinkPath, {
@@ -70,10 +70,10 @@ describe("detectMacCloudSyncedStateDir", () => {
       "Library",
       "CloudStorage",
       "OneDrive-Personal",
-      "Gods Eye",
-      ".godseye",
+      "OpenClaw",
+      ".openclaw",
     );
-    const resolvedLocalPath = path.join(home, ".godseye");
+    const resolvedLocalPath = path.join(home, ".openclaw");
 
     const result = detectMacCloudSyncedStateDir(symlinkPath, {
       platform: "darwin",
@@ -84,10 +84,10 @@ describe("detectMacCloudSyncedStateDir", () => {
     expect(result).toBeNull();
   });
 
-  it("anchors cloud detection to OS homedir when GODSEYE_HOME is overridden", () => {
-    const stateDir = path.join(home, "Library", "CloudStorage", "iCloud Drive", ".godseye");
-    const originalGodsEyeHome = process.env.GODSEYE_HOME;
-    process.env.GODSEYE_HOME = "/tmp/godseye-home-override";
+  it("anchors cloud detection to OS homedir when OPENCLAW_HOME is overridden", () => {
+    const stateDir = path.join(home, "Library", "CloudStorage", "iCloud Drive", ".openclaw");
+    const originalOpenClawHome = process.env.OPENCLAW_HOME;
+    process.env.OPENCLAW_HOME = "/tmp/openclaw-home-override";
     const homedirSpy = vi.spyOn(os, "homedir").mockReturnValue(home);
     try {
       const result = detectMacCloudSyncedStateDir(stateDir, {
@@ -100,10 +100,10 @@ describe("detectMacCloudSyncedStateDir", () => {
       });
     } finally {
       homedirSpy.mockRestore();
-      if (originalGodsEyeHome === undefined) {
-        delete process.env.GODSEYE_HOME;
+      if (originalOpenClawHome === undefined) {
+        delete process.env.OPENCLAW_HOME;
       } else {
-        process.env.GODSEYE_HOME = originalGodsEyeHome;
+        process.env.OPENCLAW_HOME = originalOpenClawHome;
       }
     }
   });
@@ -114,8 +114,8 @@ describe("detectMacCloudSyncedStateDir", () => {
       "Library",
       "Mobile Documents",
       "com~apple~CloudDocs",
-      "Gods Eye",
-      ".godseye",
+      "OpenClaw",
+      ".openclaw",
     );
 
     const result = detectMacCloudSyncedStateDir(stateDir, {

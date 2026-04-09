@@ -1,4 +1,3 @@
-import { resolveControlUiLinks } from "../../commands/onboard-helpers.js";
 import { formatConfigIssueLine } from "../../config/issue-format.js";
 import {
   resolveGatewayLaunchAgentLabel,
@@ -11,8 +10,8 @@ import {
   renderSystemdUnavailableHints,
 } from "../../daemon/systemd-hints.js";
 import { classifySystemdUnavailableDetail } from "../../daemon/systemd-unavailable.js";
+import { resolveControlUiLinks } from "../../gateway/control-ui-links.js";
 import { isWSLEnv } from "../../infra/wsl.js";
-import { getResolvedLoggerSettings } from "../../logging.js";
 import { defaultRuntime } from "../../runtime.js";
 import { colorize } from "../../terminal/theme.js";
 import { shortenHomePath } from "../../utils.js";
@@ -67,11 +66,8 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     ? okText(service.loadedText)
     : warnText(service.notLoadedText);
   defaultRuntime.log(`${label("Service:")} ${accent(service.label)} (${serviceStatus})`);
-  try {
-    const logFile = getResolvedLoggerSettings().file;
-    defaultRuntime.log(`${label("File logs:")} ${infoText(shortenHomePath(logFile))}`);
-  } catch {
-    // ignore missing config/log resolution
+  if (status.logFile) {
+    defaultRuntime.log(`${label("File logs:")} ${infoText(shortenHomePath(status.logFile))}`);
   }
   if (service.command?.programArguments?.length) {
     defaultRuntime.log(
@@ -102,7 +98,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     }
     defaultRuntime.error(
       warnText(
-        `Recommendation: run "${formatCliCommand("godseye doctor")}" (or "${formatCliCommand("godseye doctor --repair")}").`,
+        `Recommendation: run "${formatCliCommand("openclaw doctor")}" (or "${formatCliCommand("openclaw doctor --repair")}").`,
       ),
     );
   }
@@ -136,7 +132,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
       );
       defaultRuntime.error(
         errorText(
-          `Fix: rerun \`${formatCliCommand("godseye gateway install --force")}\` from the same --profile / GODSEYE_STATE_DIR you expect.`,
+          `Fix: rerun \`${formatCliCommand("openclaw gateway install --force")}\` from the same --profile / OPENCLAW_STATE_DIR you expect.`,
         ),
       );
     }
@@ -212,7 +208,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     );
     defaultRuntime.error(
       errorText(
-        `Fix: run ${formatCliCommand("godseye gateway restart")} and re-check with ${formatCliCommand("godseye gateway status --deep")}.`,
+        `Fix: run ${formatCliCommand("openclaw gateway restart")} and re-check with ${formatCliCommand("openclaw gateway status --deep")}.`,
       ),
     );
     spacer();
@@ -237,7 +233,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
 
   if (service.runtime?.missingUnit) {
     defaultRuntime.error(errorText("Service unit not found."));
-    for (const hint of renderRuntimeHints(service.runtime)) {
+    for (const hint of renderRuntimeHints(service.runtime, process.env, status.logFile)) {
       defaultRuntime.error(errorText(hint));
     }
   } else if (service.loaded && service.runtime?.status === "stopped") {
@@ -247,6 +243,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     for (const hint of renderRuntimeHints(
       service.runtime,
       service.command?.environment ?? process.env,
+      status.logFile,
     )) {
       defaultRuntime.error(errorText(hint));
     }
@@ -255,14 +252,14 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
 
   if (service.runtime?.cachedLabel) {
     const env = service.command?.environment ?? process.env;
-    const labelValue = resolveGatewayLaunchAgentLabel(env.GODSEYE_PROFILE);
+    const labelValue = resolveGatewayLaunchAgentLabel(env.OPENCLAW_PROFILE);
     defaultRuntime.error(
       errorText(
         `LaunchAgent label cached but plist missing. Clear with: launchctl bootout gui/$UID/${labelValue}`,
       ),
     );
     defaultRuntime.error(
-      errorText(`Then reinstall: ${formatCliCommand("godseye gateway install")}`),
+      errorText(`Then reinstall: ${formatCliCommand("openclaw gateway install")}`),
     );
     spacer();
   }
@@ -298,7 +295,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     }
     if (process.platform === "linux") {
       const env = service.command?.environment ?? process.env;
-      const unit = resolveGatewaySystemdServiceName(env.GODSEYE_PROFILE);
+      const unit = resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE);
       defaultRuntime.error(
         errorText(`Logs: journalctl --user -u ${unit}.service -n 200 --no-pager`),
       );
@@ -335,6 +332,6 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     spacer();
   }
 
-  defaultRuntime.log(`${label("Troubles:")} run ${formatCliCommand("godseye status")}`);
-  defaultRuntime.log(`${label("Troubleshooting:")} https://docs.gods-eye.org/troubleshooting`);
+  defaultRuntime.log(`${label("Troubles:")} run ${formatCliCommand("openclaw status")}`);
+  defaultRuntime.log(`${label("Troubleshooting:")} https://docs.openclaw.ai/troubleshooting`);
 }

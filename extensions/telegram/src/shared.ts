@@ -1,19 +1,14 @@
-import { resolveNormalizedAccountEntry } from "godseye/plugin-sdk/account-resolution";
+import { resolveNormalizedAccountEntry } from "godseye/plugin-sdk/account-core";
+import { normalizeAccountId } from "godseye/plugin-sdk/account-id";
 import { formatAllowFromLowercase } from "godseye/plugin-sdk/allow-from";
 import {
   adaptScopedAccountAccessor,
   createScopedChannelConfigAdapter,
 } from "godseye/plugin-sdk/channel-config-helpers";
-import { createChannelPluginBase } from "godseye/plugin-sdk/core";
+import { createChannelPluginBase, type ChannelPlugin } from "godseye/plugin-sdk/channel-core";
+import { getChatChannelMeta } from "godseye/plugin-sdk/channel-plugin-common";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/routing";
-import {
-  buildChannelConfigSchema,
-  getChatChannelMeta,
-  normalizeAccountId,
-  TelegramConfigSchema,
-  type ChannelPlugin,
-  type GodsEyeConfig,
-} from "../runtime-api.js";
 import { inspectTelegramAccount } from "./account-inspect.js";
 import {
   listTelegramAccountIds,
@@ -21,11 +16,21 @@ import {
   resolveTelegramAccount,
   type ResolvedTelegramAccount,
 } from "./accounts.js";
+import {
+  buildTelegramCommandsListChannelData,
+  buildTelegramModelBrowseChannelData,
+  buildTelegramModelsListChannelData,
+  buildTelegramModelsProviderChannelData,
+} from "./command-ui.js";
+import { TelegramChannelConfigSchema } from "./config-schema.js";
+import { telegramDoctor } from "./doctor.js";
+import { collectRuntimeConfigAssignments, secretTargetRegistryEntries } from "./secret-contract.js";
+import { namedAccountPromotionKeys, singleAccountKeysToMove } from "./setup-contract.js";
 
 export const TELEGRAM_CHANNEL = "telegram" as const;
 
 export function findTelegramTokenOwnerAccountId(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
 }): string | null {
   const normalizedAccountId = normalizeAccountId(params.accountId);
@@ -70,9 +75,9 @@ export function formatDuplicateTelegramTokenReason(params: {
  *   2. The config has an explicit `accounts` section with entries, AND
  *   3. The accountId is not found in that `accounts` section.
  *
- * See: https://github.com/bitan-del/gods-eye/issues/53876
+ * See: https://github.com/openclaw/openclaw/issues/53876
  */
-function isBlockedByMultiBotGuard(cfg: GodsEyeConfig, accountId: string): boolean {
+function isBlockedByMultiBotGuard(cfg: OpenClawConfig, accountId: string): boolean {
   if (normalizeAccountId(accountId) === DEFAULT_ACCOUNT_ID) {
     return false;
   }
@@ -109,9 +114,19 @@ export function createTelegramPluginBase(params: {
   setup: NonNullable<ChannelPlugin<ResolvedTelegramAccount>["setup"]>;
 }): Pick<
   ChannelPlugin<ResolvedTelegramAccount>,
-  "id" | "meta" | "setupWizard" | "capabilities" | "reload" | "configSchema" | "config" | "setup"
+  | "id"
+  | "meta"
+  | "setupWizard"
+  | "capabilities"
+  | "commands"
+  | "doctor"
+  | "reload"
+  | "configSchema"
+  | "config"
+  | "setup"
+  | "secrets"
 > {
-  return createChannelPluginBase({
+  const base = createChannelPluginBase({
     id: TELEGRAM_CHANNEL,
     meta: {
       ...getChatChannelMeta(TELEGRAM_CHANNEL),
@@ -127,16 +142,27 @@ export function createTelegramPluginBase(params: {
       nativeCommands: true,
       blockStreaming: true,
     },
+    commands: {
+      nativeCommandsAutoEnabled: true,
+      nativeSkillsAutoEnabled: true,
+      buildCommandsListChannelData: buildTelegramCommandsListChannelData,
+      buildModelsProviderChannelData: buildTelegramModelsProviderChannelData,
+      buildModelsListChannelData: buildTelegramModelsListChannelData,
+      buildModelBrowseChannelData: buildTelegramModelBrowseChannelData,
+    },
+    doctor: telegramDoctor,
     reload: { configPrefixes: ["channels.telegram"] },
-    configSchema: buildChannelConfigSchema(TelegramConfigSchema),
+    configSchema: TelegramChannelConfigSchema,
     config: {
       ...telegramConfigAdapter,
+      hasConfiguredState: ({ env }) =>
+        typeof env?.TELEGRAM_BOT_TOKEN === "string" && env.TELEGRAM_BOT_TOKEN.trim().length > 0,
       isConfigured: (account, cfg) => {
         // Use inspectTelegramAccount for a complete token resolution that includes
         // channel-level fallback paths not available in resolveTelegramAccount.
         // This ensures binding-created accountIds that inherit the channel-level
         // token are correctly detected as configured.
-        // See: https://github.com/bitan-del/gods-eye/issues/53876
+        // See: https://github.com/openclaw/openclaw/issues/53876
         if (isBlockedByMultiBotGuard(cfg, account.accountId)) {
           return false;
         }
@@ -194,9 +220,30 @@ export function createTelegramPluginBase(params: {
         };
       },
     },
-    setup: params.setup,
-  }) as Pick<
+    setup: {
+      ...params.setup,
+      namedAccountPromotionKeys,
+      singleAccountKeysToMove,
+    },
+  });
+  return {
+    ...base,
+    secrets: {
+      secretTargetRegistryEntries,
+      collectRuntimeConfigAssignments,
+    },
+  } as Pick<
     ChannelPlugin<ResolvedTelegramAccount>,
-    "id" | "meta" | "setupWizard" | "capabilities" | "reload" | "configSchema" | "config" | "setup"
+    | "id"
+    | "meta"
+    | "setupWizard"
+    | "capabilities"
+    | "commands"
+    | "doctor"
+    | "reload"
+    | "configSchema"
+    | "config"
+    | "setup"
+    | "secrets"
   >;
 }

@@ -79,6 +79,20 @@ function sanitizeBundledManifestForRuntimeInstall(pluginDir) {
     changed = true;
   }
 
+  // Remove any workspace: protocol refs from devDependencies
+  // (npm doesn't understand pnpm workspace protocol)
+  if (packageJson.devDependencies) {
+    for (const [key, value] of Object.entries(packageJson.devDependencies)) {
+      if (typeof value === "string" && value.startsWith("workspace:")) {
+        delete packageJson.devDependencies[key];
+        changed = true;
+      }
+    }
+    if (Object.keys(packageJson.devDependencies).length === 0) {
+      delete packageJson.devDependencies;
+    }
+  }
+
   if (changed) {
     writeJson(manifestPath, packageJson);
   }

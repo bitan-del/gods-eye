@@ -1,15 +1,15 @@
-import {
-  listSkillCommandsForAgents,
-  parseStrictPositiveInteger,
-  type GodsEyeConfig,
-  type RuntimeEnv,
-} from "../runtime-api.js";
 import type { ResolvedMattermostAccount } from "./accounts.js";
 import {
   fetchMattermostUserTeams,
   normalizeMattermostBaseUrl,
   type MattermostClient,
 } from "./client.js";
+import {
+  listSkillCommandsForAgents,
+  parseStrictPositiveInteger,
+  type OpenClawConfig,
+  type RuntimeEnv,
+} from "./runtime-api.js";
 import {
   DEFAULT_COMMAND_SPECS,
   isSlashCommandsEnabled,
@@ -27,7 +27,7 @@ function isLoopbackHost(hostname: string): boolean {
 }
 
 function buildSlashCommands(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   runtime: RuntimeEnv;
   nativeSkills: boolean;
 }): MattermostCommandSpec[] {
@@ -36,10 +36,12 @@ function buildSlashCommands(params: {
     return commandsToRegister;
   }
   try {
-    const skillCommands = listSkillCommandsForAgents({ cfg: params.cfg as any });
+    const skillCommands = listSkillCommandsForAgents({ cfg: params.cfg });
     for (const spec of skillCommands) {
       const name = typeof spec.name === "string" ? spec.name.trim() : "";
-      if (!name) continue;
+      if (!name) {
+        continue;
+      }
       const trigger = name.startsWith("oc_") ? name : `oc_${name}`;
       commandsToRegister.push({
         trigger,
@@ -134,7 +136,7 @@ async function registerSlashCommandsAcrossTeams(params: {
 
 export async function registerMattermostMonitorSlashCommands(params: {
   client: MattermostClient;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   runtime: RuntimeEnv;
   account: ResolvedMattermostAccount;
   baseUrl: string;
@@ -150,7 +152,7 @@ export async function registerMattermostMonitorSlashCommands(params: {
 
   try {
     const teams = await fetchMattermostUserTeams(params.client, params.botUserId);
-    const envPort = parseStrictPositiveInteger(process.env.GODSEYE_GATEWAY_PORT?.trim());
+    const envPort = parseStrictPositiveInteger(process.env.OPENCLAW_GATEWAY_PORT?.trim());
     const slashGatewayPort = envPort ?? params.cfg.gateway?.port ?? 18789;
     const slashCallbackUrl = resolveCallbackUrl({
       config: slashConfig,

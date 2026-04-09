@@ -2,7 +2,7 @@
  * Twitch channel plugin types.
  *
  * This file defines Twitch-specific types. Generic channel types are imported
- * from GodsEye core.
+ * from OpenClaw core.
  */
 
 import type {
@@ -19,7 +19,7 @@ import type {
   ChannelResolveKind,
   ChannelResolveResult,
   ChannelStatusAdapter,
-  GodsEyeConfig,
+  OpenClawConfig,
   OutboundDeliveryResult,
   RuntimeEnv,
 } from "../runtime-api.js";
@@ -132,10 +132,10 @@ export type {
   OutboundDeliveryResult,
 };
 
-import type { z } from "zod";
+import type { z } from "godseye/plugin-sdk/zod";
 // Import and re-export the schema type
 import type { TwitchConfigSchema } from "./config-schema.js";
 export type TwitchConfig = z.infer<typeof TwitchConfigSchema>;
 
-export type { GodsEyeConfig };
+export type { OpenClawConfig };
 export type { RuntimeEnv };

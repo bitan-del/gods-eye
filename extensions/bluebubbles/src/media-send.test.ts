@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { sendBlueBubblesMedia } from "./media-send.js";
-import type { GodsEyeConfig, PluginRuntime } from "./runtime-api.js";
+import type { OpenClawConfig, PluginRuntime } from "./runtime-api.js";
 import { setBlueBubblesRuntime } from "./runtime.js";
 
 const sendBlueBubblesAttachmentMock = vi.hoisted(() => vi.fn());
@@ -19,7 +19,7 @@ vi.mock("./send.js", () => ({
   sendMessageBlueBubbles: sendMessageBlueBubblesMock,
 }));
 
-vi.mock("./monitor.js", () => ({
+vi.mock("./monitor-reply-cache.js", () => ({
   resolveBlueBubblesMessageId: resolveBlueBubblesMessageIdMock,
 }));
 
@@ -54,18 +54,18 @@ function createMockRuntime(): { runtime: PluginRuntime; mocks: RuntimeMocks } {
   };
 }
 
-function createConfig(overrides?: Record<string, unknown>): GodsEyeConfig {
+function createConfig(overrides?: Record<string, unknown>): OpenClawConfig {
   return {
     channels: {
       bluebubbles: {
         ...overrides,
       },
     },
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig;
 }
 
 async function makeTempDir(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-bb-media-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-bb-media-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -82,7 +82,7 @@ async function makeTempFile(
 }
 
 async function sendLocalMedia(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   mediaPath: string;
   accountId?: string;
 }) {
@@ -95,7 +95,7 @@ async function sendLocalMedia(params: {
 }
 
 async function expectRejectedLocalMedia(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   mediaPath: string;
   error: RegExp;
   accountId?: string;
@@ -112,7 +112,7 @@ async function expectRejectedLocalMedia(params: {
 }
 
 async function expectAllowedLocalMedia(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   mediaPath: string;
   expectedAttachment: Record<string, unknown>;
   accountId?: string;

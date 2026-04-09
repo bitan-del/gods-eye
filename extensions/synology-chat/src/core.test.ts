@@ -1,13 +1,12 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import {
   createPluginSetupWizardConfigure,
   createTestWizardPrompter,
   runSetupWizardConfigure,
   type WizardPrompter,
-} from "../../../test/helpers/extensions/setup-wizard.js";
+} from "../../../test/helpers/plugins/setup-wizard.js";
 import { listAccountIds, resolveAccount } from "./accounts.js";
-import { synologyChatPlugin } from "./channel.js";
 import { SynologyChatChannelConfigSchema } from "./config-schema.js";
 import {
   authorizeUserForDm,
@@ -17,8 +16,21 @@ import {
   validateToken,
 } from "./security.js";
 import { buildSynologyChatInboundSessionKey } from "./session-key.js";
+import { synologyChatSetupWizard } from "./setup-surface.js";
 
-const synologyChatConfigure = createPluginSetupWizardConfigure(synologyChatPlugin);
+const synologyChatSetupPlugin = {
+  id: "synology-chat",
+  meta: { label: "Synology Chat" },
+  setupWizard: synologyChatSetupWizard,
+  config: {
+    listAccountIds,
+    defaultAccountId: () => "default",
+    resolveAllowFrom: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId?: string }) =>
+      resolveAccount(cfg, accountId).allowedUserIds,
+  },
+};
+
+const synologyChatConfigure = createPluginSetupWizardConfigure(synologyChatSetupPlugin);
 const originalEnv = { ...process.env };
 
 describe("synology-chat core", () => {
@@ -30,7 +42,7 @@ describe("synology-chat core", () => {
     delete process.env.SYNOLOGY_NAS_HOST;
     delete process.env.SYNOLOGY_ALLOWED_USER_IDS;
     delete process.env.SYNOLOGY_RATE_LIMIT;
-    delete process.env.GODSEYE_BOT_NAME;
+    delete process.env.OPENCLAW_BOT_NAME;
   });
 
   it("exports dangerouslyAllowNameMatching in the JSON schema", () => {
@@ -88,7 +100,7 @@ describe("synology-chat core", () => {
 
     const result = await runSetupWizardConfigure({
       configure: synologyChatConfigure,
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       prompter,
       options: {},
     });
@@ -122,7 +134,7 @@ describe("synology-chat core", () => {
 
     const result = await runSetupWizardConfigure({
       configure: synologyChatConfigure,
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       prompter,
       options: {},
       forceAllowFrom: true,
@@ -177,14 +189,14 @@ describe("synology-chat account resolution", () => {
     expect(account.dangerouslyAllowInheritedWebhookPath).toBe(false);
     expect(account.dmPolicy).toBe("allowlist");
     expect(account.rateLimitPerMinute).toBe(30);
-    expect(account.botName).toBe("Gods Eye");
+    expect(account.botName).toBe("OpenClaw");
   });
 
   it("uses env var fallbacks", () => {
     process.env.SYNOLOGY_CHAT_TOKEN = "env-tok";
     process.env.SYNOLOGY_CHAT_INCOMING_URL = "https://nas/incoming";
     process.env.SYNOLOGY_NAS_HOST = "192.0.2.1";
-    process.env.GODSEYE_BOT_NAME = "TestBot";
+    process.env.OPENCLAW_BOT_NAME = "TestBot";
 
     const cfg = { channels: { "synology-chat": {} } };
     const account = resolveAccount(cfg);

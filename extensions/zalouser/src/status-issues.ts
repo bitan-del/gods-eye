@@ -35,7 +35,7 @@ export function collectZalouserStatusIssues(
         accountId,
         kind: "auth",
         message: "Not authenticated (no saved Zalo session).",
-        fix: "Run: godseye channels login --channel zalouser",
+        fix: "Run: openclaw channels login --channel zalouser",
       });
       continue;
     }

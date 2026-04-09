@@ -1,4 +1,5 @@
-import type { GodsEyeConfig, SlackSlashCommandConfig } from "godseye/plugin-sdk/config-runtime";
+import type { PluginRuntime } from "godseye/plugin-sdk/channel-core";
+import type { OpenClawConfig, SlackSlashCommandConfig } from "godseye/plugin-sdk/config-runtime";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import type { SlackFile, SlackMessageEvent } from "../types.js";
 
@@ -7,8 +8,9 @@ export type MonitorSlackOpts = {
   appToken?: string;
   accountId?: string;
   mode?: "socket" | "http";
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   runtime?: RuntimeEnv;
+  channelRuntime?: PluginRuntime["channel"];
   abortSignal?: AbortSignal;
   mediaMaxMb?: number;
   slashCommand?: SlackSlashCommandConfig;

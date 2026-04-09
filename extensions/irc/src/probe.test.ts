@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { probeIrc } from "./probe.js";
 
 const resolveIrcAccountMock = vi.hoisted(() => vi.fn());
 const buildIrcConnectOptionsMock = vi.hoisted(() => vi.fn());
@@ -16,9 +17,17 @@ vi.mock("./client.js", () => ({
   connectIrcClient: connectIrcClientMock,
 }));
 
-import { probeIrc } from "./probe.js";
-
 describe("probeIrc", () => {
+  beforeEach(() => {
+    resolveIrcAccountMock.mockReset();
+    buildIrcConnectOptionsMock.mockReset();
+    connectIrcClientMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("returns a configuration error when the IRC account is incomplete", async () => {
     resolveIrcAccountMock.mockReturnValue({
       configured: false,
@@ -45,7 +54,7 @@ describe("probeIrc", () => {
       host: "irc.libera.chat",
       port: 6697,
       tls: true,
-      nick: "godseye",
+      nick: "openclaw",
     });
     buildIrcConnectOptionsMock.mockReturnValue({ host: "irc.libera.chat" });
     const quit = vi.fn();
@@ -64,7 +73,7 @@ describe("probeIrc", () => {
         host: "irc.libera.chat",
         port: 6697,
         tls: true,
-        nick: "godseye",
+        nick: "openclaw",
         latencyMs: 45,
       });
       expect(quit).toHaveBeenCalledWith("probe");
@@ -79,7 +88,7 @@ describe("probeIrc", () => {
       host: "irc.libera.chat",
       port: 6667,
       tls: false,
-      nick: "godseye",
+      nick: "openclaw",
     });
     buildIrcConnectOptionsMock.mockReturnValue({ host: "irc.libera.chat" });
     connectIrcClientMock.mockRejectedValue({ code: "ECONNREFUSED" });
@@ -89,7 +98,7 @@ describe("probeIrc", () => {
       host: "irc.libera.chat",
       port: 6667,
       tls: false,
-      nick: "godseye",
+      nick: "openclaw",
       error: JSON.stringify({ code: "ECONNREFUSED" }),
     });
   });

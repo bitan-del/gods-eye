@@ -1,9 +1,9 @@
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { ALLOWED_LOG_LEVELS, type LogLevel, tryParseLogLevel } from "./levels.js";
 import { loggingState } from "./state.js";
 
 export function resolveEnvLogLevelOverride(): LogLevel | undefined {
-  const raw = process.env.GODSEYE_LOG_LEVEL;
-  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  const trimmed = normalizeOptionalString(process.env.OPENCLAW_LOG_LEVEL) ?? "";
   if (!trimmed) {
     loggingState.invalidEnvLogLevelValue = null;
     return undefined;
@@ -16,7 +16,7 @@ export function resolveEnvLogLevelOverride(): LogLevel | undefined {
   if (loggingState.invalidEnvLogLevelValue !== trimmed) {
     loggingState.invalidEnvLogLevelValue = trimmed;
     process.stderr.write(
-      `[godseye] Ignoring invalid GODSEYE_LOG_LEVEL="${trimmed}" (allowed: ${ALLOWED_LOG_LEVELS.join("|")}).\n`,
+      `[openclaw] Ignoring invalid OPENCLAW_LOG_LEVEL="${trimmed}" (allowed: ${ALLOWED_LOG_LEVELS.join("|")}).\n`,
     );
   }
   return undefined;

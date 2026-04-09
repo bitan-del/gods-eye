@@ -2,7 +2,9 @@ import type { AgentTool, AgentToolResult } from "@mariozechner/pi-agent-core";
 import type { TSchema } from "@sinclair/typebox";
 import type { MsgContext } from "../../auto-reply/templating.js";
 import type { ReplyPayload } from "../../auto-reply/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import type { MarkdownTableMode } from "../../config/types.base.js";
+import type { OutboundMediaAccess } from "../../media/load-options.js";
 import type { PollInput } from "../../polls.js";
 import type { GatewayClientMode, GatewayClientName } from "../../utils/message-channel.js";
 import type { ChatType } from "../chat-type.js";
@@ -12,6 +14,12 @@ import type { ChannelMessageCapability } from "./message-capabilities.js";
 
 export type ChannelId = ChatChannelId | (string & {});
 
+export type ChannelExposure = {
+  configured?: boolean;
+  setup?: boolean;
+  docs?: boolean;
+};
+
 export type ChannelOutboundTargetMode = "explicit" | "implicit" | "heartbeat";
 
 /** Agent tool registered by a channel plugin. */
@@ -20,7 +28,7 @@ export type ChannelAgentTool = AgentTool<TSchema, unknown> & {
 };
 
 /** Lazy agent-tool factory used when tool availability depends on config. */
-export type ChannelAgentToolFactory = (params: { cfg?: GodsEyeConfig }) => ChannelAgentTool[];
+export type ChannelAgentToolFactory = (params: { cfg?: OpenClawConfig }) => ChannelAgentTool[];
 
 /**
  * Discovery-time inputs passed to channel action adapters when the core is
@@ -29,7 +37,7 @@ export type ChannelAgentToolFactory = (params: { cfg?: GodsEyeConfig }) => Chann
  * tool params or runtime handles.
  */
 export type ChannelMessageActionDiscoveryContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   currentChannelId?: string | null;
   currentChannelProvider?: string | null;
   currentThreadTs?: string | null;
@@ -82,11 +90,15 @@ export type ChannelSetupInput = {
   audience?: string;
   useEnv?: boolean;
   homeserver?: string;
+  dangerouslyAllowPrivateNetwork?: boolean;
+  /** Compatibility alias for legacy setup callers; prefer dangerouslyAllowPrivateNetwork. */
   allowPrivateNetwork?: boolean;
+  proxy?: string;
   userId?: string;
   accessToken?: string;
   password?: string;
   deviceName?: string;
+  avatarUrl?: string;
   initialSyncLimit?: number;
   ship?: string;
   url?: string;
@@ -115,7 +127,14 @@ export type ChannelAccountState =
 
 export type ChannelHeartbeatDeps = {
   webAuthExists?: () => Promise<boolean>;
-  hasActiveWebListener?: () => boolean;
+  hasActiveWebListener?: (accountId?: string) => boolean;
+};
+
+export type ChannelLegacyStateMigrationPlan = {
+  kind: "copy" | "move";
+  label: string;
+  sourcePath: string;
+  targetPath: string;
 };
 
 /** User-facing metadata used in docs, pickers, and setup surfaces. */
@@ -127,17 +146,20 @@ export type ChannelMeta = {
   docsLabel?: string;
   blurb: string;
   order?: number;
-  aliases?: string[];
+  aliases?: readonly string[];
   selectionDocsPrefix?: string;
   selectionDocsOmitLabel?: boolean;
-  selectionExtras?: string[];
+  selectionExtras?: readonly string[];
   detailLabel?: string;
   systemImage?: string;
+  markdownCapable?: boolean;
+  exposure?: ChannelExposure;
   showConfigured?: boolean;
+  showInSetup?: boolean;
   quickstartAllowFrom?: boolean;
   forceAccountBinding?: boolean;
   preferSessionLookupForAnnounceTarget?: boolean;
-  preferOver?: string[];
+  preferOver?: readonly string[];
 };
 
 /** Snapshot row returned by channel status and lifecycle surfaces. */
@@ -214,7 +236,7 @@ export type ChannelLogSink = {
 };
 
 export type ChannelGroupContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   groupId?: string | null;
   /** Human label for channel-like group conversations (e.g. #general). */
   groupChannel?: string | null;
@@ -252,7 +274,7 @@ export type ChannelSecurityDmPolicy = {
 };
 
 export type ChannelSecurityContext<ResolvedAccount = unknown> = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   account: ResolvedAccount;
 };
@@ -260,18 +282,18 @@ export type ChannelSecurityContext<ResolvedAccount = unknown> = {
 export type ChannelMentionAdapter = {
   stripRegexes?: (params: {
     ctx: MsgContext;
-    cfg: GodsEyeConfig | undefined;
+    cfg: OpenClawConfig | undefined;
     agentId?: string;
   }) => RegExp[];
   stripPatterns?: (params: {
     ctx: MsgContext;
-    cfg: GodsEyeConfig | undefined;
+    cfg: OpenClawConfig | undefined;
     agentId?: string;
   }) => string[];
   stripMentions?: (params: {
     text: string;
     ctx: MsgContext;
-    cfg: GodsEyeConfig | undefined;
+    cfg: OpenClawConfig | undefined;
     agentId?: string;
   }) => string;
 };
@@ -290,7 +312,7 @@ export type ChannelStructuredComponents = unknown[];
 export type ChannelCrossContextComponentsFactory = (params: {
   originLabel: string;
   message: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }) => ChannelStructuredComponents;
 
@@ -321,10 +343,10 @@ export type ChannelOutboundSessionRoute = {
 
 export type ChannelThreadingAdapter = {
   resolveReplyToMode?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     chatType?: string | null;
-  }) => "off" | "first" | "all";
+  }) => "off" | "first" | "all" | "batched";
   /**
    * When replyToMode is "off", allow explicit reply tags/directives to keep replyToId.
    *
@@ -333,30 +355,30 @@ export type ChannelThreadingAdapter = {
   allowExplicitReplyTagsWhenOff?: boolean;
   /**
    * Deprecated alias for allowExplicitReplyTagsWhenOff.
-   * Kept for compatibility with older extensions/docks.
+   * Kept for compatibility with older plugin surfaces.
    */
   allowTagsWhenOff?: boolean;
   buildToolContext?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     context: ChannelThreadingContext;
     hasRepliedRef?: { value: boolean };
   }) => ChannelThreadingToolContext | undefined;
   resolveAutoThreadId?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     to: string;
     toolContext?: ChannelThreadingToolContext;
     replyToId?: string | null;
   }) => string | undefined;
   resolveReplyTransport?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     threadId?: string | number | null;
     replyToId?: string | null;
   }) => ChannelReplyTransport | null;
   resolveFocusedBinding?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string | null;
     context: ChannelThreadingContext;
   }) => ChannelFocusedBindingContext | null;
@@ -381,7 +403,7 @@ export type ChannelThreadingToolContext = {
   currentChannelProvider?: ChannelId;
   currentThreadTs?: string;
   currentMessageId?: string | number;
-  replyToMode?: "off" | "first" | "all";
+  replyToMode?: "off" | "first" | "all" | "batched";
   hasRepliedRef?: { value: boolean };
   /**
    * When true, skip cross-context decoration (e.g., "[from X]" prefix).
@@ -394,6 +416,72 @@ export type ChannelThreadingToolContext = {
 /** Channel-owned messaging helpers for target parsing, routing, and payload shaping. */
 export type ChannelMessagingAdapter = {
   normalizeTarget?: (raw: string) => string | undefined;
+  defaultMarkdownTableMode?: MarkdownTableMode;
+  normalizeExplicitSessionKey?: (params: {
+    sessionKey: string;
+    ctx: MsgContext;
+  }) => string | undefined;
+  deriveLegacySessionChatType?: (sessionKey: string) => "direct" | "group" | "channel" | undefined;
+  isLegacyGroupSessionKey?: (key: string) => boolean;
+  canonicalizeLegacySessionKey?: (params: {
+    key: string;
+    agentId: string;
+  }) => string | null | undefined;
+  resolveLegacyGroupSessionKey?: (ctx: MsgContext) => {
+    key: string;
+    channel: string;
+    id: string;
+    chatType: "group" | "channel";
+  } | null;
+  resolveInboundAttachmentRoots?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => string[];
+  resolveRemoteInboundAttachmentRoots?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => string[];
+  resolveInboundConversation?: (params: {
+    from?: string;
+    to?: string;
+    conversationId?: string;
+    threadId?: string | number;
+    isGroup: boolean;
+  }) => {
+    conversationId?: string;
+    parentConversationId?: string;
+  } | null;
+  resolveDeliveryTarget?: (params: { conversationId: string; parentConversationId?: string }) => {
+    to?: string;
+    threadId?: string;
+  } | null;
+  /**
+   * Canonical plugin-owned session conversation grammar.
+   * Use this when the provider encodes thread or scoped-conversation semantics
+   * inside `rawId` (for example Telegram topics or Feishu sender scopes).
+   * Return `baseConversationId` and `parentConversationCandidates` here when
+   * you can so parsing and inheritance stay in one place.
+   * `parentConversationCandidates`, when present, should be ordered from the
+   * narrowest parent to the broadest/base conversation.
+   * Bundled plugins that need the same grammar before runtime bootstrap can
+   * mirror this contract through a top-level `session-key-api.ts` surface.
+   */
+  resolveSessionConversation?: (params: { kind: "group" | "channel"; rawId: string }) => {
+    id: string;
+    threadId?: string | null;
+    baseConversationId?: string | null;
+    parentConversationCandidates?: string[];
+  } | null;
+  /**
+   * Legacy compatibility hook for parent fallbacks when a plugin does not need
+   * to customize `id` or `threadId`. Core only uses this when
+   * `resolveSessionConversation(...)` does not return
+   * `parentConversationCandidates`.
+   */
+  resolveParentConversationCandidates?: (params: {
+    kind: "group" | "channel";
+    rawId: string;
+  }) => string[] | null;
   resolveSessionTarget?: (params: {
     kind: "group" | "channel";
     id: string;
@@ -410,7 +498,15 @@ export type ChannelMessagingAdapter = {
    */
   inferTargetChatType?: (params: { to: string }) => ChatType | undefined;
   buildCrossContextComponents?: ChannelCrossContextComponentsFactory;
-  enableInteractiveReplies?: (params: { cfg: GodsEyeConfig; accountId?: string | null }) => boolean;
+  transformReplyPayload?: (params: {
+    payload: ReplyPayload;
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => ReplyPayload | null;
+  enableInteractiveReplies?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => boolean;
   hasStructuredReplyPayload?: (params: { payload: ReplyPayload }) => boolean;
   targetResolver?: {
     looksLikeId?: (raw: string, normalized?: string) => boolean;
@@ -420,7 +516,7 @@ export type ChannelMessagingAdapter = {
      * resolution. This should complement directory lookup, not duplicate it.
      */
     resolveTarget?: (params: {
-      cfg: GodsEyeConfig;
+      cfg: OpenClawConfig;
       accountId?: string | null;
       input: string;
       normalized: string;
@@ -442,10 +538,11 @@ export type ChannelMessagingAdapter = {
    * Keep session-key orchestration in core and channel-native routing rules here.
    */
   resolveOutboundSessionRoute?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     agentId: string;
     accountId?: string | null;
     target: string;
+    currentSessionKey?: string;
     resolvedTarget?: {
       to: string;
       kind: ChannelDirectoryEntryKind | "channel";
@@ -458,7 +555,21 @@ export type ChannelMessagingAdapter = {
 };
 
 export type ChannelAgentPromptAdapter = {
-  messageToolHints?: (params: { cfg: GodsEyeConfig; accountId?: string | null }) => string[];
+  messageToolHints?: (params: { cfg: OpenClawConfig; accountId?: string | null }) => string[];
+  messageToolCapabilities?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => string[] | undefined;
+  inboundFormattingHints?: (params: { accountId?: string | null }) =>
+    | {
+        text_markup: string;
+        rules: string[];
+      }
+    | undefined;
+  reactionGuidance?: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string | null;
+  }) => { level: "minimal" | "extensive"; channelLabel?: string } | undefined;
 };
 
 export type ChannelDirectoryEntryKind = "user" | "group" | "channel";
@@ -479,9 +590,11 @@ export type ChannelMessageActionName = ChannelMessageActionNameFromList;
 export type ChannelMessageActionContext = {
   channel: ChannelId;
   action: ChannelMessageActionName;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   params: Record<string, unknown>;
+  mediaAccess?: OutboundMediaAccess;
   mediaLocalRoots?: readonly string[];
+  mediaReadFile?: (filePath: string) => Promise<Buffer>;
   accountId?: string | null;
   /**
    * Trusted sender id from inbound context. This is server-injected and must
@@ -520,6 +633,21 @@ export type ChannelMessageActionAdapter = {
     params: ChannelMessageActionDiscoveryContext,
   ) => ChannelMessageToolDiscovery | null | undefined;
   supportsAction?: (params: { action: ChannelMessageActionName }) => boolean;
+  resolveCliActionRequest?: (params: {
+    action: ChannelMessageActionName;
+    args: Record<string, unknown>;
+  }) => {
+    action: ChannelMessageActionName;
+    args: Record<string, unknown>;
+  };
+  messageActionTargetAliases?: Partial<
+    Record<
+      ChannelMessageActionName,
+      {
+        aliases: string[];
+      }
+    >
+  >;
   requiresTrustedRequesterSender?: (params: {
     action: ChannelMessageActionName;
     toolContext?: ChannelThreadingToolContext;
@@ -542,7 +670,7 @@ export type ChannelPollResult = {
 
 /** Shared poll input after core has normalized the common poll model. */
 export type ChannelPollContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   poll: PollInput;
   accountId?: string | null;

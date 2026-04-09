@@ -1,11 +1,10 @@
-import { OPENCODE_GO_DEFAULT_MODEL_REF } from "godseye/plugin-sdk/provider-models";
 import {
   applyAgentDefaultModelPrimary,
   withAgentModelAliases,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 
-export { OPENCODE_GO_DEFAULT_MODEL_REF };
+export const OPENCODE_GO_DEFAULT_MODEL_REF = "opencode-go/kimi-k2.5";
 
 const OPENCODE_GO_ALIAS_DEFAULTS: Record<string, string> = {
   "opencode-go/kimi-k2.5": "Kimi",
@@ -13,7 +12,7 @@ const OPENCODE_GO_ALIAS_DEFAULTS: Record<string, string> = {
   "opencode-go/minimax-m2.5": "MiniMax",
 };
 
-export function applyOpencodeGoProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpencodeGoProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return {
     ...cfg,
     agents: {
@@ -32,7 +31,7 @@ export function applyOpencodeGoProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig
   };
 }
 
-export function applyOpencodeGoConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpencodeGoConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyAgentDefaultModelPrimary(
     applyOpencodeGoProviderConfig(cfg),
     OPENCODE_GO_DEFAULT_MODEL_REF,

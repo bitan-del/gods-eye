@@ -1,13 +1,13 @@
 import { GoogleGenAI } from "@google/genai";
-import { extensionForMime } from "openclaw/plugin-sdk/msteams";
+import { extensionForMime } from "godseye/plugin-sdk/msteams";
 import type {
   GeneratedMusicAsset,
   MusicGenerationProvider,
   MusicGenerationRequest,
-} from "openclaw/plugin-sdk/music-generation";
-import { isProviderApiKeyConfigured } from "openclaw/plugin-sdk/provider-auth";
-import { resolveApiKeyForProvider } from "openclaw/plugin-sdk/provider-auth-runtime";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/music-generation";
+import { isProviderApiKeyConfigured } from "godseye/plugin-sdk/provider-auth";
+import { resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { normalizeGoogleApiBaseUrl } from "./api.js";
 
 const DEFAULT_GOOGLE_MUSIC_MODEL = "lyria-3-clip-preview";

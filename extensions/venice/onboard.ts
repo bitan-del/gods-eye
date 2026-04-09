@@ -1,19 +1,19 @@
 import {
+  createModelCatalogPresetAppliers,
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/provider-onboard";
+import {
   buildVeniceModelDefinition,
   VENICE_BASE_URL,
   VENICE_DEFAULT_MODEL_REF,
   VENICE_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
-import {
-  createModelCatalogPresetAppliers,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/provider-onboard";
+} from "./api.js";
 
 export { VENICE_DEFAULT_MODEL_REF };
 
 const venicePresetAppliers = createModelCatalogPresetAppliers({
   primaryModelRef: VENICE_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => ({
+  resolveParams: (_cfg: OpenClawConfig) => ({
     providerId: "venice",
     api: "openai-completions",
     baseUrl: VENICE_BASE_URL,
@@ -22,10 +22,10 @@ const venicePresetAppliers = createModelCatalogPresetAppliers({
   }),
 });
 
-export function applyVeniceProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyVeniceProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return venicePresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyVeniceConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyVeniceConfig(cfg: OpenClawConfig): OpenClawConfig {
   return venicePresetAppliers.applyConfig(cfg);
 }

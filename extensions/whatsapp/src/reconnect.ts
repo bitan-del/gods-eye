@@ -1,7 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import type { BackoffPolicy } from "godseye/plugin-sdk/infra-runtime";
-import { computeBackoff, sleepWithAbort } from "godseye/plugin-sdk/infra-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import {
+  computeBackoff,
+  sleepWithAbort,
+  type BackoffPolicy,
+} from "godseye/plugin-sdk/runtime-env";
 import { clamp } from "godseye/plugin-sdk/text-runtime";
 
 export type ReconnectPolicy = BackoffPolicy & {
@@ -17,7 +20,7 @@ export const DEFAULT_RECONNECT_POLICY: ReconnectPolicy = {
   maxAttempts: 12,
 };
 
-export function resolveHeartbeatSeconds(cfg: GodsEyeConfig, overrideSeconds?: number): number {
+export function resolveHeartbeatSeconds(cfg: OpenClawConfig, overrideSeconds?: number): number {
   const candidate = overrideSeconds ?? cfg.web?.heartbeatSeconds;
   if (typeof candidate === "number" && candidate > 0) {
     return candidate;
@@ -26,7 +29,7 @@ export function resolveHeartbeatSeconds(cfg: GodsEyeConfig, overrideSeconds?: nu
 }
 
 export function resolveReconnectPolicy(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   overrides?: Partial<ReconnectPolicy>,
 ): ReconnectPolicy {
   const reconnectOverrides = cfg.web?.reconnect ?? {};

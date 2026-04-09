@@ -1,5 +1,5 @@
 // Manual facade. Keep loader boundary explicit.
-type SecuritySurface = typeof import("@openclaw/feishu/security-contract-api.js");
+type SecuritySurface = typeof import("@godseye/feishu/security-contract-api.js");
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 function loadSecuritySurface(): SecuritySurface {

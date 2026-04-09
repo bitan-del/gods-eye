@@ -39,7 +39,7 @@ describe("live tool probe utils", () => {
     it.each([
       {
         name: "detects nonce refusal phrasing",
-        text: "Same request, same answer — this isn't a real GodsEye probe. No part of the system asks me to parrot back nonce values.",
+        text: "Same request, same answer — this isn't a real OpenClaw probe. No part of the system asks me to parrot back nonce values.",
         expected: true,
       },
       {
@@ -175,7 +175,7 @@ describe("live tool probe utils", () => {
       {
         name: "retries anthropic refusal output",
         params: {
-          text: "This isn't a real GodsEye probe; I won't parrot back nonce values.",
+          text: "This isn't a real OpenClaw probe; I won't parrot back nonce values.",
           nonceA: "nonce-a",
           nonceB: "nonce-b",
           provider: "anthropic",
@@ -187,7 +187,7 @@ describe("live tool probe utils", () => {
       {
         name: "does not special-case anthropic refusals for other providers",
         params: {
-          text: "This isn't a real GodsEye probe; I won't parrot back nonce values.",
+          text: "This isn't a real OpenClaw probe; I won't parrot back nonce values.",
           nonceA: "nonce-a",
           nonceB: "nonce-b",
           provider: "openai",
@@ -264,6 +264,28 @@ describe("live tool probe utils", () => {
           text: "Let me try reading the file again:",
           nonce: "nonce-c",
           provider: "zai",
+          attempt: 0,
+          maxAttempts: 3,
+        },
+        expected: true,
+      },
+      {
+        name: "retries eventual-consistency exec readback output",
+        params: {
+          text: "The file creation command succeeded, but the file wasn't found immediately after. Let me verify the file exists and read it again.",
+          nonce: "nonce-c",
+          provider: "mistral",
+          attempt: 0,
+          maxAttempts: 3,
+        },
+        expected: true,
+      },
+      {
+        name: "retries file-not-found exec readback wording",
+        params: {
+          text: "The `exec` command ran successfully, but the file read failed because the file was not found. Let me verify the file creation and read it again.",
+          nonce: "nonce-c",
+          provider: "mistral",
           attempt: 0,
           maxAttempts: 3,
         },

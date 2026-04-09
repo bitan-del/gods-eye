@@ -7,8 +7,9 @@ import {
   resolveAgentSessionDirsFromAgentsDirSync,
 } from "../../agents/session-dirs.js";
 import { DEFAULT_AGENT_ID, normalizeAgentId } from "../../routing/session-key.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { resolveStateDir } from "../paths.js";
-import type { GodsEyeConfig } from "../types.godseye.js";
+import type { OpenClawConfig } from "../types.openclaw.js";
 import { resolveAgentsDirFromSessionStorePath, resolveStorePath } from "./paths.js";
 
 export type SessionStoreSelectionOptions = {
@@ -54,7 +55,9 @@ function shouldSkipDiscoveredAgentDirName(dirName: string, agentId: string): boo
   // Avoid collapsing arbitrary directory names like "###" into the default main agent.
   // Human-friendly names like "Retired Agent" are still allowed because they normalize to
   // a non-default stable id and preserve the intended retired-store discovery behavior.
-  return agentId === DEFAULT_AGENT_ID && dirName.trim().toLowerCase() !== DEFAULT_AGENT_ID;
+  return (
+    agentId === DEFAULT_AGENT_ID && normalizeLowercaseStringOrEmpty(dirName) !== DEFAULT_AGENT_ID
+  );
 }
 
 function resolveValidatedDiscoveredStorePathSync(params: {
@@ -102,7 +105,7 @@ async function resolveValidatedDiscoveredStorePath(params: {
 }
 
 function resolveSessionStoreDiscoveryState(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv,
 ): {
   configuredTargets: SessionStoreTarget[];
@@ -141,7 +144,7 @@ function toDiscoveredSessionStoreTarget(
 }
 
 export function resolveAllAgentSessionStoreTargetsSync(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: { env?: NodeJS.ProcessEnv } = {},
 ): SessionStoreTarget[] {
   const env = params.env ?? process.env;
@@ -207,7 +210,7 @@ export function resolveAllAgentSessionStoreTargetsSync(
 }
 
 export async function resolveAllAgentSessionStoreTargets(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<SessionStoreTarget[]> {
   const env = params.env ?? process.env;
@@ -287,7 +290,7 @@ export async function resolveAllAgentSessionStoreTargets(
 }
 
 export function resolveSessionStoreTargets(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   opts: SessionStoreSelectionOptions,
   params: { env?: NodeJS.ProcessEnv } = {},
 ): SessionStoreTarget[] {
@@ -324,7 +327,7 @@ export function resolveSessionStoreTargets(
     const requested = normalizeAgentId(opts.agent ?? "");
     if (!knownAgents.includes(requested)) {
       throw new Error(
-        `Unknown agent id "${opts.agent}". Use "godseye agents list" to see configured agents.`,
+        `Unknown agent id "${opts.agent}". Use "openclaw agents list" to see configured agents.`,
       );
     }
     return [

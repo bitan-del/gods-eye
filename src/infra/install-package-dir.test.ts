@@ -1,9 +1,9 @@
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { runCommandWithTimeout } from "../process/exec.js";
+import { createSuiteTempRootTracker } from "../test-helpers/temp-dir.js";
 import { installPackageDir } from "./install-package-dir.js";
 
 vi.mock("../process/exec.js", async () => {
@@ -93,18 +93,18 @@ async function withInstallBaseReboundOnRealpathCall<T>(params: {
 }
 
 describe("installPackageDir", () => {
-  let fixtureRoot = "";
+  const fixtureRootTracker = createSuiteTempRootTracker({
+    prefix: "openclaw-install-package-dir-",
+  });
 
   afterEach(async () => {
     vi.restoreAllMocks();
-    if (fixtureRoot) {
-      await fs.rm(fixtureRoot, { recursive: true, force: true });
-      fixtureRoot = "";
-    }
+    await fixtureRootTracker.cleanup();
   });
 
   it("keeps the existing install in place when staged validation fails", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const installBaseDir = path.join(fixtureRoot, "plugins");
     const sourceDir = path.join(fixtureRoot, "source");
     const targetDir = path.join(installBaseDir, "demo");
@@ -135,16 +135,17 @@ describe("installPackageDir", () => {
       error: "post-copy validation failed: Error: validation boom",
     });
     await expect(fs.readFile(path.join(targetDir, "marker.txt"), "utf8")).resolves.toBe("old");
-    await expect(listMatchingDirs(installBaseDir, ".godseye-install-stage-")).resolves.toHaveLength(
-      0,
-    );
     await expect(
-      listMatchingDirs(installBaseDir, ".godseye-install-backups"),
+      listMatchingDirs(installBaseDir, ".openclaw-install-stage-"),
+    ).resolves.toHaveLength(0);
+    await expect(
+      listMatchingDirs(installBaseDir, ".openclaw-install-backups"),
     ).resolves.toHaveLength(0);
   });
 
   it("restores the original install if publish rename fails", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const installBaseDir = path.join(fixtureRoot, "plugins");
     const sourceDir = path.join(fixtureRoot, "source");
     const targetDir = path.join(installBaseDir, "demo");
@@ -178,15 +179,16 @@ describe("installPackageDir", () => {
       error: "failed to copy plugin: Error: publish boom",
     });
     await expect(fs.readFile(path.join(targetDir, "marker.txt"), "utf8")).resolves.toBe("old");
-    await expect(listMatchingDirs(installBaseDir, ".godseye-install-stage-")).resolves.toHaveLength(
-      0,
-    );
-    const backupRoot = path.join(installBaseDir, ".godseye-install-backups");
+    await expect(
+      listMatchingDirs(installBaseDir, ".openclaw-install-stage-"),
+    ).resolves.toHaveLength(0);
+    const backupRoot = path.join(installBaseDir, ".openclaw-install-backups");
     await expect(fs.readdir(backupRoot)).resolves.toHaveLength(0);
   });
 
   it("aborts without outside writes when the install base is rebound before publish", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const sourceDir = path.join(fixtureRoot, "source");
     const installBaseDir = path.join(fixtureRoot, "plugins");
     const preservedInstallRoot = path.join(fixtureRoot, "plugins-preserved");
@@ -233,7 +235,8 @@ describe("installPackageDir", () => {
   });
 
   it("warns and leaves the backup in place when the install base changes before backup cleanup", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const sourceDir = path.join(fixtureRoot, "source");
     const installBaseDir = path.join(fixtureRoot, "plugins");
     const preservedInstallRoot = path.join(fixtureRoot, "plugins-preserved");
@@ -274,12 +277,13 @@ describe("installPackageDir", () => {
     ).rejects.toMatchObject({
       code: "ENOENT",
     });
-    const backupRoot = path.join(preservedInstallRoot, ".godseye-install-backups");
+    const backupRoot = path.join(preservedInstallRoot, ".openclaw-install-backups");
     await expect(fs.readdir(backupRoot)).resolves.toHaveLength(1);
   });
 
   it("installs peer dependencies for isolated plugin package installs", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const sourceDir = path.join(fixtureRoot, "source");
     const targetDir = path.join(fixtureRoot, "plugins", "demo");
     await fs.mkdir(sourceDir, { recursive: true });
@@ -318,13 +322,14 @@ describe("installPackageDir", () => {
     expect(vi.mocked(runCommandWithTimeout)).toHaveBeenCalledWith(
       ["npm", "install", "--omit=dev", "--silent", "--ignore-scripts"],
       expect.objectContaining({
-        cwd: expect.stringContaining(".godseye-install-stage-"),
+        cwd: expect.stringContaining(".openclaw-install-stage-"),
       }),
     );
   });
 
   it("hides the staged project .npmrc while npm install runs and restores it afterward", async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-package-dir-"));
+    await fixtureRootTracker.setup();
+    const fixtureRoot = await fixtureRootTracker.make("case");
     const sourceDir = path.join(fixtureRoot, "source");
     const targetDir = path.join(fixtureRoot, "plugins", "demo");
     const npmrcContent = "git=calc.exe\n";
@@ -349,7 +354,7 @@ describe("installPackageDir", () => {
         code: "ENOENT",
       });
       await expect(
-        listMatchingEntries(cwd ?? "", ".godseye-install-hidden-npmrc-"),
+        listMatchingEntries(cwd ?? "", ".openclaw-install-hidden-npmrc-"),
       ).resolves.toHaveLength(1);
       return {
         stdout: "",
@@ -374,7 +379,7 @@ describe("installPackageDir", () => {
     expect(result).toEqual({ ok: true });
     await expect(fs.readFile(path.join(targetDir, ".npmrc"), "utf8")).resolves.toBe(npmrcContent);
     await expect(
-      listMatchingEntries(targetDir, ".godseye-install-hidden-npmrc-"),
+      listMatchingEntries(targetDir, ".openclaw-install-hidden-npmrc-"),
     ).resolves.toHaveLength(0);
   });
 });

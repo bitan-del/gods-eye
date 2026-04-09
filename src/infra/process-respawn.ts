@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
-import { scheduleDetachedLaunchdRestartHandoff } from "../daemon/launchd-restart-handoff.js";
-import { triggerGodsEyeRestart } from "./restart.js";
+import { normalizeOptionalLowercaseString } from "../shared/string-coerce.js";
+import { formatErrorMessage } from "./errors.js";
+import { triggerOpenClawRestart } from "./restart.js";
 import { detectRespawnSupervisor } from "./supervisor-markers.js";
 
 type RespawnMode = "spawned" | "supervised" | "disabled" | "failed";
@@ -12,46 +13,27 @@ export type GatewayRespawnResult = {
 };
 
 function isTruthy(value: string | undefined): boolean {
-  if (!value) {
-    return false;
-  }
-  const normalized = value.trim().toLowerCase();
+  const normalized = normalizeOptionalLowercaseString(value);
   return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
 }
 
 /**
  * Attempt to restart this process with a fresh PID.
  * - supervised environments (launchd/systemd/schtasks): caller should exit and let supervisor restart
- * - GODSEYE_NO_RESPAWN=1: caller should keep in-process restart behavior (tests/dev)
+ * - OPENCLAW_NO_RESPAWN=1: caller should keep in-process restart behavior (tests/dev)
  * - otherwise: spawn detached child with current argv/execArgv, then caller exits
  */
 export function restartGatewayProcessWithFreshPid(): GatewayRespawnResult {
-  if (isTruthy(process.env.GODSEYE_NO_RESPAWN)) {
+  if (isTruthy(process.env.OPENCLAW_NO_RESPAWN)) {
     return { mode: "disabled" };
   }
   const supervisor = detectRespawnSupervisor(process.env);
   if (supervisor) {
-    // Hand off launchd restarts to a detached helper before exiting so config
-    // reloads and SIGUSR1-driven restarts do not depend on exit/respawn timing.
-    if (supervisor === "launchd") {
-      const handoff = scheduleDetachedLaunchdRestartHandoff({
-        env: process.env,
-        mode: "start-after-exit",
-        waitForPid: process.pid,
-      });
-      if (!handoff.ok) {
-        return {
-          mode: "supervised",
-          detail: `launchd exit fallback (${handoff.detail ?? "restart handoff failed"})`,
-        };
-      }
-      return {
-        mode: "supervised",
-        detail: `launchd restart handoff pid ${handoff.pid ?? "unknown"}`,
-      };
-    }
+    // On macOS launchd, exit cleanly and let KeepAlive relaunch the service.
+    // Avoid detached kickstart/start handoffs here so restart timing stays tied
+    // to launchd's native supervision rather than a second helper process.
     if (supervisor === "schtasks") {
-      const restart = triggerGodsEyeRestart();
+      const restart = triggerOpenClawRestart();
       if (!restart.ok) {
         return {
           mode: "failed",
@@ -80,7 +62,7 @@ export function restartGatewayProcessWithFreshPid(): GatewayRespawnResult {
     child.unref();
     return { mode: "spawned", pid: child.pid ?? undefined };
   } catch (err) {
-    const detail = err instanceof Error ? err.message : String(err);
+    const detail = formatErrorMessage(err);
     return { mode: "failed", detail };
   }
 }

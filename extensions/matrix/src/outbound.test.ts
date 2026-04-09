@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 
 const mocks = vi.hoisted(() => ({
   sendMessageMatrix: vi.fn(),
@@ -31,6 +31,16 @@ describe("matrixOutbound cfg threading", () => {
     mocks.sendPollMatrix.mockResolvedValue({ eventId: "$poll", roomId: "!room:example" });
   });
 
+  it("chunks outbound text without requiring Matrix runtime initialization", () => {
+    const chunker = matrixOutbound.chunker;
+    if (!chunker) {
+      throw new Error("matrixOutbound.chunker missing");
+    }
+
+    expect(() => chunker("hello world", 5)).not.toThrow();
+    expect(chunker("hello world", 5)).toEqual(["hello", "world"]);
+  });
+
   it("passes resolved cfg to sendMessageMatrix for text sends", async () => {
     const cfg = {
       channels: {
@@ -38,7 +48,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await matrixOutbound.sendText!({
       cfg,
@@ -68,14 +78,14 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await matrixOutbound.sendMedia!({
       cfg,
       to: "room:!room:example",
       text: "caption",
       mediaUrl: "file:///tmp/cat.png",
-      mediaLocalRoots: ["/tmp/godseye"],
+      mediaLocalRoots: ["/tmp/openclaw"],
       accountId: "default",
       audioAsVoice: true,
     });
@@ -86,7 +96,7 @@ describe("matrixOutbound cfg threading", () => {
       expect.objectContaining({
         cfg,
         mediaUrl: "file:///tmp/cat.png",
-        mediaLocalRoots: ["/tmp/godseye"],
+        mediaLocalRoots: ["/tmp/openclaw"],
         audioAsVoice: true,
       }),
     );
@@ -99,7 +109,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const matrix = vi.fn(async () => ({
       messageId: "evt-injected",
       roomId: "!room:example",
@@ -134,7 +144,7 @@ describe("matrixOutbound cfg threading", () => {
           accessToken: "resolved-token",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await matrixOutbound.sendPoll!({
       cfg,

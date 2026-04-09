@@ -1,6 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   readFileUtf8AndCleanup,
   stubFetchResponse,
@@ -31,13 +31,11 @@ let parseScreenRecordPayload: typeof import("./nodes-screen.js").parseScreenReco
 let screenRecordTempPath: typeof import("./nodes-screen.js").screenRecordTempPath;
 
 async function withCameraTempDir<T>(run: (dir: string) => Promise<T>): Promise<T> {
-  return await withTempDir("godseye-test-", run);
+  return await withTempDir("openclaw-test-", run);
 }
 
 describe("nodes camera helpers", () => {
-  beforeEach(async () => {
-    vi.resetModules();
-    vi.clearAllMocks();
+  beforeAll(async () => {
     ({
       cameraTempPath,
       parseCameraClipPayload,
@@ -47,6 +45,10 @@ describe("nodes camera helpers", () => {
       writeUrlToFile,
     } = await import("./nodes-camera.js"));
     ({ parseScreenRecordPayload, screenRecordTempPath } = await import("./nodes-screen.js"));
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it("parses camera.snap payload", () => {
@@ -96,7 +98,7 @@ describe("nodes camera helpers", () => {
       tmpDir: "/tmp",
       id: "id1",
     });
-    expect(p).toBe(path.join("/tmp", "godseye-camera-snap-front-id1.jpg"));
+    expect(p).toBe(path.join("/tmp", "openclaw-camera-snap-front-id1.jpg"));
   });
 
   it("writes camera clip payload to temp path", async () => {
@@ -112,7 +114,7 @@ describe("nodes camera helpers", () => {
         tmpDir: dir,
         id: "clip1",
       });
-      expect(out).toBe(path.join(dir, "godseye-camera-clip-front-clip1.mp4"));
+      expect(out).toBe(path.join(dir, "openclaw-camera-clip-front-clip1.mp4"));
       await expect(readFileUtf8AndCleanup(out)).resolves.toBe("hi");
     });
   });
@@ -133,7 +135,7 @@ describe("nodes camera helpers", () => {
         id: "clip2",
         expectedHost,
       });
-      expect(out).toBe(path.join(dir, "godseye-camera-clip-back-clip2.mp4"));
+      expect(out).toBe(path.join(dir, "openclaw-camera-clip-back-clip2.mp4"));
       await expect(readFileUtf8AndCleanup(out)).resolves.toBe("url-clip");
     });
   });
@@ -185,51 +187,44 @@ describe("nodes camera helpers", () => {
     ).rejects.toThrow(/must match node host/i);
   });
 
-  it("rejects invalid url payload responses", async () => {
-    const cases: Array<{
-      name: string;
-      url: string;
-      response?: Response;
-      expectedMessage: RegExp;
-    }> = [
-      {
-        name: "non-https url",
-        url: "http://198.51.100.42/x.bin",
-        expectedMessage: /only https/i,
-      },
-      {
-        name: "oversized content-length",
-        url: "https://198.51.100.42/huge.bin",
-        response: new Response("tiny", {
-          status: 200,
-          headers: { "content-length": String(999_999_999) },
-        }),
-        expectedMessage: /exceeds max/i,
-      },
-      {
-        name: "non-ok status",
-        url: "https://198.51.100.42/down.bin",
-        response: new Response("down", { status: 503, statusText: "Service Unavailable" }),
-        expectedMessage: /503/i,
-      },
-      {
-        name: "empty response body",
-        url: "https://198.51.100.42/empty.bin",
-        response: new Response(null, { status: 200 }),
-        expectedMessage: /empty response body/i,
-      },
-    ];
-
-    for (const testCase of cases) {
-      if (testCase.response) {
-        stubFetchResponse(testCase.response);
+  it.each([
+    {
+      name: "non-https url",
+      url: "http://198.51.100.42/x.bin",
+      expectedMessage: /only https/i,
+    },
+    {
+      name: "oversized content-length",
+      url: "https://198.51.100.42/huge.bin",
+      response: new Response("tiny", {
+        status: 200,
+        headers: { "content-length": String(999_999_999) },
+      }),
+      expectedMessage: /exceeds max/i,
+    },
+    {
+      name: "non-ok status",
+      url: "https://198.51.100.42/down.bin",
+      response: new Response("down", { status: 503, statusText: "Service Unavailable" }),
+      expectedMessage: /503/i,
+    },
+    {
+      name: "empty response body",
+      url: "https://198.51.100.42/empty.bin",
+      response: new Response(null, { status: 200 }),
+      expectedMessage: /empty response body/i,
+    },
+  ] as const)(
+    "rejects invalid url payload response: $name",
+    async ({ url, response, expectedMessage }) => {
+      if (response) {
+        stubFetchResponse(response);
       }
       await expect(
-        writeUrlToFile("/tmp/ignored", testCase.url, { expectedHost: "198.51.100.42" }),
-        testCase.name,
-      ).rejects.toThrow(testCase.expectedMessage);
-    }
-  });
+        writeUrlToFile("/tmp/ignored", url, { expectedHost: "198.51.100.42" }),
+      ).rejects.toThrow(expectedMessage);
+    },
+  );
 
   it("removes partially written file when url stream fails", async () => {
     const stream = new ReadableStream<Uint8Array>({
@@ -295,6 +290,6 @@ describe("nodes screen helpers", () => {
       tmpDir: "/tmp",
       id: "id1",
     });
-    expect(p).toBe(path.join("/tmp", "godseye-screen-record-id1.mp4"));
+    expect(p).toBe(path.join("/tmp", "openclaw-screen-record-id1.mp4"));
   });
 });

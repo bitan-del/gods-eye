@@ -3,13 +3,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectMime } from "../media/mime.js";
+import { lowercasePreservingWhitespace } from "../shared/string-coerce.js";
 import { resolveFileWithinRoot } from "./file-resolver.js";
 
-export const A2UI_PATH = "/__godseye__/a2ui";
+export const A2UI_PATH = "/__openclaw__/a2ui";
 
-export const CANVAS_HOST_PATH = "/__godseye__/canvas";
+export const CANVAS_HOST_PATH = "/__openclaw__/canvas";
 
-export const CANVAS_WS_PATH = "/__godseye__/ws";
+export const CANVAS_WS_PATH = "/__openclaw__/ws";
 
 let cachedA2uiRootReal: string | null | undefined;
 let resolvingA2uiRoot: Promise<string | null> | null = null;
@@ -84,9 +85,9 @@ export function injectCanvasLiveReload(html: string): string {
 (() => {
   // Cross-platform action bridge helper.
   // Works on:
-  // - iOS: window.webkit.messageHandlers.godseyeCanvasA2UIAction.postMessage(...)
-  // - Android: window.godseyeCanvasA2UIAction.postMessage(...)
-  const handlerNames = ["godseyeCanvasA2UIAction"];
+  // - iOS: window.webkit.messageHandlers.openclawCanvasA2UIAction.postMessage(...)
+  // - Android: window.openclawCanvasA2UIAction.postMessage(...)
+  const handlerNames = ["openclawCanvasA2UIAction"];
   function postToNode(payload) {
     try {
       const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
@@ -113,11 +114,11 @@ export function injectCanvasLiveReload(html: string): string {
     const action = { ...userAction, id };
     return postToNode({ userAction: action });
   }
-  globalThis.GodsEye = globalThis.GodsEye ?? {};
-  globalThis.GodsEye.postMessage = postToNode;
-  globalThis.GodsEye.sendUserAction = sendUserAction;
-  globalThis.godseyePostMessage = postToNode;
-  globalThis.godseyeSendUserAction = sendUserAction;
+  globalThis.OpenClaw = globalThis.OpenClaw ?? {};
+  globalThis.OpenClaw.postMessage = postToNode;
+  globalThis.OpenClaw.sendUserAction = sendUserAction;
+  globalThis.openclawPostMessage = postToNode;
+  globalThis.openclawSendUserAction = sendUserAction;
 
   try {
     const cap = new URLSearchParams(location.search).get("oc_cap");
@@ -132,7 +133,7 @@ export function injectCanvasLiveReload(html: string): string {
 </script>
 `.trim();
 
-  const idx = html.toLowerCase().lastIndexOf("</body>");
+  const idx = lowercasePreservingWhitespace(html).lastIndexOf("</body>");
   if (idx >= 0) {
     return `${html.slice(0, idx)}\n${snippet}\n${html.slice(idx)}`;
   }
@@ -180,7 +181,7 @@ export async function handleA2uiHttpRequest(
   }
 
   try {
-    const lower = result.realPath.toLowerCase();
+    const lower = lowercasePreservingWhitespace(result.realPath);
     const mime =
       lower.endsWith(".html") || lower.endsWith(".htm")
         ? "text/html"

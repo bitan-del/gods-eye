@@ -7,25 +7,9 @@
  * Converts common inline HTML to lightweight-markup equivalents used by
  * WhatsApp/Signal/Telegram and strips any remaining tags.
  *
- * @see https://github.com/bitan-del/gods-eye/issues/31884
- * @see https://github.com/bitan-del/gods-eye/issues/18558
+ * @see https://github.com/openclaw/openclaw/issues/31884
+ * @see https://github.com/openclaw/openclaw/issues/18558
  */
-
-/** Channels where HTML tags should be converted/stripped. */
-const PLAIN_TEXT_SURFACES = new Set([
-  "whatsapp",
-  "signal",
-  "sms",
-  "irc",
-  "telegram",
-  "imessage",
-  "googlechat",
-]);
-
-/** Returns `true` when the channel cannot render raw HTML. */
-export function isPlainTextSurface(channelId: string): boolean {
-  return PLAIN_TEXT_SURFACES.has(channelId.toLowerCase());
-}
 
 /**
  * Convert common HTML tags to their plain-text/lightweight-markup equivalents

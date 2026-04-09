@@ -1,4 +1,4 @@
-import { createPatchedAccountSetupAdapter } from "godseye/plugin-sdk/setup";
+import { createPatchedAccountSetupAdapter } from "godseye/plugin-sdk/setup-runtime";
 
 const channel = "zalouser" as const;
 

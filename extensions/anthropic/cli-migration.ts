@@ -2,8 +2,8 @@ import {
   CLAUDE_CLI_PROFILE_ID,
   type OpenClawConfig,
   type ProviderAuthResult,
-} from "openclaw/plugin-sdk/provider-auth";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/provider-auth";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   readClaudeCliCredentialsForSetup,
   readClaudeCliCredentialsForSetupNonInteractive,

@@ -8,15 +8,16 @@ import {
   buildReadOnlySourceChannelAccountSnapshot,
 } from "../../channels/plugins/status.js";
 import type { ChannelAccountSnapshot } from "../../channels/plugins/types.js";
+import { resolveCommandConfigWithSecrets } from "../../cli/command-config-resolution.js";
 import { formatCliCommand } from "../../cli/command-format.js";
-import { resolveCommandSecretRefsViaGateway } from "../../cli/command-secret-gateway.js";
 import { getChannelsCommandSecretTargetIds } from "../../cli/command-secret-targets.js";
 import { withProgress } from "../../cli/progress.js";
-import { type GodsEyeConfig, readConfigFileSnapshot } from "../../config/config.js";
+import { type OpenClawConfig, readConfigFileSnapshot } from "../../config/config.js";
 import { callGateway } from "../../gateway/call.js";
 import { collectChannelStatusIssues } from "../../infra/channels-status-issues.js";
 import { formatTimeAgo } from "../../infra/format-time/format-relative.ts";
 import { defaultRuntime, type RuntimeEnv, writeRuntimeJson } from "../../runtime.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import {
@@ -85,7 +86,7 @@ function buildChannelAccountLine(
   bits: string[],
 ): string {
   const accountId = typeof account.accountId === "string" ? account.accountId : "default";
-  const name = typeof account.name === "string" ? account.name.trim() : "";
+  const name = normalizeOptionalString(account.name) ?? "";
   const labelText = formatChannelAccountLabel({
     channel: provider,
     accountId,
@@ -200,7 +201,7 @@ export function formatGatewayChannelsStatusLines(payload: Record<string, unknown
         `- ${issue.channel} ${issue.accountId}: ${issue.message}${issue.fix ? ` (${issue.fix})` : ""}`,
       );
     }
-    lines.push(`- Run: ${formatCliCommand("godseye doctor")}`);
+    lines.push(`- Run: ${formatCliCommand("openclaw doctor")}`);
     lines.push("");
   }
   lines.push(
@@ -210,9 +211,9 @@ export function formatGatewayChannelsStatusLines(payload: Record<string, unknown
 }
 
 export async function formatConfigChannelsStatusLines(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   meta: { path?: string; mode?: "local" | "remote" },
-  opts?: { sourceConfig?: GodsEyeConfig },
+  opts?: { sourceConfig?: OpenClawConfig },
 ): Promise<string[]> {
   const lines: string[] = [];
   lines.push(theme.warn("Gateway not reachable; showing config-only status."));
@@ -311,15 +312,13 @@ export async function channelsStatusCommand(
     if (!cfg) {
       return;
     }
-    const { resolvedConfig, diagnostics } = await resolveCommandSecretRefsViaGateway({
+    const { resolvedConfig } = await resolveCommandConfigWithSecrets({
       config: cfg,
       commandName: "channels status",
       targetIds: getChannelsCommandSecretTargetIds(),
       mode: "read_only_status",
+      runtime,
     });
-    for (const entry of diagnostics) {
-      runtime.log(`[secrets] ${entry}`);
-    }
     const snapshot = await readConfigFileSnapshot();
     const mode = cfg.gateway?.mode === "remote" ? "remote" : "local";
     runtime.log(

@@ -33,7 +33,7 @@ async function runLaneCase(home: string, lane?: string) {
   await runCronIsolatedAgentTurn({
     cfg: makeCfg(home, storePath),
     deps: createCliDeps(),
-    job: makeJob({ kind: "agentTurn", message: "do it", deliver: false }),
+    job: { ...makeJob({ kind: "agentTurn", message: "do it" }), delivery: { mode: "none" } },
     message: "do it",
     sessionKey: "cron:job-1",
     ...(lane === undefined ? {} : { lane }),
@@ -47,8 +47,8 @@ const envSnapshot = {
   USERPROFILE: process.env.USERPROFILE,
   HOMEDRIVE: process.env.HOMEDRIVE,
   HOMEPATH: process.env.HOMEPATH,
-  GODSEYE_HOME: process.env.GODSEYE_HOME,
-  GODSEYE_STATE_DIR: process.env.GODSEYE_STATE_DIR,
+  OPENCLAW_HOME: process.env.OPENCLAW_HOME,
+  OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR,
 } as const;
 
 function restoreSnapshotEnv() {

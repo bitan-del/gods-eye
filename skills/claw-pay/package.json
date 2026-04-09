@@ -1,0 +1,28 @@
+{
+  "name": "claw-pay",
+  "version": "0.2.0",
+  "description": "Autonomous x402 payments for OpenClaw agents",
+  "license": "SEE LICENSE IN ../LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/orca-labs-sudo/claw-pay.git"
+  },
+  "main": "src/pay.js",
+  "dependencies": {
+    "ethers": "^6.13.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "openclaw": {
+    "extensions": [
+      "executes-code"
+    ],
+    "compat": {
+      "pluginApi": "1.0"
+    },
+    "build": {
+      "openclawVersion": "1.0.0"
+    }
+  }
+}

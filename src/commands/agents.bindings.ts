@@ -2,27 +2,22 @@ import { resolveChannelDefaultAccountId } from "../channels/plugins/helpers.js";
 import { getChannelPlugin, normalizeChannelId } from "../channels/plugins/index.js";
 import type { ChannelId } from "../channels/plugins/types.js";
 import { isRouteBinding, listRouteBindings } from "../config/bindings.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { AgentRouteBinding } from "../config/types.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAgentId } from "../routing/session-key.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
+import { normalizeStringEntries } from "../shared/string-normalization.js";
 import type { ChannelChoice } from "./onboard-types.js";
 
 function bindingMatchKey(match: AgentRouteBinding["match"]) {
-  const accountId = match.accountId?.trim() || DEFAULT_ACCOUNT_ID;
+  const accountId = normalizeOptionalString(match.accountId) || DEFAULT_ACCOUNT_ID;
   const identityKey = bindingMatchIdentityKey(match);
   return [identityKey, accountId].join("|");
 }
 
 function bindingMatchIdentityKey(match: AgentRouteBinding["match"]) {
   const roles = Array.isArray(match.roles)
-    ? Array.from(
-        new Set(
-          match.roles
-            .map((role) => role.trim())
-            .filter(Boolean)
-            .toSorted(),
-        ),
-      )
+    ? Array.from(new Set(normalizeStringEntries(match.roles).toSorted()))
     : [];
   return [
     match.channel,
@@ -39,10 +34,10 @@ function canUpgradeBindingAccountScope(params: {
   incoming: AgentRouteBinding;
   normalizedIncomingAgentId: string;
 }): boolean {
-  if (!params.incoming.match.accountId?.trim()) {
+  if (!normalizeOptionalString(params.incoming.match.accountId)) {
     return false;
   }
-  if (params.existing.match.accountId?.trim()) {
+  if (normalizeOptionalString(params.existing.match.accountId)) {
     return false;
   }
   if (normalizeAgentId(params.existing.agentId) !== params.normalizedIncomingAgentId) {
@@ -73,10 +68,10 @@ export function describeBinding(binding: AgentRouteBinding) {
 }
 
 export function applyAgentBindings(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   bindings: AgentRouteBinding[],
 ): {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   added: AgentRouteBinding[];
   updated: AgentRouteBinding[];
   skipped: AgentRouteBinding[];
@@ -159,10 +154,10 @@ export function applyAgentBindings(
 }
 
 export function removeAgentBindings(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   bindings: AgentRouteBinding[],
 ): {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   removed: AgentRouteBinding[];
   missing: AgentRouteBinding[];
   conflicts: Array<{ binding: AgentRouteBinding; existingAgentId: string }>;
@@ -226,7 +221,7 @@ export function removeAgentBindings(
   };
 }
 
-function resolveDefaultAccountId(cfg: GodsEyeConfig, provider: ChannelId): string {
+function resolveDefaultAccountId(cfg: OpenClawConfig, provider: ChannelId): string {
   const plugin = getChannelPlugin(provider);
   if (!plugin) {
     return DEFAULT_ACCOUNT_ID;
@@ -236,7 +231,7 @@ function resolveDefaultAccountId(cfg: GodsEyeConfig, provider: ChannelId): strin
 
 function resolveBindingAccountId(params: {
   channel: ChannelId;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   agentId: string;
   explicitAccountId?: string;
 }): string | undefined {
@@ -264,7 +259,7 @@ function resolveBindingAccountId(params: {
 export function buildChannelBindings(params: {
   agentId: string;
   selection: ChannelChoice[];
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   accountIds?: Partial<Record<ChannelChoice, string>>;
 }): AgentRouteBinding[] {
   const bindings: AgentRouteBinding[] = [];
@@ -288,7 +283,7 @@ export function buildChannelBindings(params: {
 export function parseBindingSpecs(params: {
   agentId: string;
   specs?: string[];
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
 }): { bindings: AgentRouteBinding[]; errors: string[] } {
   const bindings: AgentRouteBinding[] = [];
   const errors: string[] = [];

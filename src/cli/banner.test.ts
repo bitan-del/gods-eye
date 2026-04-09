@@ -1,16 +1,13 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { formatCliBannerLine } from "./banner.js";
 
-const readCliBannerTaglineModeMock = vi.fn();
+const readCliBannerTaglineModeMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./banner-config-lite.js", () => ({
+  parseTaglineMode: (value: unknown) =>
+    value === "random" || value === "default" || value === "off" ? value : undefined,
   readCliBannerTaglineMode: readCliBannerTaglineModeMock,
 }));
-
-let formatCliBannerLine: typeof import("./banner.js").formatCliBannerLine;
-
-beforeAll(async () => {
-  ({ formatCliBannerLine } = await import("./banner.js"));
-});
 
 beforeEach(() => {
   readCliBannerTaglineModeMock.mockReset();
@@ -26,7 +23,7 @@ describe("formatCliBannerLine", () => {
       richTty: false,
     });
 
-    expect(line).toBe("🦞 GodsEye 2026.3.7 (abc1234)");
+    expect(line).toBe("🦞 OpenClaw 2026.3.7 (abc1234)");
   });
 
   it("uses default tagline when cli.banner.taglineMode is default", () => {
@@ -37,7 +34,7 @@ describe("formatCliBannerLine", () => {
       richTty: false,
     });
 
-    expect(line).toBe("🦞 GodsEye 2026.3.7 (abc1234) — All your chats, one GodsEye.");
+    expect(line).toBe("🦞 OpenClaw 2026.3.7 (abc1234) — All your chats, one OpenClaw.");
   });
 
   it("prefers explicit tagline mode over config", () => {
@@ -49,6 +46,6 @@ describe("formatCliBannerLine", () => {
       mode: "default",
     });
 
-    expect(line).toBe("🦞 GodsEye 2026.3.7 (abc1234) — All your chats, one GodsEye.");
+    expect(line).toBe("🦞 OpenClaw 2026.3.7 (abc1234) — All your chats, one OpenClaw.");
   });
 });

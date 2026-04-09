@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import { NON_ENV_SECRETREF_MARKER } from "./model-auth-markers.js";
 import {
   installModelsConfigTestHooks,
@@ -8,6 +8,21 @@ import {
   withModelsTempHome as withTempHome,
   withTempEnv,
 } from "./models-config.e2e-harness.js";
+
+vi.mock("../plugins/provider-runtime.js", async () => {
+  const actual = await vi.importActual<typeof import("../plugins/provider-runtime.js")>(
+    "../plugins/provider-runtime.js",
+  );
+  return {
+    ...actual,
+    applyProviderConfigDefaultsWithPlugin: (config: OpenClawConfig) => config,
+    applyProviderNativeStreamingUsageCompatWithPlugin: () => undefined,
+    normalizeProviderConfigWithPlugin: () => undefined,
+    resetProviderRuntimeHookCacheForTest: () => undefined,
+    resolveProviderConfigApiKeyWithPlugin: () => undefined,
+    resolveProviderSyntheticAuthWithPlugin: () => undefined,
+  };
+});
 
 vi.mock("./models-config.providers.js", async () => {
   const actual = await vi.importActual<typeof import("./models-config.providers.js")>(
@@ -25,24 +40,25 @@ let clearConfigCache: typeof import("../config/config.js").clearConfigCache;
 let clearRuntimeConfigSnapshot: typeof import("../config/config.js").clearRuntimeConfigSnapshot;
 let loadConfig: typeof import("../config/config.js").loadConfig;
 let setRuntimeConfigSnapshot: typeof import("../config/config.js").setRuntimeConfigSnapshot;
-let ensureGodsEyeModelsJson: typeof import("./models-config.js").ensureGodsEyeModelsJson;
+let ensureOpenClawModelsJson: typeof import("./models-config.js").ensureOpenClawModelsJson;
 let resetModelsJsonReadyCacheForTest: typeof import("./models-config.js").resetModelsJsonReadyCacheForTest;
 let readGeneratedModelsJson: typeof import("./models-config.test-utils.js").readGeneratedModelsJson;
 
-beforeEach(async () => {
-  vi.resetModules();
+beforeAll(async () => {
   ({ clearConfigCache, clearRuntimeConfigSnapshot, loadConfig, setRuntimeConfigSnapshot } =
     await import("../config/config.js"));
-  ({ ensureGodsEyeModelsJson, resetModelsJsonReadyCacheForTest } =
+  ({ ensureOpenClawModelsJson, resetModelsJsonReadyCacheForTest } =
     await import("./models-config.js"));
   ({ readGeneratedModelsJson } = await import("./models-config.test-utils.js"));
 });
 
 afterEach(() => {
+  clearRuntimeConfigSnapshot();
+  clearConfigCache();
   resetModelsJsonReadyCacheForTest();
 });
 
-function createOpenAiApiKeySourceConfig(): GodsEyeConfig {
+function createOpenAiApiKeySourceConfig(): OpenClawConfig {
   return {
     models: {
       providers: {
@@ -57,7 +73,7 @@ function createOpenAiApiKeySourceConfig(): GodsEyeConfig {
   };
 }
 
-function createOpenAiApiKeyRuntimeConfig(): GodsEyeConfig {
+function createOpenAiApiKeyRuntimeConfig(): OpenClawConfig {
   return {
     models: {
       providers: {
@@ -72,7 +88,7 @@ function createOpenAiApiKeyRuntimeConfig(): GodsEyeConfig {
   };
 }
 
-function createOpenAiHeaderSourceConfig(): GodsEyeConfig {
+function createOpenAiHeaderSourceConfig(): OpenClawConfig {
   return {
     models: {
       providers: {
@@ -98,7 +114,7 @@ function createOpenAiHeaderSourceConfig(): GodsEyeConfig {
   };
 }
 
-function createOpenAiHeaderRuntimeConfig(): GodsEyeConfig {
+function createOpenAiHeaderRuntimeConfig(): OpenClawConfig {
   return {
     models: {
       providers: {
@@ -116,7 +132,7 @@ function createOpenAiHeaderRuntimeConfig(): GodsEyeConfig {
   };
 }
 
-function withGatewayTokenMode(config: GodsEyeConfig): GodsEyeConfig {
+function withGatewayTokenMode(config: OpenClawConfig): OpenClawConfig {
   return {
     ...config,
     gateway: {
@@ -129,9 +145,9 @@ function withGatewayTokenMode(config: GodsEyeConfig): GodsEyeConfig {
 
 async function withGeneratedModelsFromRuntimeSource(
   params: {
-    sourceConfig: GodsEyeConfig;
-    runtimeConfig: GodsEyeConfig;
-    candidateConfig?: GodsEyeConfig;
+    sourceConfig: OpenClawConfig;
+    runtimeConfig: OpenClawConfig;
+    candidateConfig?: OpenClawConfig;
   },
   runAssertions: () => Promise<void>,
 ) {
@@ -140,7 +156,7 @@ async function withGeneratedModelsFromRuntimeSource(
       unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
       try {
         setRuntimeConfigSnapshot(params.runtimeConfig, params.sourceConfig);
-        await ensureGodsEyeModelsJson(params.candidateConfig ?? loadConfig());
+        await ensureOpenClawModelsJson(params.candidateConfig ?? loadConfig());
         await runAssertions();
       } finally {
         clearRuntimeConfigSnapshot();
@@ -182,7 +198,7 @@ describe("models-config runtime source snapshot", () => {
     await withTempHome(async () => {
       await withTempEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS, async () => {
         unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
-        const sourceConfig: GodsEyeConfig = {
+        const sourceConfig: OpenClawConfig = {
           models: {
             providers: {
               moonshot: {
@@ -194,7 +210,7 @@ describe("models-config runtime source snapshot", () => {
             },
           },
         };
-        const runtimeConfig: GodsEyeConfig = {
+        const runtimeConfig: OpenClawConfig = {
           models: {
             providers: {
               moonshot: {
@@ -209,7 +225,7 @@ describe("models-config runtime source snapshot", () => {
 
         try {
           setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
-          await ensureGodsEyeModelsJson(loadConfig());
+          await ensureOpenClawModelsJson(loadConfig());
 
           const parsed = await readGeneratedModelsJson<{
             providers: Record<string, { apiKey?: string }>;
@@ -229,7 +245,7 @@ describe("models-config runtime source snapshot", () => {
         unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
         const sourceConfig = createOpenAiApiKeySourceConfig();
         const runtimeConfig = createOpenAiApiKeyRuntimeConfig();
-        const clonedRuntimeConfig: GodsEyeConfig = {
+        const clonedRuntimeConfig: OpenClawConfig = {
           ...runtimeConfig,
           agents: {
             defaults: {
@@ -240,7 +256,7 @@ describe("models-config runtime source snapshot", () => {
 
         try {
           setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
-          await ensureGodsEyeModelsJson(clonedRuntimeConfig);
+          await ensureOpenClawModelsJson(clonedRuntimeConfig);
           await expectGeneratedProviderApiKey("openai", "OPENAI_API_KEY"); // pragma: allowlist secret
         } finally {
           clearRuntimeConfigSnapshot();
@@ -256,7 +272,7 @@ describe("models-config runtime source snapshot", () => {
         unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
         const sourceConfig = createOpenAiApiKeySourceConfig();
         const runtimeConfig = createOpenAiApiKeyRuntimeConfig();
-        const firstCandidate: GodsEyeConfig = {
+        const firstCandidate: OpenClawConfig = {
           ...runtimeConfig,
           models: {
             providers: {
@@ -267,7 +283,7 @@ describe("models-config runtime source snapshot", () => {
             },
           },
         };
-        const secondCandidate: GodsEyeConfig = {
+        const secondCandidate: OpenClawConfig = {
           ...runtimeConfig,
           models: {
             providers: {
@@ -281,14 +297,14 @@ describe("models-config runtime source snapshot", () => {
 
         try {
           setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
-          await ensureGodsEyeModelsJson(firstCandidate);
+          await ensureOpenClawModelsJson(firstCandidate);
           let parsed = await readGeneratedModelsJson<{
             providers: Record<string, { baseUrl?: string; apiKey?: string }>;
           }>();
           expect(parsed.providers.openai?.baseUrl).toBe("https://api.openai.com/v1");
           expect(parsed.providers.openai?.apiKey).toBe("OPENAI_API_KEY"); // pragma: allowlist secret
 
-          await ensureGodsEyeModelsJson(secondCandidate);
+          await ensureOpenClawModelsJson(secondCandidate);
           parsed = await readGeneratedModelsJson<{
             providers: Record<string, { baseUrl?: string; apiKey?: string }>;
           }>();
@@ -318,13 +334,13 @@ describe("models-config runtime source snapshot", () => {
         unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
         const sourceConfig = withGatewayTokenMode(createOpenAiApiKeySourceConfig());
         const runtimeConfig = withGatewayTokenMode(createOpenAiApiKeyRuntimeConfig());
-        const incompatibleCandidate: GodsEyeConfig = {
+        const incompatibleCandidate: OpenClawConfig = {
           ...createOpenAiApiKeyRuntimeConfig(),
         };
 
         try {
           setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
-          await ensureGodsEyeModelsJson(incompatibleCandidate);
+          await ensureOpenClawModelsJson(incompatibleCandidate);
           await expectGeneratedProviderApiKey("openai", "OPENAI_API_KEY"); // pragma: allowlist secret
         } finally {
           clearRuntimeConfigSnapshot();
@@ -340,13 +356,13 @@ describe("models-config runtime source snapshot", () => {
         unsetEnv(MODELS_CONFIG_IMPLICIT_ENV_VARS);
         const sourceConfig = withGatewayTokenMode(createOpenAiHeaderSourceConfig());
         const runtimeConfig = withGatewayTokenMode(createOpenAiHeaderRuntimeConfig());
-        const incompatibleCandidate: GodsEyeConfig = {
+        const incompatibleCandidate: OpenClawConfig = {
           ...createOpenAiHeaderRuntimeConfig(),
         };
 
         try {
           setRuntimeConfigSnapshot(runtimeConfig, sourceConfig);
-          await ensureGodsEyeModelsJson(incompatibleCandidate);
+          await ensureOpenClawModelsJson(incompatibleCandidate);
           await expectGeneratedOpenAiHeaderMarkers();
         } finally {
           clearRuntimeConfigSnapshot();

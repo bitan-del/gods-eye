@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/types.js";
+import type { OpenClawConfig } from "../config/types.js";
 import {
   resolveConfiguredSecretInputWithFallback,
   resolveRequiredConfiguredSecretRefInputString,
 } from "./resolve-configured-secret-input-string.js";
 
-function createConfig(value: unknown): GodsEyeConfig {
+function createConfig(value: unknown): OpenClawConfig {
   return {
     gateway: {
       auth: {
@@ -17,7 +17,7 @@ function createConfig(value: unknown): GodsEyeConfig {
         default: { source: "env" },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 describe("resolveConfiguredSecretInputWithFallback", () => {

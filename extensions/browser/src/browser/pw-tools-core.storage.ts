@@ -1,4 +1,4 @@
-import { readStringValue } from "openclaw/plugin-sdk/text-runtime";
+import { readStringValue } from "godseye/plugin-sdk/text-runtime";
 import { ensurePageState, getPageForTargetId } from "./pw-session.js";
 
 export async function cookiesGetViaPlaywright(opts: {

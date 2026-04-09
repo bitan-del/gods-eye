@@ -1,7 +1,7 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { MsgContext } from "../../../../src/auto-reply/templating.js";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { MsgContext } from "godseye/plugin-sdk/reply-runtime";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildDispatchInboundCaptureMock } from "../../../../src/channels/plugins/contracts/inbound-testkit.js";
-import type { GodsEyeConfig } from "../../../../src/config/types.js";
 
 type SignalMsgContext = Pick<MsgContext, "Body" | "WasMentioned"> & {
   Body?: string;
@@ -14,17 +14,24 @@ function getCapturedCtx() {
   return capturedCtx as SignalMsgContext;
 }
 
-vi.mock("godseye/plugin-sdk/reply-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/reply-runtime")>();
+vi.mock("godseye/plugin-sdk/reply-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/reply-runtime")>(
+    "godseye/plugin-sdk/reply-runtime",
+  );
   return buildDispatchInboundCaptureMock(actual, (ctx) => {
     capturedCtx = ctx as SignalMsgContext;
   });
 });
 
-let createBaseSignalEventHandlerDeps: typeof import("./event-handler.test-harness.js").createBaseSignalEventHandlerDeps;
-let createSignalReceiveEvent: typeof import("./event-handler.test-harness.js").createSignalReceiveEvent;
-let createSignalEventHandler: typeof import("./event-handler.js").createSignalEventHandler;
-let renderSignalMentions: typeof import("./mentions.js").renderSignalMentions;
+const [
+  { createBaseSignalEventHandlerDeps, createSignalReceiveEvent },
+  { createSignalEventHandler },
+  { renderSignalMentions },
+] = await Promise.all([
+  import("./event-handler.test-harness.js"),
+  import("./event-handler.js"),
+  import("./mentions.js"),
+]);
 
 type GroupEventOpts = {
   message?: string;
@@ -85,7 +92,7 @@ function createSignalConfig(params: { requireMention: boolean; mentionPattern?: 
         groups: { "*": { requireMention: params.requireMention } },
       },
     },
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig;
 }
 
 async function expectSkippedGroupHistory(opts: GroupEventOpts, expectedBody: string) {
@@ -100,14 +107,6 @@ async function expectSkippedGroupHistory(opts: GroupEventOpts, expectedBody: str
 }
 
 describe("signal mention gating", () => {
-  beforeAll(async () => {
-    vi.resetModules();
-    ({ createBaseSignalEventHandlerDeps, createSignalReceiveEvent } =
-      await import("./event-handler.test-harness.js"));
-    ({ createSignalEventHandler } = await import("./event-handler.js"));
-    ({ renderSignalMentions } = await import("./mentions.js"));
-  });
-
   beforeEach(() => {
     capturedCtx = undefined;
   });

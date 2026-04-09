@@ -1,9 +1,10 @@
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   definePluginEntry,
   fetchWithSsrFGuard,
-  ssrfPolicyFromAllowPrivateNetwork,
-  type GodsEyeConfig,
-  type GodsEyePluginApi,
+  ssrfPolicyFromDangerouslyAllowPrivateNetwork,
+  type OpenClawConfig,
+  type OpenClawPluginApi,
 } from "./api.js";
 
 type ThreadOwnershipConfig = {
@@ -11,7 +12,7 @@ type ThreadOwnershipConfig = {
   abTestChannels?: string[];
 };
 
-type AgentEntry = NonNullable<NonNullable<GodsEyeConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
 // In-memory set of {channel}:{thread} keys where this agent was @-mentioned.
 // Entries expire after 5 minutes.
@@ -27,7 +28,7 @@ function cleanExpiredMentions(): void {
   }
 }
 
-function resolveOwnershipAgent(config: GodsEyeConfig): { id: string; name: string } {
+function resolveOwnershipAgent(config: OpenClawConfig): { id: string; name: string } {
   const list = Array.isArray(config.agents?.list)
     ? config.agents.list.filter((entry): entry is AgentEntry =>
         Boolean(entry && typeof entry === "object"),
@@ -35,11 +36,9 @@ function resolveOwnershipAgent(config: GodsEyeConfig): { id: string; name: strin
     : [];
   const selected = list.find((entry) => entry.default === true) ?? list[0];
 
-  const id =
-    typeof selected?.id === "string" && selected.id.trim() ? selected.id.trim() : "unknown";
-  const identityName =
-    typeof selected?.identity?.name === "string" ? selected.identity.name.trim() : "";
-  const fallbackName = typeof selected?.name === "string" ? selected.name.trim() : "";
+  const id = normalizeOptionalString(selected?.id) ?? "unknown";
+  const identityName = normalizeOptionalString(selected?.identity?.name) ?? "";
+  const fallbackName = normalizeOptionalString(selected?.name) ?? "";
   const name = identityName || fallbackName;
 
   return { id, name };
@@ -49,7 +48,7 @@ export default definePluginEntry({
   id: "thread-ownership",
   name: "Thread Ownership",
   description: "Slack thread claim coordination for multi-agent setups",
-  register(api: GodsEyePluginApi) {
+  register(api: OpenClawPluginApi) {
     const pluginCfg = (api.pluginConfig ?? {}) as ThreadOwnershipConfig;
     const forwarderUrl = (
       pluginCfg.forwarderUrl ??
@@ -67,12 +66,16 @@ export default definePluginEntry({
     const botUserId = process.env.SLACK_BOT_USER_ID ?? "";
 
     api.on("message_received", async (event, ctx) => {
-      if (ctx.channelId !== "slack") return;
+      if (ctx.channelId !== "slack") {
+        return;
+      }
 
       const text = event.content ?? "";
       const threadTs = (event.metadata?.threadTs as string) ?? "";
       const channelId = (event.metadata?.channelId as string) ?? ctx.conversationId ?? "";
-      if (!threadTs || !channelId) return;
+      if (!threadTs || !channelId) {
+        return;
+      }
 
       const mentioned =
         (agentName && text.includes(`@${agentName}`)) ||
@@ -84,15 +87,23 @@ export default definePluginEntry({
     });
 
     api.on("message_sending", async (event, ctx) => {
-      if (ctx.channelId !== "slack") return;
+      if (ctx.channelId !== "slack") {
+        return;
+      }
 
       const threadTs = (event.metadata?.threadTs as string) ?? "";
       const channelId = (event.metadata?.channelId as string) ?? event.to;
-      if (!threadTs) return;
-      if (abTestChannels.size > 0 && !abTestChannels.has(channelId)) return;
+      if (!threadTs) {
+        return;
+      }
+      if (abTestChannels.size > 0 && !abTestChannels.has(channelId)) {
+        return;
+      }
 
       cleanExpiredMentions();
-      if (mentionedThreads.has(`${channelId}:${threadTs}`)) return;
+      if (mentionedThreads.has(`${channelId}:${threadTs}`)) {
+        return;
+      }
 
       try {
         // The forwarder is an internal service (e.g. a Docker container); allow private-network
@@ -105,7 +116,7 @@ export default definePluginEntry({
             body: JSON.stringify({ agent_id: agentId }),
           },
           timeoutMs: 3000,
-          policy: ssrfPolicyFromAllowPrivateNetwork(true),
+          policy: ssrfPolicyFromDangerouslyAllowPrivateNetwork(true),
           auditContext: "thread-ownership",
         });
 

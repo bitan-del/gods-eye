@@ -1,5 +1,5 @@
 import type * as Lark from "@larksuiteoapi/node-sdk";
-import type { GodsEyePluginApi } from "../runtime-api.js";
+import type { OpenClawPluginApi } from "../runtime-api.js";
 import { listEnabledFeishuAccounts } from "./accounts.js";
 import { createFeishuToolClient, resolveAnyEnabledFeishuToolsConfig } from "./tool-account.js";
 import {
@@ -151,7 +151,7 @@ async function renameNode(client: Lark.Client, spaceId: string, nodeToken: strin
 
 // ============ Tool Registration ============
 
-export function registerFeishuWikiTools(api: GodsEyePluginApi) {
+export function registerFeishuWikiTools(api: OpenClawPluginApi) {
   if (!api.config) {
     api.logger.debug?.("feishu_wiki: No config available, skipping wiki tools");
     return;
@@ -217,7 +217,6 @@ export function registerFeishuWikiTools(api: GodsEyePluginApi) {
               case "rename":
                 return jsonToolResult(await renameNode(client, p.space_id, p.node_token, p.title));
               default:
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exhaustive check fallback
                 return unknownToolActionResult((p as { action?: unknown }).action);
             }
           } catch (err) {

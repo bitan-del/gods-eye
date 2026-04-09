@@ -12,14 +12,39 @@ import {
   withWindowsEnv,
   writeGatewayScript,
 } from "./test-helpers/schtasks-fixtures.js";
+const timeState = vi.hoisted(() => ({ now: 0 }));
+const sleepMock = vi.hoisted(() =>
+  vi.fn(async (ms: number) => {
+    timeState.now += ms;
+  }),
+);
 const childUnref = vi.hoisted(() => vi.fn());
 const spawn = vi.hoisted(() => vi.fn(() => ({ unref: childUnref })));
+const spawnSync = vi.hoisted(() =>
+  vi.fn(() => ({
+    pid: 0,
+    output: [null, "", ""],
+    stdout: "",
+    stderr: "",
+    status: 0,
+    signal: null,
+  })),
+);
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
+vi.mock("../utils.js", async () => {
+  const actual = await vi.importActual<typeof import("../utils.js")>("../utils.js");
+  return {
+    ...actual,
+    sleep: (ms: number) => sleepMock(ms),
+  };
+});
+
+vi.mock("node:child_process", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
   return {
     ...actual,
     spawn,
+    spawnSync,
   };
 });
 
@@ -40,7 +65,7 @@ function resolveStartupEntryPath(env: Record<string, string>) {
     "Start Menu",
     "Programs",
     "Startup",
-    "GodsEye Gateway.cmd",
+    "OpenClaw Gateway.cmd",
   );
 }
 
@@ -79,7 +104,14 @@ function addStartupFallbackMissingResponses(
 beforeEach(() => {
   resetSchtasksBaseMocks();
   spawn.mockClear();
+  spawnSync.mockClear();
   childUnref.mockClear();
+  timeState.now = 0;
+  vi.spyOn(Date, "now").mockImplementation(() => timeState.now);
+  sleepMock.mockReset();
+  sleepMock.mockImplementation(async (ms: number) => {
+    timeState.now += ms;
+  });
 });
 
 afterEach(() => {
@@ -88,9 +120,10 @@ afterEach(() => {
 
 describe("Windows startup fallback", () => {
   it("falls back to a Startup-folder launcher when schtasks create is denied", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       schtasksResponses.push(
         { code: 0, stdout: "", stderr: "" },
+        { code: 1, stdout: "", stderr: "not found" },
         { code: 5, stdout: "", stderr: "ERROR: Access is denied." },
       );
 
@@ -104,7 +137,7 @@ describe("Windows startup fallback", () => {
         env,
         stdout,
         programArguments: ["node", "gateway.js", "--port", "18789"],
-        environment: { GODSEYE_GATEWAY_PORT: "18789" },
+        environment: { OPENCLAW_GATEWAY_PORT: "18789" },
       });
 
       const startupEntryPath = resolveStartupEntryPath(env);
@@ -123,9 +156,10 @@ describe("Windows startup fallback", () => {
   });
 
   it("falls back to a Startup-folder launcher when schtasks create hangs", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       schtasksResponses.push(
         { code: 0, stdout: "", stderr: "" },
+        { code: 1, stdout: "", stderr: "not found" },
         { code: 124, stdout: "", stderr: "schtasks timed out after 15000ms" },
       );
 
@@ -134,7 +168,7 @@ describe("Windows startup fallback", () => {
         env,
         stdout,
         programArguments: ["node", "gateway.js", "--port", "18789"],
-        environment: { GODSEYE_GATEWAY_PORT: "18789" },
+        environment: { OPENCLAW_GATEWAY_PORT: "18789" },
       });
 
       await expect(fs.access(resolveStartupEntryPath(env))).resolves.toBeUndefined();
@@ -143,7 +177,7 @@ describe("Windows startup fallback", () => {
   });
 
   it("treats an installed Startup-folder launcher as loaded", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       addStartupFallbackMissingResponses();
       await writeStartupFallbackEntry(env);
 
@@ -152,7 +186,7 @@ describe("Windows startup fallback", () => {
   });
 
   it("reports runtime from the gateway listener when using the Startup fallback", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       addStartupFallbackMissingResponses();
       await writeStartupFallbackEntry(env);
       inspectPortUsage.mockResolvedValue({
@@ -170,7 +204,7 @@ describe("Windows startup fallback", () => {
   });
 
   it("restarts the Startup fallback by killing the current pid and relaunching the entry", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       addStartupFallbackMissingResponses([
         { code: 0, stdout: "", stderr: "" },
         { code: 1, stdout: "", stderr: "not found" },
@@ -193,7 +227,7 @@ describe("Windows startup fallback", () => {
   });
 
   it("kills the Startup fallback runtime even when the CLI env omits the gateway port", async () => {
-    await withWindowsEnv("godseye-win-startup-", async ({ env }) => {
+    await withWindowsEnv("openclaw-win-startup-", async ({ env }) => {
       schtasksResponses.push({ code: 0, stdout: "", stderr: "" });
       await writeGatewayScript(env);
       await writeStartupFallbackEntry(env);
@@ -219,7 +253,7 @@ describe("Windows startup fallback", () => {
 
       const stdout = new PassThrough();
       const envWithoutPort = { ...env };
-      delete envWithoutPort.GODSEYE_GATEWAY_PORT;
+      delete envWithoutPort.OPENCLAW_GATEWAY_PORT;
       await stopScheduledTask({ env: envWithoutPort, stdout });
 
       expectGatewayTermination(5151);

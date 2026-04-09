@@ -32,6 +32,10 @@ import {
   wrapWebContent,
   writeCachedSearchPayload,
 } from "godseye/plugin-sdk/provider-web-search";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "godseye/plugin-sdk/text-runtime";
 
 const DEFAULT_PERPLEXITY_BASE_URL = "https://openrouter.ai/api/v1";
 const PERPLEXITY_DIRECT_BASE_URL = "https://api.perplexity.ai";
@@ -85,7 +89,7 @@ function inferPerplexityBaseUrlFromApiKey(apiKey?: string): PerplexityBaseUrlHin
   if (!apiKey) {
     return undefined;
   }
-  const normalized = apiKey.toLowerCase();
+  const normalized = normalizeLowercaseStringOrEmpty(apiKey);
   if (PERPLEXITY_KEY_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
     return "direct";
   }
@@ -122,7 +126,7 @@ function resolvePerplexityBaseUrl(
   authSource: "config" | "perplexity_env" | "openrouter_env" | "none" = "none",
   configuredKey?: string,
 ): string {
-  const fromConfig = typeof perplexity?.baseUrl === "string" ? perplexity.baseUrl.trim() : "";
+  const fromConfig = normalizeOptionalString(perplexity?.baseUrl) ?? "";
   if (fromConfig) {
     return fromConfig;
   }
@@ -141,13 +145,15 @@ function resolvePerplexityBaseUrl(
 }
 
 function resolvePerplexityModel(perplexity?: PerplexityConfig): string {
-  const model = typeof perplexity?.model === "string" ? perplexity.model.trim() : "";
+  const model = normalizeOptionalString(perplexity?.model) ?? "";
   return model || DEFAULT_PERPLEXITY_MODEL;
 }
 
 function isDirectPerplexityBaseUrl(baseUrl: string): boolean {
   try {
-    return new URL(baseUrl.trim()).hostname.toLowerCase() === "api.perplexity.ai";
+    return (
+      normalizeLowercaseStringOrEmpty(new URL(baseUrl.trim()).hostname) === "api.perplexity.ai"
+    );
   } catch {
     return false;
   }
@@ -171,8 +177,7 @@ function resolvePerplexityTransport(perplexity?: PerplexityConfig): {
   const baseUrl = resolvePerplexityBaseUrl(perplexity, auth.source, auth.apiKey);
   const model = resolvePerplexityModel(perplexity);
   const hasLegacyOverride = Boolean(
-    (perplexity?.baseUrl && perplexity.baseUrl.trim()) ||
-    (perplexity?.model && perplexity.model.trim()),
+    normalizeOptionalString(perplexity?.baseUrl) || normalizeOptionalString(perplexity?.model),
   );
   return {
     ...auth,
@@ -184,8 +189,8 @@ function resolvePerplexityTransport(perplexity?: PerplexityConfig): {
 }
 
 function extractPerplexityCitations(data: PerplexitySearchResponse): string[] {
-  const topLevel = (data.citations ?? []).filter(
-    (url): url is string => typeof url === "string" && Boolean(url.trim()),
+  const topLevel = (data.citations ?? []).filter((url): url is string =>
+    Boolean(normalizeOptionalString(url)),
   );
   if (topLevel.length > 0) {
     return [...new Set(topLevel)];
@@ -202,8 +207,9 @@ function extractPerplexityCitations(data: PerplexitySearchResponse): string[] {
           : typeof annotation.url === "string"
             ? annotation.url
             : undefined;
-      if (url?.trim()) {
-        citations.push(url.trim());
+      const normalizedUrl = normalizeOptionalString(url);
+      if (normalizedUrl) {
+        citations.push(normalizedUrl);
       }
     }
   }
@@ -228,15 +234,30 @@ async function runPerplexitySearchApi(params: {
     query: params.query,
     max_results: params.count,
   };
-  if (params.country) body.country = params.country;
-  if (params.searchDomainFilter?.length) body.search_domain_filter = params.searchDomainFilter;
-  if (params.searchRecencyFilter) body.search_recency_filter = params.searchRecencyFilter;
-  if (params.searchLanguageFilter?.length)
+  if (params.country) {
+    body.country = params.country;
+  }
+  if (params.searchDomainFilter?.length) {
+    body.search_domain_filter = params.searchDomainFilter;
+  }
+  if (params.searchRecencyFilter) {
+    body.search_recency_filter = params.searchRecencyFilter;
+  }
+  if (params.searchLanguageFilter?.length) {
     body.search_language_filter = params.searchLanguageFilter;
-  if (params.searchAfterDate) body.search_after_date = params.searchAfterDate;
-  if (params.searchBeforeDate) body.search_before_date = params.searchBeforeDate;
-  if (params.maxTokens !== undefined) body.max_tokens = params.maxTokens;
-  if (params.maxTokensPerPage !== undefined) body.max_tokens_per_page = params.maxTokensPerPage;
+  }
+  if (params.searchAfterDate) {
+    body.search_after_date = params.searchAfterDate;
+  }
+  if (params.searchBeforeDate) {
+    body.search_before_date = params.searchBeforeDate;
+  }
+  if (params.maxTokens !== undefined) {
+    body.max_tokens = params.maxTokens;
+  }
+  if (params.maxTokensPerPage !== undefined) {
+    body.max_tokens_per_page = params.maxTokensPerPage;
+  }
 
   return withTrustedWebSearchEndpoint(
     {
@@ -248,8 +269,8 @@ async function runPerplexitySearchApi(params: {
           "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${params.apiKey}`,
-          "HTTP-Referer": "https://gods-eye.org",
-          "X-Title": "GodsEye Web Search",
+          "HTTP-Referer": "https://openclaw.ai",
+          "X-Title": "OpenClaw Web Search",
         },
         body: JSON.stringify(body),
       },
@@ -296,8 +317,8 @@ async function runPerplexitySearch(params: {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${params.apiKey}`,
-          "HTTP-Referer": "https://gods-eye.org",
-          "X-Title": "GodsEye Web Search",
+          "HTTP-Referer": "https://openclaw.ai",
+          "X-Title": "OpenClaw Web Search",
         },
         body: JSON.stringify(body),
       },
@@ -326,15 +347,19 @@ function resolveRuntimeTransport(params: {
     perplexity && typeof perplexity === "object" && !Array.isArray(perplexity)
       ? (perplexity as { baseUrl?: string; model?: string })
       : undefined;
-  const configuredBaseUrl = typeof scoped?.baseUrl === "string" ? scoped.baseUrl.trim() : "";
-  const configuredModel = typeof scoped?.model === "string" ? scoped.model.trim() : "";
+  const configuredBaseUrl = normalizeOptionalString(scoped?.baseUrl) ?? "";
+  const configuredModel = normalizeOptionalString(scoped?.model) ?? "";
   const baseUrl = (() => {
     if (configuredBaseUrl) {
       return configuredBaseUrl;
     }
     if (params.keySource === "env") {
-      if (params.fallbackEnvVar === "PERPLEXITY_API_KEY") return PERPLEXITY_DIRECT_BASE_URL;
-      if (params.fallbackEnvVar === "OPENROUTER_API_KEY") return DEFAULT_PERPLEXITY_BASE_URL;
+      if (params.fallbackEnvVar === "PERPLEXITY_API_KEY") {
+        return PERPLEXITY_DIRECT_BASE_URL;
+      }
+      if (params.fallbackEnvVar === "OPENROUTER_API_KEY") {
+        return DEFAULT_PERPLEXITY_BASE_URL;
+      }
     }
     if ((params.keySource === "config" || params.keySource === "secretRef") && params.resolvedKey) {
       return inferPerplexityBaseUrlFromApiKey(params.resolvedKey) === "openrouter"
@@ -428,11 +453,11 @@ function createPerplexityToolDefinition(
           error: "missing_perplexity_api_key",
           message:
             "web_search (perplexity) needs an API key. Set PERPLEXITY_API_KEY or OPENROUTER_API_KEY in the Gateway environment, or configure tools.web.search.perplexity.apiKey.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
 
-      const params = args as Record<string, unknown>;
+      const params = args;
       const query = readStringParam(params, "query", { required: true });
       const count =
         readNumberParam(params, "count", { integer: true }) ??
@@ -444,7 +469,7 @@ function createPerplexityToolDefinition(
         return {
           error: "invalid_freshness",
           message: "freshness must be day, week, month, or year.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
 
@@ -463,7 +488,7 @@ function createPerplexityToolDefinition(
             error: "unsupported_country",
             message:
               "country filtering is only supported by the native Perplexity Search API path. Remove Perplexity baseUrl/model overrides or use a direct PERPLEXITY_API_KEY to enable it.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
         if (language) {
@@ -471,7 +496,7 @@ function createPerplexityToolDefinition(
             error: "unsupported_language",
             message:
               "language filtering is only supported by the native Perplexity Search API path. Remove Perplexity baseUrl/model overrides or use a direct PERPLEXITY_API_KEY to enable it.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
         if (rawDateAfter || rawDateBefore) {
@@ -479,7 +504,7 @@ function createPerplexityToolDefinition(
             error: "unsupported_date_filter",
             message:
               "date_after/date_before are only supported by the native Perplexity Search API path. Remove Perplexity baseUrl/model overrides or use a direct PERPLEXITY_API_KEY to enable them.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
         if (domainFilter?.length) {
@@ -487,7 +512,7 @@ function createPerplexityToolDefinition(
             error: "unsupported_domain_filter",
             message:
               "domain_filter is only supported by the native Perplexity Search API path. Remove Perplexity baseUrl/model overrides or use a direct PERPLEXITY_API_KEY to enable it.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
         if (maxTokens !== undefined || maxTokensPerPage !== undefined) {
@@ -495,7 +520,7 @@ function createPerplexityToolDefinition(
             error: "unsupported_content_budget",
             message:
               "max_tokens and max_tokens_per_page are only supported by the native Perplexity Search API path. Remove Perplexity baseUrl/model overrides or use a direct PERPLEXITY_API_KEY to enable them.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
       }
@@ -504,7 +529,7 @@ function createPerplexityToolDefinition(
         return {
           error: "invalid_language",
           message: "language must be a 2-letter ISO 639-1 code like 'en', 'de', or 'fr'.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
       if (rawFreshness && (rawDateAfter || rawDateBefore)) {
@@ -512,7 +537,7 @@ function createPerplexityToolDefinition(
           error: "conflicting_time_filters",
           message:
             "freshness and date_after/date_before cannot be used together. Use either freshness (day/week/month/year) or a date range (date_after/date_before), not both.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
       const dateAfter = rawDateAfter ? normalizeToIsoDate(rawDateAfter) : undefined;
@@ -521,21 +546,21 @@ function createPerplexityToolDefinition(
         return {
           error: "invalid_date",
           message: "date_after must be YYYY-MM-DD format.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
       if (rawDateBefore && !dateBefore) {
         return {
           error: "invalid_date",
           message: "date_before must be YYYY-MM-DD format.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
       if (dateAfter && dateBefore && dateAfter > dateBefore) {
         return {
           error: "invalid_date_range",
           message: "date_after must be before date_before.",
-          docs: "https://docs.gods-eye.org/tools/web",
+          docs: "https://docs.openclaw.ai/tools/web",
         };
       }
       if (domainFilter?.length) {
@@ -546,14 +571,14 @@ function createPerplexityToolDefinition(
             error: "invalid_domain_filter",
             message:
               "domain_filter cannot mix allowlist and denylist entries. Use either all positive entries (allowlist) or all entries prefixed with '-' (denylist).",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
         if (domainFilter.length > 20) {
           return {
             error: "invalid_domain_filter",
             message: "domain_filter supports a maximum of 20 domains.",
-            docs: "https://docs.gods-eye.org/tools/web",
+            docs: "https://docs.openclaw.ai/tools/web",
           };
         }
       }
@@ -622,7 +647,7 @@ function createPerplexityToolDefinition(
               },
               results: await runPerplexitySearchApi({
                 query,
-                apiKey: runtime.apiKey!,
+                apiKey: runtime.apiKey,
                 count: resolveSearchCount(count, DEFAULT_SEARCH_COUNT),
                 timeoutSeconds,
                 country: country ?? undefined,
@@ -654,11 +679,12 @@ export function createPerplexityWebSearchProvider(): WebSearchProviderPlugin {
     id: "perplexity",
     label: "Perplexity Search",
     hint: "Requires Perplexity API key or OpenRouter API key · structured results",
+    onboardingScopes: ["text-inference"],
     credentialLabel: "Perplexity API key",
     envVars: ["PERPLEXITY_API_KEY", "OPENROUTER_API_KEY"],
     placeholder: "pplx-...",
     signupUrl: "https://www.perplexity.ai/settings/api",
-    docsUrl: "https://docs.gods-eye.org/perplexity",
+    docsUrl: "https://docs.openclaw.ai/perplexity",
     autoDetectOrder: 50,
     credentialPath: "plugins.entries.perplexity.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.perplexity.config.webSearch.apiKey"],
@@ -673,10 +699,10 @@ export function createPerplexityWebSearchProvider(): WebSearchProviderPlugin {
     resolveRuntimeMetadata: (ctx) => ({
       perplexityTransport: resolveRuntimeTransport({
         searchConfig: mergeScopedSearchConfig(
-          ctx.searchConfig as SearchConfigRecord | undefined,
+          ctx.searchConfig,
           "perplexity",
           resolveProviderWebSearchPluginConfig(ctx.config, "perplexity"),
-        ) as SearchConfigRecord | undefined,
+        ),
         resolvedKey: ctx.resolvedCredential?.value,
         keySource: ctx.resolvedCredential?.source ?? "missing",
         fallbackEnvVar: ctx.resolvedCredential?.fallbackEnvVar,
@@ -685,11 +711,11 @@ export function createPerplexityWebSearchProvider(): WebSearchProviderPlugin {
     createTool: (ctx) =>
       createPerplexityToolDefinition(
         mergeScopedSearchConfig(
-          ctx.searchConfig as SearchConfigRecord | undefined,
+          ctx.searchConfig,
           "perplexity",
           resolveProviderWebSearchPluginConfig(ctx.config, "perplexity"),
-        ) as SearchConfigRecord | undefined,
-        ctx.runtimeMetadata?.perplexityTransport as PerplexityTransport | undefined,
+        ),
+        ctx.runtimeMetadata?.perplexityTransport,
       ),
   };
 }

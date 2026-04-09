@@ -108,7 +108,7 @@ function analyzeSourceModule(params: { filePath: string; source: string }): {
       }
 
       if (
-        specifier === "openclaw/plugin-sdk/core" &&
+        specifier === "godseye/plugin-sdk/core" &&
         statement.importClause?.namedBindings &&
         ts.isNamedImports(statement.importClause.namedBindings) &&
         statement.importClause.namedBindings.elements.some(
@@ -283,7 +283,7 @@ describe("plugin entry guardrails", () => {
         import "./setup.js";
         export { x };
         export * from "./barrel.js";
-        import { y } from "openclaw/plugin-sdk/testing";
+        import { y } from "godseye/plugin-sdk/testing";
       `,
       }).relativeSpecifiers.toSorted(),
     ).toEqual(["./barrel.js", "./safe.js", "./setup.js"]);
@@ -313,8 +313,8 @@ describe("plugin entry guardrails", () => {
       analyzeSourceModule({
         filePath: "aliased-plugin-entry.ts",
         source: `
-          import { definePluginEntry as dpe } from "openclaw/plugin-sdk/core";
-          import { somethingElse } from "openclaw/plugin-sdk/core";
+          import { definePluginEntry as dpe } from "godseye/plugin-sdk/core";
+          import { somethingElse } from "godseye/plugin-sdk/core";
         `,
       }).importsDefinePluginEntryFromCore,
     ).toBe(true);

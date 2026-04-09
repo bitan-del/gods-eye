@@ -1,9 +1,9 @@
 import type { IncomingMessage } from "node:http";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { createIMessageTestPlugin } from "../../test/helpers/channels/imessage-test-plugin.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { setActivePluginRegistry } from "../plugins/runtime.js";
-import { createMSTeamsTestPlugin, createTestRegistry } from "../test-utils/channel-plugins.js";
-import { createIMessageTestPlugin } from "../test-utils/imessage-test-plugin.js";
+import { createChannelTestPluginBase, createTestRegistry } from "../test-utils/channel-plugins.js";
 import {
   extractHookToken,
   isHookAgentAllowed,
@@ -15,8 +15,24 @@ import {
   resolveHooksConfig,
 } from "./hooks.js";
 
+const createDemoAliasPlugin = () => ({
+  ...createChannelTestPluginBase({
+    id: "demo-alias-channel",
+    label: "Demo Alias Channel",
+    docsPath: "/channels/demo-alias-channel",
+  }),
+  meta: {
+    ...createChannelTestPluginBase({
+      id: "demo-alias-channel",
+      label: "Demo Alias Channel",
+      docsPath: "/channels/demo-alias-channel",
+    }).meta,
+    aliases: ["workspace-chat"],
+  },
+});
+
 describe("gateway hooks helpers", () => {
-  const resolveHooksConfigOrThrow = (cfg: GodsEyeConfig) => {
+  const resolveHooksConfigOrThrow = (cfg: OpenClawConfig) => {
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -35,7 +51,7 @@ describe("gateway hooks helpers", () => {
       agents: {
         list: [{ id: "main", default: true }, { id: "hooks" }],
       },
-    }) as GodsEyeConfig;
+    }) as OpenClawConfig;
 
   beforeEach(() => {
     setActivePluginRegistry(emptyRegistry);
@@ -51,7 +67,7 @@ describe("gateway hooks helpers", () => {
         token: "secret",
         path: "hooks///",
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(base);
     expect(resolved?.basePath).toBe("/hooks");
     expect(resolved?.token).toBe("secret");
@@ -61,7 +77,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHooksConfig rejects root path", () => {
     const cfg = {
       hooks: { enabled: true, token: "x", path: "/" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     expect(() => resolveHooksConfig(cfg)).toThrow("hooks.path may not be '/'");
   });
 
@@ -69,14 +85,14 @@ describe("gateway hooks helpers", () => {
     const req = {
       headers: {
         authorization: "Bearer top",
-        "x-godseye-token": "header",
+        "x-openclaw-token": "header",
       },
     } as unknown as IncomingMessage;
     const result1 = extractHookToken(req);
     expect(result1).toBe("top");
 
     const req2 = {
-      headers: { "x-godseye-token": "header" },
+      headers: { "x-openclaw-token": "header" },
     } as unknown as IncomingMessage;
     const result2 = extractHookToken(req2);
     expect(result2).toBe("header");
@@ -128,16 +144,16 @@ describe("gateway hooks helpers", () => {
     setActivePluginRegistry(
       createTestRegistry([
         {
-          pluginId: "msteams",
+          pluginId: "demo-alias-channel",
           source: "test",
-          plugin: createMSTeamsTestPlugin({ aliases: ["teams"] }),
+          plugin: createDemoAliasPlugin(),
         },
       ]),
     );
-    const teams = normalizeAgentPayload({ message: "yo", channel: "teams" });
-    expect(teams.ok).toBe(true);
-    if (teams.ok) {
-      expect(teams.value.channel).toBe("msteams");
+    const aliasChannel = normalizeAgentPayload({ message: "yo", channel: "workspace-chat" });
+    expect(aliasChannel.ok).toBe(true);
+    if (aliasChannel.ok) {
+      expect(aliasChannel.value.channel).toBe("demo-alias-channel");
     }
 
     const bad = normalizeAgentPayload({ message: "yo", channel: "sms" });
@@ -164,7 +180,7 @@ describe("gateway hooks helpers", () => {
       agents: {
         list: [{ id: "main", default: true }, { id: "hooks" }],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -199,7 +215,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHookSessionKey disables request sessionKey by default", () => {
     const cfg = {
       hooks: { enabled: true, token: "secret" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -216,7 +232,7 @@ describe("gateway hooks helpers", () => {
   test("resolveHookSessionKey allows request sessionKey when explicitly enabled", () => {
     const cfg = {
       hooks: { enabled: true, token: "secret", allowRequestSessionKey: true },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -238,7 +254,7 @@ describe("gateway hooks helpers", () => {
         allowRequestSessionKey: true,
         allowedSessionKeyPrefixes: ["hook:"],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -267,7 +283,7 @@ describe("gateway hooks helpers", () => {
         token: "secret",
         defaultSessionKey: "hook:ingress",
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const resolved = resolveHooksConfig(cfg);
     expect(resolved).not.toBeNull();
     if (!resolved) {
@@ -281,22 +297,22 @@ describe("gateway hooks helpers", () => {
     expect(resolvedKey).toEqual({ ok: true, value: "hook:ingress" });
   });
 
-  test("normalizeHookDispatchSessionKey strips duplicate target agent prefix", () => {
+  test("normalizeHookDispatchSessionKey preserves target agent scope", () => {
     expect(
       normalizeHookDispatchSessionKey({
         sessionKey: "agent:hooks:slack:channel:c123",
         targetAgentId: "hooks",
       }),
-    ).toBe("slack:channel:c123");
+    ).toBe("agent:hooks:slack:channel:c123");
   });
 
-  test("normalizeHookDispatchSessionKey preserves non-target agent scoped keys", () => {
+  test("normalizeHookDispatchSessionKey rebinds non-target agent scoped keys to the target agent", () => {
     expect(
       normalizeHookDispatchSessionKey({
         sessionKey: "agent:main:slack:channel:c123",
         targetAgentId: "hooks",
       }),
-    ).toBe("agent:main:slack:channel:c123");
+    ).toBe("agent:hooks:slack:channel:c123");
   });
 
   test("resolveHooksConfig validates defaultSessionKey and generated fallback against prefixes", () => {
@@ -308,7 +324,7 @@ describe("gateway hooks helpers", () => {
           defaultSessionKey: "agent:main:main",
           allowedSessionKeyPrefixes: ["hook:"],
         },
-      } as GodsEyeConfig),
+      } as OpenClawConfig),
     ).toThrow("hooks.defaultSessionKey must match hooks.allowedSessionKeyPrefixes");
 
     expect(() =>
@@ -318,7 +334,7 @@ describe("gateway hooks helpers", () => {
           token: "secret",
           allowedSessionKeyPrefixes: ["agent:"],
         },
-      } as GodsEyeConfig),
+      } as OpenClawConfig),
     ).toThrow(
       "hooks.allowedSessionKeyPrefixes must include 'hook:' when hooks.defaultSessionKey is unset",
     );

@@ -1,14 +1,35 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   loadConfigMock as loadConfig,
+  resolveConfigPathMock as resolveConfigPath,
   resolveGatewayPortMock as resolveGatewayPort,
+  resolveStateDirMock as resolveStateDir,
 } from "../gateway/gateway-connection.test-mocks.js";
 import { captureEnv, withEnvAsync } from "../test-utils/env.js";
 
-const { resolveGatewayConnection } = await import("./gateway-chat.js");
+vi.mock("../config/config.js", async () => {
+  const mocks = await import("../gateway/gateway-connection.test-mocks.js");
+  return {
+    loadConfig: mocks.loadConfigMock,
+    resolveConfigPath: mocks.resolveConfigPathMock,
+    resolveGatewayPort: mocks.resolveGatewayPortMock,
+    resolveStateDir: mocks.resolveStateDirMock,
+  };
+});
+
+vi.mock("../gateway/net.js", async () => {
+  const mocks = await import("../gateway/gateway-connection.test-mocks.js");
+  return {
+    isLoopbackHost: mocks.isLoopbackHostMock,
+    isSecureWebSocketUrl: mocks.isSecureWebSocketUrlMock,
+    pickPrimaryLanIPv4: mocks.pickPrimaryLanIPv4Mock,
+  };
+});
+
+const { GatewayChatClient, resolveGatewayConnection } = await import("./gateway-chat.js");
 
 async function fileExists(filePath: string): Promise<boolean> {
   try {
@@ -42,7 +63,7 @@ async function withModeExecProviderFixture(
   label: string,
   run: (fixture: ModeExecProviderFixture) => Promise<void>,
 ) {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `godseye-tui-mode-${label}-`));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `openclaw-tui-mode-${label}-`));
   const tokenMarker = path.join(tempDir, "token-provider-ran");
   const passwordMarker = path.join(tempDir, "password-provider-ran");
   const tokenExecProgram = [
@@ -85,16 +106,25 @@ describe("resolveGatewayConnection", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "GODSEYE_GATEWAY_URL",
-      "GODSEYE_GATEWAY_TOKEN",
-      "GODSEYE_GATEWAY_PASSWORD",
+      "OPENCLAW_GATEWAY_URL",
+      "OPENCLAW_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
     ]);
-    loadConfig.mockClear();
-    resolveGatewayPort.mockClear();
+    loadConfig.mockReset();
+    resolveGatewayPort.mockReset();
+    resolveStateDir.mockReset();
+    resolveConfigPath.mockReset();
     resolveGatewayPort.mockReturnValue(18789);
-    delete process.env.GODSEYE_GATEWAY_URL;
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
+    resolveStateDir.mockImplementation(
+      (env: NodeJS.ProcessEnv) => env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw",
+    );
+    resolveConfigPath.mockImplementation(
+      (env: NodeJS.ProcessEnv, stateDir: string) =>
+        env.OPENCLAW_CONFIG_PATH ?? `${stateDir}/openclaw.json`,
+    );
+    delete process.env.OPENCLAW_GATEWAY_URL;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
   });
 
   afterEach(() => {
@@ -131,21 +161,22 @@ describe("resolveGatewayConnection", () => {
     expect(result).toEqual({
       url: "wss://override.example/ws",
       ...expected,
+      allowInsecureLocalOperatorUi: false,
     });
   });
   it("uses config auth token for local mode when both config and env tokens are set", async () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local", auth: { token: "config-token" } } });
 
-    await withEnvAsync({ GODSEYE_GATEWAY_TOKEN: "env-token" }, async () => {
+    await withEnvAsync({ OPENCLAW_GATEWAY_TOKEN: "env-token" }, async () => {
       const result = await resolveGatewayConnection({});
       expect(result.token).toBe("config-token");
     });
   });
 
-  it("falls back to GODSEYE_GATEWAY_TOKEN when config token is missing", async () => {
+  it("falls back to OPENCLAW_GATEWAY_TOKEN when config token is missing", async () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local" } });
 
-    await withEnvAsync({ GODSEYE_GATEWAY_TOKEN: "env-token" }, async () => {
+    await withEnvAsync({ OPENCLAW_GATEWAY_TOKEN: "env-token" }, async () => {
       const result = await resolveGatewayConnection({});
       expect(result.token).toBe("env-token");
     });
@@ -214,7 +245,7 @@ describe("resolveGatewayConnection", () => {
     );
   });
 
-  it("prefers GODSEYE_GATEWAY_PASSWORD over remote password fallback", async () => {
+  it("prefers OPENCLAW_GATEWAY_PASSWORD over remote password fallback", async () => {
     loadConfig.mockReturnValue({
       gateway: {
         mode: "remote",
@@ -222,7 +253,7 @@ describe("resolveGatewayConnection", () => {
       },
     });
 
-    const gatewayPasswordEnv = "GODSEYE_GATEWAY_PASSWORD"; // pragma: allowlist secret
+    const gatewayPasswordEnv = "OPENCLAW_GATEWAY_PASSWORD"; // pragma: allowlist secret
     const gatewayPassword = "env-pass"; // pragma: allowlist secret
     await withEnvAsync({ [gatewayPasswordEnv]: gatewayPassword }, async () => {
       const result = await resolveGatewayConnection({});
@@ -233,7 +264,7 @@ describe("resolveGatewayConnection", () => {
   it.runIf(process.platform !== "win32")(
     "resolves file-backed SecretRef token for local mode",
     async () => {
-      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-tui-file-secret-"));
+      const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-tui-file-secret-"));
       const secretFile = path.join(tempDir, "secrets.json");
       await fs.writeFile(secretFile, JSON.stringify({ gatewayToken: "file-secret-token" }), "utf8");
       await fs.chmod(secretFile, 0o600);
@@ -348,5 +379,68 @@ describe("resolveGatewayConnection", () => {
         expect(await fileExists(passwordMarker)).toBe(true);
       },
     );
+  });
+
+  it("marks loopback local connections for insecure operator ui auth when enabled", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        controlUi: {
+          allowInsecureAuth: true,
+        },
+        auth: {
+          mode: "token",
+          token: "config-token",
+        },
+      },
+    });
+
+    const result = await resolveGatewayConnection({});
+    expect(result.allowInsecureLocalOperatorUi).toBe(true);
+  });
+
+  it("preserves insecure local operator ui auth when a loopback url override is provided", async () => {
+    loadConfig.mockReturnValue({
+      gateway: {
+        mode: "local",
+        controlUi: {
+          allowInsecureAuth: true,
+        },
+        auth: {
+          mode: "token",
+          token: "config-token",
+        },
+      },
+    });
+
+    const result = await resolveGatewayConnection({
+      url: "ws://127.0.0.1:18791",
+      token: "override-token",
+    });
+    expect(result.allowInsecureLocalOperatorUi).toBe(true);
+    expect(result.token).toBe("override-token");
+  });
+});
+
+describe("GatewayChatClient", () => {
+  it("identifies the TUI as a tui client and skips device identity on insecure local ui paths", () => {
+    const client = new GatewayChatClient({
+      url: "ws://127.0.0.1:18789",
+      token: "test-token",
+      allowInsecureLocalOperatorUi: true,
+    });
+
+    expect(
+      (client as unknown as { client: { opts: { clientName?: string; mode?: string } } }).client
+        .opts.clientName,
+    ).toBe("openclaw-tui");
+    expect(
+      (client as unknown as { client: { opts: { clientName?: string; mode?: string } } }).client
+        .opts.mode,
+    ).toBe("ui");
+    expect(
+      (client as unknown as { client: { opts: { deviceIdentity?: unknown } } }).client.opts
+        .deviceIdentity,
+    ).toBeUndefined();
   });
 });

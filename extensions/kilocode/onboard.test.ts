@@ -1,7 +1,7 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { resolveEnvApiKey } from "openclaw/plugin-sdk/provider-auth-runtime";
-import { resolveAgentModelPrimaryValue } from "openclaw/plugin-sdk/provider-onboard";
-import { captureEnv } from "openclaw/plugin-sdk/testing";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveEnvApiKey } from "godseye/plugin-sdk/provider-auth-runtime";
+import { resolveAgentModelPrimaryValue } from "godseye/plugin-sdk/provider-onboard";
+import { captureEnv } from "godseye/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
 import {
   buildKilocodeModelDefinition,

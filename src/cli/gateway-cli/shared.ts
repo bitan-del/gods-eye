@@ -20,32 +20,6 @@ export const toOptionString = (value: unknown): string | undefined => {
   return undefined;
 };
 
-export function describeUnknownError(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  if (typeof err === "string") {
-    return err;
-  }
-  if (typeof err === "number" || typeof err === "bigint") {
-    return err.toString();
-  }
-  if (typeof err === "boolean") {
-    return err ? "true" : "false";
-  }
-  if (err && typeof err === "object") {
-    if ("message" in err && typeof err.message === "string") {
-      return err.message;
-    }
-    try {
-      return JSON.stringify(err);
-    } catch {
-      return "Unknown error";
-    }
-  }
-  return "Unknown error";
-}
-
 export function extractGatewayMiskeys(parsed: unknown): {
   hasGatewayToken: boolean;
   hasRemoteToken: boolean;
@@ -65,25 +39,25 @@ export function extractGatewayMiskeys(parsed: unknown): {
 }
 
 export function renderGatewayServiceStopHints(env: NodeJS.ProcessEnv = process.env): string[] {
-  const profile = env.GODSEYE_PROFILE;
+  const profile = env.OPENCLAW_PROFILE;
   switch (process.platform) {
     case "darwin":
       return [
-        `Tip: ${formatCliCommand("godseye gateway stop")}`,
+        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
         `Or: launchctl bootout gui/$UID/${resolveGatewayLaunchAgentLabel(profile)}`,
       ];
     case "linux":
       return [
-        `Tip: ${formatCliCommand("godseye gateway stop")}`,
+        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
         `Or: systemctl --user stop ${resolveGatewaySystemdServiceName(profile)}.service`,
       ];
     case "win32":
       return [
-        `Tip: ${formatCliCommand("godseye gateway stop")}`,
+        `Tip: ${formatCliCommand("openclaw gateway stop")}`,
         `Or: schtasks /End /TN "${resolveGatewayWindowsTaskName(profile)}"`,
       ];
     default:
-      return [`Tip: ${formatCliCommand("godseye gateway stop")}`];
+      return [`Tip: ${formatCliCommand("openclaw gateway stop")}`];
   }
 }
 

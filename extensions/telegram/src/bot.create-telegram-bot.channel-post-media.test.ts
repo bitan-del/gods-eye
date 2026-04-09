@@ -1,5 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { useFrozenTime, useRealTime } from "../../../test/helpers/extensions/frozen-time.js";
+import { useFrozenTime, useRealTime } from "../../../test/helpers/plugins/frozen-time.js";
 
 const harness = await import("./bot.create-telegram-bot.test-harness.js");
 const {
@@ -10,6 +10,8 @@ const {
   telegramBotDepsForTest,
   telegramBotRuntimeForTest,
 } = harness;
+const { createTelegramBot: createTelegramBotBase, setTelegramBotRuntimeForTest } =
+  await import("./bot.js");
 
 let createTelegramBot: (
   opts: Parameters<typeof import("./bot.js").createTelegramBot>[0],
@@ -90,7 +92,7 @@ function createChannelPostContext(params: {
       ...(params.mediaGroupId ? { media_group_id: params.mediaGroupId } : {}),
       ...(photoFileId ? { photo: [{ file_id: photoFileId }] } : {}),
     },
-    me: { username: "godseye_bot" },
+    me: { username: "openclaw_bot" },
     getFile: async () =>
       params.getFileResult ?? (photoFileId ? { file_path: `photos/${photoFileId}.jpg` } : {}),
   };
@@ -136,10 +138,7 @@ async function queueChannelPostAlbum(
 }
 
 describe("createTelegramBot channel_post media", () => {
-  beforeAll(async () => {
-    vi.resetModules();
-    const { createTelegramBot: createTelegramBotBase, setTelegramBotRuntimeForTest } =
-      await import("./bot.js");
+  beforeAll(() => {
     createTelegramBot = (opts) =>
       createTelegramBotBase({
         ...opts,
@@ -150,8 +149,7 @@ describe("createTelegramBot channel_post media", () => {
     );
   });
 
-  beforeEach(async () => {
-    const { setTelegramBotRuntimeForTest } = await import("./bot.js");
+  beforeEach(() => {
     setTelegramBotRuntimeForTest(
       telegramBotRuntimeForTest as unknown as Parameters<typeof setTelegramBotRuntimeForTest>[0],
     );
@@ -200,7 +198,7 @@ describe("createTelegramBot channel_post media", () => {
           date: 1736380800,
           text: part1,
         },
-        me: { username: "godseye_bot" },
+        me: { username: "openclaw_bot" },
         getFile: async () => ({}),
       });
 
@@ -211,7 +209,7 @@ describe("createTelegramBot channel_post media", () => {
           date: 1736380801,
           text: part2,
         },
-        me: { username: "godseye_bot" },
+        me: { username: "openclaw_bot" },
         getFile: async () => ({}),
       });
 
@@ -276,7 +274,7 @@ describe("createTelegramBot channel_post media", () => {
           photo: [{ file_id: "p1" }],
           from: { id: 55, is_bot: false, first_name: "u" },
         },
-        me: { username: "godseye_bot" },
+        me: { username: "openclaw_bot" },
         getFile: async () => ({ file_path: "photos/p1.jpg" }),
       });
 

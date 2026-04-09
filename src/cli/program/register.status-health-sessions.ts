@@ -1,8 +1,17 @@
 import type { Command } from "commander";
+import { flowsCancelCommand, flowsListCommand, flowsShowCommand } from "../../commands/flows.js";
 import { healthCommand } from "../../commands/health.js";
 import { sessionsCleanupCommand } from "../../commands/sessions-cleanup.js";
 import { sessionsCommand } from "../../commands/sessions.js";
 import { statusCommand } from "../../commands/status.js";
+import {
+  tasksAuditCommand,
+  tasksCancelCommand,
+  tasksListCommand,
+  tasksMaintenanceCommand,
+  tasksNotifyCommand,
+  tasksShowCommand,
+} from "../../commands/tasks.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
@@ -55,21 +64,21 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["godseye status", "Show channel health + session summary."],
-          ["godseye status --all", "Full diagnosis (read-only)."],
-          ["godseye status --json", "Machine-readable output."],
-          ["godseye status --usage", "Show model provider usage/quota snapshots."],
+          ["openclaw status", "Show channel health + session summary."],
+          ["openclaw status --all", "Full diagnosis (read-only)."],
+          ["openclaw status --json", "Machine-readable output."],
+          ["openclaw status --usage", "Show model provider usage/quota snapshots."],
           [
-            "godseye status --deep",
+            "openclaw status --deep",
             "Run channel probes (WA + Telegram + Discord + Slack + Signal).",
           ],
-          ["godseye status --deep --timeout 5000", "Tighten probe timeout."],
+          ["openclaw status --deep --timeout 5000", "Tighten probe timeout."],
         ])}`,
     )
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/status", "docs.gods-eye.org/cli/status")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/status", "docs.openclaw.ai/cli/status")}\n`,
     )
     .action(async (opts) => {
       await runWithVerboseAndTimeout(opts, async ({ verbose, timeoutMs }) => {
@@ -97,7 +106,7 @@ export function registerStatusHealthSessionsCommands(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/health", "docs.gods-eye.org/cli/health")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/health", "docs.openclaw.ai/cli/health")}\n`,
     )
     .action(async (opts) => {
       await runWithVerboseAndTimeout(opts, async ({ verbose, timeoutMs }) => {
@@ -125,12 +134,12 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["godseye sessions", "List all sessions."],
-          ["godseye sessions --agent work", "List sessions for one agent."],
-          ["godseye sessions --all-agents", "Aggregate sessions across agents."],
-          ["godseye sessions --active 120", "Only last 2 hours."],
-          ["godseye sessions --json", "Machine-readable output."],
-          ["godseye sessions --store ./tmp/sessions.json", "Use a specific session store."],
+          ["openclaw sessions", "List all sessions."],
+          ["openclaw sessions --agent work", "List sessions for one agent."],
+          ["openclaw sessions --all-agents", "Aggregate sessions across agents."],
+          ["openclaw sessions --active 120", "Only last 2 hours."],
+          ["openclaw sessions --json", "Machine-readable output."],
+          ["openclaw sessions --store ./tmp/sessions.json", "Use a specific session store."],
         ])}\n\n${theme.muted(
           "Shows token usage per session when the agent reports it; set agents.defaults.contextTokens to cap the window and show %.",
         )}`,
@@ -138,7 +147,7 @@ export function registerStatusHealthSessionsCommands(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/sessions", "docs.gods-eye.org/cli/sessions")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/sessions", "docs.openclaw.ai/cli/sessions")}\n`,
     )
     .action(async (opts) => {
       setVerbose(Boolean(opts.verbose));
@@ -174,16 +183,16 @@ export function registerStatusHealthSessionsCommands(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["godseye sessions cleanup --dry-run", "Preview stale/cap cleanup."],
+          ["openclaw sessions cleanup --dry-run", "Preview stale/cap cleanup."],
           [
-            "godseye sessions cleanup --dry-run --fix-missing",
+            "openclaw sessions cleanup --dry-run --fix-missing",
             "Also preview pruning entries with missing transcript files.",
           ],
-          ["godseye sessions cleanup --enforce", "Apply maintenance now."],
-          ["godseye sessions cleanup --agent work --dry-run", "Preview one agent store."],
-          ["godseye sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
+          ["openclaw sessions cleanup --enforce", "Apply maintenance now."],
+          ["openclaw sessions cleanup --agent work --dry-run", "Preview one agent store."],
+          ["openclaw sessions cleanup --all-agents --dry-run", "Preview all agent stores."],
           [
-            "godseye sessions cleanup --enforce --store ./tmp/sessions.json",
+            "openclaw sessions cleanup --enforce --store ./tmp/sessions.json",
             "Use a specific store.",
           ],
         ])}`,
@@ -208,6 +217,220 @@ export function registerStatusHealthSessionsCommands(program: Command) {
             fixMissing: Boolean(opts.fixMissing),
             activeKey: opts.activeKey as string | undefined,
             json: Boolean(opts.json || parentOpts?.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  const tasksCmd = program
+    .command("tasks")
+    .description("Inspect durable background tasks and TaskFlow state")
+    .option("--json", "Output as JSON", false)
+    .option("--runtime <name>", "Filter by kind (subagent, acp, cron, cli)")
+    .option(
+      "--status <name>",
+      "Filter by status (queued, running, succeeded, failed, timed_out, cancelled, lost)",
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksListCommand(
+          {
+            json: Boolean(opts.json),
+            runtime: opts.runtime as string | undefined,
+            status: opts.status as string | undefined,
+          },
+          defaultRuntime,
+        );
+      });
+    });
+  tasksCmd.enablePositionalOptions();
+
+  tasksCmd
+    .command("list")
+    .description("List tracked background tasks")
+    .option("--json", "Output as JSON", false)
+    .option("--runtime <name>", "Filter by kind (subagent, acp, cron, cli)")
+    .option(
+      "--status <name>",
+      "Filter by status (queued, running, succeeded, failed, timed_out, cancelled, lost)",
+    )
+    .action(async (opts, command) => {
+      const parentOpts = command.parent?.opts() as
+        | {
+            json?: boolean;
+            runtime?: string;
+            status?: string;
+          }
+        | undefined;
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksListCommand(
+          {
+            json: Boolean(opts.json || parentOpts?.json),
+            runtime: (opts.runtime as string | undefined) ?? parentOpts?.runtime,
+            status: (opts.status as string | undefined) ?? parentOpts?.status,
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksCmd
+    .command("audit")
+    .description("Show stale or broken background tasks and TaskFlows")
+    .option("--json", "Output as JSON", false)
+    .option("--severity <level>", "Filter by severity (warn, error)")
+    .option(
+      "--code <name>",
+      "Filter by finding code (stale_queued, stale_running, lost, delivery_failed, missing_cleanup, inconsistent_timestamps, restore_failed, stale_waiting, stale_blocked, cancel_stuck, missing_linked_tasks, blocked_task_missing)",
+    )
+    .option("--limit <n>", "Limit displayed findings")
+    .action(async (opts, command) => {
+      const parentOpts = command.parent?.opts() as { json?: boolean } | undefined;
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksAuditCommand(
+          {
+            json: Boolean(opts.json || parentOpts?.json),
+            severity: opts.severity as "warn" | "error" | undefined,
+            code: opts.code as
+              | "stale_queued"
+              | "stale_running"
+              | "lost"
+              | "delivery_failed"
+              | "missing_cleanup"
+              | "inconsistent_timestamps"
+              | "restore_failed"
+              | "stale_waiting"
+              | "stale_blocked"
+              | "cancel_stuck"
+              | "missing_linked_tasks"
+              | "blocked_task_missing"
+              | undefined,
+            limit: parsePositiveIntOrUndefined(opts.limit),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksCmd
+    .command("maintenance")
+    .description("Preview or apply tasks and TaskFlow maintenance")
+    .option("--json", "Output as JSON", false)
+    .option("--apply", "Apply reconciliation, cleanup stamping, and pruning", false)
+    .action(async (opts, command) => {
+      const parentOpts = command.parent?.opts() as { json?: boolean } | undefined;
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksMaintenanceCommand(
+          {
+            json: Boolean(opts.json || parentOpts?.json),
+            apply: Boolean(opts.apply),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksCmd
+    .command("show")
+    .description("Show one background task by task id, run id, or session key")
+    .argument("<lookup>", "Task id, run id, or session key")
+    .option("--json", "Output as JSON", false)
+    .action(async (lookup, opts, command) => {
+      const parentOpts = command.parent?.opts() as { json?: boolean } | undefined;
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksShowCommand(
+          {
+            lookup,
+            json: Boolean(opts.json || parentOpts?.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksCmd
+    .command("notify")
+    .description("Set task notify policy")
+    .argument("<lookup>", "Task id, run id, or session key")
+    .argument("<notify>", "Notify policy (done_only, state_changes, silent)")
+    .action(async (lookup, notify) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksNotifyCommand(
+          {
+            lookup,
+            notify: notify as "done_only" | "state_changes" | "silent",
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksCmd
+    .command("cancel")
+    .description("Cancel a running background task")
+    .argument("<lookup>", "Task id, run id, or session key")
+    .action(async (lookup) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await tasksCancelCommand(
+          {
+            lookup,
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  const tasksFlowCmd = tasksCmd
+    .command("flow")
+    .description("Inspect durable TaskFlow state under tasks");
+
+  tasksFlowCmd
+    .command("list")
+    .description("List tracked TaskFlows")
+    .option("--json", "Output as JSON", false)
+    .option(
+      "--status <name>",
+      "Filter by status (queued, running, waiting, blocked, succeeded, failed, cancelled, lost)",
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await flowsListCommand(
+          {
+            json: Boolean(opts.json),
+            status: opts.status as string | undefined,
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksFlowCmd
+    .command("show")
+    .description("Show one TaskFlow by flow id or owner key")
+    .argument("<lookup>", "Flow id or owner key")
+    .option("--json", "Output as JSON", false)
+    .action(async (lookup, opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await flowsShowCommand(
+          {
+            lookup,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  tasksFlowCmd
+    .command("cancel")
+    .description("Cancel a running TaskFlow")
+    .argument("<lookup>", "Flow id or owner key")
+    .action(async (lookup) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await flowsCancelCommand(
+          {
+            lookup,
           },
           defaultRuntime,
         );

@@ -1,6 +1,10 @@
 import { Type } from "@sinclair/typebox";
-import { jsonResult, readNumberParam, readStringParam } from "godseye/plugin-sdk/agent-runtime";
-import type { GodsEyePluginApi } from "godseye/plugin-sdk/plugin-runtime";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-runtime";
+import {
+  jsonResult,
+  readNumberParam,
+  readStringParam,
+} from "godseye/plugin-sdk/provider-web-search";
 import { runFirecrawlScrape } from "./firecrawl-client.js";
 
 function optionalStringEnum<const T extends readonly string[]>(
@@ -57,7 +61,7 @@ const FirecrawlScrapeToolSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export function createFirecrawlScrapeTool(api: GodsEyePluginApi) {
+export function createFirecrawlScrapeTool(api: OpenClawPluginApi) {
   return {
     name: "firecrawl_scrape",
     label: "Firecrawl Scrape",

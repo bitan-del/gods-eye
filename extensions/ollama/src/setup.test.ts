@@ -1,5 +1,5 @@
-import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime-env";
-import type { WizardPrompter } from "openclaw/plugin-sdk/setup";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import type { WizardPrompter } from "godseye/plugin-sdk/setup";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { jsonResponse, requestBodyText, requestUrl } from "../../../src/test-helpers/http.js";
 import {

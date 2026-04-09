@@ -5,9 +5,10 @@ import { formatCliCommand } from "../cli/command-format.js";
 import type { loadConfig } from "../config/config.js";
 import { resolveStateDir } from "../config/paths.js";
 import { runCommandWithTimeout } from "../process/exec.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { VERSION } from "../version.js";
-import { resolveGodsEyePackageRoot } from "./godseye-root.js";
 import { writeJsonAtomic } from "./json-files.js";
+import { resolveOpenClawPackageRoot } from "./openclaw-root.js";
 import { normalizeUpdateChannel, DEFAULT_PACKAGE_CHANNEL } from "./update-channels.js";
 import { compareSemverStrings, resolveNpmChannelTag, checkUpdateStatus } from "./update-check.js";
 
@@ -236,7 +237,7 @@ async function runAutoUpdateCommand(params: {
   const baseArgs = ["update", "--yes", "--channel", params.channel, "--json"];
   const execPath = process.execPath?.trim();
   const argv1 = process.argv[1]?.trim();
-  const lowerExecBase = execPath ? path.basename(execPath).toLowerCase() : "";
+  const lowerExecBase = execPath ? normalizeLowercaseStringOrEmpty(path.basename(execPath)) : "";
   const runtimeIsNodeOrBun =
     lowerExecBase === "node" ||
     lowerExecBase === "node.exe" ||
@@ -265,14 +266,14 @@ async function runAutoUpdateCommand(params: {
     }
   }
   if (argv.length === 0) {
-    argv.push("godseye", ...baseArgs);
+    argv.push("openclaw", ...baseArgs);
   }
 
   try {
     const res = await runCommandWithTimeout(argv, {
       timeoutMs: params.timeoutMs,
       env: {
-        GODSEYE_AUTO_UPDATE: "1",
+        OPENCLAW_AUTO_UPDATE: "1",
       },
     });
     return {
@@ -344,7 +345,7 @@ export async function runGatewayUpdateCheck(params: {
     }
   }
 
-  const root = await resolveGodsEyePackageRoot({
+  const root = await resolveOpenClawPackageRoot({
     moduleUrl: import.meta.url,
     argv1: process.argv[1],
     cwd: process.cwd(),
@@ -400,7 +401,7 @@ export async function runGatewayUpdateCheck(params: {
       state.lastNotifiedVersion !== resolved.version || state.lastNotifiedTag !== tag;
     if (shouldRunUpdateHints && shouldNotify) {
       params.log.info(
-        `update available (${tag}): v${resolved.version} (current v${VERSION}). Run: ${formatCliCommand("godseye update")}`,
+        `update available (${tag}): v${resolved.version} (current v${VERSION}). Run: ${formatCliCommand("openclaw update")}`,
       );
       nextState.lastNotifiedVersion = resolved.version;
       nextState.lastNotifiedTag = tag;

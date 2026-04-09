@@ -1,5 +1,5 @@
 // Private helper surface for the bundled nostr plugin.
-// Keep this list additive and scoped to symbols used under extensions/nostr.
+// Keep this list additive and scoped to the bundled Nostr surface.
 
 import { createOptionalChannelSetupSurface } from "./channel-setup.js";
 
@@ -18,13 +18,13 @@ export {
   createPreCryptoDirectDmAuthorizer,
   resolveInboundDirectDmAccessWithRuntime,
 } from "./direct-dm.js";
-export type { GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig } from "../config/config.js";
 export { MarkdownConfigSchema } from "../config/zod-schema.core.js";
 export { readJsonBodyWithLimit, requestBodyErrorToText } from "../infra/http-body.js";
 export { isBlockedHostnameOrIp } from "../infra/net/ssrf.js";
 export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { PluginRuntime } from "../plugins/runtime/types.js";
-export type { GodsEyePluginApi } from "../plugins/types.js";
+export type { OpenClawPluginApi } from "../plugins/types.js";
 export { DEFAULT_ACCOUNT_ID } from "../routing/session-key.js";
 export {
   buildComputedAccountStatusSnapshot,

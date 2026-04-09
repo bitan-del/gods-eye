@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import type { DoctorAccountRecord, DoctorAllowFromList } from "../types.js";
 import { collectEmptyAllowlistPolicyWarningsForAccount } from "./empty-allowlist-policy.js";
 import { asObjectRecord } from "./object.js";
@@ -18,7 +18,7 @@ type ScanEmptyAllowlistPolicyWarningsParams = {
 };
 
 export function scanEmptyAllowlistPolicyWarnings(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: ScanEmptyAllowlistPolicyWarningsParams,
 ): string[] {
   const channels = cfg.channels;

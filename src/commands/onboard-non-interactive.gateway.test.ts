@@ -19,6 +19,7 @@ type InstallGatewayDaemonResult = Awaited<ReturnType<typeof installGatewayDaemon
 const installGatewayDaemonNonInteractiveMock = vi.hoisted(() =>
   vi.fn(async (): Promise<InstallGatewayDaemonResult> => ({ installed: true })),
 );
+const healthCommandMock = vi.hoisted(() => vi.fn(async () => {}));
 const gatewayServiceMock = vi.hoisted(() => ({
   label: "LaunchAgent",
   loadedText: "loaded",
@@ -33,7 +34,13 @@ const readLastGatewayErrorLineMock = vi.hoisted(() =>
   vi.fn(async () => "Gateway failed to start: required secrets are unavailable."),
 );
 let waitForGatewayReachableMock:
-  | ((params: { url: string; token?: string; password?: string; deadlineMs?: number }) => Promise<{
+  | ((params: {
+      url: string;
+      token?: string;
+      password?: string;
+      deadlineMs?: number;
+      probeTimeoutMs?: number;
+    }) => Promise<{
       ok: boolean;
       detail?: string;
     }>)
@@ -66,8 +73,9 @@ vi.mock("../gateway/client.js", () => ({
   },
 }));
 
-vi.mock("./onboard-helpers.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./onboard-helpers.js")>();
+vi.mock("./onboard-helpers.js", async () => {
+  const actual =
+    await vi.importActual<typeof import("./onboard-helpers.js")>("./onboard-helpers.js");
   return {
     ...actual,
     ensureWorkspaceAndSessions: ensureWorkspaceAndSessionsMock,
@@ -80,6 +88,10 @@ vi.mock("./onboard-helpers.js", async (importOriginal) => {
 
 vi.mock("./onboard-non-interactive/local/daemon-install.js", () => ({
   installGatewayDaemonNonInteractive: installGatewayDaemonNonInteractiveMock,
+}));
+
+vi.mock("./health.js", () => ({
+  healthCommand: healthCommandMock,
 }));
 
 vi.mock("../daemon/service.js", () => ({
@@ -148,7 +160,7 @@ async function expectLocalJsonSetupFailure(stateDir: string, runtimeWithCapture:
       {
         nonInteractive: true,
         mode: "local",
-        workspace: path.join(stateDir, "godseye"),
+        workspace: path.join(stateDir, "openclaw"),
         authChoice: "skip",
         skipSkills: true,
         skipHealth: false,
@@ -170,8 +182,8 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       throw new Error("temp home not initialized");
     }
     const stateDir = await fs.mkdtemp(path.join(tempHome, prefix));
-    process.env.GODSEYE_STATE_DIR = stateDir;
-    delete process.env.GODSEYE_CONFIG_PATH;
+    process.env.OPENCLAW_STATE_DIR = stateDir;
+    delete process.env.OPENCLAW_CONFIG_PATH;
     return stateDir;
   };
   const withStateDir = async (
@@ -188,25 +200,25 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   beforeAll(async () => {
     envSnapshot = captureEnv([
       "HOME",
-      "GODSEYE_STATE_DIR",
-      "GODSEYE_CONFIG_PATH",
-      "GODSEYE_SKIP_CHANNELS",
-      "GODSEYE_SKIP_GMAIL_WATCHER",
-      "GODSEYE_SKIP_CRON",
-      "GODSEYE_SKIP_CANVAS_HOST",
-      "GODSEYE_SKIP_BROWSER_CONTROL_SERVER",
-      "GODSEYE_GATEWAY_TOKEN",
-      "GODSEYE_GATEWAY_PASSWORD",
+      "OPENCLAW_STATE_DIR",
+      "OPENCLAW_CONFIG_PATH",
+      "OPENCLAW_SKIP_CHANNELS",
+      "OPENCLAW_SKIP_GMAIL_WATCHER",
+      "OPENCLAW_SKIP_CRON",
+      "OPENCLAW_SKIP_CANVAS_HOST",
+      "OPENCLAW_SKIP_BROWSER_CONTROL_SERVER",
+      "OPENCLAW_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
     ]);
-    process.env.GODSEYE_SKIP_CHANNELS = "1";
-    process.env.GODSEYE_SKIP_GMAIL_WATCHER = "1";
-    process.env.GODSEYE_SKIP_CRON = "1";
-    process.env.GODSEYE_SKIP_CANVAS_HOST = "1";
-    process.env.GODSEYE_SKIP_BROWSER_CONTROL_SERVER = "1";
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
+    process.env.OPENCLAW_SKIP_CHANNELS = "1";
+    process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+    process.env.OPENCLAW_SKIP_CRON = "1";
+    process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
+    process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
 
-    tempHome = await makeTempWorkspace("godseye-onboard-");
+    tempHome = await makeTempWorkspace("openclaw-onboard-");
     process.env.HOME = tempHome;
 
     await loadGatewayOnboardModules();
@@ -226,6 +238,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   afterEach(() => {
     waitForGatewayReachableMock = undefined;
     installGatewayDaemonNonInteractiveMock.mockClear();
+    healthCommandMock.mockClear();
     gatewayServiceMock.isLoaded.mockClear();
     gatewayServiceMock.readRuntime.mockClear();
     readLastGatewayErrorLineMock.mockClear();
@@ -235,7 +248,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   it("writes gateway token auth into config", async () => {
     await withStateDir("state-noninteractive-", async (stateDir) => {
       const token = "tok_test_123";
-      const workspace = path.join(stateDir, "godseye");
+      const workspace = path.join(stateDir, "openclaw");
 
       await runNonInteractiveSetup(
         {
@@ -255,24 +268,54 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
 
       const configPath = resolveStateConfigPath(process.env, stateDir);
       const cfg = await readJsonFile<{
-        gateway?: { auth?: { mode?: string; token?: string } };
+        gateway?: { mode?: string; auth?: { mode?: string; token?: string } };
         agents?: { defaults?: { workspace?: string } };
         tools?: { profile?: string };
       }>(configPath);
 
       expect(cfg?.agents?.defaults?.workspace).toBe(workspace);
+      expect(cfg?.gateway?.mode).toBe("local");
       expect(cfg?.tools?.profile).toBe("coding");
       expect(cfg?.gateway?.auth?.mode).toBe("token");
       expect(cfg?.gateway?.auth?.token).toBe(token);
     });
   }, 60_000);
 
-  it("uses GODSEYE_GATEWAY_TOKEN when --gateway-token is omitted", async () => {
+  it("keeps gateway.mode=local on the install-daemon onboarding path", async () => {
+    await withStateDir("state-install-daemon-local-mode-", async (stateDir) => {
+      const workspace = path.join(stateDir, "openclaw");
+
+      await runNonInteractiveSetup(
+        {
+          nonInteractive: true,
+          mode: "local",
+          workspace,
+          authChoice: "skip",
+          skipSkills: true,
+          skipHealth: true,
+          installDaemon: true,
+          gatewayBind: "loopback",
+        },
+        runtime,
+      );
+
+      const configPath = resolveStateConfigPath(process.env, stateDir);
+      const cfg = await readJsonFile<{
+        gateway?: { mode?: string; bind?: string };
+      }>(configPath);
+
+      expect(cfg?.gateway?.mode).toBe("local");
+      expect(cfg?.gateway?.bind).toBe("loopback");
+      expect(installGatewayDaemonNonInteractiveMock).toHaveBeenCalledTimes(1);
+    });
+  }, 60_000);
+
+  it("uses OPENCLAW_GATEWAY_TOKEN when --gateway-token is omitted", async () => {
     await withStateDir("state-env-token-", async (stateDir) => {
       const envToken = "tok_env_fallback_123";
-      const workspace = path.join(stateDir, "godseye");
-      const prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-      process.env.GODSEYE_GATEWAY_TOKEN = envToken;
+      const workspace = path.join(stateDir, "openclaw");
+      const prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      process.env.OPENCLAW_GATEWAY_TOKEN = envToken;
 
       try {
         await runNonInteractiveSetup(
@@ -299,9 +342,9 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
         expect(cfg?.gateway?.auth?.token).toBe(envToken);
       } finally {
         if (prevToken === undefined) {
-          delete process.env.GODSEYE_GATEWAY_TOKEN;
+          delete process.env.OPENCLAW_GATEWAY_TOKEN;
         } else {
-          process.env.GODSEYE_GATEWAY_TOKEN = prevToken;
+          process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
         }
       }
     });
@@ -310,9 +353,9 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   it("writes gateway token SecretRef from --gateway-token-ref-env", async () => {
     await withStateDir("state-env-token-ref-", async (stateDir) => {
       const envToken = "tok_env_ref_123";
-      const workspace = path.join(stateDir, "godseye");
-      const prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-      process.env.GODSEYE_GATEWAY_TOKEN = envToken;
+      const workspace = path.join(stateDir, "openclaw");
+      const prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      process.env.OPENCLAW_GATEWAY_TOKEN = envToken;
 
       try {
         await runNonInteractiveSetup(
@@ -326,7 +369,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
             installDaemon: false,
             gatewayBind: "loopback",
             gatewayAuth: "token",
-            gatewayTokenRefEnv: "GODSEYE_GATEWAY_TOKEN",
+            gatewayTokenRefEnv: "OPENCLAW_GATEWAY_TOKEN",
           },
           runtime,
         );
@@ -340,13 +383,13 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
         expect(cfg?.gateway?.auth?.token).toEqual({
           source: "env",
           provider: "default",
-          id: "GODSEYE_GATEWAY_TOKEN",
+          id: "OPENCLAW_GATEWAY_TOKEN",
         });
       } finally {
         if (prevToken === undefined) {
-          delete process.env.GODSEYE_GATEWAY_TOKEN;
+          delete process.env.OPENCLAW_GATEWAY_TOKEN;
         } else {
-          process.env.GODSEYE_GATEWAY_TOKEN = prevToken;
+          process.env.OPENCLAW_GATEWAY_TOKEN = prevToken;
         }
       }
     });
@@ -354,7 +397,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
 
   it("fails when --gateway-token-ref-env points to a missing env var", async () => {
     await withStateDir("state-env-token-ref-missing-", async (stateDir) => {
-      const workspace = path.join(stateDir, "godseye");
+      const workspace = path.join(stateDir, "openclaw");
       const previous = process.env.MISSING_GATEWAY_TOKEN_ENV;
       delete process.env.MISSING_GATEWAY_TOKEN_ENV;
       try {
@@ -430,7 +473,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
           {
             nonInteractive: true,
             mode: "local",
-            workspace: path.join(stateDir, "godseye"),
+            workspace: path.join(stateDir, "openclaw"),
             authChoice: "skip",
             skipSkills: true,
             skipHealth: false,
@@ -448,16 +491,26 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
   it("uses a longer health deadline when daemon install was requested", async () => {
     await withStateDir("state-local-daemon-health-", async (stateDir) => {
       let capturedDeadlineMs: number | undefined;
-      waitForGatewayReachableMock = vi.fn(async (params: { deadlineMs?: number }) => {
-        capturedDeadlineMs = params.deadlineMs;
-        return { ok: true };
-      });
+      let capturedProbeTimeoutMs: number | undefined;
+      waitForGatewayReachableMock = vi.fn(
+        async (params: {
+          url: string;
+          token?: string;
+          password?: string;
+          deadlineMs?: number;
+          probeTimeoutMs?: number;
+        }) => {
+          capturedDeadlineMs = params.deadlineMs;
+          capturedProbeTimeoutMs = params.probeTimeoutMs;
+          return { ok: true };
+        },
+      );
 
       await runNonInteractiveSetup(
         {
           nonInteractive: true,
           mode: "local",
-          workspace: path.join(stateDir, "godseye"),
+          workspace: path.join(stateDir, "openclaw"),
           authChoice: "skip",
           skipSkills: true,
           skipHealth: false,
@@ -469,6 +522,84 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
 
       expect(installGatewayDaemonNonInteractiveMock).toHaveBeenCalledTimes(1);
       expect(capturedDeadlineMs).toBe(45_000);
+      expect(capturedProbeTimeoutMs).toBe(10_000);
+    });
+  }, 60_000);
+
+  it("uses a longer Windows health deadline when daemon install was requested", async () => {
+    await withStateDir("state-local-daemon-health-win-", async (stateDir) => {
+      let capturedDeadlineMs: number | undefined;
+      let capturedProbeTimeoutMs: number | undefined;
+      waitForGatewayReachableMock = vi.fn(
+        async (params: {
+          url: string;
+          token?: string;
+          password?: string;
+          deadlineMs?: number;
+          probeTimeoutMs?: number;
+        }) => {
+          capturedDeadlineMs = params.deadlineMs;
+          capturedProbeTimeoutMs = params.probeTimeoutMs;
+          return { ok: true };
+        },
+      );
+
+      const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+      try {
+        await runNonInteractiveSetup(
+          {
+            nonInteractive: true,
+            mode: "local",
+            workspace: path.join(stateDir, "openclaw"),
+            authChoice: "skip",
+            skipSkills: true,
+            skipHealth: false,
+            installDaemon: true,
+            gatewayBind: "loopback",
+          },
+          runtime,
+        );
+      } finally {
+        platformSpy.mockRestore();
+      }
+
+      expect(installGatewayDaemonNonInteractiveMock).toHaveBeenCalledTimes(1);
+      expect(capturedDeadlineMs).toBe(90_000);
+      expect(capturedProbeTimeoutMs).toBe(15_000);
+    });
+  }, 60_000);
+
+  it("uses a longer Windows health command timeout when daemon install was requested", async () => {
+    await withStateDir("state-local-daemon-health-command-win-", async (stateDir) => {
+      waitForGatewayReachableMock = vi.fn(async () => ({ ok: true }));
+
+      const platformSpy = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+      try {
+        await runNonInteractiveSetup(
+          {
+            nonInteractive: true,
+            mode: "local",
+            workspace: path.join(stateDir, "openclaw"),
+            authChoice: "skip",
+            skipSkills: true,
+            skipHealth: false,
+            installDaemon: true,
+            gatewayBind: "loopback",
+          },
+          runtime,
+        );
+      } finally {
+        platformSpy.mockRestore();
+      }
+
+      expect(healthCommandMock).toHaveBeenCalledTimes(1);
+      expect(healthCommandMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          json: false,
+          timeoutMs: 90_000,
+        }),
+        runtime,
+      );
     });
   }, 60_000);
 
@@ -551,7 +682,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       expect(parsed.installDaemon).toBe(true);
       expect(parsed.detail).toContain("1006 abnormal closure");
       expect(parsed.gateway?.wsUrl).toContain("ws://127.0.0.1:");
-      expect(parsed.hints).toContain("Run `godseye gateway status --deep` for more detail.");
+      expect(parsed.hints).toContain("Run `openclaw gateway status --deep` for more detail.");
       expect(parsed.diagnostics?.service?.label).toBe("LaunchAgent");
       expect(parsed.diagnostics?.service?.loaded).toBe(true);
       expect(parsed.diagnostics?.service?.runtimeStatus).toBe("running");
@@ -566,11 +697,11 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
       return;
     }
     await withStateDir("state-lan-", async (stateDir) => {
-      process.env.GODSEYE_STATE_DIR = stateDir;
-      process.env.GODSEYE_CONFIG_PATH = path.join(stateDir, "godseye.json");
+      process.env.OPENCLAW_STATE_DIR = stateDir;
+      process.env.OPENCLAW_CONFIG_PATH = path.join(stateDir, "openclaw.json");
 
       const port = getPseudoPort(40_000);
-      const workspace = path.join(stateDir, "godseye");
+      const workspace = path.join(stateDir, "openclaw");
 
       await runNonInteractiveSetup(
         {

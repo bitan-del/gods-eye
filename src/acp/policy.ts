@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import { AcpRuntimeError } from "./runtime/errors.js";
 
@@ -8,11 +8,11 @@ const ACP_DISPATCH_DISABLED_MESSAGE =
 
 export type AcpDispatchPolicyState = "enabled" | "acp_disabled" | "dispatch_disabled";
 
-export function isAcpEnabledByPolicy(cfg: GodsEyeConfig): boolean {
+export function isAcpEnabledByPolicy(cfg: OpenClawConfig): boolean {
   return cfg.acp?.enabled !== false;
 }
 
-export function resolveAcpDispatchPolicyState(cfg: GodsEyeConfig): AcpDispatchPolicyState {
+export function resolveAcpDispatchPolicyState(cfg: OpenClawConfig): AcpDispatchPolicyState {
   if (!isAcpEnabledByPolicy(cfg)) {
     return "acp_disabled";
   }
@@ -23,11 +23,11 @@ export function resolveAcpDispatchPolicyState(cfg: GodsEyeConfig): AcpDispatchPo
   return "enabled";
 }
 
-export function isAcpDispatchEnabledByPolicy(cfg: GodsEyeConfig): boolean {
+export function isAcpDispatchEnabledByPolicy(cfg: OpenClawConfig): boolean {
   return resolveAcpDispatchPolicyState(cfg) === "enabled";
 }
 
-export function resolveAcpDispatchPolicyMessage(cfg: GodsEyeConfig): string | null {
+export function resolveAcpDispatchPolicyMessage(cfg: OpenClawConfig): string | null {
   const state = resolveAcpDispatchPolicyState(cfg);
   if (state === "acp_disabled") {
     return ACP_DISABLED_MESSAGE;
@@ -38,7 +38,7 @@ export function resolveAcpDispatchPolicyMessage(cfg: GodsEyeConfig): string | nu
   return null;
 }
 
-export function resolveAcpDispatchPolicyError(cfg: GodsEyeConfig): AcpRuntimeError | null {
+export function resolveAcpDispatchPolicyError(cfg: OpenClawConfig): AcpRuntimeError | null {
   const message = resolveAcpDispatchPolicyMessage(cfg);
   if (!message) {
     return null;
@@ -46,7 +46,7 @@ export function resolveAcpDispatchPolicyError(cfg: GodsEyeConfig): AcpRuntimeErr
   return new AcpRuntimeError("ACP_DISPATCH_DISABLED", message);
 }
 
-export function isAcpAgentAllowedByPolicy(cfg: GodsEyeConfig, agentId: string): boolean {
+export function isAcpAgentAllowedByPolicy(cfg: OpenClawConfig, agentId: string): boolean {
   const allowed = (cfg.acp?.allowedAgents ?? [])
     .map((entry) => normalizeAgentId(entry))
     .filter(Boolean);
@@ -57,7 +57,7 @@ export function isAcpAgentAllowedByPolicy(cfg: GodsEyeConfig, agentId: string): 
 }
 
 export function resolveAcpAgentPolicyError(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
 ): AcpRuntimeError | null {
   if (isAcpAgentAllowedByPolicy(cfg, agentId)) {

@@ -1,12 +1,13 @@
 import { defineSingleProviderPluginEntry } from "godseye/plugin-sdk/provider-entry";
-import { applyXaiModelCompat } from "godseye/plugin-sdk/provider-models";
+import { applyXaiModelCompat } from "godseye/plugin-sdk/provider-tools";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { applyVeniceConfig, VENICE_DEFAULT_MODEL_REF } from "./onboard.js";
 import { buildVeniceProvider } from "./provider-catalog.js";
 
 const PROVIDER_ID = "venice";
 
 function isXaiBackedVeniceModel(modelId: string): boolean {
-  return modelId.trim().toLowerCase().includes("grok");
+  return normalizeLowercaseStringOrEmpty(modelId).includes("grok");
 }
 
 export default defineSingleProviderPluginEntry({

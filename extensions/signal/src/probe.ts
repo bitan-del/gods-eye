@@ -1,4 +1,5 @@
 import type { BaseProbeResult } from "godseye/plugin-sdk/channel-contract";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { signalCheck, signalRpcRequest } from "./client.js";
 
 export type SignalProbe = BaseProbeResult & {
@@ -45,7 +46,7 @@ export async function probeSignal(baseUrl: string, timeoutMs: number): Promise<S
     });
     result.version = parseSignalVersion(version);
   } catch (err) {
-    result.error = err instanceof Error ? err.message : String(err);
+    result.error = formatErrorMessage(err);
   }
   return {
     ...result,

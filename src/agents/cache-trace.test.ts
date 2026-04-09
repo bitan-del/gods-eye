@@ -1,13 +1,13 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveUserPath } from "../utils.js";
 import { createCacheTrace } from "./cache-trace.js";
 
 describe("createCacheTrace", () => {
   it("returns null when diagnostics cache tracing is disabled", () => {
     const trace = createCacheTrace({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       env: {},
     });
 
@@ -21,7 +21,7 @@ describe("createCacheTrace", () => {
         diagnostics: {
           cacheTrace: {
             enabled: true,
-            filePath: "~/.godseye/logs/cache-trace.jsonl",
+            filePath: "~/.openclaw/logs/cache-trace.jsonl",
           },
         },
       },
@@ -33,7 +33,7 @@ describe("createCacheTrace", () => {
     });
 
     expect(trace).not.toBeNull();
-    expect(trace?.filePath).toBe(resolveUserPath("~/.godseye/logs/cache-trace.jsonl"));
+    expect(trace?.filePath).toBe(resolveUserPath("~/.openclaw/logs/cache-trace.jsonl"));
 
     trace?.recordStage("session:loaded", {
       messages: [],
@@ -69,6 +69,49 @@ describe("createCacheTrace", () => {
     expect(event.system).toBe("");
   });
 
+  it("records stream context from systemPrompt when wrapping stream functions", () => {
+    const lines: string[] = [];
+    const trace = createCacheTrace({
+      cfg: {
+        diagnostics: {
+          cacheTrace: {
+            enabled: true,
+            includeSystem: true,
+          },
+        },
+      },
+      env: {},
+      writer: {
+        filePath: "memory",
+        write: (line) => lines.push(line),
+      },
+    });
+
+    const wrapped = trace?.wrapStreamFn(((model: unknown, context: unknown, options: unknown) => ({
+      model,
+      context,
+      options,
+    })) as never);
+
+    void wrapped?.(
+      {
+        id: "gpt-5.4",
+        provider: "openai",
+        api: "openai-responses",
+      } as never,
+      {
+        systemPrompt: "system prompt text",
+        messages: [],
+      } as never,
+      {},
+    );
+
+    const event = JSON.parse(lines[0]?.trim() ?? "{}") as Record<string, unknown>;
+    expect(event.stage).toBe("stream:context");
+    expect(event.system).toBe("system prompt text");
+    expect(event.systemDigest).toBeTypeOf("string");
+  });
+
   it("respects env overrides for enablement", () => {
     const lines: string[] = [];
     const trace = createCacheTrace({
@@ -80,7 +123,7 @@ describe("createCacheTrace", () => {
         },
       },
       env: {
-        GODSEYE_CACHE_TRACE: "0",
+        OPENCLAW_CACHE_TRACE: "0",
       },
       writer: {
         filePath: "memory",

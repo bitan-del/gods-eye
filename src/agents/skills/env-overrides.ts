@@ -1,6 +1,9 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { normalizeResolvedSecretInputString } from "../../config/types.secrets.js";
-import { isDangerousHostEnvVarName } from "../../infra/host-env-security.js";
+import {
+  isDangerousHostEnvOverrideVarName,
+  isDangerousHostEnvVarName,
+} from "../../infra/host-env-security.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { sanitizeEnvVars, validateEnvVarValue } from "../sandbox/sanitize-env-vars.js";
 import { resolveSkillConfig } from "./config.js";
@@ -22,7 +25,7 @@ type ActiveSkillEnvEntry = {
  * Tracks env var keys that are currently injected by skill overrides.
  * Used by ACP harness spawn to strip skill-injected keys so they don't
  * leak to child processes (e.g., OPENAI_API_KEY leaking to Codex CLI).
- * @see https://github.com/bitan-del/gods-eye/issues/36280
+ * @see https://github.com/openclaw/openclaw/issues/36280
  */
 const activeSkillEnvEntries = new Map<string, ActiveSkillEnvEntry>();
 
@@ -86,7 +89,9 @@ function matchesAnyPattern(value: string, patterns: readonly RegExp[]): boolean 
 
 function isAlwaysBlockedSkillEnvKey(key: string): boolean {
   return (
-    isDangerousHostEnvVarName(key) || matchesAnyPattern(key, SKILL_ALWAYS_BLOCKED_ENV_PATTERNS)
+    isDangerousHostEnvVarName(key) ||
+    isDangerousHostEnvOverrideVarName(key) ||
+    matchesAnyPattern(key, SKILL_ALWAYS_BLOCKED_ENV_PATTERNS)
   );
 }
 
@@ -211,7 +216,7 @@ function createEnvReverter(updates: EnvUpdate[]) {
   };
 }
 
-export function applySkillEnvOverrides(params: { skills: SkillEntry[]; config?: GodsEyeConfig }) {
+export function applySkillEnvOverrides(params: { skills: SkillEntry[]; config?: OpenClawConfig }) {
   const { skills } = params;
   const config = resolveSkillRuntimeConfig(params.config);
   const updates: EnvUpdate[] = [];
@@ -237,7 +242,7 @@ export function applySkillEnvOverrides(params: { skills: SkillEntry[]; config?: 
 
 export function applySkillEnvOverridesFromSnapshot(params: {
   snapshot?: SkillSnapshot;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
 }) {
   const { snapshot } = params;
   const config = resolveSkillRuntimeConfig(params.config);

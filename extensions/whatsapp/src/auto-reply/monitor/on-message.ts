@@ -1,11 +1,11 @@
-import { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import type { getReplyFromConfig } from "godseye/plugin-sdk/reply-runtime";
 import type { MsgContext } from "godseye/plugin-sdk/reply-runtime";
 import { resolveAgentRoute } from "godseye/plugin-sdk/routing";
 import { buildGroupHistoryKey } from "godseye/plugin-sdk/routing";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
-import { normalizeE164 } from "godseye/plugin-sdk/text-runtime";
 import { getPrimaryIdentityId, getSenderIdentity } from "../../identity.js";
+import { normalizeE164 } from "../../text-runtime.js";
+import { loadConfig } from "../config.runtime.js";
 import type { MentionConfig } from "../mentions.js";
 import type { WebInboundMsg } from "../types.js";
 import { maybeBroadcastMessage } from "./broadcast.js";
@@ -29,7 +29,7 @@ export function createWebOnMessageHandler(params: {
   replyResolver: typeof getReplyFromConfig;
   replyLogger: ReturnType<(typeof import("godseye/plugin-sdk/runtime-env"))["getChildLogger"]>;
   baseMentionConfig: MentionConfig;
-  account: { authDir?: string; accountId?: string };
+  account: { authDir?: string; accountId?: string; selfChatMode?: boolean };
 }) {
   const processForRoute = async (
     msg: WebInboundMsg,
@@ -135,6 +135,7 @@ export function createWebOnMessageHandler(params: {
         sessionKey: route.sessionKey,
         baseMentionConfig: params.baseMentionConfig,
         authDir: params.account.authDir,
+        selfChatMode: params.account.selfChatMode,
         groupHistories: params.groupHistories,
         groupHistoryLimit: params.groupHistoryLimit,
         groupMemberNames: params.groupMemberNames,
@@ -149,7 +150,7 @@ export function createWebOnMessageHandler(params: {
       if (!msg.sender?.e164 && !msg.senderE164 && peerId && peerId.startsWith("+")) {
         const normalized = normalizeE164(peerId);
         if (normalized) {
-          msg.sender = { ...(msg.sender ?? {}), e164: normalized };
+          msg.sender = { ...msg.sender, e164: normalized };
           msg.senderE164 = normalized;
         }
       }

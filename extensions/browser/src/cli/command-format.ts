@@ -1,1 +1,1 @@
-export { formatCliCommand } from "openclaw/plugin-sdk/browser-setup-tools";
+export { formatCliCommand } from "godseye/plugin-sdk/browser-setup-tools";

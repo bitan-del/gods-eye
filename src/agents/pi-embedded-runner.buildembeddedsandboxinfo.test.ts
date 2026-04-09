@@ -7,16 +7,16 @@ function createSandboxContext(overrides?: Partial<SandboxContext>): SandboxConte
     enabled: true,
     backendId: "docker",
     sessionKey: "session:test",
-    workspaceDir: "/tmp/godseye-sandbox",
-    agentWorkspaceDir: "/tmp/godseye-workspace",
+    workspaceDir: "/tmp/openclaw-sandbox",
+    agentWorkspaceDir: "/tmp/openclaw-workspace",
     workspaceAccess: "none",
-    runtimeId: "godseye-sbx-test",
-    runtimeLabel: "godseye-sbx-test",
-    containerName: "godseye-sbx-test",
+    runtimeId: "openclaw-sbx-test",
+    runtimeLabel: "openclaw-sbx-test",
+    containerName: "openclaw-sbx-test",
     containerWorkdir: "/workspace",
     docker: {
-      image: "godseye-sandbox:bookworm-slim",
-      containerPrefix: "godseye-sbx-",
+      image: "openclaw-sandbox:bookworm-slim",
+      containerPrefix: "openclaw-sbx-",
       workdir: "/workspace",
       readOnlyRoot: true,
       tmpfs: ["/tmp"],
@@ -33,7 +33,7 @@ function createSandboxContext(overrides?: Partial<SandboxContext>): SandboxConte
     browser: {
       bridgeUrl: "http://localhost:9222",
       noVncUrl: "http://localhost:6080",
-      containerName: "godseye-sbx-browser-test",
+      containerName: "openclaw-sbx-browser-test",
     },
   } satisfies SandboxContext;
   return { ...base, ...overrides };
@@ -49,7 +49,7 @@ describe("buildEmbeddedSandboxInfo", () => {
 
     expect(buildEmbeddedSandboxInfo(sandbox)).toEqual({
       enabled: true,
-      workspaceDir: "/tmp/godseye-sandbox",
+      workspaceDir: "/tmp/openclaw-sandbox",
       containerWorkspaceDir: "/workspace",
       workspaceAccess: "none",
       agentWorkspaceMount: undefined,
@@ -73,7 +73,7 @@ describe("buildEmbeddedSandboxInfo", () => {
       }),
     ).toEqual({
       enabled: true,
-      workspaceDir: "/tmp/godseye-sandbox",
+      workspaceDir: "/tmp/openclaw-sandbox",
       containerWorkspaceDir: "/workspace",
       workspaceAccess: "none",
       agentWorkspaceMount: undefined,

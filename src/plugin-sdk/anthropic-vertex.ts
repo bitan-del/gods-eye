@@ -1,4 +1,4 @@
-type FacadeModule = typeof import("@openclaw/anthropic-vertex/api.js");
+type FacadeModule = typeof import("@godseye/anthropic-vertex/api.js");
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 function loadFacadeModule(): FacadeModule {

@@ -1,15 +1,16 @@
 import {
   DEFAULT_ACCOUNT_ID,
   type ChannelSetupAdapter,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/setup";
+import { resolveDefaultFeishuAccountId } from "./accounts.js";
 import type { FeishuConfig } from "./types.js";
 
 export function setFeishuNamedAccountEnabled(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   enabled: boolean,
-): GodsEyeConfig {
+): OpenClawConfig {
   const feishuCfg = cfg.channels?.feishu as FeishuConfig | undefined;
   return {
     ...cfg,
@@ -30,7 +31,7 @@ export function setFeishuNamedAccountEnabled(
 }
 
 export const feishuSetupAdapter: ChannelSetupAdapter = {
-  resolveAccountId: () => DEFAULT_ACCOUNT_ID,
+  resolveAccountId: ({ cfg, accountId }) => accountId?.trim() || resolveDefaultFeishuAccountId(cfg),
   applyAccountConfig: ({ cfg, accountId }) => {
     const isDefault = !accountId || accountId === DEFAULT_ACCOUNT_ID;
     if (isDefault) {

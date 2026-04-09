@@ -1,8 +1,7 @@
 import { serializePayload } from "@buape/carbon";
 import { ComponentType } from "discord-api-types/v10";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it, vi } from "vitest";
-import * as modelsCommandModule from "../../../../src/auto-reply/reply/commands-models.js";
-import type { GodsEyeConfig } from "../../../../src/config/config.js";
 import {
   DISCORD_CUSTOM_ID_MAX_CHARS,
   DISCORD_MODEL_PICKER_MODEL_PAGE_SIZE,
@@ -20,6 +19,12 @@ import {
   toDiscordModelPickerMessagePayload,
 } from "./model-picker.js";
 import { createModelsProviderData } from "./model-picker.test-utils.js";
+
+const buildModelsProviderDataMock = vi.hoisted(() => vi.fn());
+
+vi.mock("godseye/plugin-sdk/models-provider-runtime", () => ({
+  buildModelsProviderData: buildModelsProviderDataMock,
+}));
 
 type SerializedComponent = {
   type: number;
@@ -70,15 +75,13 @@ function requireValue<T>(value: T | null | undefined, message: string): T {
 describe("loadDiscordModelPickerData", () => {
   it("reuses buildModelsProviderData as source of truth with agent scope", async () => {
     const expected = createModelsProviderData({ openai: ["gpt-4o"] });
-    const cfg = {} as GodsEyeConfig;
-    const spy = vi
-      .spyOn(modelsCommandModule, "buildModelsProviderData")
-      .mockResolvedValue(expected);
+    const cfg = {} as OpenClawConfig;
+    buildModelsProviderDataMock.mockResolvedValue(expected);
 
     const result = await loadDiscordModelPickerData(cfg, "support");
 
-    expect(spy).toHaveBeenCalledTimes(1);
-    expect(spy).toHaveBeenCalledWith(cfg, "support");
+    expect(buildModelsProviderDataMock).toHaveBeenCalledTimes(1);
+    expect(buildModelsProviderDataMock).toHaveBeenCalledWith(cfg, "support");
     expect(result).toBe(expected);
   });
 });

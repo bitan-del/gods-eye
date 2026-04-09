@@ -1,11 +1,11 @@
-import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import { createProviderApiKeyAuthMethod } from "openclaw/plugin-sdk/provider-auth-api-key";
+import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
+import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth-api-key";
 import {
   readConfiguredProviderCatalogEntries,
   type ProviderCatalogContext,
-} from "openclaw/plugin-sdk/provider-catalog-shared";
-import { buildProviderReplayFamilyHooks } from "openclaw/plugin-sdk/provider-model-shared";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/provider-onboard";
+} from "godseye/plugin-sdk/provider-catalog-shared";
+import { buildProviderReplayFamilyHooks } from "godseye/plugin-sdk/provider-model-shared";
+import type { OpenClawConfig } from "godseye/plugin-sdk/provider-onboard";
 import {
   applyArceeConfig,
   applyArceeOpenRouterConfig,

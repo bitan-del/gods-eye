@@ -7,7 +7,7 @@ const resolveNodeStartupTlsEnvironmentMock = vi.hoisted(() => vi.fn());
 const loadConfigMock = vi.hoisted(() => vi.fn());
 const readConfigFileSnapshotMock = vi.hoisted(() => vi.fn());
 const resolveGatewayPortMock = vi.hoisted(() => vi.fn(() => 18789));
-const writeConfigFileMock = vi.hoisted(() => vi.fn());
+const replaceConfigFileMock = vi.hoisted(() => vi.fn());
 const resolveIsNixModeMock = vi.hoisted(() => vi.fn(() => false));
 const resolveSecretInputRefMock = vi.hoisted(() =>
   vi.fn((): { ref: unknown } => ({ ref: undefined })),
@@ -24,7 +24,7 @@ const resolveSecretRefValuesMock = vi.hoisted(() => vi.fn());
 const randomTokenMock = vi.hoisted(() => vi.fn(() => "generated-token"));
 const buildGatewayInstallPlanMock = vi.hoisted(() =>
   vi.fn(async () => ({
-    programArguments: ["godseye", "gateway", "run"],
+    programArguments: ["openclaw", "gateway", "run"],
     workingDirectory: "/tmp",
     environment: {},
   })),
@@ -61,8 +61,8 @@ vi.mock("../../config/config.js", () => ({
   loadConfig: loadConfigMock,
   readBestEffortConfig: loadConfigMock,
   readConfigFileSnapshot: readConfigFileSnapshotMock,
+  replaceConfigFile: replaceConfigFileMock,
   resolveGatewayPort: resolveGatewayPortMock,
-  writeConfigFile: writeConfigFileMock,
 }));
 
 vi.mock("../../config/paths.js", () => ({
@@ -141,10 +141,10 @@ function expectFirstInstallPlanCallOmitsToken() {
 
 function mockResolvedGatewayTokenSecretRef() {
   resolveSecretInputRefMock.mockReturnValue({
-    ref: { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" },
+    ref: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
   });
   resolveSecretRefValuesMock.mockResolvedValue(
-    new Map([["env:default:GODSEYE_GATEWAY_TOKEN", "resolved-from-secretref"]]),
+    new Map([["env:default:OPENCLAW_GATEWAY_TOKEN", "resolved-from-secretref"]]),
   );
 }
 
@@ -157,7 +157,7 @@ describe("runDaemonInstall", () => {
     resolveNodeStartupTlsEnvironmentMock.mockReset();
     readConfigFileSnapshotMock.mockReset();
     resolveGatewayPortMock.mockClear();
-    writeConfigFileMock.mockReset();
+    replaceConfigFileMock.mockReset();
     resolveIsNixModeMock.mockReset();
     resolveSecretInputRefMock.mockReset();
     resolveGatewayAuthMock.mockReset();
@@ -188,7 +188,7 @@ describe("runDaemonInstall", () => {
     resolveSecretRefValuesMock.mockResolvedValue(new Map());
     randomTokenMock.mockReturnValue("generated-token");
     buildGatewayInstallPlanMock.mockResolvedValue({
-      programArguments: ["godseye", "gateway", "run"],
+      programArguments: ["openclaw", "gateway", "run"],
       workingDirectory: "/tmp",
       environment: {},
     });
@@ -202,7 +202,7 @@ describe("runDaemonInstall", () => {
       NODE_EXTRA_CA_CERTS: undefined,
       NODE_USE_SYSTEM_CA: undefined,
     });
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
   });
 
   afterEach(() => {
@@ -211,7 +211,7 @@ describe("runDaemonInstall", () => {
 
   it("fails install when token auth requires an unresolved token SecretRef", async () => {
     resolveSecretInputRefMock.mockReturnValue({
-      ref: { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" },
+      ref: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
     });
     resolveSecretRefValuesMock.mockRejectedValue(new Error("secret unavailable"));
 
@@ -231,7 +231,7 @@ describe("runDaemonInstall", () => {
     expect(actionState.failed).toEqual([]);
     expect(buildGatewayInstallPlanMock).toHaveBeenCalledTimes(1);
     expectFirstInstallPlanCallOmitsToken();
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
     expect(
       actionState.warnings.some((warning) =>
         warning.includes("gateway.auth.token is SecretRef-managed"),
@@ -241,7 +241,7 @@ describe("runDaemonInstall", () => {
 
   it("does not treat env-template gateway.auth.token as plaintext during install", async () => {
     loadConfigMock.mockReturnValue({
-      gateway: { auth: { mode: "token", token: "${GODSEYE_GATEWAY_TOKEN}" } },
+      gateway: { auth: { mode: "token", token: "${OPENCLAW_GATEWAY_TOKEN}" } },
     });
     mockResolvedGatewayTokenSecretRef();
 
@@ -264,11 +264,13 @@ describe("runDaemonInstall", () => {
     await runDaemonInstall({ json: true });
 
     expect(actionState.failed).toEqual([]);
-    expect(writeConfigFileMock).toHaveBeenCalledTimes(1);
-    const writtenConfig = writeConfigFileMock.mock.calls[0]?.[0] as {
-      gateway?: { auth?: { token?: string } };
+    expect(replaceConfigFileMock).toHaveBeenCalledTimes(1);
+    const writtenConfig = replaceConfigFileMock.mock.calls[0]?.[0] as {
+      nextConfig?: {
+        gateway?: { auth?: { token?: string } };
+      };
     };
-    expect(writtenConfig.gateway?.auth?.token).toBe("minted-token");
+    expect(writtenConfig.nextConfig?.gateway?.auth?.token).toBe("minted-token");
     expect(buildGatewayInstallPlanMock).toHaveBeenCalledWith(
       expect.objectContaining({ port: 18789 }),
     );
@@ -307,7 +309,7 @@ describe("runDaemonInstall", () => {
       NODE_USE_SYSTEM_CA: undefined,
     });
     service.readCommand.mockResolvedValue({
-      programArguments: ["godseye", "gateway", "run"],
+      programArguments: ["openclaw", "gateway", "run"],
       environment: {
         NODE_EXTRA_CA_CERTS: "/etc/ssl/certs/ca-certificates.crt",
       },
@@ -326,7 +328,7 @@ describe("runDaemonInstall", () => {
       NODE_USE_SYSTEM_CA: undefined,
     });
     service.readCommand.mockResolvedValue({
-      programArguments: ["godseye", "gateway", "run"],
+      programArguments: ["openclaw", "gateway", "run"],
       environment: {},
     } as never);
 
@@ -362,7 +364,7 @@ describe("runDaemonInstall", () => {
   it("reuses env-backed service secrets during forced reinstall when the current shell is missing them", async () => {
     service.isLoaded.mockResolvedValue(true);
     service.readCommand.mockResolvedValue({
-      programArguments: ["godseye", "gateway", "run"],
+      programArguments: ["openclaw", "gateway", "run"],
       environment: {
         OPENAI_API_KEY: "service-openai-key",
       },

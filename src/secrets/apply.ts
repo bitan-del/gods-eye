@@ -7,7 +7,7 @@ import { loadAuthProfileStoreForSecretsRuntime } from "../agents/auth-profiles.j
 import { AUTH_STORE_VERSION } from "../agents/auth-profiles/constants.js";
 import { resolveAuthStorePath } from "../agents/auth-profiles/paths.js";
 import { normalizeProviderId } from "../agents/model-selection.js";
-import { resolveStateDir, type GodsEyeConfig } from "../config/config.js";
+import { resolveStateDir, type OpenClawConfig } from "../config/config.js";
 import type { ConfigWriteOptions } from "../config/io.js";
 import type { SecretProviderConfig } from "../config/types.secrets.js";
 import { normalizeAgentId } from "../routing/session-key.js";
@@ -47,7 +47,7 @@ type ApplyWrite = {
 };
 
 type ProjectedState = {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   configPath: string;
   configWriteOptions: ConfigWriteOptions;
   authStoreByPath: Map<string, Record<string, unknown>>;
@@ -152,7 +152,7 @@ function scrubEnvRaw(
 }
 
 function applyProviderPlanMutations(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   upserts: Record<string, SecretProviderConfig> | undefined;
   deletes: string[] | undefined;
 }): boolean {
@@ -255,6 +255,7 @@ async function projectPlanState(params: {
     changedFiles,
     enabled: options.scrubEnv,
   });
+  const checkFullRuntime = params.write ? changedFiles.size > 0 : params.allowExecInDryRun;
 
   const validation = await validateProjectedSecretsState({
     env: params.env,
@@ -263,6 +264,7 @@ async function projectPlanState(params: {
     authStoreByPath,
     write: params.write,
     allowExecInDryRun: params.allowExecInDryRun,
+    checkFullRuntime,
   });
 
   return {
@@ -282,7 +284,7 @@ async function projectPlanState(params: {
 
 function applyConfigTargetMutations(params: {
   planTargets: SecretsPlanTarget[];
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
   changedFiles: Set<string>;
@@ -363,7 +365,7 @@ function applyConfigTargetMutations(params: {
 }
 
 function scrubAuthStoresForProviderTargets(params: {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   stateDir: string;
   providerTargets: Set<string>;
   scrubbedValues: Set<string>;
@@ -435,7 +437,7 @@ function ensureMutableAuthStore(
 
 function resolveAuthStoreForTarget(params: {
   target: SecretsPlanTarget;
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
 }): { path: string; store: MutableAuthProfileStore } {
@@ -455,12 +457,12 @@ function resolveAuthStoreForTarget(params: {
   return { path: authStorePath, store };
 }
 
-function asConfigPathRoot(store: MutableAuthProfileStore): GodsEyeConfig {
-  return store as unknown as GodsEyeConfig;
+function asConfigPathRoot(store: MutableAuthProfileStore): OpenClawConfig {
+  return store as unknown as OpenClawConfig;
 }
 
 function resolveAuthStorePathForAgent(params: {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   stateDir: string;
   agentId: string;
 }): string {
@@ -535,7 +537,7 @@ function ensureAuthProfileContainer(params: {
 function applyAuthProfileTargetMutation(params: {
   target: SecretsPlanTarget;
   resolved: ResolvedPlanTargetEntry["resolved"];
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   stateDir: string;
   authStoreByPath: Map<string, Record<string, unknown>>;
   scrubbedValues: Set<string>;
@@ -650,11 +652,12 @@ function scrubEnvFiles(params: {
 
 async function validateProjectedSecretsState(params: {
   env: NodeJS.ProcessEnv;
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   resolvedTargets: ResolvedPlanTargetEntry[];
   authStoreByPath: Map<string, Record<string, unknown>>;
   write: boolean;
   allowExecInDryRun: boolean;
+  checkFullRuntime: boolean;
 }): Promise<{ refsChecked: number; skippedExecRefs: number; resolvabilityComplete: boolean }> {
   const cache = {};
   let refsChecked = 0;
@@ -691,10 +694,14 @@ async function validateProjectedSecretsState(params: {
   for (const [authStorePath, store] of params.authStoreByPath.entries()) {
     authStoreLookup.set(resolveUserPath(authStorePath), store);
   }
-  if (params.write || params.allowExecInDryRun) {
+  if (params.checkFullRuntime) {
     await prepareSecretsRuntimeSnapshot({
       config: params.nextConfig,
       env: params.env,
+      // Dry-run preflight only needs auth-store materialization when this plan
+      // actually touches auth-profile state. Write mode keeps the stricter
+      // whole-runtime check.
+      includeAuthStoreRefs: params.write || params.authStoreByPath.size > 0,
       loadAuthStore: (agentDir?: string) => {
         const storePath = resolveUserPath(resolveAuthStorePath(agentDir));
         const override = authStoreLookup.get(storePath);
@@ -853,3 +860,18 @@ export async function runSecretsApply(params: {
     warnings: projected.warnings,
   };
 }
+
+export const __testing = {
+  async projectConfigForTest(params: {
+    plan: SecretsApplyPlan;
+    env?: NodeJS.ProcessEnv;
+  }): Promise<OpenClawConfig> {
+    const projected = await projectPlanState({
+      plan: params.plan,
+      env: params.env ?? process.env,
+      write: false,
+      allowExecInDryRun: false,
+    });
+    return projected.nextConfig;
+  },
+};

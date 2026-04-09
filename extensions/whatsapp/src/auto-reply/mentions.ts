@@ -1,6 +1,5 @@
 import { buildMentionRegexes, normalizeMentionText } from "godseye/plugin-sdk/channel-inbound";
 import type { loadConfig } from "godseye/plugin-sdk/config-runtime";
-import { isSelfChatMode, normalizeE164 } from "godseye/plugin-sdk/text-runtime";
 import {
   getComparableIdentityValues,
   getMentionIdentities,
@@ -8,6 +7,7 @@ import {
   identitiesOverlap,
   type WhatsAppIdentity,
 } from "../identity.js";
+import { isSelfChatMode, normalizeE164 } from "../text-runtime.js";
 import type { WebInboundMsg } from "./types.js";
 
 export type MentionConfig = {

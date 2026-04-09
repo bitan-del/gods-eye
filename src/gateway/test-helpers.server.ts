@@ -4,11 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, vi } from "vitest";
 import { WebSocket } from "ws";
-import {
-  clearConfigCache,
-  clearRuntimeConfigSnapshot,
-  parseConfigJson5,
-} from "../config/config.js";
+import "./test-helpers.mocks.js";
+import { parseConfigJson5, resetConfigRuntimeState } from "../config/config.js";
 import {
   clearSessionStoreCacheForTest,
   resolveMainSessionKeyFromConfig,
@@ -30,19 +27,21 @@ import {
   parseAgentSessionKey,
   toAgentStoreSessionKey,
 } from "../routing/session-key.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { captureEnv } from "../test-utils/env.js";
 import { getDeterministicFreePortBlock } from "../test-utils/ports.js";
 import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import { buildDeviceAuthPayloadV3 } from "./device-auth.js";
 import { PROTOCOL_VERSION } from "./protocol/index.js";
 import type { GatewayServerOptions } from "./server.js";
+import { resetTestPluginRegistry } from "./test-helpers.plugin-registry.js";
 import {
   agentCommand,
   cronIsolatedRun,
   embeddedRunMock,
   getReplyFromConfig,
   piSdkMock,
-  resetTestPluginRegistry,
   sendWhatsAppMock,
   sessionStoreSaveDelayMs,
   setTestConfigRoot,
@@ -50,7 +49,7 @@ import {
   testTailscaleWhois,
   testState,
   testTailnetIPv4,
-} from "./test-helpers.mocks.js";
+} from "./test-helpers.runtime-state.js";
 
 // Import lazily after test env/home setup so config/session paths resolve to test dirs.
 // Keep one cached module per worker for speed.
@@ -64,16 +63,17 @@ async function getServerModule() {
 const GATEWAY_TEST_ENV_KEYS = [
   "HOME",
   "USERPROFILE",
-  "GODSEYE_STATE_DIR",
-  "GODSEYE_CONFIG_PATH",
-  "GODSEYE_SKIP_BROWSER_CONTROL_SERVER",
-  "GODSEYE_SKIP_GMAIL_WATCHER",
-  "GODSEYE_SKIP_CANVAS_HOST",
-  "GODSEYE_BUNDLED_PLUGINS_DIR",
-  "GODSEYE_SKIP_CHANNELS",
-  "GODSEYE_SKIP_PROVIDERS",
-  "GODSEYE_SKIP_CRON",
-  "GODSEYE_TEST_MINIMAL_GATEWAY",
+  "OPENCLAW_STATE_DIR",
+  "OPENCLAW_CONFIG_PATH",
+  "OPENCLAW_GATEWAY_TOKEN",
+  "OPENCLAW_SKIP_BROWSER_CONTROL_SERVER",
+  "OPENCLAW_SKIP_GMAIL_WATCHER",
+  "OPENCLAW_SKIP_CANVAS_HOST",
+  "OPENCLAW_BUNDLED_PLUGINS_DIR",
+  "OPENCLAW_SKIP_CHANNELS",
+  "OPENCLAW_SKIP_PROVIDERS",
+  "OPENCLAW_SKIP_CRON",
+  "OPENCLAW_TEST_MINIMAL_GATEWAY",
 ] as const;
 
 let gatewayEnvSnapshot: ReturnType<typeof captureEnv> | undefined;
@@ -83,6 +83,8 @@ let tempControlUiRoot: string | undefined;
 let suiteConfigRootSeq = 0;
 let lastSyncedSessionStorePath: string | undefined;
 let lastSyncedSessionConfigJson: string | undefined;
+let activeSuiteGatewayServerCount = 0;
+let activeSuiteHookScopeCount = 0;
 
 function resolveGatewayTestMainSessionKeys(): string[] {
   const resolved = resolveMainSessionKeyFromConfig();
@@ -118,11 +120,11 @@ function hasUnsyncedGatewayTestSessionConfig(): boolean {
 
 async function persistTestSessionConfig(): Promise<void> {
   const configPaths = new Set<string>();
-  if (process.env.GODSEYE_CONFIG_PATH) {
-    configPaths.add(process.env.GODSEYE_CONFIG_PATH);
+  if (process.env.OPENCLAW_CONFIG_PATH) {
+    configPaths.add(process.env.OPENCLAW_CONFIG_PATH);
   }
-  if (process.env.GODSEYE_STATE_DIR) {
-    configPaths.add(path.join(process.env.GODSEYE_STATE_DIR, "godseye.json"));
+  if (process.env.OPENCLAW_STATE_DIR) {
+    configPaths.add(path.join(process.env.OPENCLAW_STATE_DIR, "openclaw.json"));
   }
   const parsedConfigs = new Map<string, Record<string, unknown>>();
   let preservedTemplateStore: string | undefined;
@@ -162,18 +164,23 @@ async function persistTestSessionConfig(): Promise<void> {
       config.session && typeof config.session === "object" && !Array.isArray(config.session)
         ? { ...(config.session as Record<string, unknown>) }
         : {};
+    delete session.mainKey;
+    delete session.store;
     if (typeof nextStoreValue === "string" && nextStoreValue.trim().length > 0) {
       session.store = nextStoreValue;
     }
     if (testState.sessionConfig) {
       Object.assign(session, testState.sessionConfig);
     }
-    config.session = session;
+    if (Object.keys(session).length > 0) {
+      config.session = session;
+    } else {
+      delete config.session;
+    }
     await fs.mkdir(path.dirname(configPath), { recursive: true });
     await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf-8");
   }
-  clearRuntimeConfigSnapshot();
-  clearConfigCache();
+  resetConfigRuntimeState();
   lastSyncedSessionStorePath = testState.sessionStorePath;
   lastSyncedSessionConfigJson = serializeGatewayTestSessionConfig();
 }
@@ -213,24 +220,24 @@ export async function writeSessionStore(params: {
 
 async function setupGatewayTestHome() {
   gatewayEnvSnapshot = captureEnv([...GATEWAY_TEST_ENV_KEYS]);
-  tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-gateway-home-"));
+  tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gateway-home-"));
   process.env.HOME = tempHome;
   process.env.USERPROFILE = tempHome;
-  process.env.GODSEYE_STATE_DIR = path.join(tempHome, ".godseye");
-  delete process.env.GODSEYE_CONFIG_PATH;
+  process.env.OPENCLAW_STATE_DIR = path.join(tempHome, ".openclaw");
+  delete process.env.OPENCLAW_CONFIG_PATH;
 }
 
 function applyGatewaySkipEnv() {
-  process.env.GODSEYE_SKIP_BROWSER_CONTROL_SERVER = "1";
-  process.env.GODSEYE_SKIP_GMAIL_WATCHER = "1";
-  process.env.GODSEYE_SKIP_CANVAS_HOST = "1";
-  process.env.GODSEYE_SKIP_CHANNELS = "1";
-  process.env.GODSEYE_SKIP_PROVIDERS = "1";
-  process.env.GODSEYE_SKIP_CRON = "1";
-  process.env.GODSEYE_TEST_MINIMAL_GATEWAY = "1";
-  process.env.GODSEYE_BUNDLED_PLUGINS_DIR = tempHome
-    ? path.join(tempHome, "godseye-test-no-bundled-extensions")
-    : "godseye-test-no-bundled-extensions";
+  process.env.OPENCLAW_SKIP_BROWSER_CONTROL_SERVER = "1";
+  process.env.OPENCLAW_SKIP_GMAIL_WATCHER = "1";
+  process.env.OPENCLAW_SKIP_CANVAS_HOST = "1";
+  process.env.OPENCLAW_SKIP_CHANNELS = "1";
+  process.env.OPENCLAW_SKIP_PROVIDERS = "1";
+  process.env.OPENCLAW_SKIP_CRON = "1";
+  process.env.OPENCLAW_TEST_MINIMAL_GATEWAY = "1";
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = tempHome
+    ? path.join(tempHome, "openclaw-test-no-bundled-extensions")
+    : "openclaw-test-no-bundled-extensions";
 }
 
 async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
@@ -241,7 +248,8 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
     throw new Error("resetGatewayTestState called before temp home was initialized");
   }
   applyGatewaySkipEnv();
-  const stateDir = process.env.GODSEYE_STATE_DIR;
+  delete process.env.OPENCLAW_GATEWAY_TOKEN;
+  const stateDir = process.env.OPENCLAW_STATE_DIR;
   if (stateDir) {
     await fs.rm(stateDir, {
       recursive: true,
@@ -252,7 +260,7 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
     await fs.mkdir(stateDir, { recursive: true });
   }
   if (options.uniqueConfigRoot) {
-    const suiteRoot = path.join(tempHome, ".godseye-test-suite");
+    const suiteRoot = path.join(tempHome, ".openclaw-test-suite");
     await fs.mkdir(suiteRoot, { recursive: true });
     tempConfigRoot = path.join(suiteRoot, `case-${suiteConfigRootSeq++}`);
     await fs.rm(tempConfigRoot, {
@@ -263,7 +271,7 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
     });
     await fs.mkdir(tempConfigRoot, { recursive: true });
   } else {
-    tempConfigRoot = path.join(tempHome, ".godseye-test");
+    tempConfigRoot = path.join(tempHome, ".openclaw-test");
     await fs.rm(tempConfigRoot, {
       recursive: true,
       force: true,
@@ -272,7 +280,8 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
     });
     await fs.mkdir(tempConfigRoot, { recursive: true });
   }
-  tempControlUiRoot = path.join(tempHome, ".godseye-test-control-ui");
+  setTestConfigRoot(tempConfigRoot);
+  tempControlUiRoot = path.join(tempHome, ".openclaw-test-control-ui");
   await fs.rm(tempControlUiRoot, {
     recursive: true,
     force: true,
@@ -282,12 +291,11 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
   await fs.mkdir(tempControlUiRoot, { recursive: true });
   await fs.writeFile(
     path.join(tempControlUiRoot, "index.html"),
-    "<!doctype html><title>godseye-test-control-ui</title>\n",
+    "<!doctype html><title>openclaw-test-control-ui</title>\n",
     "utf-8",
   );
   setTestConfigRoot(tempConfigRoot);
-  clearRuntimeConfigSnapshot();
-  clearConfigCache();
+  resetConfigRuntimeState();
   resetTestPluginRegistry();
   clearGatewaySubagentRuntime();
   sessionStoreSaveDelayMs.value = 0;
@@ -326,12 +334,23 @@ async function resetGatewayTestState(options: { uniqueConfigRoot: boolean }) {
   embeddedRunMock.abortCalls = [];
   embeddedRunMock.waitCalls = [];
   embeddedRunMock.waitResults.clear();
+  embeddedRunMock.compactEmbeddedPiSession.mockReset();
+  embeddedRunMock.compactEmbeddedPiSession.mockResolvedValue({
+    ok: true,
+    compacted: true,
+    result: {
+      summary: "summary",
+      firstKeptEntryId: "entry-1",
+      tokensBefore: 120,
+      tokensAfter: 80,
+    },
+  });
   for (const sessionKey of resolveGatewayTestMainSessionKeys()) {
     drainSystemEvents(sessionKey);
   }
   resetAgentRunContextForTest();
   const mod = await getServerModule();
-  mod.__resetModelCatalogCacheForTest();
+  await mod.__resetModelCatalogCacheForTest();
   piSdkMock.enabled = false;
   piSdkMock.discoverCalls = 0;
   piSdkMock.models = [];
@@ -361,21 +380,98 @@ async function cleanupGatewayTestHome(options: { restoreEnv: boolean }) {
   }
 }
 
+async function resetGatewayTestRuntimeOnly() {
+  vi.useRealTimers();
+  setLoggerOverride({ level: "silent", consoleLevel: "silent" });
+  applyGatewaySkipEnv();
+  delete process.env.OPENCLAW_GATEWAY_TOKEN;
+  resetConfigRuntimeState();
+  resetTestPluginRegistry();
+  clearGatewaySubagentRuntime();
+  sessionStoreSaveDelayMs.value = 0;
+  testTailnetIPv4.value = undefined;
+  testTailscaleWhois.value = null;
+  testState.gatewayBind = undefined;
+  testState.gatewayAuth = { mode: "token", token: "test-gateway-token-1234567890" };
+  testState.gatewayControlUi = undefined;
+  testState.hooksConfig = undefined;
+  testState.canvasHostPort = undefined;
+  testState.legacyIssues = [];
+  testState.legacyParsed = {};
+  testState.migrationConfig = null;
+  testState.migrationChanges = [];
+  testState.cronEnabled = false;
+  testState.cronStorePath = undefined;
+  testState.sessionConfig = undefined;
+  testState.sessionStorePath = undefined;
+  testState.agentConfig = undefined;
+  testState.agentsConfig = undefined;
+  testState.bindingsConfig = undefined;
+  testState.channelsConfig = undefined;
+  testState.allowFrom = undefined;
+  lastSyncedSessionStorePath = testState.sessionStorePath;
+  lastSyncedSessionConfigJson = serializeGatewayTestSessionConfig();
+  testIsNixMode.value = false;
+  cronIsolatedRun.mockReset();
+  cronIsolatedRun.mockResolvedValue({ status: "ok", summary: "ok" });
+  agentCommand.mockReset();
+  agentCommand.mockResolvedValue(undefined);
+  getReplyFromConfig.mockReset();
+  getReplyFromConfig.mockResolvedValue(undefined);
+  sendWhatsAppMock.mockReset();
+  sendWhatsAppMock.mockResolvedValue({ messageId: "msg-1", toJid: "jid-1" });
+  embeddedRunMock.activeIds.clear();
+  embeddedRunMock.abortCalls = [];
+  embeddedRunMock.waitCalls = [];
+  embeddedRunMock.waitResults.clear();
+  embeddedRunMock.compactEmbeddedPiSession.mockReset();
+  embeddedRunMock.compactEmbeddedPiSession.mockResolvedValue({
+    ok: true,
+    compacted: true,
+    result: {
+      summary: "summary",
+      firstKeptEntryId: "entry-1",
+      tokensBefore: 120,
+      tokensAfter: 80,
+    },
+  });
+  clearSessionStoreCacheForTest();
+  await persistTestSessionConfig();
+  for (const sessionKey of resolveGatewayTestMainSessionKeys()) {
+    drainSystemEvents(sessionKey);
+  }
+  resetAgentRunContextForTest();
+}
+
 export function installGatewayTestHooks(options?: { scope?: "test" | "suite" }) {
   const scope = options?.scope ?? "test";
   if (scope === "suite") {
     beforeAll(async () => {
-      await setupGatewayTestHome();
-      await resetGatewayTestState({ uniqueConfigRoot: false });
+      if (activeSuiteHookScopeCount === 0) {
+        await setupGatewayTestHome();
+        await resetGatewayTestState({ uniqueConfigRoot: false });
+      }
+      activeSuiteHookScopeCount += 1;
     });
     beforeEach(async () => {
+      if (activeSuiteGatewayServerCount > 0) {
+        await resetGatewayTestRuntimeOnly();
+        return;
+      }
       await resetGatewayTestState({ uniqueConfigRoot: false });
     }, 60_000);
     afterEach(async () => {
+      if (activeSuiteGatewayServerCount > 0) {
+        vi.useRealTimers();
+        return;
+      }
       await cleanupGatewayTestHome({ restoreEnv: false });
     });
     afterAll(async () => {
-      await cleanupGatewayTestHome({ restoreEnv: true });
+      activeSuiteHookScopeCount = Math.max(0, activeSuiteHookScopeCount - 1);
+      if (activeSuiteHookScopeCount === 0) {
+        await cleanupGatewayTestHome({ restoreEnv: true });
+      }
     });
     return;
   }
@@ -419,8 +515,8 @@ type GatewayTestMessage = {
   [key: string]: unknown;
 };
 
-const CONNECT_CHALLENGE_NONCE_KEY = "__godseyeTestConnectChallengeNonce";
-const CONNECT_CHALLENGE_TRACKED_KEY = "__godseyeTestConnectChallengeTracked";
+const CONNECT_CHALLENGE_NONCE_KEY = "__openclawTestConnectChallengeNonce";
+const CONNECT_CHALLENGE_TRACKED_KEY = "__openclawTestConnectChallengeTracked";
 type TrackedWs = WebSocket & Record<string, unknown>;
 
 export function getTrackedConnectChallengeNonce(ws: WebSocket): string | undefined {
@@ -485,7 +581,7 @@ export async function startGatewayServer(port: number, opts?: GatewayServerOptio
     opts?.controlUiEnabled === undefined ? { ...opts, controlUiEnabled: false } : opts;
   if (
     resolvedOpts?.controlUiEnabled === true &&
-    process.env.GODSEYE_TEST_MINIMAL_GATEWAY === "1" &&
+    process.env.OPENCLAW_TEST_MINIMAL_GATEWAY === "1" &&
     tempControlUiRoot &&
     typeof (testState.gatewayControlUi as { root?: unknown } | undefined)?.root !== "string"
   ) {
@@ -494,7 +590,21 @@ export async function startGatewayServer(port: number, opts?: GatewayServerOptio
       root: tempControlUiRoot,
     };
   }
-  return await mod.startGatewayServer(port, resolvedOpts);
+  const server = await mod.startGatewayServer(port, resolvedOpts);
+  activeSuiteGatewayServerCount += 1;
+  const originalClose = server.close.bind(server);
+  let closed = false;
+  server.close = (async (...args: Parameters<typeof originalClose>) => {
+    try {
+      return await originalClose(...args);
+    } finally {
+      if (!closed) {
+        closed = true;
+        activeSuiteGatewayServerCount = Math.max(0, activeSuiteGatewayServerCount - 1);
+      }
+    }
+  }) as typeof server.close;
+  return server;
 }
 
 async function startGatewayServerWithRetries(params: {
@@ -608,8 +718,8 @@ export async function startServerWithClient(
 ) {
   const { wsHeaders, ...gatewayOpts } = opts ?? {};
   let port = await getFreePort();
-  const envSnapshot = captureEnv(["GODSEYE_GATEWAY_TOKEN"]);
-  const prev = process.env.GODSEYE_GATEWAY_TOKEN;
+  const envSnapshot = captureEnv(["OPENCLAW_GATEWAY_TOKEN"]);
+  const prev = process.env.OPENCLAW_GATEWAY_TOKEN;
   if (typeof token === "string") {
     testState.gatewayAuth = { mode: "token", token };
   }
@@ -619,12 +729,20 @@ export async function startServerWithClient(
       ? (testState.gatewayAuth as { token?: string }).token
       : undefined);
   if (fallbackToken === undefined) {
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
   } else {
-    process.env.GODSEYE_GATEWAY_TOKEN = fallbackToken;
+    process.env.OPENCLAW_GATEWAY_TOKEN = fallbackToken;
   }
 
-  const started = await startGatewayServerWithRetries({ port, opts: gatewayOpts });
+  const resolvedGatewayOpts: GatewayServerOptions =
+    fallbackToken && !gatewayOpts.auth
+      ? {
+          ...gatewayOpts,
+          auth: { mode: "token", token: fallbackToken },
+        }
+      : gatewayOpts;
+
+  const started = await startGatewayServerWithRetries({ port, opts: resolvedGatewayOpts });
   port = started.port;
   const server = started.server;
 
@@ -656,11 +774,13 @@ function resolveDefaultTestDeviceIdentityPath(params: {
   deviceFamily?: string;
   role: string;
 }) {
-  const safe =
-    `${params.clientId}-${params.clientMode}-${params.platform}-${params.deviceFamily ?? "none"}-${params.role}`
-      .replace(/[^a-zA-Z0-9._-]+/g, "_")
-      .toLowerCase();
-  const suiteRoot = process.env.GODSEYE_STATE_DIR ?? process.env.HOME ?? os.tmpdir();
+  const safe = normalizeLowercaseStringOrEmpty(
+    `${params.clientId}-${params.clientMode}-${params.platform}-${params.deviceFamily ?? "none"}-${params.role}`.replace(
+      /[^a-zA-Z0-9._-]+/g,
+      "_",
+    ),
+  );
+  const suiteRoot = process.env.OPENCLAW_STATE_DIR ?? process.env.HOME ?? os.tmpdir();
   return path.join(suiteRoot, "test-device-identities", `${safe}.json`);
 }
 
@@ -690,10 +810,27 @@ export async function readConnectChallengeNonce(
   }
 }
 
+function resolveAuthTokenForSignature(opts?: {
+  token?: string;
+  bootstrapToken?: string;
+  deviceToken?: string;
+}) {
+  return opts?.token ?? opts?.bootstrapToken ?? opts?.deviceToken;
+}
+
+export function testOnlyResolveAuthTokenForSignature(opts?: {
+  token?: string;
+  bootstrapToken?: string;
+  deviceToken?: string;
+}) {
+  return resolveAuthTokenForSignature(opts);
+}
+
 export async function connectReq(
   ws: WebSocket,
   opts?: {
     token?: string;
+    bootstrapToken?: string;
     deviceToken?: string;
     password?: string;
     skipDefaultAuth?: boolean;
@@ -740,17 +877,22 @@ export async function connectReq(
       ? undefined
       : typeof (testState.gatewayAuth as { token?: unknown } | undefined)?.token === "string"
         ? ((testState.gatewayAuth as { token?: string }).token ?? undefined)
-        : process.env.GODSEYE_GATEWAY_TOKEN;
+        : process.env.OPENCLAW_GATEWAY_TOKEN;
   const defaultPassword =
     opts?.skipDefaultAuth === true
       ? undefined
       : typeof (testState.gatewayAuth as { password?: unknown } | undefined)?.password === "string"
         ? ((testState.gatewayAuth as { password?: string }).password ?? undefined)
-        : process.env.GODSEYE_GATEWAY_PASSWORD;
+        : process.env.OPENCLAW_GATEWAY_PASSWORD;
   const token = opts?.token ?? defaultToken;
-  const deviceToken = opts?.deviceToken?.trim() || undefined;
+  const bootstrapToken = normalizeOptionalString(opts?.bootstrapToken);
+  const deviceToken = normalizeOptionalString(opts?.deviceToken);
   const password = opts?.password ?? defaultPassword;
-  const authTokenForSignature = token ?? deviceToken;
+  const authTokenForSignature = resolveAuthTokenForSignature({
+    token,
+    bootstrapToken,
+    deviceToken,
+  });
   const requestedScopes = Array.isArray(opts?.scopes)
     ? opts.scopes
     : role === "operator"
@@ -817,9 +959,10 @@ export async function connectReq(
         role,
         scopes: requestedScopes,
         auth:
-          token || password || deviceToken
+          token || bootstrapToken || password || deviceToken
             ? {
                 token,
+                bootstrapToken,
                 deviceToken,
                 password,
               }
@@ -895,8 +1038,7 @@ export async function rpcReq<T extends Record<string, unknown>>(
   // Gateway suites often mutate testState-backed config/session inputs between
   // RPCs while reusing one server instance; flush caches so the next request
   // observes the updated test fixture state.
-  clearRuntimeConfigSnapshot();
-  clearConfigCache();
+  resetConfigRuntimeState();
   clearSessionStoreCacheForTest();
   const { randomUUID } = await import("node:crypto");
   const id = randomUUID();

@@ -1,13 +1,22 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("./cli-credentials.js", () => ({
+  readCodexCliCredentialsCached: () => null,
+  readMiniMaxCliCredentialsCached: () => null,
+}));
+
+vi.mock("../plugins/provider-runtime.js", () => ({
+  resolveExternalAuthProfilesWithPlugins: () => [],
+}));
+
 import {
   clearRuntimeAuthProfileStoreSnapshots,
   calculateAuthProfileCooldownMs,
   ensureAuthProfileStore,
   markAuthProfileFailure,
-  replaceRuntimeAuthProfileStoreSnapshots,
 } from "./auth-profiles.js";
 
 type AuthProfileStore = ReturnType<typeof ensureAuthProfileStore>;
@@ -15,7 +24,7 @@ type AuthProfileStore = ReturnType<typeof ensureAuthProfileStore>;
 async function withAuthProfileStore(
   fn: (ctx: { agentDir: string; store: AuthProfileStore }) => Promise<void>,
 ): Promise<void> {
-  const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-auth-"));
+  const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-"));
   try {
     const authPath = path.join(agentDir, "auth-profiles.json");
     fs.writeFileSync(
@@ -51,7 +60,7 @@ function expectCooldownInRange(remainingMs: number, minMs: number, maxMs: number
 
 describe("markAuthProfileFailure", () => {
   it("does not overwrite fresher on-disk credentials with a stale runtime snapshot", async () => {
-    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-auth-"));
+    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-"));
     try {
       const authPath = path.join(agentDir, "auth-profiles.json");
       fs.writeFileSync(
@@ -68,12 +77,16 @@ describe("markAuthProfileFailure", () => {
         }),
       );
 
-      replaceRuntimeAuthProfileStoreSnapshots([
-        {
-          agentDir,
-          store: ensureAuthProfileStore(agentDir),
+      const staleRuntimeStore: AuthProfileStore = {
+        version: 1,
+        profiles: {
+          "openai:default": {
+            type: "api_key",
+            provider: "openai",
+            key: "sk-expired-old",
+          },
         },
-      ]);
+      };
 
       fs.writeFileSync(
         authPath,
@@ -89,7 +102,6 @@ describe("markAuthProfileFailure", () => {
         }),
       );
 
-      const staleRuntimeStore = ensureAuthProfileStore(agentDir);
       const staleCredential = staleRuntimeStore.profiles["openai:default"];
       expect(staleCredential?.type).toBe("api_key");
       expect(staleCredential && "key" in staleCredential ? staleCredential.key : undefined).toBe(
@@ -199,8 +211,9 @@ describe("markAuthProfileFailure", () => {
       expect(stats?.failureCounts?.overloaded).toBe(1);
     });
   });
-  it("disables auth_permanent failures via disabledUntil (like billing)", async () => {
+  it("disables auth_permanent failures for ~10 minutes by default", async () => {
     await withAuthProfileStore(async ({ agentDir, store }) => {
+      const startedAt = Date.now();
       await markAuthProfileFailure({
         store,
         profileId: "anthropic:default",
@@ -213,10 +226,37 @@ describe("markAuthProfileFailure", () => {
       expect(stats?.disabledReason).toBe("auth_permanent");
       // Should NOT set cooldownUntil (that's for transient errors)
       expect(stats?.cooldownUntil).toBeUndefined();
+      const remainingMs = (stats?.disabledUntil as number) - startedAt;
+      expectCooldownInRange(remainingMs, 9 * 60 * 1000, 11 * 60 * 1000);
+    });
+  });
+
+  it("honors auth_permanent backoff overrides", async () => {
+    await withAuthProfileStore(async ({ agentDir, store }) => {
+      const startedAt = Date.now();
+      await markAuthProfileFailure({
+        store,
+        profileId: "anthropic:default",
+        reason: "auth_permanent",
+        agentDir,
+        cfg: {
+          auth: {
+            cooldowns: {
+              authPermanentBackoffMinutes: 15,
+              authPermanentMaxMinutes: 45,
+            },
+          },
+        } as never,
+      });
+
+      const disabledUntil = store.usageStats?.["anthropic:default"]?.disabledUntil;
+      expect(typeof disabledUntil).toBe("number");
+      const remainingMs = (disabledUntil as number) - startedAt;
+      expectCooldownInRange(remainingMs, 14 * 60 * 1000, 16 * 60 * 1000);
     });
   });
   it("resets backoff counters outside the failure window", async () => {
-    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-auth-"));
+    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-"));
     try {
       const authPath = path.join(agentDir, "auth-profiles.json");
       const now = Date.now();
@@ -260,7 +300,7 @@ describe("markAuthProfileFailure", () => {
   });
 
   it("resets error count when previous cooldown has expired to prevent escalation", async () => {
-    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-auth-"));
+    const agentDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-auth-"));
     try {
       const authPath = path.join(agentDir, "auth-profiles.json");
       const now = Date.now();

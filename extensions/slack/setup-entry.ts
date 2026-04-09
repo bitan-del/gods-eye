@@ -1,6 +1,13 @@
-import { defineSetupPluginEntry } from "godseye/plugin-sdk/core";
-import { slackSetupPlugin } from "./src/channel.setup.js";
+import { defineBundledChannelSetupEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { slackSetupPlugin } from "./src/channel.setup.js";
-
-export default defineSetupPluginEntry(slackSetupPlugin);
+export default defineBundledChannelSetupEntry({
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./setup-plugin-api.js",
+    exportName: "slackSetupPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+});

@@ -1,20 +1,17 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 
-const DIAGNOSTICS_ENV = "GODSEYE_DIAGNOSTICS";
-
-function normalizeFlag(value: string): string {
-  return value.trim().toLowerCase();
-}
+const DIAGNOSTICS_ENV = "OPENCLAW_DIAGNOSTICS";
 
 function parseEnvFlags(raw?: string): string[] {
   if (!raw) {
     return [];
   }
   const trimmed = raw.trim();
-  if (!trimmed) {
+  const lowered = normalizeLowercaseStringOrEmpty(trimmed);
+  if (!lowered) {
     return [];
   }
-  const lowered = trimmed.toLowerCase();
   if (["0", "false", "off", "none"].includes(lowered)) {
     return [];
   }
@@ -23,7 +20,7 @@ function parseEnvFlags(raw?: string): string[] {
   }
   return trimmed
     .split(/[,\s]+/)
-    .map(normalizeFlag)
+    .map((value) => normalizeLowercaseStringOrEmpty(value))
     .filter(Boolean);
 }
 
@@ -31,7 +28,7 @@ function uniqueFlags(flags: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const flag of flags) {
-    const normalized = normalizeFlag(flag);
+    const normalized = normalizeLowercaseStringOrEmpty(flag);
     if (!normalized || seen.has(normalized)) {
       continue;
     }
@@ -42,7 +39,7 @@ function uniqueFlags(flags: string[]): string[] {
 }
 
 export function resolveDiagnosticFlags(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): string[] {
   const configFlags = Array.isArray(cfg?.diagnostics?.flags) ? cfg?.diagnostics?.flags : [];
@@ -51,12 +48,12 @@ export function resolveDiagnosticFlags(
 }
 
 export function matchesDiagnosticFlag(flag: string, enabledFlags: string[]): boolean {
-  const target = normalizeFlag(flag);
+  const target = normalizeLowercaseStringOrEmpty(flag);
   if (!target) {
     return false;
   }
   for (const raw of enabledFlags) {
-    const enabled = normalizeFlag(raw);
+    const enabled = normalizeLowercaseStringOrEmpty(raw);
     if (!enabled) {
       continue;
     }
@@ -84,7 +81,7 @@ export function matchesDiagnosticFlag(flag: string, enabledFlags: string[]): boo
 
 export function isDiagnosticFlagEnabled(
   flag: string,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   const flags = resolveDiagnosticFlags(cfg, env);

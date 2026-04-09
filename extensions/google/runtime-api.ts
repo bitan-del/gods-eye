@@ -3,4 +3,5 @@ export {
   normalizeGoogleApiBaseUrl,
   normalizeGoogleModelId,
   parseGeminiAuth,
-} from "godseye/plugin-sdk/provider-google";
+  resolveGoogleGenerativeAiHttpRequestConfig,
+} from "./api.js";

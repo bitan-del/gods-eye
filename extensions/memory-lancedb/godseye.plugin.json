@@ -27,7 +27,7 @@
     },
     "dbPath": {
       "label": "Database Path",
-      "placeholder": "~/.godseye/memory/lancedb",
+      "placeholder": "~/.openclaw/memory/lancedb",
       "advanced": true
     },
     "autoCapture": {

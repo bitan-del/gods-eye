@@ -1,6 +1,8 @@
 import type { TSchema } from "@sinclair/typebox";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { formatErrorMessage } from "../../infra/errors.js";
 import { defaultRuntime } from "../../runtime.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { normalizeAnyChannelId } from "../registry.js";
 import { getChannelPlugin, listChannelPlugins } from "./index.js";
 import type { ChannelMessageCapability } from "./message-capabilities.js";
@@ -12,7 +14,7 @@ import type {
 } from "./types.js";
 
 export type ChannelMessageActionDiscoveryInput = {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   channel?: string | null;
   currentChannelProvider?: string | null;
   currentChannelId?: string | null;
@@ -30,12 +32,7 @@ type ChannelActions = NonNullable<NonNullable<ReturnType<typeof getChannelPlugin
 const loggedMessageActionErrors = new Set<string>();
 
 export function resolveMessageActionDiscoveryChannelId(raw?: string | null): string | undefined {
-  const normalized = normalizeAnyChannelId(raw);
-  if (normalized) {
-    return normalized;
-  }
-  const trimmed = raw?.trim();
-  return trimmed || undefined;
+  return normalizeAnyChannelId(raw) ?? normalizeOptionalString(raw);
 }
 
 export function createMessageActionDiscoveryContext(
@@ -45,7 +42,7 @@ export function createMessageActionDiscoveryContext(
     params.channel ?? params.currentChannelProvider,
   );
   return {
-    cfg: params.cfg ?? ({} as GodsEyeConfig),
+    cfg: params.cfg ?? ({} as OpenClawConfig),
     currentChannelId: params.currentChannelId,
     currentChannelProvider,
     currentThreadTs: params.currentThreadTs,
@@ -63,7 +60,7 @@ function logMessageActionError(params: {
   operation: "describeMessageTool";
   error: unknown;
 }) {
-  const message = params.error instanceof Error ? params.error.message : String(params.error);
+  const message = formatErrorMessage(params.error);
   const key = `${params.pluginId}:${params.operation}:${message}`;
   if (loggedMessageActionErrors.has(key)) {
     return;
@@ -146,7 +143,7 @@ export function resolveMessageActionDiscoveryForPlugin(params: {
   };
 }
 
-export function listChannelMessageActions(cfg: GodsEyeConfig): ChannelMessageActionName[] {
+export function listChannelMessageActions(cfg: OpenClawConfig): ChannelMessageActionName[] {
   const actions = new Set<ChannelMessageActionName>(["send", "broadcast"]);
   for (const plugin of listChannelPlugins()) {
     for (const action of resolveMessageActionDiscoveryForPlugin({
@@ -161,7 +158,7 @@ export function listChannelMessageActions(cfg: GodsEyeConfig): ChannelMessageAct
   return Array.from(actions);
 }
 
-export function listChannelMessageCapabilities(cfg: GodsEyeConfig): ChannelMessageCapability[] {
+export function listChannelMessageCapabilities(cfg: OpenClawConfig): ChannelMessageCapability[] {
   const capabilities = new Set<ChannelMessageCapability>();
   for (const plugin of listChannelPlugins()) {
     for (const capability of resolveMessageActionDiscoveryForPlugin({
@@ -177,7 +174,7 @@ export function listChannelMessageCapabilities(cfg: GodsEyeConfig): ChannelMessa
 }
 
 export function listChannelMessageCapabilitiesForChannel(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel?: string;
   currentChannelId?: string | null;
   currentThreadTs?: string | null;
@@ -220,7 +217,7 @@ function mergeToolSchemaProperties(
 }
 
 export function resolveChannelMessageToolSchemaProperties(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel?: string;
   currentChannelId?: string | null;
   currentThreadTs?: string | null;
@@ -260,7 +257,7 @@ export function resolveChannelMessageToolSchemaProperties(params: {
 }
 
 export function channelSupportsMessageCapability(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   capability: ChannelMessageCapability,
 ): boolean {
   return listChannelMessageCapabilities(cfg).includes(capability);
@@ -268,7 +265,7 @@ export function channelSupportsMessageCapability(
 
 export function channelSupportsMessageCapabilityForChannel(
   params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     channel?: string;
     currentChannelId?: string | null;
     currentThreadTs?: string | null;

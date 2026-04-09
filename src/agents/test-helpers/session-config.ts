@@ -1,8 +1,8 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 
 export function createPerSenderSessionConfig(
-  overrides: Partial<NonNullable<GodsEyeConfig["session"]>> = {},
-): NonNullable<GodsEyeConfig["session"]> {
+  overrides: Partial<NonNullable<OpenClawConfig["session"]>> = {},
+): NonNullable<OpenClawConfig["session"]> {
   return {
     mainKey: "main",
     scope: "per-sender",

@@ -1,5 +1,5 @@
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { logVerbose, shouldLogVerbose } from "../globals.js";
 import { isAudioAttachment } from "./attachments.js";
 import { runAudioTranscription } from "./audio-transcription-runner.js";
@@ -17,7 +17,7 @@ import type { MediaUnderstandingProvider } from "./types.js";
  */
 export async function transcribeFirstAudio(params: {
   ctx: MsgContext;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentDir?: string;
   providers?: Record<string, MediaUnderstandingProvider>;
   activeModel?: ActiveMediaModel;
@@ -26,7 +26,7 @@ export async function transcribeFirstAudio(params: {
 
   // Check if audio transcription is enabled in config
   const audioConfig = cfg.tools?.media?.audio;
-  if (!audioConfig || audioConfig.enabled === false) {
+  if (audioConfig?.enabled === false) {
     return undefined;
   }
 

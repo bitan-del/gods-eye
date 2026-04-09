@@ -1,6 +1,7 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { TelegramGroupConfig } from "godseye/plugin-sdk/config-runtime";
 import { normalizeAccountId } from "godseye/plugin-sdk/routing";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 type TelegramGroups = Record<string, TelegramGroupConfig>;
 
@@ -13,7 +14,7 @@ export type TelegramGroupMigrationResult = {
 };
 
 function resolveAccountGroups(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId?: string | null,
 ): { groups?: TelegramGroups } {
   if (!accountId) {
@@ -29,7 +30,7 @@ function resolveAccountGroups(
     return { groups: exact.groups };
   }
   const matchKey = Object.keys(accounts).find(
-    (key) => key.toLowerCase() === normalized.toLowerCase(),
+    (key) => normalizeLowercaseStringOrEmpty(key) === normalizeLowercaseStringOrEmpty(normalized),
   );
   return { groups: matchKey ? accounts[matchKey]?.groups : undefined };
 }
@@ -57,7 +58,7 @@ export function migrateTelegramGroupsInPlace(
 }
 
 export function migrateTelegramGroupConfig(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   oldChatId: string;
   newChatId: string;

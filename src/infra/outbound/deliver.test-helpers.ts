@@ -1,13 +1,16 @@
 import { vi } from "vitest";
+import { createIMessageTestPlugin } from "../../../test/helpers/channels/imessage-test-plugin.js";
 import {
+  imessageOutboundForTest,
   signalOutbound,
-  telegramOutbound,
   whatsappOutbound,
-} from "../../../test/channel-outbounds.js";
-import type { GodsEyeConfig } from "../../config/config.js";
-import { setActivePluginRegistry } from "../../plugins/runtime.js";
+} from "../../../test/helpers/infra/deliver-test-outbounds.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import {
+  releasePinnedPluginChannelRegistry,
+  setActivePluginRegistry,
+} from "../../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
-import { createIMessageTestPlugin } from "../../test-utils/imessage-test-plugin.js";
 import { createInternalHookEventPayload } from "../../test-utils/internal-hook-event-payload.js";
 import type { DeliverOutboundPayloadsParams, OutboundDeliveryResult } from "./deliver.js";
 
@@ -100,10 +103,10 @@ export const internalHookMocks = _internalHookMocks;
 export const queueMocks = _queueMocks;
 export const logMocks = _logMocks;
 
-vi.mock("../../config/sessions.js", async () => {
-  const actual = await vi.importActual<typeof import("../../config/sessions.js")>(
-    "../../config/sessions.js",
-  );
+vi.mock("../../config/sessions/transcript.runtime.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../config/sessions/transcript.runtime.js")
+  >("../../config/sessions/transcript.runtime.js");
   return {
     ...actual,
     appendAssistantMessageToSessionTranscript: _mocks.appendAssistantMessageToSessionTranscript,
@@ -143,7 +146,7 @@ vi.mock("../../logging/subsystem.js", () => ({
   },
 }));
 
-export const whatsappChunkConfig: GodsEyeConfig = {
+export const whatsappChunkConfig: OpenClawConfig = {
   channels: { whatsapp: { textChunkLimit: 4000 } },
 };
 
@@ -157,14 +160,6 @@ export const defaultRegistry = createTestRegistry([
     }),
   },
   {
-    pluginId: "telegram",
-    source: "test",
-    plugin: createOutboundTestPlugin({
-      id: "telegram",
-      outbound: telegramOutbound,
-    }),
-  },
-  {
     pluginId: "whatsapp",
     source: "test",
     plugin: createOutboundTestPlugin({
@@ -175,13 +170,14 @@ export const defaultRegistry = createTestRegistry([
   {
     pluginId: "imessage",
     source: "test",
-    plugin: createIMessageTestPlugin(),
+    plugin: createIMessageTestPlugin({ outbound: imessageOutboundForTest }),
   },
 ]);
 
 export const emptyRegistry = createTestRegistry([]);
 
 export function resetDeliverTestState() {
+  releasePinnedPluginChannelRegistry();
   setActivePluginRegistry(defaultRegistry);
   deliverMocks.hooks.runner.hasHooks = () => false;
   deliverMocks.hooks.runner.runMessageSent = async () => {};
@@ -198,6 +194,7 @@ export function resetDeliverTestState() {
 }
 
 export function clearDeliverTestRegistry() {
+  releasePinnedPluginChannelRegistry();
   setActivePluginRegistry(emptyRegistry);
 }
 
@@ -227,7 +224,7 @@ export async function runChunkedWhatsAppDelivery(params: {
     >()
     .mockResolvedValueOnce({ messageId: "w1", toJid: "jid" })
     .mockResolvedValueOnce({ messageId: "w2", toJid: "jid" });
-  const cfg: GodsEyeConfig = {
+  const cfg: OpenClawConfig = {
     channels: { whatsapp: { textChunkLimit: 2 } },
   };
   const results = await params.deliverOutboundPayloads({
@@ -235,7 +232,7 @@ export async function runChunkedWhatsAppDelivery(params: {
     channel: "whatsapp",
     to: "+1555",
     payloads: [{ text: "abcd" }],
-    deps: { sendWhatsApp },
+    deps: { whatsapp: sendWhatsApp },
     ...(params.mirror ? { mirror: params.mirror } : {}),
   });
   return { sendWhatsApp, results };

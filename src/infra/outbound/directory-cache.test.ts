@@ -1,35 +1,42 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { DirectoryCache, buildDirectoryCacheKey } from "./directory-cache.js";
+import type { DirectoryCacheKey } from "./directory-cache.js";
 
 describe("buildDirectoryCacheKey", () => {
-  it("includes account and signature fallbacks", () => {
-    expect(
-      buildDirectoryCacheKey({
+  it.each([
+    {
+      input: {
         channel: "slack",
         kind: "channel",
         source: "cache",
-      }),
-    ).toBe("slack:default:channel:cache:default");
-
-    expect(
-      buildDirectoryCacheKey({
+      },
+      expected: "slack:default:channel:cache:default",
+    },
+    {
+      input: {
         channel: "discord",
         accountId: "work",
         kind: "user",
         source: "live",
         signature: "v2",
-      }),
-    ).toBe("discord:work:user:live:v2");
-  });
+      },
+      expected: "discord:work:user:live:v2",
+    },
+  ] satisfies Array<{ input: DirectoryCacheKey; expected: string }>)(
+    "includes account and signature fallbacks for %j",
+    ({ input, expected }) => {
+      expect(buildDirectoryCacheKey(input)).toBe(expected);
+    },
+  );
 });
 
 describe("DirectoryCache", () => {
   it("expires entries after ttl and resets when config ref changes", () => {
     vi.useFakeTimers();
     const cache = new DirectoryCache<string>(1_000);
-    const cfgA = {} as GodsEyeConfig;
-    const cfgB = {} as GodsEyeConfig;
+    const cfgA = {} as OpenClawConfig;
+    const cfgB = {} as OpenClawConfig;
 
     cache.set("a", "first", cfgA);
     expect(cache.get("a", cfgA)).toBe("first");
@@ -45,7 +52,7 @@ describe("DirectoryCache", () => {
 
   it("evicts least-recent entries, refreshes insertion order, and clears matches", () => {
     const cache = new DirectoryCache<string>(60_000, 2);
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
 
     cache.set("a", "A", cfg);
     cache.set("b", "B", cfg);

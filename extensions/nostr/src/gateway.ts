@@ -1,6 +1,6 @@
-import { createChannelPairingController } from "openclaw/plugin-sdk/channel-pairing";
-import { attachChannelToResult } from "openclaw/plugin-sdk/channel-send-result";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import { createChannelPairingController } from "godseye/plugin-sdk/channel-pairing";
+import { attachChannelToResult } from "godseye/plugin-sdk/channel-send-result";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   createPreCryptoDirectDmAuthorizer,
   DEFAULT_ACCOUNT_ID,

@@ -16,8 +16,9 @@ import {
   installHooksFromNpmSpec,
   installHooksFromPath,
 } from "./install.js";
+import * as hookInstallRuntime from "./install.runtime.js";
 
-const fixtureRoot = path.join(process.cwd(), ".tmp", `godseye-hook-install-${randomUUID()}`);
+const fixtureRoot = path.join(process.cwd(), ".tmp", `openclaw-hook-install-${randomUUID()}`);
 const sharedArchiveDir = path.join(fixtureRoot, "_archives");
 let tempDirIndex = 0;
 const sharedArchivePathByName = new Map<string, string>();
@@ -96,9 +97,9 @@ function writeHookPackManifest(params: {
   fs.writeFileSync(
     path.join(params.pkgDir, "package.json"),
     JSON.stringify({
-      name: "@godseye/test-hooks",
+      name: "@openclaw/test-hooks",
       version: "0.0.1",
-      godseye: { hooks: params.hooks },
+      openclaw: { hooks: params.hooks },
       ...(params.dependencies ? { dependencies: params.dependencies } : {}),
     }),
     "utf-8",
@@ -215,7 +216,7 @@ describe("installHooksFromPath", () => {
         "---",
         "name: one-hook",
         "description: One hook",
-        'metadata: {"godseye":{"events":["command:new"]}}',
+        'metadata: {"openclaw":{"events":["command:new"]}}',
         "---",
         "",
         "# One Hook",
@@ -250,7 +251,7 @@ describe("installHooksFromPath", () => {
         "---",
         "name: my-hook",
         "description: My hook",
-        'metadata: {"godseye":{"events":["command:new"]}}',
+        'metadata: {"openclaw":{"events":["command:new"]}}',
         "---",
         "",
         "# My Hook",
@@ -277,12 +278,12 @@ describe("installHooksFromPath", () => {
       {
         hooks: ["../outside"],
         setupLink: false,
-        expected: "godseye.hooks entry escapes package directory",
+        expected: "openclaw.hooks entry escapes package directory",
       },
       {
         hooks: ["./linked"],
         setupLink: true,
-        expected: "godseye.hooks entry resolves outside package directory",
+        expected: "openclaw.hooks entry resolves outside package directory",
       },
     ] as const;
 
@@ -327,6 +328,41 @@ describe("installHooksFromPath", () => {
 });
 
 describe("installHooksFromNpmSpec", () => {
+  it("does not expose dangerous force unsafe install through npm-spec archive params", async () => {
+    const installFromValidatedNpmSpecArchiveSpy = vi
+      .spyOn(hookInstallRuntime, "installFromValidatedNpmSpecArchive")
+      .mockImplementation(
+        async (
+          params: Parameters<typeof hookInstallRuntime.installFromValidatedNpmSpecArchive>[0],
+        ) => {
+          expect(
+            (params.archiveInstallParams as Record<string, unknown>).dangerouslyForceUnsafeInstall,
+          ).toBeUndefined();
+          return {
+            ok: true,
+            hookPackId: "test-hooks",
+            hooks: ["one-hook"],
+            targetDir: "/tmp/hooks/test-hooks",
+            version: "0.0.1",
+          };
+        },
+      );
+
+    try {
+      const result = await installHooksFromNpmSpec({
+        spec: "@openclaw/test-hooks@0.0.1",
+      });
+
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        return;
+      }
+      expect(result.hookPackId).toBe("test-hooks");
+    } finally {
+      installFromValidatedNpmSpecArchiveSpy.mockRestore();
+    }
+  });
+
   it("uses --ignore-scripts for npm pack and cleans up temp dir", async () => {
     const stateDir = makeTempDir();
 
@@ -341,8 +377,8 @@ describe("installHooksFromNpmSpec", () => {
           code: 0,
           stdout: JSON.stringify([
             {
-              id: "@godseye/test-hooks@0.0.1",
-              name: "@godseye/test-hooks",
+              id: "@openclaw/test-hooks@0.0.1",
+              name: "@openclaw/test-hooks",
               version: "0.0.1",
               filename: packedName,
               integrity: "sha512-hook-test",
@@ -360,7 +396,7 @@ describe("installHooksFromNpmSpec", () => {
 
     const hooksDir = path.join(stateDir, "hooks");
     const result = await installHooksFromNpmSpec({
-      spec: "@godseye/test-hooks@0.0.1",
+      spec: "@openclaw/test-hooks@0.0.1",
       hooksDir,
       logger: { info: () => {}, warn: () => {} },
     });
@@ -369,13 +405,13 @@ describe("installHooksFromNpmSpec", () => {
       return;
     }
     expect(result.hookPackId).toBe("test-hooks");
-    expect(result.npmResolution?.resolvedSpec).toBe("@godseye/test-hooks@0.0.1");
+    expect(result.npmResolution?.resolvedSpec).toBe("@openclaw/test-hooks@0.0.1");
     expect(result.npmResolution?.integrity).toBe("sha512-hook-test");
     expect(fs.existsSync(path.join(result.targetDir, "hooks", "one-hook", "HOOK.md"))).toBe(true);
 
     expectSingleNpmPackIgnoreScriptsCall({
       calls: run.mock.calls,
-      expectedSpec: "@godseye/test-hooks@0.0.1",
+      expectedSpec: "@openclaw/test-hooks@0.0.1",
     });
 
     expect(packTmpDir).not.toBe("");
@@ -385,8 +421,8 @@ describe("installHooksFromNpmSpec", () => {
   it("aborts when integrity drift callback rejects the fetched artifact", async () => {
     const run = vi.mocked(runCommandWithTimeout);
     mockNpmPackMetadataResult(run, {
-      id: "@godseye/test-hooks@0.0.1",
-      name: "@godseye/test-hooks",
+      id: "@openclaw/test-hooks@0.0.1",
+      name: "@openclaw/test-hooks",
       version: "0.0.1",
       filename: "test-hooks-0.0.1.tgz",
       integrity: "sha512-new",
@@ -395,7 +431,7 @@ describe("installHooksFromNpmSpec", () => {
 
     const onIntegrityDrift = vi.fn(async () => false);
     const result = await installHooksFromNpmSpec({
-      spec: "@godseye/test-hooks@0.0.1",
+      spec: "@openclaw/test-hooks@0.0.1",
       expectedIntegrity: "sha512-old",
       onIntegrityDrift,
     });
@@ -412,8 +448,8 @@ describe("installHooksFromNpmSpec", () => {
 
     const run = vi.mocked(runCommandWithTimeout);
     mockNpmPackMetadataResult(run, {
-      id: "@godseye/test-hooks@0.0.2-beta.1",
-      name: "@godseye/test-hooks",
+      id: "@openclaw/test-hooks@0.0.2-beta.1",
+      name: "@openclaw/test-hooks",
       version: "0.0.2-beta.1",
       filename: "test-hooks-0.0.2-beta.1.tgz",
       integrity: "sha512-beta",
@@ -421,13 +457,13 @@ describe("installHooksFromNpmSpec", () => {
     });
 
     const result = await installHooksFromNpmSpec({
-      spec: "@godseye/test-hooks",
+      spec: "@openclaw/test-hooks",
       logger: { info: () => {}, warn: () => {} },
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.error).toContain("prerelease version 0.0.2-beta.1");
-      expect(result.error).toContain('"@godseye/test-hooks@beta"');
+      expect(result.error).toContain('"@openclaw/test-hooks@beta"');
     }
   });
 });

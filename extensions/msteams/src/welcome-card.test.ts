@@ -8,7 +8,7 @@ describe("buildWelcomeCard", () => {
     expect(card.version).toBe("1.5");
 
     const body = card.body as Array<{ text: string }>;
-    expect(body[0]?.text).toContain("Gods Eye");
+    expect(body[0]?.text).toContain("OpenClaw");
 
     const actions = card.actions as Array<{ title: string; data: unknown }>;
     expect(actions.length).toBe(3);
@@ -50,8 +50,8 @@ describe("buildGroupWelcomeText", () => {
     expect(text).toContain("@MyBot");
   });
 
-  it("defaults to GodsEye", () => {
+  it("defaults to OpenClaw", () => {
     const text = buildGroupWelcomeText();
-    expect(text).toContain("Gods Eye");
+    expect(text).toContain("OpenClaw");
   });
 });

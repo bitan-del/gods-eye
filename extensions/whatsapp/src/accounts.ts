@@ -4,13 +4,13 @@ import {
   createAccountListHelpers,
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,
-  resolveAccountEntry,
-  resolveMergedAccountConfig,
   resolveUserPath,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/account-resolution";
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/account-core";
 import { resolveOAuthDir } from "godseye/plugin-sdk/state-paths";
-import { hasWebCredsSync } from "./auth-store.js";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import { resolveMergedWhatsAppAccountConfig } from "./account-config.js";
+import { hasWebCredsSync } from "./creds-files.js";
 import type { DmPolicy, GroupPolicy, WhatsAppAccountConfig } from "./runtime-api.js";
 
 export type ResolvedWhatsAppAccount = {
@@ -32,6 +32,7 @@ export type ResolvedWhatsAppAccount = {
   mediaMaxMb?: number;
   blockStreaming?: boolean;
   ackReaction?: WhatsAppAccountConfig["ackReaction"];
+  reactionLevel?: WhatsAppAccountConfig["reactionLevel"];
   groups?: WhatsAppAccountConfig["groups"];
   debounceMs?: number;
 };
@@ -43,7 +44,7 @@ const { listConfiguredAccountIds, listAccountIds, resolveDefaultAccountId } =
 export const listWhatsAppAccountIds = listAccountIds;
 export const resolveDefaultWhatsAppAccountId = resolveDefaultAccountId;
 
-export function listWhatsAppAuthDirs(cfg: GodsEyeConfig): string[] {
+export function listWhatsAppAuthDirs(cfg: OpenClawConfig): string[] {
   const oauthDir = resolveOAuthDir();
   const whatsappDir = path.join(oauthDir, "whatsapp");
   const authDirs = new Set<string>([oauthDir, path.join(whatsappDir, DEFAULT_ACCOUNT_ID)]);
@@ -68,15 +69,8 @@ export function listWhatsAppAuthDirs(cfg: GodsEyeConfig): string[] {
   return Array.from(authDirs);
 }
 
-export function hasAnyWhatsAppAuth(cfg: GodsEyeConfig): boolean {
+export function hasAnyWhatsAppAuth(cfg: OpenClawConfig): boolean {
   return listWhatsAppAuthDirs(cfg).some((authDir) => hasWebCredsSync(authDir));
-}
-
-function resolveAccountConfig(
-  cfg: GodsEyeConfig,
-  accountId: string,
-): WhatsAppAccountConfig | undefined {
-  return resolveAccountEntry(cfg.channels?.whatsapp?.accounts, accountId);
 }
 
 function resolveDefaultAuthDir(accountId: string): string {
@@ -96,12 +90,12 @@ function legacyAuthExists(authDir: string): boolean {
   }
 }
 
-export function resolveWhatsAppAuthDir(params: { cfg: GodsEyeConfig; accountId: string }): {
+export function resolveWhatsAppAuthDir(params: { cfg: OpenClawConfig; accountId: string }): {
   authDir: string;
   isLegacy: boolean;
 } {
   const accountId = params.accountId.trim() || DEFAULT_ACCOUNT_ID;
-  const account = resolveAccountConfig(params.cfg, accountId);
+  const account = resolveMergedWhatsAppAccountConfig({ cfg: params.cfg, accountId });
   const configured = account?.authDir?.trim();
   if (configured) {
     return { authDir: resolveUserPath(configured), isLegacy: false };
@@ -119,17 +113,14 @@ export function resolveWhatsAppAuthDir(params: { cfg: GodsEyeConfig; accountId: 
 }
 
 export function resolveWhatsAppAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedWhatsAppAccount {
-  const rootCfg = params.cfg.channels?.whatsapp;
-  const accountId = params.accountId?.trim() || resolveDefaultWhatsAppAccountId(params.cfg);
-  const merged = resolveMergedAccountConfig<WhatsAppAccountConfig>({
-    channelConfig: rootCfg as WhatsAppAccountConfig | undefined,
-    accounts: rootCfg?.accounts as Record<string, Partial<WhatsAppAccountConfig>> | undefined,
-    accountId,
-    omitKeys: ["defaultAccount"],
+  const merged = resolveMergedWhatsAppAccountConfig({
+    cfg: params.cfg,
+    accountId: params.accountId?.trim() || resolveDefaultWhatsAppAccountId(params.cfg),
   });
+  const accountId = merged.accountId;
   const enabled = merged.enabled !== false;
   const { authDir, isLegacy } = resolveWhatsAppAuthDir({
     cfg: params.cfg,
@@ -137,7 +128,7 @@ export function resolveWhatsAppAccount(params: {
   });
   return {
     accountId,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     enabled,
     sendReadReceipts: merged.sendReadReceipts ?? true,
     messagePrefix: merged.messagePrefix ?? params.cfg.messages?.messagePrefix,
@@ -154,6 +145,7 @@ export function resolveWhatsAppAccount(params: {
     mediaMaxMb: merged.mediaMaxMb,
     blockStreaming: merged.blockStreaming,
     ackReaction: merged.ackReaction,
+    reactionLevel: merged.reactionLevel,
     groups: merged.groups,
     debounceMs: merged.debounceMs,
   };
@@ -169,7 +161,7 @@ export function resolveWhatsAppMediaMaxBytes(
   return mediaMaxMb * 1024 * 1024;
 }
 
-export function listEnabledWhatsAppAccounts(cfg: GodsEyeConfig): ResolvedWhatsAppAccount[] {
+export function listEnabledWhatsAppAccounts(cfg: OpenClawConfig): ResolvedWhatsAppAccount[] {
   return listWhatsAppAccountIds(cfg)
     .map((accountId) => resolveWhatsAppAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

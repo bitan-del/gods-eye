@@ -1,7 +1,7 @@
 import {
   buildChannelOutboundSessionRoute,
   type ChannelOutboundSessionRouteParams,
-} from "godseye/plugin-sdk/core";
+} from "godseye/plugin-sdk/channel-core";
 import { stripNextcloudTalkTargetPrefix } from "./normalize.js";
 
 export function resolveNextcloudTalkOutboundSessionRoute(

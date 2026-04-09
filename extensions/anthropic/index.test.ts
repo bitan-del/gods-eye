@@ -1,4 +1,4 @@
-import { capturePluginRegistration } from "openclaw/plugin-sdk/testing";
+import { capturePluginRegistration } from "godseye/plugin-sdk/testing";
 import { describe, expect, it, vi } from "vitest";
 import { registerSingleProviderPlugin } from "../../test/helpers/plugins/plugin-registration.js";
 

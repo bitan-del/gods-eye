@@ -1,6 +1,9 @@
-import { defineSetupPluginEntry } from "godseye/plugin-sdk/core";
-import { discordSetupPlugin } from "./src/channel.setup.js";
+import { defineBundledChannelSetupEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { discordSetupPlugin } from "./src/channel.setup.js";
-
-export default defineSetupPluginEntry(discordSetupPlugin);
+export default defineBundledChannelSetupEntry({
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./setup-plugin-api.js",
+    exportName: "discordSetupPlugin",
+  },
+});

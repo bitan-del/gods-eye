@@ -16,7 +16,7 @@ vi.mock("@google/genai", () => ({
   GoogleGenAI: GoogleGenAIMock,
 }));
 
-import * as providerAuthRuntime from "openclaw/plugin-sdk/provider-auth-runtime";
+import * as providerAuthRuntime from "godseye/plugin-sdk/provider-auth-runtime";
 import { buildGoogleMusicGenerationProvider } from "./music-generation-provider.js";
 
 describe("google music generation provider", () => {

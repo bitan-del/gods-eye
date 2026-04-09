@@ -32,7 +32,7 @@ function createGatewayAudit({
       programArguments: ["/usr/bin/node", "gateway"],
       environment: {
         PATH: path,
-        ...(serviceToken ? { GODSEYE_GATEWAY_TOKEN: serviceToken } : {}),
+        ...(serviceToken ? { OPENCLAW_GATEWAY_TOKEN: serviceToken } : {}),
       },
       ...(environmentValueSources ? { environmentValueSources } : {}),
     },
@@ -140,7 +140,7 @@ describe("auditGatewayServiceConfig", () => {
       expectedGatewayToken: "new-token",
       serviceToken: "old-token",
       environmentValueSources: {
-        GODSEYE_GATEWAY_TOKEN: "file",
+        OPENCLAW_GATEWAY_TOKEN: "file",
       },
     });
     expectTokenAudit(audit, { embedded: false, mismatch: false });

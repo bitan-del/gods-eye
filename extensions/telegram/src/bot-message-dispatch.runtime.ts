@@ -3,9 +3,9 @@ export {
   resolveMarkdownTableMode,
   resolveSessionStoreEntry,
   resolveStorePath,
-} from "openclaw/plugin-sdk/config-runtime";
-export { getAgentScopedMediaLocalRoots } from "openclaw/plugin-sdk/media-runtime";
-export { resolveChunkMode } from "openclaw/plugin-sdk/reply-runtime";
+} from "godseye/plugin-sdk/config-runtime";
+export { getAgentScopedMediaLocalRoots } from "godseye/plugin-sdk/media-runtime";
+export { resolveChunkMode } from "godseye/plugin-sdk/reply-runtime";
 export {
   generateTelegramTopicLabel as generateTopicLabel,
   resolveAutoTopicLabelConfig,

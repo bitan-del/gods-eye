@@ -1,9 +1,13 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { getPluginToolMeta } from "../plugins/tools.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { resolveAgentDir, resolveAgentWorkspaceDir, resolveSessionAgentId } from "./agent-scope.js";
 import { getChannelAgentToolMeta } from "./channel-tools.js";
 import { resolveModel } from "./pi-embedded-runner/model.js";
-import { createGodsEyeCodingTools } from "./pi-tools.js";
+import { createOpenClawCodingTools } from "./pi-tools.js";
 import { resolveEffectiveToolPolicy } from "./pi-tools.policy.js";
 import { summarizeToolDescriptionText } from "./tool-description-summary.js";
 import { resolveToolDisplay } from "./tool-display.js";
@@ -35,7 +39,7 @@ export type EffectiveToolInventoryResult = {
 };
 
 export type ResolveEffectiveToolInventoryParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   sessionKey?: string;
   workspaceDir?: string;
@@ -55,22 +59,25 @@ export type ResolveEffectiveToolInventoryParams = {
   groupId?: string | null;
   groupChannel?: string | null;
   groupSpace?: string | null;
-  replyToMode?: "off" | "first" | "all";
+  replyToMode?: "off" | "first" | "all" | "batched";
   modelHasVision?: boolean;
   requireExplicitMessageTarget?: boolean;
   disableMessageTool?: boolean;
 };
 
 function resolveEffectiveToolLabel(tool: AnyAgentTool): string {
-  const rawLabel = typeof tool.label === "string" ? tool.label.trim() : "";
-  if (rawLabel && rawLabel.toLowerCase() !== tool.name.toLowerCase()) {
+  const rawLabel = normalizeOptionalString(tool.label) ?? "";
+  if (
+    rawLabel &&
+    normalizeLowercaseStringOrEmpty(rawLabel) !== normalizeLowercaseStringOrEmpty(tool.name)
+  ) {
     return rawLabel;
   }
   return resolveToolDisplay({ name: tool.name }).title;
 }
 
 function resolveRawToolDescription(tool: AnyAgentTool): string {
-  return typeof tool.description === "string" ? tool.description.trim() : "";
+  return normalizeOptionalString(tool.description) ?? "";
 }
 
 function summarizeToolDescription(tool: AnyAgentTool): string {
@@ -122,7 +129,7 @@ function disambiguateLabels(entries: EffectiveToolInventoryEntry[]): EffectiveTo
 }
 
 function resolveEffectiveModelCompat(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentDir: string;
   modelProvider?: string;
   modelId?: string;
@@ -154,7 +161,7 @@ export function resolveEffectiveToolInventory(
     modelId: params.modelId,
   });
 
-  const effectiveTools = createGodsEyeCodingTools({
+  const effectiveTools = createOpenClawCodingTools({
     agentId,
     sessionKey: params.sessionKey,
     workspaceDir,

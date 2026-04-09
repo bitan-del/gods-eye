@@ -3,8 +3,8 @@ import type {
   RealtimeTranscriptionProviderPlugin,
   RealtimeTranscriptionSession,
   RealtimeTranscriptionSessionCreateRequest,
-} from "openclaw/plugin-sdk/realtime-transcription";
-import { normalizeResolvedSecretInputString } from "openclaw/plugin-sdk/secret-input";
+} from "godseye/plugin-sdk/realtime-transcription";
+import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
 import WebSocket from "ws";
 import {
   asFiniteNumber,

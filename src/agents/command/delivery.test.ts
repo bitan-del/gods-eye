@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { slackOutbound } from "../../../test/channel-outbounds.js";
+import type { ChannelOutboundAdapter } from "../../channels/plugins/types.js";
 import type { CliDeps } from "../../cli/outbound-send-deps.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { setActivePluginRegistry } from "../../plugins/runtime.js";
 import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { deliverAgentCommandResult, normalizeAgentCommandReplyPayloads } from "./delivery.js";
@@ -10,6 +10,14 @@ import type { AgentCommandOpts } from "./types.js";
 type NormalizeParams = Parameters<typeof normalizeAgentCommandReplyPayloads>[0];
 type RunResult = NormalizeParams["result"];
 
+const slackOutboundForTest: ChannelOutboundAdapter = {
+  deliveryMode: "direct",
+  sendText: async ({ to, text }) => ({
+    channel: "slack",
+    messageId: `${to}:${text}`,
+  }),
+};
+
 const emptyRegistry = createTestRegistry([]);
 const slackRegistry = createTestRegistry([
   {
@@ -17,7 +25,7 @@ const slackRegistry = createTestRegistry([
     source: "test",
     plugin: createOutboundTestPlugin({
       id: "slack",
-      outbound: slackOutbound,
+      outbound: slackOutboundForTest,
       messaging: {
         enableInteractiveReplies: ({ cfg }) =>
           (cfg.channels?.slack as { capabilities?: { interactiveReplies?: boolean } } | undefined)
@@ -46,7 +54,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
     setActivePluginRegistry(emptyRegistry);
   });
 
-  it("compiles Slack directives for direct agent deliveries when interactive replies are enabled", () => {
+  it("keeps Slack directives in text for direct agent deliveries", () => {
     const normalized = normalizeAgentCommandReplyPayloads({
       cfg: {
         channels: {
@@ -54,7 +62,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
             capabilities: { interactiveReplies: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       opts: { message: "test" } as AgentCommandOpts,
       outboundSession: undefined,
       deliveryChannel: "slack",
@@ -64,19 +72,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
 
     expect(normalized).toMatchObject([
       {
-        text: "Choose",
-        interactive: {
-          blocks: [
-            {
-              type: "text",
-              text: "Choose",
-            },
-            {
-              type: "buttons",
-              buttons: [{ label: "Retry", value: "retry" }],
-            },
-          ],
-        },
+        text: "Choose [[slack_buttons: Retry:retry]]",
       },
     ]);
   });
@@ -87,7 +83,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
         messages: {
           responsePrefix: "[{modelFull}]",
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       opts: { message: "test" } as AgentCommandOpts,
       outboundSession: undefined,
       deliveryChannel: "slack",
@@ -123,7 +119,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
             capabilities: { interactiveReplies: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       deps: {} as CliDeps,
       runtime: runtime as never,
       opts: {
@@ -147,7 +143,7 @@ describe("normalizeAgentCommandReplyPayloads", () => {
     };
 
     const delivered = await deliverAgentCommandResult({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       deps: {} as CliDeps,
       runtime: runtime as never,
       opts: {

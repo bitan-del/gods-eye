@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { buildCommandTestParams } from "./commands.test-harness.js";
 import { createMockTypingController } from "./test-helpers.js";
 
@@ -15,7 +15,7 @@ function buildParams(commandBody: string) {
   const cfg = {
     commands: { text: true },
     channels: { whatsapp: { allowFrom: ["*"] } },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
   return buildCommandTestParams(commandBody, cfg, undefined, { workspaceDir: "/tmp/workspace" });
 }
 
@@ -126,6 +126,29 @@ describe("handleBtwCommand", () => {
     expect(result).toEqual({
       shouldContinue: false,
       reply: { text: "nothing important", btw: { question: "what changed?" } },
+    });
+  });
+
+  it("falls back to the resolved agent dir when the caller omits it", async () => {
+    const params = buildParams("/btw what changed?");
+    params.agentId = "worker-1";
+    params.agentDir = undefined;
+    params.sessionEntry = {
+      sessionId: "session-1",
+      updatedAt: Date.now(),
+    };
+    runBtwSideQuestionMock.mockResolvedValue({ text: "resolved fallback" });
+
+    const result = await handleBtwCommand(params, true);
+
+    expect(runBtwSideQuestionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentDir: expect.stringContaining("/agents/worker-1/agent"),
+      }),
+    );
+    expect(result).toEqual({
+      shouldContinue: false,
+      reply: { text: "resolved fallback", btw: { question: "what changed?" } },
     });
   });
 });

@@ -1,11 +1,16 @@
 import { createAccountStatusSink } from "godseye/plugin-sdk/channel-lifecycle";
 import { probeZalo } from "./probe.js";
 import { resolveZaloProxyFetch } from "./proxy.js";
-import { PAIRING_APPROVED_MESSAGE, type ChannelPlugin, type GodsEyeConfig } from "./runtime-api.js";
+import {
+  PAIRING_APPROVED_MESSAGE,
+  type ChannelPlugin,
+  type OpenClawConfig,
+} from "./runtime-api.js";
 import { normalizeSecretInputString } from "./secret-input.js";
 import { sendMessageZalo } from "./send.js";
+import type { ResolvedZaloAccount } from "./types.js";
 
-export async function notifyZaloPairingApproval(params: { cfg: GodsEyeConfig; id: string }) {
+export async function notifyZaloPairingApproval(params: { cfg: OpenClawConfig; id: string }) {
   const { resolveZaloAccount } = await import("./accounts.js");
   const account = resolveZaloAccount({ cfg: params.cfg });
   if (!account.token) {
@@ -37,7 +42,9 @@ export async function probeZaloAccount(params: {
 }
 
 export async function startZaloGatewayAccount(
-  ctx: Parameters<NonNullable<NonNullable<ChannelPlugin["gateway"]>["startAccount"]>>[0],
+  ctx: Parameters<
+    NonNullable<NonNullable<ChannelPlugin<ResolvedZaloAccount>["gateway"]>["startAccount"]>
+  >[0],
 ) {
   const account = ctx.account;
   const token = account.token.trim();

@@ -1,11 +1,11 @@
-import { coerceNativeSetting, normalizeAllowFromList } from "openclaw/plugin-sdk/channel-policy";
+import { coerceNativeSetting, normalizeAllowFromList } from "godseye/plugin-sdk/channel-policy";
 import {
   isDangerousNameMatchingEnabled,
   resolveNativeCommandsEnabled,
   resolveNativeSkillsEnabled,
-} from "openclaw/plugin-sdk/config-runtime";
-import { readChannelAllowFromStore } from "openclaw/plugin-sdk/conversation-runtime";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/config-runtime";
+import { readChannelAllowFromStore } from "godseye/plugin-sdk/conversation-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { ResolvedDiscordAccount } from "./accounts.js";
 import type { OpenClawConfig } from "./runtime-api.js";
 import { isDiscordMutableAllowEntry } from "./security-doctor.js";

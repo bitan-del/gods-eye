@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { resolveStateDir } from "openclaw/plugin-sdk/state-paths";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/account-id";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   findMatrixAccountEntry,
   requiresExplicitMatrixDefaultAccount,

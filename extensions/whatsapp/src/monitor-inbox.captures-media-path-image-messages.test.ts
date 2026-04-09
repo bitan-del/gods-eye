@@ -11,8 +11,10 @@ import {
 let monitorWebInbox: typeof import("./inbound.js").monitorWebInbox;
 const inboundLoggerInfoMock = vi.hoisted(() => vi.fn());
 
-vi.mock("godseye/plugin-sdk/text-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/text-runtime")>();
+vi.mock("godseye/plugin-sdk/text-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/text-runtime")>(
+    "godseye/plugin-sdk/text-runtime",
+  );
   return {
     ...actual,
     getChildLogger: () => ({
@@ -83,7 +85,7 @@ describe("web monitor inbox", () => {
         fromMe: false,
       },
     ]);
-    expect(sock.sendPresenceUpdate).toHaveBeenCalledWith("available");
+    expect(sock.sendPresenceUpdate).toHaveBeenNthCalledWith(1, "available");
     await listener.close();
   });
 

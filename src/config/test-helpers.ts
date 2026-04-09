@@ -1,14 +1,40 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { withTempHome as withTempHomeBase } from "../../test/helpers/temp-home.js";
-import type { GodsEyeConfig } from "./config.js";
+import { resetPluginLoaderTestStateForTest } from "../plugins/loader.test-fixtures.js";
+import { clearPluginSetupRegistryCache } from "../plugins/setup-registry.js";
+import { resetConfigRuntimeState, type OpenClawConfig } from "./config.js";
 
-export async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
-  return withTempHomeBase(fn, { prefix: "godseye-config-" });
+function resetConfigTestRuntimeState(): void {
+  resetConfigRuntimeState();
+  resetPluginLoaderTestStateForTest();
+  clearPluginSetupRegistryCache();
 }
 
-export async function writeGodsEyeConfig(home: string, config: unknown): Promise<string> {
-  const configPath = path.join(home, ".godseye", "godseye.json");
+export async function withTempHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
+  resetConfigTestRuntimeState();
+  try {
+    return await withTempHomeBase(fn, {
+      prefix: "openclaw-config-",
+      env: {
+        OPENCLAW_CONFIG_PATH: undefined,
+        OPENCLAW_BUNDLED_PLUGINS_DIR: undefined,
+        OPENCLAW_DISABLE_BUNDLED_PLUGINS: undefined,
+        OPENCLAW_DISABLE_PLUGIN_DISCOVERY_CACHE: undefined,
+        OPENCLAW_DISABLE_PLUGIN_MANIFEST_CACHE: undefined,
+        OPENCLAW_PLUGIN_CATALOG_PATHS: undefined,
+        OPENCLAW_MPM_CATALOG_PATHS: undefined,
+        OPENCLAW_PLUGIN_DISCOVERY_CACHE_MS: undefined,
+        OPENCLAW_PLUGIN_MANIFEST_CACHE_MS: undefined,
+      },
+    });
+  } finally {
+    resetConfigTestRuntimeState();
+  }
+}
+
+export async function writeOpenClawConfig(home: string, config: unknown): Promise<string> {
+  const configPath = path.join(home, ".openclaw", "openclaw.json");
   await fs.mkdir(path.dirname(configPath), { recursive: true });
   await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
   return configPath;
@@ -21,9 +47,9 @@ export async function writeStateDirDotEnv(
     stateDir?: string;
   },
 ): Promise<{ dotEnvPath: string; stateDir: string }> {
-  const stateDir = params?.stateDir ?? params?.env?.GODSEYE_STATE_DIR?.trim();
+  const stateDir = params?.stateDir ?? params?.env?.OPENCLAW_STATE_DIR?.trim();
   if (!stateDir) {
-    throw new Error("Expected GODSEYE_STATE_DIR or explicit stateDir for .env test setup");
+    throw new Error("Expected OPENCLAW_STATE_DIR or explicit stateDir for .env test setup");
   }
   const dotEnvPath = path.join(stateDir, ".env");
   await fs.mkdir(path.dirname(dotEnvPath), { recursive: true });
@@ -36,7 +62,7 @@ export async function withTempHomeConfig<T>(
   fn: (params: { home: string; configPath: string }) => Promise<T>,
 ): Promise<T> {
   return withTempHome(async (home) => {
-    const configPath = await writeGodsEyeConfig(home, config);
+    const configPath = await writeOpenClawConfig(home, config);
     return fn({ home, configPath });
   });
 }
@@ -72,7 +98,7 @@ export async function withEnvOverride<T>(
 
 export function buildWebSearchProviderConfig(params: {
   provider: NonNullable<
-    NonNullable<NonNullable<NonNullable<GodsEyeConfig["tools"]>["web"]>["search"]>["provider"]
+    NonNullable<NonNullable<NonNullable<OpenClawConfig["tools"]>["web"]>["search"]>["provider"]
   >;
   enabled?: boolean;
   providerConfig?: Record<string, unknown>;

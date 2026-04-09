@@ -1,11 +1,20 @@
-import type { Skill as CanonicalSkill, SourceInfo } from "@mariozechner/pi-coding-agent";
+import type { Skill as CanonicalSkill } from "@mariozechner/pi-coding-agent";
 
 export type SourceScope = "user" | "project" | "temporary";
 export type SourceOrigin = "package" | "top-level";
 
+export interface SourceInfo {
+  path?: string;
+  source?: string;
+  scope?: SourceScope;
+  origin?: SourceOrigin;
+  baseDir?: string;
+}
+
 export type Skill = CanonicalSkill & {
   // Preserve legacy source reads while keeping the canonical upstream shape.
   source?: string;
+  sourceInfo?: SourceInfo;
 };
 
 export function createSyntheticSourceInfo(
@@ -35,12 +44,6 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
-/**
- * Keep this formatter's XML layout byte-for-byte aligned with the upstream
- * Agent Skills formatter so we can avoid importing the full pi-coding-agent
- * package root on the cold skills path. Visibility policy is applied upstream
- * before calling this helper.
- */
 export function formatSkillsForPrompt(skills: Skill[]): string {
   if (skills.length === 0) {
     return "";

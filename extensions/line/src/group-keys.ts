@@ -1,5 +1,5 @@
 import { normalizeAccountId } from "godseye/plugin-sdk/account-id";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/account-resolution";
+import type { OpenClawConfig } from "godseye/plugin-sdk/account-resolution";
 import { resolveAccountEntry } from "godseye/plugin-sdk/account-resolution";
 import type { LineConfig, LineGroupConfig } from "./types.js";
 
@@ -38,7 +38,7 @@ export function resolveLineGroupConfigEntry<T>(
 }
 
 export function resolveLineGroupsConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId?: string | null,
 ): Record<string, LineGroupConfig | undefined> | undefined {
   const lineConfig = cfg.channels?.line as LineConfig | undefined;
@@ -51,7 +51,7 @@ export function resolveLineGroupsConfig(
 }
 
 export function resolveExactLineGroupConfigKey(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
 }): string | undefined {
@@ -62,11 +62,4 @@ export function resolveExactLineGroupConfigKey(params: {
   return resolveLineGroupLookupIds(params.groupId).find((candidate) =>
     Object.hasOwn(groups, candidate),
   );
-}
-
-export function resolveLineGroupHistoryKey(params: {
-  groupId?: string | null;
-  roomId?: string | null;
-}): string | undefined {
-  return params.groupId?.trim() || params.roomId?.trim() || undefined;
 }

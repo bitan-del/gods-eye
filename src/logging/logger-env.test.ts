@@ -1,23 +1,28 @@
-import os from "node:os";
-import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getResolvedConsoleSettings,
   getResolvedLoggerSettings,
   resetLogger,
   setLoggerOverride,
 } from "../logging.js";
+import { createSuiteLogPathTracker } from "./log-test-helpers.js";
 import { loggingState } from "./state.js";
 
-const testLogPath = path.join(os.tmpdir(), "godseye-test-env-log-level.log");
 const defaultMaxFileBytes = 500 * 1024 * 1024;
+const logPathTracker = createSuiteLogPathTracker("openclaw-test-env-log-level-");
 
-describe("GODSEYE_LOG_LEVEL", () => {
+describe("OPENCLAW_LOG_LEVEL", () => {
   let originalEnv: string | undefined;
+  let testLogPath = "";
+
+  beforeAll(async () => {
+    await logPathTracker.setup();
+  });
 
   beforeEach(() => {
-    originalEnv = process.env.GODSEYE_LOG_LEVEL;
-    delete process.env.GODSEYE_LOG_LEVEL;
+    originalEnv = process.env.OPENCLAW_LOG_LEVEL;
+    testLogPath = logPathTracker.nextPath();
+    delete process.env.OPENCLAW_LOG_LEVEL;
     loggingState.invalidEnvLogLevelValue = null;
     resetLogger();
     setLoggerOverride(null);
@@ -25,14 +30,19 @@ describe("GODSEYE_LOG_LEVEL", () => {
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.GODSEYE_LOG_LEVEL;
+      delete process.env.OPENCLAW_LOG_LEVEL;
     } else {
-      process.env.GODSEYE_LOG_LEVEL = originalEnv;
+      process.env.OPENCLAW_LOG_LEVEL = originalEnv;
     }
     loggingState.invalidEnvLogLevelValue = null;
     resetLogger();
     setLoggerOverride(null);
     vi.restoreAllMocks();
+  });
+
+  afterAll(async () => {
+    await logPathTracker.cleanup();
+    testLogPath = "";
   });
 
   it("applies a valid env override to both file and console levels", () => {
@@ -42,7 +52,7 @@ describe("GODSEYE_LOG_LEVEL", () => {
       consoleStyle: "json",
       file: testLogPath,
     });
-    process.env.GODSEYE_LOG_LEVEL = "debug";
+    process.env.OPENCLAW_LOG_LEVEL = "debug";
 
     expect(getResolvedLoggerSettings()).toEqual({
       level: "debug",
@@ -62,7 +72,7 @@ describe("GODSEYE_LOG_LEVEL", () => {
       consoleStyle: "compact",
       file: testLogPath,
     });
-    process.env.GODSEYE_LOG_LEVEL = "nope";
+    process.env.OPENCLAW_LOG_LEVEL = "nope";
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(
       () => true as unknown as ReturnType<typeof process.stderr.write>, // preserve stream contract in test spy
     );
@@ -74,8 +84,8 @@ describe("GODSEYE_LOG_LEVEL", () => {
 
     const warnings = stderrSpy.mock.calls
       .map(([firstArg]) => String(firstArg))
-      .filter((line) => line.includes("GODSEYE_LOG_LEVEL"));
+      .filter((line) => line.includes("OPENCLAW_LOG_LEVEL"));
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('Ignoring invalid GODSEYE_LOG_LEVEL="nope"');
+    expect(warnings[0]).toContain('Ignoring invalid OPENCLAW_LOG_LEVEL="nope"');
   });
 });

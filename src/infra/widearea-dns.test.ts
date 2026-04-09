@@ -12,9 +12,9 @@ import {
 } from "./widearea-dns.js";
 
 const baseZoneOpts: WideAreaGatewayZoneOpts = {
-  domain: "godseye.internal.",
+  domain: "openclaw.internal.",
   gatewayPort: 18789,
-  displayName: "Mac Studio (GodsEye)",
+  displayName: "Mac Studio (OpenClaw)",
   tailnetIPv4: "100.123.224.76",
   hostLabel: "studio-london",
   instanceLabel: "studio-london",
@@ -24,6 +24,19 @@ function makeZoneOpts(overrides: Partial<WideAreaGatewayZoneOpts> = {}): WideAre
   return { ...baseZoneOpts, ...overrides };
 }
 
+function renderZoneText(overrides: Partial<WideAreaGatewayZoneOpts> = {}): string {
+  return renderWideAreaGatewayZoneText({
+    ...makeZoneOpts(overrides),
+    serial: 2025121701,
+  });
+}
+
+function expectZoneRecords(text: string, records: string[]): void {
+  for (const record of records) {
+    expect(text).toContain(record);
+  }
+}
+
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -31,9 +44,9 @@ afterEach(() => {
 
 describe("wide-area DNS discovery domain helpers", () => {
   it.each([
-    { value: "godseye.internal", expected: "godseye.internal." },
-    { value: "godseye.internal.", expected: "godseye.internal." },
-    { value: "  godseye.internal  ", expected: "godseye.internal." },
+    { value: "openclaw.internal", expected: "openclaw.internal." },
+    { value: "openclaw.internal.", expected: "openclaw.internal." },
+    { value: "  openclaw.internal  ", expected: "openclaw.internal." },
     { value: "", expected: null },
     { value: "   ", expected: null },
     { value: null, expected: null },
@@ -46,7 +59,7 @@ describe("wide-area DNS discovery domain helpers", () => {
     {
       name: "prefers config domain over env",
       params: {
-        env: { GODSEYE_WIDE_AREA_DOMAIN: "env.internal" } as NodeJS.ProcessEnv,
+        env: { OPENCLAW_WIDE_AREA_DOMAIN: "env.internal" } as NodeJS.ProcessEnv,
         configDomain: "config.internal",
       },
       expected: "config.internal.",
@@ -54,14 +67,14 @@ describe("wide-area DNS discovery domain helpers", () => {
     {
       name: "falls back to env domain",
       params: {
-        env: { GODSEYE_WIDE_AREA_DOMAIN: "env.internal" } as NodeJS.ProcessEnv,
+        env: { OPENCLAW_WIDE_AREA_DOMAIN: "env.internal" } as NodeJS.ProcessEnv,
       },
       expected: "env.internal.",
     },
     {
       name: "returns null when both sources are blank",
       params: {
-        env: { GODSEYE_WIDE_AREA_DOMAIN: "   " } as NodeJS.ProcessEnv,
+        env: { OPENCLAW_WIDE_AREA_DOMAIN: "   " } as NodeJS.ProcessEnv,
         configDomain: " ",
       },
       expected: null,
@@ -71,76 +84,64 @@ describe("wide-area DNS discovery domain helpers", () => {
   });
 
   it("builds the default zone path from the normalized domain", () => {
-    expect(getWideAreaZonePath("godseye.internal.")).toBe(
-      path.join(utils.CONFIG_DIR, "dns", "godseye.internal.db"),
+    expect(getWideAreaZonePath("openclaw.internal.")).toBe(
+      path.join(utils.CONFIG_DIR, "dns", "openclaw.internal.db"),
     );
   });
 });
 
 describe("wide-area DNS-SD zone rendering", () => {
   it("renders a zone with gateway PTR/SRV/TXT records", () => {
-    const txt = renderWideAreaGatewayZoneText({
-      domain: "godseye.internal.",
-      serial: 2025121701,
-      gatewayPort: 18789,
-      displayName: "Mac Studio (GodsEye)",
-      tailnetIPv4: "100.123.224.76",
+    const txt = renderZoneText({
       tailnetIPv6: "fd7a:115c:a1e0::8801:e04c",
-      hostLabel: "studio-london",
-      instanceLabel: "studio-london",
       sshPort: 22,
-      cliPath: "/opt/homebrew/bin/godseye",
+      cliPath: "/opt/homebrew/bin/openclaw",
     });
 
-    expect(txt).toContain(`$ORIGIN godseye.internal.`);
-    expect(txt).toContain(`studio-london IN A 100.123.224.76`);
-    expect(txt).toContain(`studio-london IN AAAA fd7a:115c:a1e0::8801:e04c`);
-    expect(txt).toContain(`_godseye-gw._tcp IN PTR studio-london._godseye-gw._tcp`);
-    expect(txt).toContain(`studio-london._godseye-gw._tcp IN SRV 0 0 18789 studio-london`);
-    expect(txt).toContain(`displayName=Mac Studio (GodsEye)`);
-    expect(txt).toContain(`gatewayPort=18789`);
-    expect(txt).toContain(`sshPort=22`);
-    expect(txt).toContain(`cliPath=/opt/homebrew/bin/godseye`);
+    expectZoneRecords(txt, [
+      `$ORIGIN openclaw.internal.`,
+      `studio-london IN A 100.123.224.76`,
+      `studio-london IN AAAA fd7a:115c:a1e0::8801:e04c`,
+      `_openclaw-gw._tcp IN PTR studio-london._openclaw-gw._tcp`,
+      `studio-london._openclaw-gw._tcp IN SRV 0 0 18789 studio-london`,
+      `displayName=Mac Studio (OpenClaw)`,
+      `gatewayPort=18789`,
+      `sshPort=22`,
+      `cliPath=/opt/homebrew/bin/openclaw`,
+    ]);
   });
 
-  it("includes tailnetDns when provided", () => {
-    const txt = renderWideAreaGatewayZoneText({
-      domain: "godseye.internal.",
-      serial: 2025121701,
-      gatewayPort: 18789,
-      displayName: "Mac Studio (GodsEye)",
-      tailnetIPv4: "100.123.224.76",
-      tailnetDns: "peters-mac-studio-1.sheep-coho.ts.net",
-      hostLabel: "studio-london",
-      instanceLabel: "studio-london",
-    });
-
-    expect(txt).toContain(`tailnetDns=peters-mac-studio-1.sheep-coho.ts.net`);
-  });
-
-  it("includes gateway TLS TXT fields and trims display metadata", () => {
-    const txt = renderWideAreaGatewayZoneText({
-      domain: "godseye.internal",
-      serial: 2025121701,
-      gatewayPort: 18789,
-      displayName: "  Mac Studio (GodsEye)  ",
-      tailnetIPv4: "100.123.224.76",
-      hostLabel: " Studio London ",
-      instanceLabel: " Studio London ",
-      gatewayTlsEnabled: true,
-      gatewayTlsFingerprintSha256: "abc123",
-      tailnetDns: " tailnet.ts.net ",
-      cliPath: " /opt/homebrew/bin/godseye ",
-    });
-
-    expect(txt).toContain(`$ORIGIN godseye.internal.`);
-    expect(txt).toContain(`studio-london IN A 100.123.224.76`);
-    expect(txt).toContain(`studio-london._godseye-gw._tcp IN TXT`);
-    expect(txt).toContain(`displayName=Mac Studio (GodsEye)`);
-    expect(txt).toContain(`gatewayTls=1`);
-    expect(txt).toContain(`gatewayTlsSha256=abc123`);
-    expect(txt).toContain(`tailnetDns=tailnet.ts.net`);
-    expect(txt).toContain(`cliPath=/opt/homebrew/bin/godseye`);
+  it.each([
+    {
+      name: "includes tailnetDns when provided",
+      overrides: { tailnetDns: "peters-mac-studio-1.sheep-coho.ts.net" },
+      records: [`tailnetDns=peters-mac-studio-1.sheep-coho.ts.net`],
+    },
+    {
+      name: "includes gateway TLS TXT fields and trims display metadata",
+      overrides: {
+        domain: "openclaw.internal",
+        displayName: "  Mac Studio (OpenClaw)  ",
+        hostLabel: " Studio London ",
+        instanceLabel: " Studio London ",
+        gatewayTlsEnabled: true,
+        gatewayTlsFingerprintSha256: "abc123",
+        tailnetDns: " tailnet.ts.net ",
+        cliPath: " /opt/homebrew/bin/openclaw ",
+      },
+      records: [
+        `$ORIGIN openclaw.internal.`,
+        `studio-london IN A 100.123.224.76`,
+        `studio-london._openclaw-gw._tcp IN TXT`,
+        `displayName=Mac Studio (OpenClaw)`,
+        `gatewayTls=1`,
+        `gatewayTlsSha256=abc123`,
+        `tailnetDns=tailnet.ts.net`,
+        `cliPath=/opt/homebrew/bin/openclaw`,
+      ],
+    },
+  ])("$name", ({ overrides, records }) => {
+    expectZoneRecords(renderZoneText(overrides), records);
   });
 });
 
@@ -160,7 +161,7 @@ describe("wide-area DNS zone writes", () => {
     const result = await writeWideAreaGatewayZone(makeZoneOpts());
 
     expect(result).toEqual({
-      zonePath: getWideAreaZonePath("godseye.internal."),
+      zonePath: getWideAreaZonePath("openclaw.internal."),
       changed: false,
     });
     expect(writeSpy).not.toHaveBeenCalled();
@@ -180,11 +181,11 @@ describe("wide-area DNS zone writes", () => {
     );
 
     expect(result).toEqual({
-      zonePath: getWideAreaZonePath("godseye.internal."),
+      zonePath: getWideAreaZonePath("openclaw.internal."),
       changed: true,
     });
     expect(writeSpy).toHaveBeenCalledWith(
-      getWideAreaZonePath("godseye.internal."),
+      getWideAreaZonePath("openclaw.internal."),
       expect.stringContaining("@ IN SOA ns1 hostmaster 2026031305 7200 3600 1209600 60"),
       "utf-8",
     );

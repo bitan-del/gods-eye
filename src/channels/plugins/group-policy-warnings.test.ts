@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../config/types.godseye.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
   collectAllowlistProviderGroupPolicyWarnings,
   collectAllowlistProviderRestrictSendersWarnings,
@@ -49,13 +49,13 @@ describe("group policy warning builders", () => {
   });
 
   it("projects cfg-only warning collector inputs", () => {
-    const collect = projectConfigWarningCollector<{ cfg: GodsEyeConfig; accountId: string }>(
+    const collect = projectConfigWarningCollector<{ cfg: OpenClawConfig; accountId: string }>(
       ({ cfg }) => [cfg.channels ? "configured" : "none"],
     );
 
     expect(
       collect({
-        cfg: { channels: { slack: {} } } as GodsEyeConfig,
+        cfg: { channels: { slack: {} } } as OpenClawConfig,
         accountId: "acct-1",
       }),
     ).toEqual(["configured"]);
@@ -63,14 +63,14 @@ describe("group policy warning builders", () => {
 
   it("projects cfg+accountId warning collector inputs", () => {
     const collect = projectConfigAccountIdWarningCollector<{
-      cfg: GodsEyeConfig;
+      cfg: OpenClawConfig;
       accountId?: string | null;
       account: { accountId: string };
     }>(({ accountId }) => [accountId ?? "default"]);
 
     expect(
       collect({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         accountId: "acct-1",
         account: { accountId: "ignored" },
       }),
@@ -90,16 +90,16 @@ describe("group policy warning builders", () => {
     const collect = projectAccountConfigWarningCollector<
       { accountId: string },
       Record<string, unknown>,
-      { account: { accountId: string }; cfg: GodsEyeConfig }
+      { account: { accountId: string }; cfg: OpenClawConfig }
     >(
-      (cfg: GodsEyeConfig) => cfg.channels ?? {},
+      (cfg: OpenClawConfig) => cfg.channels ?? {},
       ({ account, cfg }) => [String(account.accountId), Object.keys(cfg).join(",") || "none"],
     );
 
     expect(
       collect({
         account: { accountId: "acct-1" },
-        cfg: { channels: { slack: {} } } as GodsEyeConfig,
+        cfg: { channels: { slack: {} } } as OpenClawConfig,
       }),
     ).toEqual(["acct-1", "slack"]);
   });
@@ -406,7 +406,7 @@ describe("group policy warning builders", () => {
       cfg: {
         channels?: {
           defaults?: { groupPolicy?: "open" | "allowlist" | "disabled" };
-          example?: unknown;
+          example?: Record<string, unknown>;
         };
       };
       channelLabel: string;
@@ -505,7 +505,7 @@ describe("group policy warning builders", () => {
 
   it("builds config-aware open-provider collectors", () => {
     const collectWarnings = createOpenProviderGroupPolicyWarningCollector<{
-      cfg: { channels?: { example?: unknown } };
+      cfg: { channels?: { example?: Record<string, unknown> } };
       configuredGroupPolicy?: "open" | "allowlist" | "disabled";
     }>({
       providerConfigPresent: (cfg) => cfg.channels?.example !== undefined,

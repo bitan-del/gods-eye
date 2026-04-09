@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveImageSanitizationLimits } from "./image-sanitization.js";
 
 describe("image sanitization config", () => {
   it("defaults when no config value exists", () => {
     expect(resolveImageSanitizationLimits(undefined)).toEqual({});
     expect(
-      resolveImageSanitizationLimits({ agents: { defaults: {} } } as unknown as GodsEyeConfig),
+      resolveImageSanitizationLimits({ agents: { defaults: {} } } as unknown as OpenClawConfig),
     ).toEqual({});
   });
 
@@ -14,7 +14,7 @@ describe("image sanitization config", () => {
     expect(
       resolveImageSanitizationLimits({
         agents: { defaults: { imageMaxDimensionPx: 1600.9 } },
-      } as unknown as GodsEyeConfig),
+      } as unknown as OpenClawConfig),
     ).toEqual({ maxDimensionPx: 1600 });
   });
 });

@@ -1,6 +1,6 @@
-# @godseye/voice-call
+# @openclaw/voice-call
 
-Official Voice Call plugin for **Gods Eye**.
+Official Voice Call plugin for **OpenClaw**.
 
 Providers:
 
@@ -9,15 +9,15 @@ Providers:
 - **Plivo** (Voice API + XML transfer + GetInput speech)
 - **Mock** (dev/no network)
 
-Docs: `https://docs.gods-eye.org/plugins/voice-call`
-Plugin system: `https://docs.gods-eye.org/plugin`
+Docs: `https://docs.openclaw.ai/plugins/voice-call`
+Plugin system: `https://docs.openclaw.ai/plugin`
 
 ## Install (local dev)
 
-### Option A: install via Gods Eye (recommended)
+### Option A: install via OpenClaw (recommended)
 
 ```bash
-godseye plugins install @godseye/voice-call
+openclaw plugins install @openclaw/voice-call
 ```
 
 Restart the Gateway afterwards.
@@ -25,9 +25,10 @@ Restart the Gateway afterwards.
 ### Option B: copy into your global extensions folder (dev)
 
 ```bash
-mkdir -p ~/.godseye/extensions
-cp -R extensions/voice-call ~/.godseye/extensions/voice-call
-cd ~/.godseye/extensions/voice-call && pnpm install
+PLUGIN_HOME=~/.openclaw/extensions
+mkdir -p "$PLUGIN_HOME"
+cp -R <local-plugin-checkout> "$PLUGIN_HOME/voice-call"
+cd "$PLUGIN_HOME/voice-call" && pnpm install
 ```
 
 ## Config
@@ -75,7 +76,15 @@ Put under `plugins.entries.voice-call.config`:
 
   streaming: {
     enabled: true,
+    // optional; if omitted, Voice Call picks the first registered
+    // realtime-transcription provider by autoSelectOrder
+    provider: "<realtime-transcription-provider-id>",
     streamPath: "/voice/stream",
+    providers: {
+      "<realtime-transcription-provider-id>": {
+        // provider-owned options
+      },
+    },
     preStartTimeoutMs: 5000,
     maxPendingConnections: 32,
     maxPendingConnectionsPerIp: 4,
@@ -89,29 +98,31 @@ Notes:
 - Twilio/Telnyx/Plivo require a **publicly reachable** webhook URL.
 - `mock` is a local dev provider (no network calls).
 - Telnyx requires `telnyx.publicKey` (or `TELNYX_PUBLIC_KEY`) unless `skipSignatureVerification` is true.
-- advanced webhook, streaming, and tunnel notes: `https://docs.gods-eye.org/plugins/voice-call`
+- If older configs still use `provider: "log"`, `twilio.from`, or legacy `streaming.*` OpenAI keys, run `openclaw doctor --fix` to rewrite them.
+- advanced webhook, streaming, and tunnel notes: `https://docs.openclaw.ai/plugins/voice-call`
+- `responseModel` is optional. When unset, voice responses use the runtime default model.
 
 ## Stale call reaper
 
 See the plugin docs for recommended ranges and production examples:
-`https://docs.gods-eye.org/plugins/voice-call#stale-call-reaper`
+`https://docs.openclaw.ai/plugins/voice-call#stale-call-reaper`
 
 ## TTS for calls
 
 Voice Call uses the core `messages.tts` configuration for
 streaming speech on calls. Override examples and provider caveats live here:
-`https://docs.gods-eye.org/plugins/voice-call#tts-for-calls`
+`https://docs.openclaw.ai/plugins/voice-call#tts-for-calls`
 
 ## CLI
 
 ```bash
-godseye voicecall call --to "+15555550123" --message "Hello from Gods Eye"
-godseye voicecall continue --call-id <id> --message "Any questions?"
-godseye voicecall speak --call-id <id> --message "One moment"
-godseye voicecall end --call-id <id>
-godseye voicecall status --call-id <id>
-godseye voicecall tail
-godseye voicecall expose --mode funnel
+openclaw voicecall call --to "+15555550123" --message "Hello from OpenClaw"
+openclaw voicecall continue --call-id <id> --message "Any questions?"
+openclaw voicecall speak --call-id <id> --message "One moment"
+openclaw voicecall end --call-id <id>
+openclaw voicecall status --call-id <id>
+openclaw voicecall tail
+openclaw voicecall expose --mode funnel
 ```
 
 ## Tool
@@ -144,4 +155,5 @@ Actions:
 - While a Twilio stream is active, playback does not fall back to TwiML `<Say>`; stream-TTS failures fail the playback request.
 - Outbound conversation calls suppress barge-in only while the initial greeting is actively speaking, then re-enable normal interruption.
 - Twilio stream disconnect auto-end uses a short grace window so quick reconnects do not end the call.
-- Media streaming requires `ws` and OpenAI Realtime API key.
+- Realtime provider selection is generic. Configure `streaming.provider` / `realtime.provider` and put provider-owned options under `providers.<id>`.
+- Runtime fallback still accepts the old voice-call keys for now, but migration is a doctor step and the compat shim is scheduled to go away in a future release.

@@ -1,5 +1,5 @@
 // Private helper surface for the bundled feishu plugin.
-// Keep this list additive and scoped to symbols used under extensions/feishu.
+// Keep this list additive and scoped to the bundled Feishu surface.
 
 export type { HistoryEntry } from "../auto-reply/reply/history.js";
 export {
@@ -13,6 +13,7 @@ export { logTypingFailure } from "../channels/logging.js";
 export type { AllowlistMatch } from "../channels/plugins/allowlist-match.js";
 export { buildChannelConfigSchema } from "../channels/plugins/config-schema.js";
 export { createActionGate } from "../agents/tools/common.js";
+export { chunkTextForOutbound } from "./text-chunking.js";
 export {
   buildSingleChannelSecretPromptState,
   addWildcardAllowFrom,
@@ -39,13 +40,20 @@ export type {
 export type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
 export { createReplyPrefixContext } from "../channels/reply-prefix.js";
 export { createChannelReplyPipeline } from "./channel-reply-pipeline.js";
-export type { GodsEyeConfig as ClawdbotConfig, GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig as ClawdbotConfig, OpenClawConfig } from "../config/config.js";
+export { resolveChannelContextVisibilityMode } from "../config/context-visibility.js";
 export {
   resolveAllowlistProviderRuntimeGroupPolicy,
   resolveDefaultGroupPolicy,
   resolveOpenProviderRuntimeGroupPolicy,
   warnMissingProviderGroupPolicyFallbackOnce,
 } from "../config/runtime-group-policy.js";
+export {
+  evaluateSupplementalContextVisibility,
+  filterSupplementalContextItems,
+  shouldIncludeSupplementalContext,
+  type ContextVisibilityKind,
+} from "../security/context-visibility.js";
 export type { DmPolicy, GroupToolPolicyConfig } from "../config/types.js";
 export type { SecretInput } from "./secret-input.js";
 export {
@@ -61,13 +69,13 @@ export { resolveAgentOutboundIdentity } from "../infra/outbound/identity.js";
 export type { OutboundIdentity } from "../infra/outbound/identity.js";
 export { emptyPluginConfigSchema } from "../plugins/config-schema.js";
 export type { PluginRuntime } from "../plugins/runtime/types.js";
-export type { AnyAgentTool, GodsEyePluginApi } from "../plugins/types.js";
+export type { AnyAgentTool, OpenClawPluginApi } from "../plugins/types.js";
 export { DEFAULT_ACCOUNT_ID, normalizeAgentId } from "../routing/session-key.js";
 export type { RuntimeEnv } from "../runtime.js";
 export { formatDocsLink } from "../terminal/links.js";
 export { evaluateSenderGroupAccessForPolicy } from "./group-access.js";
 export type { WizardPrompter } from "../wizard/prompts.js";
-export { feishuSetupWizard, feishuSetupAdapter } from "../../extensions/feishu/setup-api.js";
+export { feishuSetupWizard, feishuSetupAdapter } from "./feishu-setup.js";
 export { buildAgentMediaPayload } from "./agent-media-payload.js";
 export { readJsonFileWithFallback } from "./json-store.js";
 export { createChannelPairingController } from "./channel-pairing.js";
@@ -81,8 +89,11 @@ export {
 export { withTempDownloadPath } from "./temp-path.js";
 export {
   buildFeishuConversationId,
+  createFeishuThreadBindingManager,
+  parseFeishuDirectConversationId,
   parseFeishuConversationId,
-} from "../../extensions/feishu/api.js";
+  parseFeishuTargetId,
+} from "./feishu-conversation.js";
 export {
   createWebhookAnomalyTracker,
   createFixedWindowRateLimiter,

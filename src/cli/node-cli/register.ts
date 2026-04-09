@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { loadNodeHostConfig } from "../../node-host/config.js";
 import { runNodeHost } from "../../node-host/runner.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import { parsePort } from "../daemon-cli/shared.js";
@@ -27,13 +28,13 @@ export function registerNodeCli(program: Command) {
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
           [
-            "godseye node run --host 127.0.0.1 --port 18789",
+            "openclaw node run --host 127.0.0.1 --port 18789",
             "Run the node host in the foreground.",
           ],
-          ["godseye node status", "Check node host service status."],
-          ["godseye node install", "Install the node host service."],
-          ["godseye node restart", "Restart the installed node host service."],
-        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/node", "docs.gods-eye.org/cli/node")}\n`,
+          ["openclaw node status", "Check node host service status."],
+          ["openclaw node install", "Install the node host service."],
+          ["openclaw node restart", "Restart the installed node host service."],
+        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/node", "docs.openclaw.ai/cli/node")}\n`,
     );
 
   node
@@ -48,7 +49,9 @@ export function registerNodeCli(program: Command) {
     .action(async (opts) => {
       const existing = await loadNodeHostConfig();
       const host =
-        (opts.host as string | undefined)?.trim() || existing?.gateway?.host || "127.0.0.1";
+        normalizeOptionalString(opts.host as string | undefined) ||
+        existing?.gateway?.host ||
+        "127.0.0.1";
       const port = parsePortWithFallback(opts.port, existing?.gateway?.port ?? 18789);
       await runNodeHost({
         gatewayHost: host,

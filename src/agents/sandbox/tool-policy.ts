@@ -1,4 +1,5 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { resolveAgentConfig } from "../agent-scope.js";
 import { compileGlobPatterns, matchesAnyGlobPattern } from "../glob-pattern.js";
 import { expandToolGroups, normalizeToolName } from "../tool-policy.js";
@@ -157,13 +158,15 @@ function filterDefaultDenyForExplicitAllows(params: {
 function expandResolvedPolicy(policy: SandboxToolPolicy): SandboxToolPolicy {
   const expandedDeny = expandToolGroups(policy.deny ?? []);
   let expandedAllow = expandToolGroups(policy.allow ?? []);
+  const expandedDenyLower = expandedDeny.map(normalizeLowercaseStringOrEmpty);
+  const expandedAllowLower = expandedAllow.map(normalizeLowercaseStringOrEmpty);
 
   // `image` is essential for multimodal workflows; keep the existing sandbox
   // behavior that auto-includes it for explicit allowlists unless it is denied.
   if (
     expandedAllow.length > 0 &&
-    !expandedDeny.map((value) => value.toLowerCase()).includes("image") &&
-    !expandedAllow.map((value) => value.toLowerCase()).includes("image")
+    !expandedDenyLower.includes("image") &&
+    !expandedAllowLower.includes("image")
   ) {
     expandedAllow = [...expandedAllow, "image"];
   }
@@ -206,7 +209,7 @@ export function isToolAllowed(policy: SandboxToolPolicy, name: string) {
 }
 
 export function resolveSandboxToolPolicyForAgent(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
   agentId?: string,
 ): SandboxToolPolicyResolved {
   const agentConfig = cfg && agentId ? resolveAgentConfig(cfg, agentId) : undefined;

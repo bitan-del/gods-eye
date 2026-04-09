@@ -1,10 +1,10 @@
 // Narrow plugin-sdk surface for the bundled phone-control plugin.
-// Keep this list additive and scoped to symbols used under extensions/phone-control.
+// Keep this list additive and scoped to the bundled phone-control surface.
 
 export { definePluginEntry } from "./plugin-entry.js";
 export type {
-  GodsEyePluginApi,
-  GodsEyePluginCommandDefinition,
-  GodsEyePluginService,
+  OpenClawPluginApi,
+  OpenClawPluginCommandDefinition,
+  OpenClawPluginService,
   PluginCommandContext,
 } from "../plugins/types.js";

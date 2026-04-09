@@ -1,10 +1,17 @@
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-types";
 import {
   buildHuggingfaceModelDefinition,
   discoverHuggingfaceModels,
-  type ModelProviderConfig,
   HUGGINGFACE_BASE_URL,
   HUGGINGFACE_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
+} from "./models.js";
+
+export {
+  buildHuggingfaceModelDefinition,
+  discoverHuggingfaceModels,
+  HUGGINGFACE_BASE_URL,
+  HUGGINGFACE_MODEL_CATALOG,
+} from "./models.js";
 
 export async function buildHuggingfaceProvider(
   discoveryApiKey?: string,

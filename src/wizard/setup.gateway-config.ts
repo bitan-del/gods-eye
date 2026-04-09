@@ -4,7 +4,7 @@ import {
   validateGatewayPasswordInput,
 } from "../commands/onboard-helpers.js";
 import type { GatewayAuthChoice, SecretInputMode } from "../commands/onboard-types.js";
-import type { GatewayBindMode, GatewayTailscaleMode, GodsEyeConfig } from "../config/config.js";
+import type { GatewayBindMode, GatewayTailscaleMode, OpenClawConfig } from "../config/config.js";
 import { ensureControlUiAllowedOriginsForNonLoopbackBind } from "../config/gateway-control-ui-origins.js";
 import {
   normalizeSecretInputString,
@@ -33,8 +33,8 @@ import type {
 
 type ConfigureGatewayOptions = {
   flow: WizardFlow;
-  baseConfig: GodsEyeConfig;
-  nextConfig: GodsEyeConfig;
+  baseConfig: OpenClawConfig;
+  nextConfig: OpenClawConfig;
   localPort: number;
   quickstartGateway: QuickstartGatewayDefaults;
   secretInputMode?: SecretInputMode;
@@ -43,7 +43,7 @@ type ConfigureGatewayOptions = {
 };
 
 type ConfigureGatewayResult = {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   settings: GatewayWizardSettings;
 };
 
@@ -192,10 +192,10 @@ export async function configureGatewayForSetup(
           provider: "gateway-auth-token",
           config: nextConfig,
           prompter,
-          preferredEnvVar: "GODSEYE_GATEWAY_TOKEN",
+          preferredEnvVar: "OPENCLAW_GATEWAY_TOKEN",
           copy: {
             sourceMessage: "Where is this gateway token stored?",
-            envVarPlaceholder: "GODSEYE_GATEWAY_TOKEN",
+            envVarPlaceholder: "OPENCLAW_GATEWAY_TOKEN",
           },
         });
         gatewayTokenInput = resolved.ref;
@@ -203,7 +203,7 @@ export async function configureGatewayForSetup(
       }
     } else if (flow === "quickstart") {
       gatewayToken =
-        (quickstartTokenString ?? normalizeGatewayTokenInput(process.env.GODSEYE_GATEWAY_TOKEN)) ||
+        (quickstartTokenString ?? normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN)) ||
         randomToken();
       gatewayTokenInput = gatewayToken;
     } else {
@@ -212,7 +212,7 @@ export async function configureGatewayForSetup(
         placeholder: "Needed for multi-machine or non-loopback access",
         initialValue:
           quickstartTokenString ??
-          normalizeGatewayTokenInput(process.env.GODSEYE_GATEWAY_TOKEN) ??
+          normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN) ??
           "",
       });
       gatewayToken = normalizeGatewayTokenInput(tokenInput) || randomToken();
@@ -230,7 +230,7 @@ export async function configureGatewayForSetup(
         copy: {
           modeMessage: "How do you want to provide the gateway password?",
           plaintextLabel: "Enter password now",
-          plaintextHint: "Stores the password directly in GodsEye config",
+          plaintextHint: "Stores the password directly in OpenClaw config",
         },
       });
       if (selectedMode === "ref") {
@@ -238,10 +238,10 @@ export async function configureGatewayForSetup(
           provider: "gateway-auth-password",
           config: nextConfig,
           prompter,
-          preferredEnvVar: "GODSEYE_GATEWAY_PASSWORD",
+          preferredEnvVar: "OPENCLAW_GATEWAY_PASSWORD",
           copy: {
             sourceMessage: "Where is this gateway password stored?",
-            envVarPlaceholder: "GODSEYE_GATEWAY_PASSWORD",
+            envVarPlaceholder: "OPENCLAW_GATEWAY_PASSWORD",
           },
         });
         password = resolved.ref;
@@ -293,6 +293,23 @@ export async function configureGatewayForSetup(
       },
     },
   };
+
+  if (
+    flow === "quickstart" &&
+    bind === "loopback" &&
+    nextConfig.gateway?.controlUi?.allowInsecureAuth === undefined
+  ) {
+    nextConfig = {
+      ...nextConfig,
+      gateway: {
+        ...nextConfig.gateway,
+        controlUi: {
+          ...nextConfig.gateway?.controlUi,
+          allowInsecureAuth: true,
+        },
+      },
+    };
+  }
 
   nextConfig = ensureControlUiAllowedOriginsForNonLoopbackBind(nextConfig, {
     requireControlUiEnabled: true,

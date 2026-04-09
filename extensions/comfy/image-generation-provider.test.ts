@@ -1,5 +1,5 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import * as providerAuth from "openclaw/plugin-sdk/provider-auth-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import * as providerAuth from "godseye/plugin-sdk/provider-auth-runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   _setComfyFetchGuardForTesting,

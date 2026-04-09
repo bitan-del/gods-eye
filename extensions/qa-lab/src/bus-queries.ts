@@ -1,4 +1,4 @@
-import { normalizeOptionalLowercaseString } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
 import type {
   QaBusAttachment,
   QaBusConversation,

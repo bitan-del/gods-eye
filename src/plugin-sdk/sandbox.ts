@@ -19,13 +19,14 @@ export type {
   SshSandboxSession,
   SshSandboxSettings,
 } from "../agents/sandbox.js";
-export type { GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig } from "../config/config.js";
 
 export {
   buildExecRemoteCommand,
   buildRemoteCommand,
   buildSshSandboxArgv,
   createRemoteShellSandboxFsBridge,
+  createWritableRenameTargetResolver,
   createSshSandboxSessionFromConfigText,
   createSshSandboxSessionFromSettings,
   disposeSshSandboxSession,
@@ -36,6 +37,7 @@ export {
   resolveWritableRenameTargets,
   resolveWritableRenameTargetsForBridge,
   runSshSandboxCommand,
+  sanitizeEnvVars,
   shellEscape,
   uploadDirectoryToSshTarget,
 } from "../agents/sandbox.js";
@@ -45,4 +47,4 @@ export {
   type PluginCommandRunOptions,
   type PluginCommandRunResult,
 } from "./run-command.js";
-export { resolvePreferredGodsEyeTmpDir } from "../infra/tmp-godseye-dir.js";
+export { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";

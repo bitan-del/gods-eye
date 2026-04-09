@@ -1,10 +1,14 @@
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   buildBootstrapContextFiles,
   DEFAULT_BOOTSTRAP_MAX_CHARS,
   DEFAULT_BOOTSTRAP_PROMPT_TRUNCATION_WARNING_MODE,
   DEFAULT_BOOTSTRAP_TOTAL_MAX_CHARS,
+  ensureSessionHeader,
   resolveBootstrapMaxChars,
   resolveBootstrapPromptTruncationWarningMode,
   resolveBootstrapTotalMaxChars,
@@ -25,6 +29,22 @@ const createLargeBootstrapFiles = (): WorkspaceBootstrapFile[] => [
   makeFile({ name: "SOUL.md", path: "/tmp/SOUL.md", content: "b".repeat(10_000) }),
   makeFile({ name: "USER.md", path: "/tmp/USER.md", content: "c".repeat(10_000) }),
 ];
+
+describe("ensureSessionHeader", () => {
+  it("creates transcript files with restrictive permissions", async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-session-header-"));
+    try {
+      const sessionFile = path.join(tempDir, "nested", "session.jsonl");
+      await ensureSessionHeader({ sessionFile, sessionId: "session-1", cwd: tempDir });
+
+      expect((await fs.stat(path.dirname(sessionFile))).mode & 0o777).toBe(0o700);
+      expect((await fs.stat(sessionFile)).mode & 0o777).toBe(0o600);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("buildBootstrapContextFiles", () => {
   it("keeps missing markers", () => {
     const files = [makeFile({ missing: true, content: undefined })];
@@ -154,7 +174,7 @@ describe("buildBootstrapContextFiles", () => {
 
 type BootstrapLimitResolverCase = {
   name: "bootstrapMaxChars" | "bootstrapTotalMaxChars";
-  resolve: (cfg?: GodsEyeConfig) => number;
+  resolve: (cfg?: OpenClawConfig) => number;
   defaultValue: number;
 };
 
@@ -182,7 +202,7 @@ describe("bootstrap limit resolvers", () => {
     for (const resolver of BOOTSTRAP_LIMIT_RESOLVERS) {
       const cfg = {
         agents: { defaults: { [resolver.name]: 12345 } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       expect(resolver.resolve(cfg)).toBe(12345);
     }
   });
@@ -191,7 +211,7 @@ describe("bootstrap limit resolvers", () => {
     for (const resolver of BOOTSTRAP_LIMIT_RESOLVERS) {
       const cfg = {
         agents: { defaults: { [resolver.name]: -1 } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       expect(resolver.resolve(cfg)).toBe(resolver.defaultValue);
     }
   });
@@ -208,12 +228,12 @@ describe("resolveBootstrapPromptTruncationWarningMode", () => {
     expect(
       resolveBootstrapPromptTruncationWarningMode({
         agents: { defaults: { bootstrapPromptTruncationWarning: "off" } },
-      } as GodsEyeConfig),
+      } as OpenClawConfig),
     ).toBe("off");
     expect(
       resolveBootstrapPromptTruncationWarningMode({
         agents: { defaults: { bootstrapPromptTruncationWarning: "always" } },
-      } as GodsEyeConfig),
+      } as OpenClawConfig),
     ).toBe("always");
   });
 
@@ -221,7 +241,7 @@ describe("resolveBootstrapPromptTruncationWarningMode", () => {
     expect(
       resolveBootstrapPromptTruncationWarningMode({
         agents: { defaults: { bootstrapPromptTruncationWarning: "invalid" } },
-      } as unknown as GodsEyeConfig),
+      } as unknown as OpenClawConfig),
     ).toBe(DEFAULT_BOOTSTRAP_PROMPT_TRUNCATION_WARNING_MODE);
   });
 });

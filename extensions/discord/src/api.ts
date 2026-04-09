@@ -1,5 +1,9 @@
-import { resolveFetch } from "godseye/plugin-sdk/infra-runtime";
-import { resolveRetryConfig, retryAsync, type RetryConfig } from "godseye/plugin-sdk/infra-runtime";
+import { resolveFetch } from "godseye/plugin-sdk/fetch-runtime";
+import {
+  resolveRetryConfig,
+  retryAsync,
+  type RetryConfig,
+} from "godseye/plugin-sdk/retry-runtime";
 
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 const DISCORD_API_RETRY_DEFAULTS = {

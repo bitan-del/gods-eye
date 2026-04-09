@@ -2,15 +2,16 @@ import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig, PluginRuntime, RuntimeEnv } from "../runtime-api.js";
-import type { MSTeamsConversationStore } from "./conversation-store.js";
-import type { MSTeamsAdapter } from "./messenger.js";
+import type { OpenClawConfig, PluginRuntime, RuntimeEnv } from "../runtime-api.js";
 import {
   type MSTeamsActivityHandler,
   type MSTeamsMessageHandlerDeps,
   registerMSTeamsHandlers,
 } from "./monitor-handler.js";
-import type { MSTeamsPollStore } from "./polls.js";
+import {
+  createActivityHandler,
+  createMSTeamsMessageHandlerDeps,
+} from "./monitor-handler.test-helpers.js";
 import { setMSTeamsRuntime } from "./runtime.js";
 import type { MSTeamsTurnContext } from "./sdk-types.js";
 
@@ -57,66 +58,16 @@ function createRuntimeStub(readAllowFromStore: ReturnType<typeof vi.fn>): Plugin
   } as unknown as PluginRuntime;
 }
 
-function createActivityHandler(run = vi.fn(async () => undefined)): MSTeamsActivityHandler & {
-  run: NonNullable<MSTeamsActivityHandler["run"]>;
-} {
-  let handler: MSTeamsActivityHandler & {
-    run: NonNullable<MSTeamsActivityHandler["run"]>;
-  };
-  handler = {
-    onMessage: () => handler,
-    onMembersAdded: () => handler,
-    onReactionsAdded: () => handler,
-    onReactionsRemoved: () => handler,
-    run,
-  };
-  return handler;
-}
-
 function createDeps(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   readAllowFromStore?: ReturnType<typeof vi.fn>;
 }): MSTeamsMessageHandlerDeps {
   const readAllowFromStore = params.readAllowFromStore ?? vi.fn(async () => []);
   setMSTeamsRuntime(createRuntimeStub(readAllowFromStore));
-
-  const adapter: MSTeamsAdapter = {
-    continueConversation: async () => {},
-    process: async () => {},
-    updateActivity: async () => {},
-    deleteActivity: async () => {},
-  };
-  const conversationStore: MSTeamsConversationStore = {
-    upsert: async () => {},
-    get: async () => null,
-    list: async () => [],
-    remove: async () => false,
-    findByUserId: async () => null,
-  };
-  const pollStore: MSTeamsPollStore = {
-    createPoll: async () => {},
-    getPoll: async () => null,
-    recordVote: async () => null,
-  };
-
-  return {
+  return createMSTeamsMessageHandlerDeps({
     cfg: params.cfg,
     runtime: { error: vi.fn() } as unknown as RuntimeEnv,
-    appId: "test-app-id",
-    adapter,
-    tokenProvider: {
-      getAccessToken: async () => "token",
-    },
-    textLimit: 4000,
-    mediaMaxBytes: 8 * 1024 * 1024,
-    conversationStore,
-    pollStore,
-    log: {
-      info: vi.fn(),
-      error: vi.fn(),
-      debug: vi.fn(),
-    },
-  };
+  });
 }
 
 function createFeedbackInvokeContext(params: {
@@ -174,6 +125,33 @@ async function expectFileMissing(filePath: string) {
   await expect(access(filePath)).rejects.toThrow();
 }
 
+async function withFeedbackHandler(params: {
+  cfg: OpenClawConfig;
+  context: Parameters<typeof createFeedbackInvokeContext>[0];
+  assertResult: (args: { tmpDir: string; originalRun: ReturnType<typeof vi.fn> }) => Promise<void>;
+}) {
+  const tmpDir = await mkdtemp(path.join(tmpdir(), "openclaw-msteams-feedback-"));
+  try {
+    const originalRun = vi.fn(async () => undefined);
+    const handler = registerMSTeamsHandlers(
+      createActivityHandler(originalRun),
+      createDeps({
+        cfg: {
+          ...params.cfg,
+          session: { store: tmpDir },
+        },
+      }),
+    ) as MSTeamsActivityHandler & {
+      run: NonNullable<MSTeamsActivityHandler["run"]>;
+    };
+
+    await handler.run(createFeedbackInvokeContext(params.context));
+    await params.assertResult({ tmpDir, originalRun });
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+}
+
 describe("msteams feedback invoke authz", () => {
   beforeEach(() => {
     feedbackReflectionMockState.runFeedbackReflection.mockReset();
@@ -181,152 +159,110 @@ describe("msteams feedback invoke authz", () => {
   });
 
   it("records feedback for an allowlisted DM sender", async () => {
-    const tmpDir = await mkdtemp(path.join(tmpdir(), "godseye-msteams-feedback-"));
-    try {
-      const originalRun = vi.fn(async () => undefined);
-      const handler = registerMSTeamsHandlers(
-        createActivityHandler(originalRun),
-        createDeps({
-          cfg: {
-            session: { store: tmpDir },
-            channels: {
-              msteams: {
-                dmPolicy: "allowlist",
-                allowFrom: ["owner-aad"],
-              },
-            },
-          } as GodsEyeConfig,
-        }),
-      ) as MSTeamsActivityHandler & {
-        run: NonNullable<MSTeamsActivityHandler["run"]>;
-      };
-
-      await handler.run(
-        createFeedbackInvokeContext({
-          reaction: "like",
-          conversationId: "a:personal-chat;messageid=bot-msg-1",
-          conversationType: "personal",
-          senderId: "owner-aad",
-          senderName: "Owner",
-          comment: "allowed feedback",
-        }),
-      );
-
-      const transcript = await readFile(
-        path.join(tmpDir, "msteams_direct_owner-aad.jsonl"),
-        "utf-8",
-      );
-      expect(JSON.parse(transcript.trim())).toMatchObject({
-        event: "feedback",
-        messageId: "bot-msg-1",
-        value: "positive",
+    await withFeedbackHandler({
+      cfg: {
+        channels: {
+          msteams: {
+            dmPolicy: "allowlist",
+            allowFrom: ["owner-aad"],
+          },
+        },
+      } as OpenClawConfig,
+      context: {
+        reaction: "like",
+        conversationId: "a:personal-chat;messageid=bot-msg-1",
+        conversationType: "personal",
+        senderId: "owner-aad",
+        senderName: "Owner",
         comment: "allowed feedback",
-        sessionKey: "msteams:direct:owner-aad",
-        conversationId: "a:personal-chat",
-      });
-      expect(originalRun).not.toHaveBeenCalled();
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true });
-    }
+      },
+      assertResult: async ({ tmpDir, originalRun }) => {
+        const transcript = await readFile(
+          path.join(tmpDir, "msteams_direct_owner-aad.jsonl"),
+          "utf-8",
+        );
+        expect(JSON.parse(transcript.trim())).toMatchObject({
+          event: "feedback",
+          messageId: "bot-msg-1",
+          value: "positive",
+          comment: "allowed feedback",
+          sessionKey: "msteams:direct:owner-aad",
+          conversationId: "a:personal-chat",
+        });
+        expect(originalRun).not.toHaveBeenCalled();
+      },
+    });
   });
 
   it("keeps DM feedback allowed when team route allowlists exist", async () => {
-    const tmpDir = await mkdtemp(path.join(tmpdir(), "godseye-msteams-feedback-"));
-    try {
-      const originalRun = vi.fn(async () => undefined);
-      const handler = registerMSTeamsHandlers(
-        createActivityHandler(originalRun),
-        createDeps({
-          cfg: {
-            session: { store: tmpDir },
-            channels: {
-              msteams: {
-                dmPolicy: "allowlist",
-                allowFrom: ["owner-aad"],
-                teams: {
-                  team123: {
-                    channels: {
-                      "19:group@thread.tacv2": { requireMention: false },
-                    },
-                  },
+    await withFeedbackHandler({
+      cfg: {
+        channels: {
+          msteams: {
+            dmPolicy: "allowlist",
+            allowFrom: ["owner-aad"],
+            teams: {
+              team123: {
+                channels: {
+                  "19:group@thread.tacv2": { requireMention: false },
                 },
               },
             },
-          } as GodsEyeConfig,
-        }),
-      ) as MSTeamsActivityHandler & {
-        run: NonNullable<MSTeamsActivityHandler["run"]>;
-      };
-
-      await handler.run(
-        createFeedbackInvokeContext({
-          reaction: "like",
-          conversationId: "a:personal-chat;messageid=bot-msg-1",
-          conversationType: "personal",
-          senderId: "owner-aad",
-          senderName: "Owner",
-          comment: "allowed dm feedback",
-        }),
-      );
-
-      const transcript = await readFile(
-        path.join(tmpDir, "msteams_direct_owner-aad.jsonl"),
-        "utf-8",
-      );
-      expect(JSON.parse(transcript.trim())).toMatchObject({
-        event: "feedback",
-        value: "positive",
+          },
+        },
+      } as OpenClawConfig,
+      context: {
+        reaction: "like",
+        conversationId: "a:personal-chat;messageid=bot-msg-1",
+        conversationType: "personal",
+        senderId: "owner-aad",
+        senderName: "Owner",
         comment: "allowed dm feedback",
-        sessionKey: "msteams:direct:owner-aad",
-      });
-      expect(originalRun).not.toHaveBeenCalled();
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true });
-    }
+      },
+      assertResult: async ({ tmpDir, originalRun }) => {
+        const transcript = await readFile(
+          path.join(tmpDir, "msteams_direct_owner-aad.jsonl"),
+          "utf-8",
+        );
+        expect(JSON.parse(transcript.trim())).toMatchObject({
+          event: "feedback",
+          value: "positive",
+          comment: "allowed dm feedback",
+          sessionKey: "msteams:direct:owner-aad",
+        });
+        expect(originalRun).not.toHaveBeenCalled();
+      },
+    });
   });
 
   it("does not record feedback for a DM sender outside allowFrom", async () => {
-    const tmpDir = await mkdtemp(path.join(tmpdir(), "godseye-msteams-feedback-"));
-    try {
-      const originalRun = vi.fn(async () => undefined);
-      const handler = registerMSTeamsHandlers(
-        createActivityHandler(originalRun),
-        createDeps({
-          cfg: {
-            session: { store: tmpDir },
-            channels: {
-              msteams: {
-                dmPolicy: "allowlist",
-                allowFrom: ["owner-aad"],
-              },
-            },
-          } as GodsEyeConfig,
-        }),
-      ) as MSTeamsActivityHandler & {
-        run: NonNullable<MSTeamsActivityHandler["run"]>;
-      };
-
-      await handler.run(
-        createFeedbackInvokeContext({
-          reaction: "like",
-          conversationId: "a:personal-chat;messageid=bot-msg-1",
-          conversationType: "personal",
-          senderId: "attacker-aad",
-          senderName: "Attacker",
-          comment: "blocked feedback",
-        }),
-      );
-
-      await expectFileMissing(path.join(tmpDir, "msteams_direct_attacker-aad.jsonl"));
-      expect(feedbackReflectionMockState.runFeedbackReflection).not.toHaveBeenCalled();
-      expect(originalRun).not.toHaveBeenCalled();
-    } finally {
-      await rm(tmpDir, { recursive: true, force: true });
-    }
+    await withFeedbackHandler({
+      cfg: {
+        channels: {
+          msteams: {
+            dmPolicy: "allowlist",
+            allowFrom: ["owner-aad"],
+          },
+        },
+      } as OpenClawConfig,
+      context: {
+        reaction: "like",
+        conversationId: "a:personal-chat;messageid=bot-msg-1",
+        conversationType: "personal",
+        senderId: "attacker-aad",
+        senderName: "Attacker",
+        comment: "blocked feedback",
+      },
+      assertResult: async ({ tmpDir, originalRun }) => {
+        await expectFileMissing(path.join(tmpDir, "msteams_direct_attacker-aad.jsonl"));
+        expect(feedbackReflectionMockState.runFeedbackReflection).not.toHaveBeenCalled();
+        expect(originalRun).not.toHaveBeenCalled();
+      },
+    });
   });
 
   it("does not trigger reflection for a group sender outside groupAllowFrom", async () => {
-    const tmpDir = await mkdtemp(path.join(tmpdir(), "godseye-msteams-feedback-"));
+    const tmpDir = await mkdtemp(path.join(tmpdir(), "openclaw-msteams-feedback-"));
     try {
       const originalRun = vi.fn(async () => undefined);
       const handler = registerMSTeamsHandlers(
@@ -341,7 +277,7 @@ describe("msteams feedback invoke authz", () => {
                 feedbackReflection: true,
               },
             },
-          } as GodsEyeConfig,
+          } as OpenClawConfig,
         }),
       ) as MSTeamsActivityHandler & {
         run: NonNullable<MSTeamsActivityHandler["run"]>;

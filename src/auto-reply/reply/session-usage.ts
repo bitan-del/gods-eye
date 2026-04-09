@@ -1,10 +1,10 @@
-import { setCliSessionId } from "../../agents/cli-session.js";
+import { setCliSessionBinding, setCliSessionId } from "../../agents/cli-session.js";
 import {
   deriveSessionTotalTokens,
   hasNonzeroUsage,
   type NormalizedUsage,
 } from "../../agents/usage.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { loadConfig } from "../../config/config.js";
 import {
   type SessionSystemPromptReport,
@@ -18,17 +18,29 @@ function applyCliSessionIdToSessionPatch(
   params: {
     providerUsed?: string;
     cliSessionId?: string;
+    cliSessionBinding?: import("../../config/sessions.js").CliSessionBinding;
   },
   entry: SessionEntry,
   patch: Partial<SessionEntry>,
 ): Partial<SessionEntry> {
   const cliProvider = params.providerUsed ?? entry.modelProvider;
+  if (params.cliSessionBinding && cliProvider) {
+    const nextEntry = { ...entry, ...patch };
+    setCliSessionBinding(nextEntry, cliProvider, params.cliSessionBinding);
+    return {
+      ...patch,
+      cliSessionIds: nextEntry.cliSessionIds,
+      cliSessionBindings: nextEntry.cliSessionBindings,
+      claudeCliSessionId: nextEntry.claudeCliSessionId,
+    };
+  }
   if (params.cliSessionId && cliProvider) {
     const nextEntry = { ...entry, ...patch };
     setCliSessionId(nextEntry, cliProvider, params.cliSessionId);
     return {
       ...patch,
       cliSessionIds: nextEntry.cliSessionIds,
+      cliSessionBindings: nextEntry.cliSessionBindings,
       claudeCliSessionId: nextEntry.claudeCliSessionId,
     };
   }
@@ -40,7 +52,7 @@ function resolveNonNegativeNumber(value: number | undefined): number | undefined
 }
 
 function estimateSessionRunCostUsd(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   usage?: NormalizedUsage;
   providerUsed?: string;
   modelUsed?: string;
@@ -59,7 +71,7 @@ function estimateSessionRunCostUsd(params: {
 export async function persistSessionUsageUpdate(params: {
   storePath?: string;
   sessionKey?: string;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   usage?: NormalizedUsage;
   /**
    * Usage from the last individual API call (not accumulated). When provided,
@@ -72,8 +84,10 @@ export async function persistSessionUsageUpdate(params: {
   providerUsed?: string;
   contextTokensUsed?: number;
   promptTokens?: number;
+  usageIsContextSnapshot?: boolean;
   systemPromptReport?: SessionSystemPromptReport;
   cliSessionId?: string;
+  cliSessionBinding?: import("../../config/sessions.js").CliSessionBinding;
   logLabel?: string;
 }): Promise<void> {
   const { storePath, sessionKey } = params;
@@ -88,7 +102,8 @@ export async function persistSessionUsageUpdate(params: {
     typeof params.promptTokens === "number" &&
     Number.isFinite(params.promptTokens) &&
     params.promptTokens > 0;
-  const hasFreshContextSnapshot = Boolean(params.lastCallUsage) || hasPromptTokens;
+  const hasFreshContextSnapshot =
+    Boolean(params.lastCallUsage) || hasPromptTokens || params.usageIsContextSnapshot === true;
 
   if (hasUsage || hasFreshContextSnapshot) {
     try {
@@ -101,7 +116,9 @@ export async function persistSessionUsageUpdate(params: {
           // `usage.input` sums input tokens from every API call in the run
           // (tool-use loops, compaction retries), overstating actual context.
           // `lastCallUsage` reflects only the final API call — the true context.
-          const usageForContext = params.lastCallUsage ?? (hasUsage ? params.usage : undefined);
+          const usageForContext =
+            params.lastCallUsage ??
+            (params.usageIsContextSnapshot === true ? params.usage : undefined);
           const totalTokens = hasFreshContextSnapshot
             ? deriveSessionTotalTokens({
                 usage: usageForContext,

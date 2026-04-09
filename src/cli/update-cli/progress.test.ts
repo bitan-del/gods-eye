@@ -14,7 +14,7 @@ function makeResult(
     steps: [
       {
         name: stepName,
-        command: "npm i -g godseye@latest",
+        command: "npm i -g openclaw@latest",
         cwd: "/tmp",
         durationMs: 1,
         exitCode: 1,
@@ -26,6 +26,36 @@ function makeResult(
 }
 
 describe("inferUpdateFailureHints", () => {
+  it("returns a package-manager bootstrap hint for pnpm npm-bootstrap failures", () => {
+    const result = {
+      status: "error",
+      mode: "git",
+      reason: "pnpm-npm-bootstrap-failed",
+      steps: [],
+      durationMs: 1,
+    } satisfies UpdateRunResult;
+
+    const hints = inferUpdateFailureHints(result);
+
+    expect(hints.join("\n")).toContain("bootstrap pnpm from npm");
+    expect(hints.join("\n")).toContain("Install pnpm manually");
+  });
+
+  it("returns a corepack hint when corepack is missing", () => {
+    const result = {
+      status: "error",
+      mode: "git",
+      reason: "pnpm-corepack-missing",
+      steps: [],
+      durationMs: 1,
+    } satisfies UpdateRunResult;
+
+    const hints = inferUpdateFailureHints(result);
+
+    expect(hints.join("\n")).toContain("corepack is missing");
+    expect(hints.join("\n")).toContain("Install pnpm manually");
+  });
+
   it("returns EACCES hint for global update permission failures", () => {
     const result = makeResult(
       "global update",

@@ -1,8 +1,9 @@
 import { constants as fsConstants } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { chromium } from "playwright-core";
-import type { GodsEyeConfig } from "../api.js";
+import type { OpenClawConfig } from "../api.js";
 import type { DiffRenderOptions, DiffTheme } from "./types.js";
 import { VIEWER_ASSET_PREFIX, getServedViewerAsset } from "./viewer-assets.js";
 
@@ -11,6 +12,7 @@ const SHARED_BROWSER_KEY = "__default__";
 const IMAGE_SIZE_LIMIT_ERROR = "Diff frame did not render within image size limits.";
 const PDF_REFERENCE_PAGE_HEIGHT_PX = 1_056;
 const MAX_PDF_PAGES = 50;
+const LOCAL_VIEWER_BASE_HREF = "http://127.0.0.1/plugins/diffs/view/local/local";
 
 export type DiffScreenshotter = {
   screenshotHtml(params: {
@@ -45,10 +47,10 @@ let sharedBrowserState: SharedBrowserState | null = null;
 let executablePathCache: ExecutablePathCache | null = null;
 
 export class PlaywrightDiffScreenshotter implements DiffScreenshotter {
-  private readonly config: GodsEyeConfig;
+  private readonly config: OpenClawConfig;
   private readonly browserIdleMs: number;
 
-  constructor(params: { config: GodsEyeConfig; browserIdleMs?: number }) {
+  constructor(params: { config: OpenClawConfig; browserIdleMs?: number }) {
     this.config = params.config;
     this.browserIdleMs = params.browserIdleMs ?? DEFAULT_BROWSER_IDLE_MS;
   }
@@ -114,10 +116,10 @@ export class PlaywrightDiffScreenshotter implements DiffScreenshotter {
         await page.setContent(injectBaseHref(params.html), { waitUntil: "load" });
         await page.waitForFunction(
           () => {
-            if (document.documentElement.dataset.godseyeDiffsReady === "true") {
+            if (document.documentElement.dataset.openclawDiffsReady === "true") {
               return true;
             }
-            return [...document.querySelectorAll("[data-godseye-diff-host]")].every((element) => {
+            return [...document.querySelectorAll("[data-openclaw-diff-host]")].every((element) => {
               return (
                 element instanceof HTMLElement && element.shadowRoot?.querySelector("[data-diffs]")
               );
@@ -254,9 +256,10 @@ export class PlaywrightDiffScreenshotter implements DiffScreenshotter {
       if (error instanceof Error && error.message === IMAGE_SIZE_LIMIT_ERROR) {
         throw error;
       }
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = formatErrorMessage(error);
       throw new Error(
         `Diff PNG/PDF rendering requires a Chromium-compatible browser. Set browser.executablePath or install Chrome/Chromium. ${reason}`,
+        { cause: error },
       );
     } finally {
       await page?.close().catch(() => {});
@@ -274,14 +277,14 @@ function injectBaseHref(html: string): string {
   if (html.includes("<base ")) {
     return html;
   }
-  return html.replace("<head>", '<head><base href="http://127.0.0.1/" />');
+  return html.replace("<head>", `<head><base href="${LOCAL_VIEWER_BASE_HREF}" />`);
 }
 
-async function resolveBrowserExecutablePath(config: GodsEyeConfig): Promise<string | undefined> {
+async function resolveBrowserExecutablePath(config: OpenClawConfig): Promise<string | undefined> {
   const cacheKey = JSON.stringify({
     configPath: config.browser?.executablePath?.trim() || "",
     env: [
-      process.env.GODSEYE_BROWSER_EXECUTABLE_PATH ?? "",
+      process.env.OPENCLAW_BROWSER_EXECUTABLE_PATH ?? "",
       process.env.BROWSER_EXECUTABLE_PATH ?? "",
       process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ?? "",
     ],
@@ -306,7 +309,7 @@ async function resolveBrowserExecutablePath(config: GodsEyeConfig): Promise<stri
 }
 
 async function resolveBrowserExecutablePathUncached(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
 ): Promise<string | undefined> {
   const configPath = config.browser?.executablePath?.trim();
   if (configPath) {
@@ -315,7 +318,7 @@ async function resolveBrowserExecutablePathUncached(
   }
 
   const envCandidates = [
-    process.env.GODSEYE_BROWSER_EXECUTABLE_PATH,
+    process.env.OPENCLAW_BROWSER_EXECUTABLE_PATH,
     process.env.BROWSER_EXECUTABLE_PATH,
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
   ]
@@ -338,7 +341,7 @@ async function resolveBrowserExecutablePathUncached(
 }
 
 async function acquireSharedBrowser(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   idleMs: number;
 }): Promise<BrowserLease> {
   const executablePath = await resolveBrowserExecutablePath(params.config);

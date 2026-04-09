@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createWizardPrompter as buildWizardPrompter } from "../../test/helpers/wizard-prompter.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { PluginWebSearchProviderEntry } from "../plugins/types.js";
 import type { RuntimeEnv } from "../runtime.js";
 
 const runTui = vi.hoisted(() => vi.fn(async () => {}));
-const probeGatewayReachable = vi.hoisted(() => vi.fn(async () => ({ ok: true })));
+const probeGatewayReachable = vi.hoisted(() =>
+  vi.fn<() => Promise<{ ok: boolean; detail?: string }>>(async () => ({ ok: true })),
+);
+const waitForGatewayReachable = vi.hoisted(() =>
+  vi.fn<() => Promise<{ ok: boolean; detail?: string }>>(async () => ({ ok: true })),
+);
 const setupWizardShellCompletion = vi.hoisted(() => vi.fn(async () => {}));
 const buildGatewayInstallPlan = vi.hoisted(() =>
   vi.fn(async () => ({
@@ -37,16 +42,16 @@ const resolveSetupSecretInputString = vi.hoisted(() =>
   vi.fn<() => Promise<string | undefined>>(async () => undefined),
 );
 const resolveExistingKey = vi.hoisted(() =>
-  vi.fn<(config: GodsEyeConfig, provider: string) => string | undefined>(() => undefined),
+  vi.fn<(config: OpenClawConfig, provider: string) => string | undefined>(() => undefined),
 );
 const hasExistingKey = vi.hoisted(() =>
-  vi.fn<(config: GodsEyeConfig, provider: string) => boolean>(() => false),
+  vi.fn<(config: OpenClawConfig, provider: string) => boolean>(() => false),
 );
 const hasKeyInEnv = vi.hoisted(() =>
   vi.fn<(entry: Pick<PluginWebSearchProviderEntry, "envVars">) => boolean>(() => false),
 );
 const listConfiguredWebSearchProviders = vi.hoisted(() =>
-  vi.fn<(params?: { config?: GodsEyeConfig }) => PluginWebSearchProviderEntry[]>(() => []),
+  vi.fn<(params?: { config?: OpenClawConfig }) => PluginWebSearchProviderEntry[]>(() => []),
 );
 
 vi.mock("../commands/onboard-helpers.js", () => ({
@@ -58,7 +63,7 @@ vi.mock("../commands/onboard-helpers.js", () => ({
     httpUrl: "http://127.0.0.1:18789",
     wsUrl: "ws://127.0.0.1:18789",
   })),
-  waitForGatewayReachable: vi.fn(async () => {}),
+  waitForGatewayReachable,
 }));
 
 vi.mock("../commands/daemon-install-helpers.js", () => ({
@@ -84,7 +89,7 @@ vi.mock("../commands/health.js", () => ({
 }));
 
 vi.mock("../commands/onboard-search.js", () => ({
-  SEARCH_PROVIDER_OPTIONS: [],
+  listSearchProviderOptions: () => [],
   resolveSearchProviderOptions: () => [],
   hasExistingKey,
   hasKeyInEnv,
@@ -177,7 +182,7 @@ function expectFirstOnboardingInstallPlanCallOmitsToken() {
 }
 
 type AdvancedFinalizeArgs = {
-  nextConfig?: GodsEyeConfig;
+  nextConfig?: OpenClawConfig;
   prompter?: ReturnType<typeof buildWizardPrompter>;
   runtime?: RuntimeEnv;
   installDaemon?: boolean;
@@ -190,7 +195,7 @@ function createLaterPrompter() {
   });
 }
 
-function createEnabledFirecrawlSearchConfig(): GodsEyeConfig {
+function createEnabledFirecrawlSearchConfig(): OpenClawConfig {
   return {
     tools: {
       web: {
@@ -233,6 +238,8 @@ describe("finalizeSetupWizard", () => {
   beforeEach(() => {
     runTui.mockClear();
     probeGatewayReachable.mockClear();
+    waitForGatewayReachable.mockReset();
+    waitForGatewayReachable.mockResolvedValue({ ok: true });
     setupWizardShellCompletion.mockClear();
     buildGatewayInstallPlan.mockClear();
     gatewayServiceInstall.mockClear();
@@ -259,8 +266,8 @@ describe("finalizeSetupWizard", () => {
   });
 
   it("resolves gateway password SecretRef for probe and TUI", async () => {
-    const previous = process.env.GODSEYE_GATEWAY_PASSWORD;
-    process.env.GODSEYE_GATEWAY_PASSWORD = "resolved-gateway-password"; // pragma: allowlist secret
+    const previous = process.env.OPENCLAW_GATEWAY_PASSWORD;
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "resolved-gateway-password"; // pragma: allowlist secret
     resolveSetupSecretInputString.mockResolvedValueOnce("resolved-gateway-password");
     const select = vi.fn(async (params: { message: string }) => {
       if (params.message === "How do you want to hatch your bot?") {
@@ -292,7 +299,7 @@ describe("finalizeSetupWizard", () => {
               password: {
                 source: "env",
                 provider: "default",
-                id: "GODSEYE_GATEWAY_PASSWORD",
+                id: "OPENCLAW_GATEWAY_PASSWORD",
               },
             },
           },
@@ -318,9 +325,9 @@ describe("finalizeSetupWizard", () => {
       });
     } finally {
       if (previous === undefined) {
-        delete process.env.GODSEYE_GATEWAY_PASSWORD;
+        delete process.env.OPENCLAW_GATEWAY_PASSWORD;
       } else {
-        process.env.GODSEYE_GATEWAY_PASSWORD = previous;
+        process.env.OPENCLAW_GATEWAY_PASSWORD = previous;
       }
     }
 
@@ -362,7 +369,7 @@ describe("finalizeSetupWizard", () => {
             token: {
               source: "env",
               provider: "default",
-              id: "GODSEYE_GATEWAY_TOKEN",
+              id: "OPENCLAW_GATEWAY_TOKEN",
             },
           },
         },
@@ -503,6 +510,100 @@ describe("finalizeSetupWizard", () => {
         "Web search is enabled, so your agent can look things up online when needed.",
       ),
       "Web search",
+    );
+  });
+
+  it("shows actionable gateway guidance instead of a hard error in no-daemon onboarding", async () => {
+    waitForGatewayReachable.mockResolvedValue({
+      ok: false,
+      detail: "gateway closed (1006 abnormal closure (no close frame)): no close reason",
+    });
+    probeGatewayReachable.mockResolvedValue({
+      ok: false,
+      detail: "gateway closed (1006 abnormal closure (no close frame)): no close reason",
+    });
+    const prompter = createLaterPrompter();
+    const runtime = createRuntime();
+
+    await finalizeSetupWizard({
+      flow: "quickstart",
+      opts: {
+        acceptRisk: true,
+        authChoice: "skip",
+        installDaemon: false,
+        skipHealth: false,
+        skipUi: false,
+      },
+      baseConfig: {},
+      nextConfig: {},
+      workspaceDir: "/tmp",
+      settings: {
+        port: 18789,
+        bind: "loopback",
+        authMode: "token",
+        gatewayToken: "test-token",
+        tailscaleMode: "off",
+        tailscaleResetOnExit: false,
+      },
+      prompter,
+      runtime,
+    });
+
+    expect(runtime.error).not.toHaveBeenCalledWith("health failed");
+    expect(prompter.note).toHaveBeenCalledWith(
+      expect.stringContaining("Setup was run without Gateway service install"),
+      "Gateway",
+    );
+    expect(prompter.note).not.toHaveBeenCalledWith(expect.any(String), "Dashboard ready");
+  });
+
+  it("does not show a Codex native search summary when web search is globally disabled", async () => {
+    const note = vi.fn(async () => {});
+    const prompter = buildWizardPrompter({
+      note,
+      select: vi.fn(async () => "later") as never,
+      confirm: vi.fn(async () => false),
+    });
+
+    await finalizeSetupWizard({
+      flow: "advanced",
+      opts: {
+        acceptRisk: true,
+        authChoice: "skip",
+        installDaemon: false,
+        skipHealth: true,
+        skipUi: true,
+      },
+      baseConfig: {},
+      nextConfig: {
+        tools: {
+          web: {
+            search: {
+              enabled: false,
+              openaiCodex: {
+                enabled: true,
+                mode: "cached",
+              },
+            },
+          },
+        },
+      },
+      workspaceDir: "/tmp",
+      settings: {
+        port: 18789,
+        bind: "loopback",
+        authMode: "token",
+        gatewayToken: undefined,
+        tailscaleMode: "off",
+        tailscaleResetOnExit: false,
+      },
+      prompter,
+      runtime: createRuntime(),
+    });
+
+    expect(note).not.toHaveBeenCalledWith(
+      expect.stringContaining("Codex native search:"),
+      "Codex native search",
     );
   });
 });

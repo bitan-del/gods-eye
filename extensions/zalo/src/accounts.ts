@@ -2,8 +2,9 @@ import {
   createAccountListHelpers,
   resolveMergedAccountConfig,
 } from "godseye/plugin-sdk/account-helpers";
-import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "godseye/plugin-sdk/account-id";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import { normalizeAccountId } from "godseye/plugin-sdk/account-id";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "./runtime-api.js";
 import { resolveZaloToken } from "./token.js";
 import type { ResolvedZaloAccount, ZaloAccountConfig, ZaloConfig } from "./types.js";
 
@@ -13,7 +14,7 @@ const { listAccountIds: listZaloAccountIds, resolveDefaultAccountId: resolveDefa
   createAccountListHelpers("zalo");
 export { listZaloAccountIds, resolveDefaultZaloAccountId };
 
-function mergeZaloAccountConfig(cfg: GodsEyeConfig, accountId: string): ZaloAccountConfig {
+function mergeZaloAccountConfig(cfg: OpenClawConfig, accountId: string): ZaloAccountConfig {
   return resolveMergedAccountConfig<ZaloAccountConfig>({
     channelConfig: cfg.channels?.zalo as ZaloAccountConfig | undefined,
     accounts: (cfg.channels?.zalo as ZaloConfig | undefined)?.accounts as
@@ -25,11 +26,13 @@ function mergeZaloAccountConfig(cfg: GodsEyeConfig, accountId: string): ZaloAcco
 }
 
 export function resolveZaloAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   allowUnresolvedSecretRef?: boolean;
 }): ResolvedZaloAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? (params.cfg.channels?.zalo as ZaloConfig | undefined)?.defaultAccount,
+  );
   const baseEnabled = (params.cfg.channels?.zalo as ZaloConfig | undefined)?.enabled !== false;
   const merged = mergeZaloAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -42,7 +45,7 @@ export function resolveZaloAccount(params: {
 
   return {
     accountId,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     enabled,
     token: tokenResolution.token,
     tokenSource: tokenResolution.source,
@@ -50,7 +53,7 @@ export function resolveZaloAccount(params: {
   };
 }
 
-export function listEnabledZaloAccounts(cfg: GodsEyeConfig): ResolvedZaloAccount[] {
+export function listEnabledZaloAccounts(cfg: OpenClawConfig): ResolvedZaloAccount[] {
   return listZaloAccountIds(cfg)
     .map((accountId) => resolveZaloAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

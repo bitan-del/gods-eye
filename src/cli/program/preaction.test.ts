@@ -1,7 +1,10 @@
 import { Command } from "commander";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { repoInstallSpec } from "../../../test/helpers/bundled-plugin-paths.js";
 import { loggingState } from "../../logging/state.js";
 import { setCommandJsonMode } from "./json-mode.js";
+
+const MATRIX_REPO_INSTALL_SPEC = repoInstallSpec("matrix");
 
 const setVerboseMock = vi.fn();
 const emitCliBannerMock = vi.fn();
@@ -34,7 +37,7 @@ vi.mock("../../logging/console.js", () => ({
 }));
 
 vi.mock("../cli-name.js", () => ({
-  resolveCliName: () => "godseye",
+  resolveCliName: () => "openclaw",
 }));
 
 vi.mock("./config-guard.js", () => ({
@@ -44,15 +47,6 @@ vi.mock("./config-guard.js", () => ({
 vi.mock("../plugin-registry.js", () => ({
   ensurePluginRegistryLoaded: ensurePluginRegistryLoadedMock,
 }));
-
-const mockedModuleIds = [
-  "../../globals.js",
-  "../../runtime.js",
-  "../banner.js",
-  "../cli-name.js",
-  "./config-guard.js",
-  "../plugin-registry.js",
-];
 
 let registerPreActionHooks: typeof import("./preaction.js").registerPreActionHooks;
 let originalProcessArgv: string[];
@@ -67,13 +61,6 @@ beforeAll(async () => {
   ({ registerPreActionHooks } = await import("./preaction.js"));
 });
 
-afterAll(() => {
-  for (const id of mockedModuleIds) {
-    vi.doUnmock(id);
-  }
-  vi.resetModules();
-});
-
 beforeEach(() => {
   vi.clearAllMocks();
   originalProcessArgv = [...process.argv];
@@ -81,7 +68,7 @@ beforeEach(() => {
   originalProcessTitleDescriptor = Object.getOwnPropertyDescriptor(process, "title");
   observedProcessTitle = originalProcessTitle;
   originalNodeNoWarnings = process.env.NODE_NO_WARNINGS;
-  originalHideBanner = process.env.GODSEYE_HIDE_BANNER;
+  originalHideBanner = process.env.OPENCLAW_HIDE_BANNER;
   originalForceStderr = loggingState.forceConsoleToStderr;
   // Worker-thread Vitest runs do not reliably mutate the real process title,
   // so capture writes at the property boundary instead.
@@ -95,7 +82,7 @@ beforeEach(() => {
   });
   loggingState.forceConsoleToStderr = false;
   delete process.env.NODE_NO_WARNINGS;
-  delete process.env.GODSEYE_HIDE_BANNER;
+  delete process.env.OPENCLAW_HIDE_BANNER;
 });
 
 afterEach(() => {
@@ -117,9 +104,9 @@ afterEach(() => {
     process.env.NODE_NO_WARNINGS = originalNodeNoWarnings;
   }
   if (originalHideBanner === undefined) {
-    delete process.env.GODSEYE_HIDE_BANNER;
+    delete process.env.OPENCLAW_HIDE_BANNER;
   } else {
-    process.env.GODSEYE_HIDE_BANNER = originalHideBanner;
+    process.env.OPENCLAW_HIDE_BANNER = originalHideBanner;
   }
 });
 
@@ -130,7 +117,12 @@ describe("registerPreActionHooks", () => {
     | null = null;
 
   function buildProgram() {
-    const program = new Command().name("godseye");
+    const program = new Command().name("openclaw");
+    program
+      .command("agent")
+      .requiredOption("-m, --message <text>")
+      .option("--local")
+      .action(() => {});
     program
       .command("status")
       .option("--json")
@@ -208,7 +200,7 @@ describe("registerPreActionHooks", () => {
     const processTitleSetSpy = vi.spyOn(process, "title", "set");
     await runPreAction({
       parseArgv: ["status"],
-      processArgv: ["node", "godseye", "status", "--debug"],
+      processArgv: ["node", "openclaw", "status", "--debug"],
     });
 
     expect(emitCliBannerMock).toHaveBeenCalledWith("9.9.9-test");
@@ -218,12 +210,12 @@ describe("registerPreActionHooks", () => {
       commandPath: ["status"],
     });
     expect(ensurePluginRegistryLoadedMock).toHaveBeenCalledWith({ scope: "channels" });
-    expect(processTitleSetSpy).toHaveBeenCalledWith("godseye-status");
+    expect(processTitleSetSpy).toHaveBeenCalledWith("openclaw-status");
 
     vi.clearAllMocks();
     await runPreAction({
       parseArgv: ["message", "send"],
-      processArgv: ["node", "godseye", "message", "send"],
+      processArgv: ["node", "openclaw", "message", "send"],
     });
 
     expect(setVerboseMock).toHaveBeenCalledWith(false);
@@ -236,10 +228,23 @@ describe("registerPreActionHooks", () => {
     processTitleSetSpy.mockRestore();
   });
 
+  it("loads plugins for local agent runs", async () => {
+    await runPreAction({
+      parseArgv: ["agent"],
+      processArgv: ["node", "openclaw", "agent", "--local", "--message", "hi"],
+    });
+
+    expect(ensureConfigReadyMock).toHaveBeenCalledWith({
+      runtime: runtimeMock,
+      commandPath: ["agent", "hi"],
+    });
+    expect(ensurePluginRegistryLoadedMock).toHaveBeenCalledWith({ scope: "all" });
+  });
+
   it("keeps setup alias and channels add manifest-first", async () => {
     await runPreAction({
       parseArgv: ["onboard"],
-      processArgv: ["node", "godseye", "onboard"],
+      processArgv: ["node", "openclaw", "onboard"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -251,7 +256,7 @@ describe("registerPreActionHooks", () => {
     vi.clearAllMocks();
     await runPreAction({
       parseArgv: ["channels", "add"],
-      processArgv: ["node", "godseye", "channels", "add"],
+      processArgv: ["node", "openclaw", "channels", "add"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -263,8 +268,8 @@ describe("registerPreActionHooks", () => {
 
   it("only allows invalid config for explicit Matrix reinstall requests", async () => {
     await runPreAction({
-      parseArgv: ["plugins", "install", "@godseye/matrix"],
-      processArgv: ["node", "godseye", "plugins", "install", "@godseye/matrix"],
+      parseArgv: ["plugins", "install", "@openclaw/matrix"],
+      processArgv: ["node", "openclaw", "plugins", "install", "@openclaw/matrix"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -276,7 +281,7 @@ describe("registerPreActionHooks", () => {
     vi.clearAllMocks();
     await runPreAction({
       parseArgv: ["plugins", "install", "alpha"],
-      processArgv: ["node", "godseye", "plugins", "install", "alpha"],
+      processArgv: ["node", "openclaw", "plugins", "install", "alpha"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -286,8 +291,8 @@ describe("registerPreActionHooks", () => {
 
     vi.clearAllMocks();
     await runPreAction({
-      parseArgv: ["plugins", "install", "./extensions/matrix"],
-      processArgv: ["node", "godseye", "plugins", "install", "./extensions/matrix"],
+      parseArgv: ["plugins", "install", MATRIX_REPO_INSTALL_SPEC],
+      processArgv: ["node", "openclaw", "plugins", "install", MATRIX_REPO_INSTALL_SPEC],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -298,13 +303,13 @@ describe("registerPreActionHooks", () => {
 
     vi.clearAllMocks();
     await runPreAction({
-      parseArgv: ["plugins", "install", "@godseye/matrix", "--marketplace", "local/repo"],
+      parseArgv: ["plugins", "install", "@openclaw/matrix", "--marketplace", "local/repo"],
       processArgv: [
         "node",
-        "godseye",
+        "openclaw",
         "plugins",
         "install",
-        "@godseye/matrix",
+        "@openclaw/matrix",
         "--marketplace",
         "local/repo",
       ],
@@ -319,7 +324,7 @@ describe("registerPreActionHooks", () => {
   it("skips help/version preaction and respects banner opt-out", async () => {
     await runPreAction({
       parseArgv: ["status"],
-      processArgv: ["node", "godseye", "--version"],
+      processArgv: ["node", "openclaw", "--version"],
     });
 
     expect(emitCliBannerMock).not.toHaveBeenCalled();
@@ -327,11 +332,11 @@ describe("registerPreActionHooks", () => {
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();
 
     vi.clearAllMocks();
-    process.env.GODSEYE_HIDE_BANNER = "1";
+    process.env.OPENCLAW_HIDE_BANNER = "1";
 
     await runPreAction({
       parseArgv: ["status"],
-      processArgv: ["node", "godseye", "status"],
+      processArgv: ["node", "openclaw", "status"],
     });
 
     expect(emitCliBannerMock).not.toHaveBeenCalled();
@@ -341,7 +346,7 @@ describe("registerPreActionHooks", () => {
   it("applies --json stdout suppression only for explicit JSON output commands", async () => {
     await runPreAction({
       parseArgv: ["status"],
-      processArgv: ["node", "godseye", "status", "--json"],
+      processArgv: ["node", "openclaw", "status", "--json"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -354,7 +359,7 @@ describe("registerPreActionHooks", () => {
     vi.clearAllMocks();
     await runPreAction({
       parseArgv: ["update", "status", "--json"],
-      processArgv: ["node", "godseye", "update", "status", "--json"],
+      processArgv: ["node", "openclaw", "update", "status", "--json"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -367,7 +372,7 @@ describe("registerPreActionHooks", () => {
     vi.clearAllMocks();
     await runPreAction({
       parseArgv: ["config", "set", "gateway.auth.mode", "{bad", "--json"],
-      processArgv: ["node", "godseye", "config", "set", "gateway.auth.mode", "{bad", "--json"],
+      processArgv: ["node", "openclaw", "config", "set", "gateway.auth.mode", "{bad", "--json"],
     });
 
     expect(ensureConfigReadyMock).toHaveBeenCalledWith({
@@ -379,7 +384,7 @@ describe("registerPreActionHooks", () => {
   it("routes logs to stderr in --json mode so stdout stays clean", async () => {
     await runPreAction({
       parseArgv: ["agents", "list"],
-      processArgv: ["node", "godseye", "agents", "list", "--json"],
+      processArgv: ["node", "openclaw", "agents", "list", "--json"],
     });
 
     expect(routeLogsToStderrMock).toHaveBeenCalledOnce();
@@ -389,7 +394,7 @@ describe("registerPreActionHooks", () => {
     // config set --json is parse-only (not JSON output mode), should not route
     await runPreAction({
       parseArgv: ["config", "set", "gateway.auth.mode", "local", "--json"],
-      processArgv: ["node", "godseye", "config", "set", "gateway.auth.mode", "local", "--json"],
+      processArgv: ["node", "openclaw", "config", "set", "gateway.auth.mode", "local", "--json"],
     });
 
     expect(routeLogsToStderrMock).not.toHaveBeenCalled();
@@ -399,7 +404,7 @@ describe("registerPreActionHooks", () => {
     // non-json command should not route
     await runPreAction({
       parseArgv: ["agents", "list"],
-      processArgv: ["node", "godseye", "agents", "list"],
+      processArgv: ["node", "openclaw", "agents", "list"],
     });
 
     expect(routeLogsToStderrMock).not.toHaveBeenCalled();
@@ -408,7 +413,7 @@ describe("registerPreActionHooks", () => {
   it("bypasses config guard for config validate", async () => {
     await runPreAction({
       parseArgv: ["config", "validate"],
-      processArgv: ["node", "godseye", "config", "validate"],
+      processArgv: ["node", "openclaw", "config", "validate"],
     });
 
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();
@@ -417,7 +422,7 @@ describe("registerPreActionHooks", () => {
   it("bypasses config guard for config validate when root option values are present", async () => {
     await runPreAction({
       parseArgv: ["config", "validate"],
-      processArgv: ["node", "godseye", "--profile", "work", "config", "validate"],
+      processArgv: ["node", "openclaw", "--profile", "work", "config", "validate"],
     });
 
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();
@@ -426,7 +431,7 @@ describe("registerPreActionHooks", () => {
   it("bypasses config guard for config schema", async () => {
     await runPreAction({
       parseArgv: ["config", "schema"],
-      processArgv: ["node", "godseye", "config", "schema"],
+      processArgv: ["node", "openclaw", "config", "schema"],
     });
 
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();
@@ -435,7 +440,7 @@ describe("registerPreActionHooks", () => {
   it("bypasses config guard for backup create", async () => {
     await runPreAction({
       parseArgv: ["backup", "create"],
-      processArgv: ["node", "godseye", "backup", "create", "--json"],
+      processArgv: ["node", "openclaw", "backup", "create", "--json"],
     });
 
     expect(ensureConfigReadyMock).not.toHaveBeenCalled();
@@ -449,7 +454,7 @@ describe("registerPreActionHooks", () => {
 
     await runPreAction({
       parseArgv: ["agents", "list"],
-      processArgv: ["node", "godseye", "agents", "list", "--json"],
+      processArgv: ["node", "openclaw", "agents", "list", "--json"],
     });
 
     expect(ensurePluginRegistryLoadedMock).toHaveBeenCalled();
@@ -466,7 +471,7 @@ describe("registerPreActionHooks", () => {
 
     await runPreAction({
       parseArgv: ["agents", "list"],
-      processArgv: ["node", "godseye", "agents", "list"],
+      processArgv: ["node", "openclaw", "agents", "list"],
     });
 
     expect(ensurePluginRegistryLoadedMock).toHaveBeenCalled();

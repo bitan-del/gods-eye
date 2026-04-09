@@ -1,3 +1,4 @@
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
 import {
   DEFAULT_ACCOUNT_ID,
   createChannelPairingController,
@@ -8,7 +9,7 @@ import {
   resolveDmGroupAccessWithLists,
   resolveEffectiveAllowFromLists,
   resolveSenderScopedGroupPolicy,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "../../runtime-api.js";
 import { normalizeMSTeamsConversationId } from "../inbound.js";
 import { resolveMSTeamsAllowlistMatch, resolveMSTeamsRouteConfig } from "../policy.js";
@@ -18,13 +19,13 @@ import type { MSTeamsTurnContext } from "../sdk-types.js";
 export type MSTeamsResolvedSenderAccess = Awaited<ReturnType<typeof resolveMSTeamsSenderAccess>>;
 
 export async function resolveMSTeamsSenderAccess(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   activity: MSTeamsTurnContext["activity"];
 }) {
   const activity = params.activity;
   const msteamsCfg = params.cfg.channels?.msteams;
   const conversationId = normalizeMSTeamsConversationId(activity.conversation?.id ?? "unknown");
-  const convType = activity.conversation?.conversationType?.toLowerCase();
+  const convType = normalizeOptionalLowercaseString(activity.conversation?.conversationType);
   const isDirectMessage = convType === "personal" || (!convType && !activity.conversation?.isGroup);
   const senderId = activity.from?.aadObjectId ?? activity.from?.id ?? "unknown";
   const senderName = activity.from?.name ?? activity.from?.id ?? senderId;

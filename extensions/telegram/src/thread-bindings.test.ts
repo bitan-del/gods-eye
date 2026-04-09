@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { getSessionBindingService } from "godseye/plugin-sdk/conversation-runtime";
+import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveStateDir } from "../../../src/config/paths.js";
-import { getSessionBindingService } from "../../../src/infra/outbound/session-binding-service.js";
 import { importFreshModule } from "../../../test/helpers/import-fresh.js";
 import {
   __testing,
@@ -23,7 +23,7 @@ describe("telegram thread bindings", () => {
     vi.useRealTimers();
     await __testing.resetTelegramThreadBindingsForTests();
     if (stateDirOverride) {
-      delete process.env.GODSEYE_STATE_DIR;
+      delete process.env.OPENCLAW_STATE_DIR;
       fs.rmSync(stateDirOverride, { recursive: true, force: true });
       stateDirOverride = undefined;
     }
@@ -58,7 +58,7 @@ describe("telegram thread bindings", () => {
     expect(manager.getByConversationId("-100200300:topic:77")?.boundBy).toBe("user-1");
   });
 
-  it("does not support child placement", async () => {
+  it("rejects child placement when conversationId is a bare topic ID with no group context", async () => {
     createTelegramThreadBindingManager({
       accountId: "default",
       persist: false,
@@ -72,12 +72,36 @@ describe("telegram thread bindings", () => {
         conversation: {
           channel: "telegram",
           accountId: "default",
-          conversationId: "-100200300:topic:77",
+          conversationId: "77",
         },
         placement: "child",
       }),
     ).rejects.toMatchObject({
-      code: "BINDING_CAPABILITY_UNSUPPORTED",
+      code: "BINDING_CREATE_FAILED",
+    });
+  });
+
+  it("rejects child placement when parentConversationId is also a bare topic ID", async () => {
+    createTelegramThreadBindingManager({
+      accountId: "default",
+      persist: false,
+      enableSweeper: false,
+    });
+
+    await expect(
+      getSessionBindingService().bind({
+        targetSessionKey: "agent:main:acp:child-acp-1",
+        targetKind: "session",
+        conversation: {
+          channel: "telegram",
+          accountId: "default",
+          conversationId: "77",
+          parentConversationId: "99",
+        },
+        placement: "child",
+      }),
+    ).rejects.toMatchObject({
+      code: "BINDING_CREATE_FAILED",
     });
   });
 
@@ -173,8 +197,8 @@ describe("telegram thread bindings", () => {
   });
 
   it("does not persist lifecycle updates when manager persistence is disabled", async () => {
-    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-telegram-bindings-"));
-    process.env.GODSEYE_STATE_DIR = stateDirOverride;
+    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-telegram-bindings-"));
+    process.env.OPENCLAW_STATE_DIR = stateDirOverride;
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T10:00:00.000Z"));
 
@@ -214,8 +238,8 @@ describe("telegram thread bindings", () => {
   });
 
   it("persists unbinds before restart so removed bindings do not come back", async () => {
-    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-telegram-bindings-"));
-    process.env.GODSEYE_STATE_DIR = stateDirOverride;
+    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-telegram-bindings-"));
+    process.env.OPENCLAW_STATE_DIR = stateDirOverride;
 
     createTelegramThreadBindingManager({
       accountId: "default",
@@ -224,7 +248,7 @@ describe("telegram thread bindings", () => {
     });
 
     const bound = await getSessionBindingService().bind({
-      targetSessionKey: "plugin-binding:godseye-codex-app-server:abc123",
+      targetSessionKey: "plugin-binding:openclaw-codex-app-server:abc123",
       targetKind: "session",
       conversation: {
         channel: "telegram",
@@ -250,8 +274,8 @@ describe("telegram thread bindings", () => {
   });
 
   it("flushes pending lifecycle update persists before test reset", async () => {
-    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-telegram-bindings-"));
-    process.env.GODSEYE_STATE_DIR = stateDirOverride;
+    stateDirOverride = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-telegram-bindings-"));
+    process.env.OPENCLAW_STATE_DIR = stateDirOverride;
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-03-06T10:00:00.000Z"));
 

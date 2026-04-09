@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/memory-core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/memory-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   __testing,

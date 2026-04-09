@@ -1,4 +1,4 @@
-import { isBlockedHostnameOrIp } from "openclaw/plugin-sdk/ssrf-runtime";
+import { isBlockedHostnameOrIp } from "godseye/plugin-sdk/ssrf-runtime";
 import { normalizeBlueBubblesServerUrl } from "./types.js";
 
 function asRecord(value: unknown): Record<string, unknown> | null {

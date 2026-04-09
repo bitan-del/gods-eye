@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   deletePathStrict,
   getPath,
@@ -7,11 +7,11 @@ import {
   setPathExistingStrict,
 } from "./path-utils.js";
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
-function createAgentListConfig(): GodsEyeConfig {
+function createAgentListConfig(): OpenClawConfig {
   return asConfig({
     agents: {
       list: [{ id: "a" }],
@@ -75,5 +75,16 @@ describe("secrets path utils", () => {
     const changed = setPathCreateStrict(config, ["talk", "apiKey"], "same");
     expect(changed).toBe(false);
     expect(getPath(config, ["talk", "apiKey"])).toBe("same");
+  });
+
+  it("setPathCreateStrict works on nested config sub-objects", () => {
+    const pluginConfig: Record<string, unknown> = {};
+    const changed = setPathCreateStrict(pluginConfig, ["webSearch", "mode"], "llm-context");
+    expect(changed).toBe(true);
+    expect(pluginConfig).toEqual({
+      webSearch: {
+        mode: "llm-context",
+      },
+    });
   });
 });

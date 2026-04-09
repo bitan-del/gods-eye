@@ -1,9 +1,9 @@
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import {
   buildSyntheticModelDefinition,
-  type ModelProviderConfig,
   SYNTHETIC_BASE_URL,
   SYNTHETIC_MODEL_CATALOG,
-} from "godseye/plugin-sdk/provider-models";
+} from "./models.js";
 
 export function buildSyntheticProvider(): ModelProviderConfig {
   return {

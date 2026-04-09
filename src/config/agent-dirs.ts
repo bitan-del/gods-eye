@@ -2,9 +2,10 @@ import os from "node:os";
 import path from "node:path";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { DEFAULT_AGENT_ID, normalizeAgentId } from "../routing/session-key.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { resolveUserPath } from "../utils.js";
 import { resolveStateDir } from "./paths.js";
-import type { GodsEyeConfig } from "./types.js";
+import type { OpenClawConfig } from "./types.js";
 
 export type DuplicateAgentDir = {
   agentDir: string;
@@ -24,12 +25,12 @@ export class DuplicateAgentDirError extends Error {
 function canonicalizeAgentDir(agentDir: string): string {
   const resolved = path.resolve(agentDir);
   if (process.platform === "darwin" || process.platform === "win32") {
-    return resolved.toLowerCase();
+    return normalizeLowercaseStringOrEmpty(resolved);
   }
   return resolved;
 }
 
-function collectReferencedAgentIds(cfg: GodsEyeConfig): string[] {
+function collectReferencedAgentIds(cfg: OpenClawConfig): string[] {
   const ids = new Set<string>();
 
   const agents = Array.isArray(cfg.agents?.list) ? cfg.agents?.list : [];
@@ -57,7 +58,7 @@ function collectReferencedAgentIds(cfg: GodsEyeConfig): string[] {
 }
 
 function resolveEffectiveAgentDir(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
   deps?: { env?: NodeJS.ProcessEnv; homedir?: () => string },
 ): string {
@@ -78,7 +79,7 @@ function resolveEffectiveAgentDir(
 }
 
 export function findDuplicateAgentDirs(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   deps?: { env?: NodeJS.ProcessEnv; homedir?: () => string },
 ): DuplicateAgentDir[] {
   const byDir = new Map<string, { agentDir: string; agentIds: string[] }>();

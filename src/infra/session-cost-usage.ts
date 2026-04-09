@@ -4,7 +4,7 @@ import readline from "node:readline";
 import type { NormalizedUsage, UsageLike } from "../agents/usage.js";
 import { normalizeUsage } from "../agents/usage.js";
 import { stripInboundMetadata } from "../auto-reply/reply/strip-inbound-meta.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   isPrimarySessionTranscriptFileName,
   isSessionArchiveArtifactName,
@@ -18,6 +18,8 @@ import {
 } from "../config/sessions/paths.js";
 import type { SessionEntry } from "../config/sessions/types.js";
 import { stripEnvelope, stripMessageIdHints } from "../shared/chat-envelope.js";
+import { asFiniteNumber } from "../shared/number-coercion.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { countToolResults, extractToolCallNames } from "../utils/transcript-tools.js";
 import { estimateUsageCost, resolveModelCostConfig } from "../utils/usage-format.js";
 import type {
@@ -74,16 +76,6 @@ const emptyTotals = (): CostUsageTotals => ({
   missingCostEntries: 0,
 });
 
-const toFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value !== "number") {
-    return undefined;
-  }
-  if (!Number.isFinite(value)) {
-    return undefined;
-  }
-  return value;
-};
-
 const extractCostBreakdown = (usageRaw?: UsageLike | null): CostBreakdown | undefined => {
   if (!usageRaw || typeof usageRaw !== "object") {
     return undefined;
@@ -94,17 +86,17 @@ const extractCostBreakdown = (usageRaw?: UsageLike | null): CostBreakdown | unde
     return undefined;
   }
 
-  const total = toFiniteNumber(cost.total);
+  const total = asFiniteNumber(cost.total);
   if (total === undefined || total < 0) {
     return undefined;
   }
 
   return {
     total,
-    input: toFiniteNumber(cost.input),
-    output: toFiniteNumber(cost.output),
-    cacheRead: toFiniteNumber(cost.cacheRead),
-    cacheWrite: toFiniteNumber(cost.cacheWrite),
+    input: asFiniteNumber(cost.input),
+    output: asFiniteNumber(cost.output),
+    cacheRead: asFiniteNumber(cost.cacheRead),
+    cacheWrite: asFiniteNumber(cost.cacheWrite),
   };
 };
 
@@ -117,7 +109,7 @@ const parseTimestamp = (entry: Record<string, unknown>): Date | undefined => {
     }
   }
   const message = entry.message as Record<string, unknown> | undefined;
-  const messageTimestamp = toFiniteNumber(message?.timestamp);
+  const messageTimestamp = asFiniteNumber(message?.timestamp);
   if (messageTimestamp !== undefined) {
     const parsed = new Date(messageTimestamp);
     if (!Number.isNaN(parsed.valueOf())) {
@@ -152,7 +144,7 @@ const parseTranscriptEntry = (entry: Record<string, unknown>): ParsedTranscriptE
 
   const costBreakdown = extractCostBreakdown(usageRaw);
   const stopReason = typeof message.stopReason === "string" ? message.stopReason : undefined;
-  const durationMs = toFiniteNumber(message.durationMs ?? entry.durationMs);
+  const durationMs = asFiniteNumber(message.durationMs ?? entry.durationMs);
 
   return {
     message,
@@ -248,7 +240,7 @@ async function* readJsonlRecords(filePath: string): AsyncGenerator<Record<string
 
 async function scanTranscriptFile(params: {
   filePath: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   onEntry: (entry: ParsedTranscriptEntry) => void;
 }): Promise<void> {
   for await (const parsed of readJsonlRecords(params.filePath)) {
@@ -272,7 +264,7 @@ async function scanTranscriptFile(params: {
 
 async function scanUsageFile(params: {
   filePath: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   onEntry: (entry: ParsedUsageEntry) => void;
 }): Promise<void> {
   await scanTranscriptFile({
@@ -361,7 +353,7 @@ export async function loadCostUsageSummary(params?: {
   startMs?: number;
   endMs?: number;
   days?: number; // Deprecated, for backwards compatibility
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentId?: string;
 }): Promise<CostUsageSummary> {
   const now = new Date();
@@ -553,7 +545,7 @@ export async function loadSessionCostSummary(params: {
   sessionId?: string;
   sessionEntry?: SessionEntry;
   sessionFile?: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentId?: string;
   startMs?: number;
   endMs?: number;
@@ -825,7 +817,7 @@ export async function loadSessionUsageTimeSeries(params: {
   sessionId?: string;
   sessionEntry?: SessionEntry;
   sessionFile?: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentId?: string;
   maxPoints?: number;
 }): Promise<SessionUsageTimeSeries | null> {
@@ -928,7 +920,7 @@ export async function loadSessionLogs(params: {
   sessionId?: string;
   sessionEntry?: SessionEntry;
   sessionFile?: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentId?: string;
   limit?: number;
 }): Promise<SessionLogEntry[] | null> {
@@ -954,8 +946,7 @@ export async function loadSessionLogs(params: {
 
       const contentParts: string[] = [];
       const rawToolName = message.toolName ?? message.tool_name ?? message.name ?? message.tool;
-      const toolName =
-        typeof rawToolName === "string" && rawToolName.trim() ? rawToolName.trim() : undefined;
+      const toolName = normalizeOptionalString(rawToolName);
       if (role === "tool" || role === "toolResult") {
         contentParts.push(`[Tool: ${toolName ?? "tool"}]`);
         contentParts.push("[Tool Result]");

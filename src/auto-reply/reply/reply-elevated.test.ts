@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { MsgContext } from "../templating.js";
 import { resolveElevatedPermissions } from "./reply-elevated.js";
 
-function buildConfig(allowFrom: string[]): GodsEyeConfig {
+function buildConfig(allowFrom: string[]): OpenClawConfig {
   return {
     tools: {
       elevated: {
@@ -12,7 +12,7 @@ function buildConfig(allowFrom: string[]): GodsEyeConfig {
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 function buildContext(overrides?: Partial<MsgContext>): MsgContext {

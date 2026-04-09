@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../runtime-api.js";
+import type { OpenClawConfig } from "../../runtime-api.js";
 import {
   resolveDefaultMattermostAccountId,
   resolveMattermostAccount,
@@ -8,7 +8,7 @@ import {
 
 describe("resolveDefaultMattermostAccountId", () => {
   it("prefers channels.mattermost.defaultAccount when it matches a configured account", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         mattermost: {
           defaultAccount: "alerts",
@@ -24,7 +24,7 @@ describe("resolveDefaultMattermostAccountId", () => {
   });
 
   it("normalizes channels.mattermost.defaultAccount before lookup", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         mattermost: {
           defaultAccount: "Ops Team",
@@ -39,7 +39,7 @@ describe("resolveDefaultMattermostAccountId", () => {
   });
 
   it("falls back when channels.mattermost.defaultAccount is missing", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         mattermost: {
           defaultAccount: "missing",
@@ -56,8 +56,29 @@ describe("resolveDefaultMattermostAccountId", () => {
 });
 
 describe("resolveMattermostReplyToMode", () => {
+  it("uses configured defaultAccount when accountId is omitted", () => {
+    const cfg: OpenClawConfig = {
+      channels: {
+        mattermost: {
+          defaultAccount: "alerts",
+          accounts: {
+            alerts: {
+              botToken: "tok-alerts",
+              baseUrl: "https://alerts.example.com",
+              replyToMode: "all",
+            },
+          },
+        },
+      },
+    };
+
+    const account = resolveMattermostAccount({ cfg });
+    expect(account.accountId).toBe("alerts");
+    expect(resolveMattermostReplyToMode(account, "channel")).toBe("all");
+  });
+
   it("uses the configured mode for channel and group messages", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         mattermost: {
           replyToMode: "all",
@@ -71,7 +92,7 @@ describe("resolveMattermostReplyToMode", () => {
   });
 
   it("keeps direct messages off even when replyToMode is enabled", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         mattermost: {
           replyToMode: "all",

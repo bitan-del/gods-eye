@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   resolveThreadBindingIdleTimeoutMsForChannel,
   resolveThreadBindingMaxAgeMsForChannel,
@@ -10,7 +10,7 @@ import {
   type SessionBindingRecord,
 } from "godseye/plugin-sdk/conversation-runtime";
 import { normalizeAccountId, resolveAgentIdFromSessionKey } from "godseye/plugin-sdk/routing";
-import { resolveGlobalSingleton } from "godseye/plugin-sdk/text-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 
 type FeishuBindingTargetKind = "subagent" | "acp";
 
@@ -51,16 +51,20 @@ type FeishuThreadBindingsState = {
   bindingsByAccountConversation: Map<string, FeishuThreadBindingRecord>;
 };
 
-const FEISHU_THREAD_BINDINGS_STATE_KEY = Symbol.for("godseye.feishuThreadBindingsState");
-const state = resolveGlobalSingleton<FeishuThreadBindingsState>(
-  FEISHU_THREAD_BINDINGS_STATE_KEY,
-  () => ({
-    managersByAccountId: new Map(),
-    bindingsByAccountConversation: new Map(),
-  }),
-);
+const FEISHU_THREAD_BINDINGS_STATE_KEY = Symbol.for("openclaw.feishuThreadBindingsState");
+let state: FeishuThreadBindingsState | undefined;
 
 function getState(): FeishuThreadBindingsState {
+  if (!state) {
+    const globalStore = globalThis as Record<PropertyKey, unknown>;
+    state = (globalStore[FEISHU_THREAD_BINDINGS_STATE_KEY] as
+      | FeishuThreadBindingsState
+      | undefined) ?? {
+      managersByAccountId: new Map(),
+      bindingsByAccountConversation: new Map(),
+    };
+    globalStore[FEISHU_THREAD_BINDINGS_STATE_KEY] = state;
+  }
   return state;
 }
 
@@ -118,7 +122,7 @@ function toSessionBindingRecord(
 
 export function createFeishuThreadBindingManager(params: {
   accountId?: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 }): FeishuThreadBindingManager {
   const accountId = normalizeAccountId(params.accountId);
   const existing = getState().managersByAccountId.get(accountId);
@@ -162,7 +166,7 @@ export function createFeishuThreadBindingManager(params: {
       const record: FeishuThreadBindingRecord = {
         accountId,
         conversationId: normalizedConversationId,
-        parentConversationId: parentConversationId?.trim() || undefined,
+        parentConversationId: normalizeOptionalString(parentConversationId),
         deliveryTo:
           typeof metadata?.deliveryTo === "string" && metadata.deliveryTo.trim()
             ? metadata.deliveryTo.trim()
@@ -215,7 +219,7 @@ export function createFeishuThreadBindingManager(params: {
     },
     unbindBySessionKey: (targetSessionKey) => {
       const removed: FeishuThreadBindingRecord[] = [];
-      for (const record of [...getState().bindingsByAccountConversation.values()]) {
+      for (const record of getState().bindingsByAccountConversation.values()) {
         if (record.accountId !== accountId || record.targetSessionKey !== targetSessionKey) {
           continue;
         }
@@ -227,7 +231,7 @@ export function createFeishuThreadBindingManager(params: {
       return removed;
     },
     stop: () => {
-      for (const key of [...getState().bindingsByAccountConversation.keys()]) {
+      for (const key of getState().bindingsByAccountConversation.keys()) {
         if (key.startsWith(`${accountId}:`)) {
           getState().bindingsByAccountConversation.delete(key);
         }

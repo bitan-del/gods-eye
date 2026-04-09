@@ -1,12 +1,13 @@
 import {
   DEFAULT_ACCOUNT_ID,
   normalizeAccountId,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/account-resolution";
 import {
   hasConfiguredSecretInput,
   normalizeSecretInputString,
 } from "godseye/plugin-sdk/secret-input";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { SlackAccountSurfaceFields } from "./account-surface-fields.js";
 import {
   mergeSlackAccountConfig,
@@ -64,7 +65,7 @@ function inspectSlackToken(value: unknown): {
 }
 
 export function inspectSlackAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   envBotToken?: string | null;
   envAppToken?: string | null;
@@ -128,7 +129,7 @@ export function inspectSlackAccount(params: {
   return {
     accountId,
     enabled,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     mode,
     botToken,
     appToken,

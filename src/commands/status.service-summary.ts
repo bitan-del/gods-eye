@@ -5,7 +5,7 @@ export type ServiceStatusSummary = {
   label: string;
   installed: boolean | null;
   loaded: boolean;
-  managedByGodsEye: boolean;
+  managedByOpenClaw: boolean;
   externallyManaged: boolean;
   loadedText: string;
   runtime: GatewayServiceRuntime | undefined;
@@ -17,9 +17,9 @@ export async function readServiceStatusSummary(
 ): Promise<ServiceStatusSummary> {
   try {
     const state = await readGatewayServiceState(service, { env: process.env });
-    const managedByGodsEye = state.installed;
-    const externallyManaged = !managedByGodsEye && state.running;
-    const installed = managedByGodsEye || externallyManaged;
+    const managedByOpenClaw = state.installed;
+    const externallyManaged = !managedByOpenClaw && state.running;
+    const installed = managedByOpenClaw || externallyManaged;
     const loadedText = externallyManaged
       ? "running (externally managed)"
       : state.loaded
@@ -29,7 +29,7 @@ export async function readServiceStatusSummary(
       label: service.label,
       installed,
       loaded: state.loaded,
-      managedByGodsEye,
+      managedByOpenClaw,
       externallyManaged,
       loadedText,
       runtime: state.runtime,
@@ -39,7 +39,7 @@ export async function readServiceStatusSummary(
       label: fallbackLabel,
       installed: null,
       loaded: false,
-      managedByGodsEye: false,
+      managedByOpenClaw: false,
       externallyManaged: false,
       loadedText: "unknown",
       runtime: undefined,

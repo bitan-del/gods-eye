@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createMockMatrixClient,
   expectExplicitMatrixClientConfig,
@@ -41,10 +41,16 @@ vi.mock("../send.js", () => ({
   resolveMatrixRoomId: (...args: unknown[]) => resolveMatrixRoomIdMock(...args),
 }));
 
-const { withResolvedActionClient, withResolvedRoomAction, withStartedActionClient } =
-  await import("./client.js");
+let withResolvedActionClient: typeof import("./client.js").withResolvedActionClient;
+let withResolvedRoomAction: typeof import("./client.js").withResolvedRoomAction;
+let withStartedActionClient: typeof import("./client.js").withStartedActionClient;
 
 describe("action client helpers", () => {
+  beforeAll(async () => {
+    ({ withResolvedActionClient, withResolvedRoomAction, withStartedActionClient } =
+      await import("./client.js"));
+  });
+
   beforeEach(() => {
     primeMatrixClientResolverMocks();
     resolveMatrixRoomIdMock
@@ -57,7 +63,7 @@ describe("action client helpers", () => {
   });
 
   it("stops one-off shared clients when no active monitor client is registered", async () => {
-    vi.stubEnv("GODSEYE_GATEWAY_PORT", "18799");
+    vi.stubEnv("OPENCLAW_GATEWAY_PORT", "18799");
 
     const result = await withResolvedActionClient({ accountId: "default" }, async () => "ok");
 

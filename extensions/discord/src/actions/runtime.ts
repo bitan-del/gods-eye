@@ -1,6 +1,6 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { createDiscordActionGate } from "../accounts.js";
-import { readStringParam, type GodsEyeConfig } from "../runtime-api.js";
+import { readStringParam, type OpenClawConfig } from "../runtime-api.js";
 import { handleDiscordGuildAction } from "./runtime.guild.js";
 import { handleDiscordMessagingAction } from "./runtime.messaging.js";
 import { handleDiscordModerationAction } from "./runtime.moderation.js";
@@ -56,7 +56,7 @@ const presenceActions = new Set(["setPresence"]);
 
 export async function handleDiscordAction(
   params: Record<string, unknown>,
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   options?: {
     mediaLocalRoots?: readonly string[];
   },
@@ -69,7 +69,7 @@ export async function handleDiscordAction(
     return await handleDiscordMessagingAction(action, params, isActionEnabled, options, cfg);
   }
   if (guildActions.has(action)) {
-    return await handleDiscordGuildAction(action, params, isActionEnabled);
+    return await handleDiscordGuildAction(action, params, isActionEnabled, cfg, options);
   }
   if (moderationActions.has(action)) {
     return await handleDiscordModerationAction(action, params, isActionEnabled);

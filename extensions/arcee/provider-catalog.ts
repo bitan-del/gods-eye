@@ -1,4 +1,4 @@
-import type { ModelProviderConfig } from "openclaw/plugin-sdk/provider-model-shared";
+import type { ModelProviderConfig } from "godseye/plugin-sdk/provider-model-shared";
 import { buildArceeModelDefinition, ARCEE_BASE_URL, ARCEE_MODEL_CATALOG } from "./models.js";
 
 export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";

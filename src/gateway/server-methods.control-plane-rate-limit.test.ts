@@ -35,7 +35,7 @@ describe("gateway control-plane write rate limit", () => {
       role: "operator",
       scopes: ["operator.admin"],
       client: {
-        id: "godseye-control-ui",
+        id: "openclaw-control-ui",
         version: "1.0.0",
         platform: "darwin",
         mode: "ui",
@@ -129,6 +129,31 @@ describe("gateway control-plane write rate limit", () => {
     const allowed = await runRequest({ method: "update.run", context, client, handler });
     expect(allowed).toHaveBeenCalledWith(true, undefined, undefined);
     expect(handlerCalls).toHaveBeenCalledTimes(4);
+  });
+
+  it("blocks startup-gated methods before dispatch", async () => {
+    const handlerCalls = vi.fn();
+    const handler: GatewayRequestHandler = (opts) => {
+      handlerCalls(opts);
+      opts.respond(true, undefined, undefined);
+    };
+    const context = {
+      ...buildContext(),
+      unavailableGatewayMethods: new Set(["chat.history"]),
+    } as Parameters<typeof handleGatewayRequest>[0]["context"];
+    const client = buildClient();
+
+    const blocked = await runRequest({ method: "chat.history", context, client, handler });
+
+    expect(handlerCalls).not.toHaveBeenCalled();
+    expect(blocked).toHaveBeenCalledWith(
+      false,
+      undefined,
+      expect.objectContaining({
+        code: "UNAVAILABLE",
+        retryable: true,
+      }),
+    );
   });
 
   it("uses connId fallback when both device and client IP are unknown", () => {

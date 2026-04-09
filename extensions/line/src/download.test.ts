@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolvePreferredGodsEyeTmpDir } from "godseye/plugin-sdk/infra-runtime";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/temp-path";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getMessageContentMock = vi.hoisted(() => vi.fn());
 
@@ -38,11 +38,13 @@ async function* chunks(parts: Buffer[]): AsyncGenerator<Buffer> {
 }
 
 describe("downloadLineMedia", () => {
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-    vi.resetModules();
-    getMessageContentMock.mockReset();
+  beforeAll(async () => {
     ({ downloadLineMedia } = await import("./download.js"));
+  });
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    getMessageContentMock.mockReset();
   });
 
   it("does not derive temp file path from external messageId", async () => {
@@ -67,7 +69,7 @@ describe("downloadLineMedia", () => {
     expect(writtenPath).not.toContain(messageId);
     expect(writtenPath).not.toContain("..");
 
-    const tmpRoot = path.resolve(resolvePreferredGodsEyeTmpDir());
+    const tmpRoot = path.resolve(resolvePreferredOpenClawTmpDir());
     const rel = path.relative(tmpRoot, path.resolve(writtenPath));
     expect(rel === ".." || rel.startsWith(`..${path.sep}`)).toBe(false);
   });

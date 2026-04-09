@@ -1,6 +1,6 @@
-import { normalizeChatChannelId } from "../../../channels/registry.js";
+import { normalizeChatChannelId } from "../../../channels/ids.js";
 import { listRouteBindings } from "../../../config/bindings.js";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import {
   formatChannelAccountsDefaultPath,
   formatSetExplicitDefaultInstruction,
@@ -11,6 +11,10 @@ import {
   normalizeAccountId,
   normalizeOptionalAccountId,
 } from "../../../routing/session-key.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../../../shared/string-coerce.js";
 import { asObjectRecord } from "./object.js";
 
 type ChannelMissingDefaultAccountContext = {
@@ -24,11 +28,11 @@ function normalizeBindingChannelKey(raw?: string | null): string {
   if (normalized) {
     return normalized;
   }
-  return (raw ?? "").trim().toLowerCase();
+  return normalizeLowercaseStringOrEmpty(raw);
 }
 
 function collectChannelsMissingDefaultAccount(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
 ): ChannelMissingDefaultAccountContext[] {
   const channels = asObjectRecord(cfg.channels);
   if (!channels) {
@@ -61,7 +65,7 @@ function collectChannelsMissingDefaultAccount(
   return contexts;
 }
 
-export function collectMissingDefaultAccountBindingWarnings(cfg: GodsEyeConfig): string[] {
+export function collectMissingDefaultAccountBindingWarnings(cfg: OpenClawConfig): string[] {
   const bindings = listRouteBindings(cfg);
   const warnings: string[] = [];
 
@@ -87,7 +91,7 @@ export function collectMissingDefaultAccountBindingWarnings(cfg: GodsEyeConfig):
         continue;
       }
 
-      const rawAccountId = typeof match.accountId === "string" ? match.accountId.trim() : "";
+      const rawAccountId = normalizeOptionalString(match.accountId) ?? "";
       if (!rawAccountId) {
         continue;
       }
@@ -126,7 +130,7 @@ export function collectMissingDefaultAccountBindingWarnings(cfg: GodsEyeConfig):
   return warnings;
 }
 
-export function collectMissingExplicitDefaultAccountWarnings(cfg: GodsEyeConfig): string[] {
+export function collectMissingExplicitDefaultAccountWarnings(cfg: OpenClawConfig): string[] {
   const warnings: string[] = [];
   for (const { channelKey, channel, normalizedAccountIds } of collectChannelsMissingDefaultAccount(
     cfg,

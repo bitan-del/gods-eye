@@ -1,3 +1,7 @@
+import {
+  implicitMentionKindWhen,
+  resolveInboundMentionDecision,
+} from "godseye/plugin-sdk/channel-inbound";
 import { vi } from "vitest";
 import type { PluginRuntime } from "./runtime-api.js";
 import { setMatrixRuntime } from "./runtime.js";
@@ -56,6 +60,8 @@ export function installMatrixMonitorTestRuntime(
           options.matchesMentionPatterns ??
           ((text: string, patterns: RegExp[]) => patterns.some((pattern) => pattern.test(text))),
         matchesMentionWithExplicit: () => false,
+        implicitMentionKindWhen,
+        resolveInboundMentionDecision,
       },
       media: {
         fetchRemoteMedia: vi.fn(),

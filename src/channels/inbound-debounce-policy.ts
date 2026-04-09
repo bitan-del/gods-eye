@@ -5,11 +5,12 @@ import {
   resolveInboundDebounceMs,
   type InboundDebounceCreateParams,
 } from "../auto-reply/inbound-debounce.js";
-import type { GodsEyeConfig } from "../config/types.js";
+import type { OpenClawConfig } from "../config/types.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 
 export function shouldDebounceTextInbound(params: {
   text: string | null | undefined;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   hasMedia?: boolean;
   commandOptions?: CommandNormalizeOptions;
   allowDebounce?: boolean;
@@ -20,7 +21,7 @@ export function shouldDebounceTextInbound(params: {
   if (params.hasMedia) {
     return false;
   }
-  const text = params.text?.trim() ?? "";
+  const text = normalizeOptionalString(params.text) ?? "";
   if (!text) {
     return false;
   }
@@ -29,7 +30,7 @@ export function shouldDebounceTextInbound(params: {
 
 export function createChannelInboundDebouncer<T>(
   params: Omit<InboundDebounceCreateParams<T>, "debounceMs"> & {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     channel: string;
     debounceMsOverride?: number;
   },

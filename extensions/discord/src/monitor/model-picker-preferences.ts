@@ -1,11 +1,11 @@
 import os from "node:os";
 import path from "node:path";
 import { normalizeAccountId as normalizeSharedAccountId } from "godseye/plugin-sdk/account-id";
-import { normalizeProviderId } from "godseye/plugin-sdk/agent-runtime";
-import { withFileLock } from "godseye/plugin-sdk/infra-runtime";
-import { resolveRequiredHomeDir } from "godseye/plugin-sdk/infra-runtime";
+import { withFileLock } from "godseye/plugin-sdk/file-lock";
 import { readJsonFileWithFallback, writeJsonFileAtomically } from "godseye/plugin-sdk/json-store";
+import { normalizeProviderId } from "godseye/plugin-sdk/provider-model-shared";
 import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 
 const MODEL_PICKER_PREFERENCES_LOCK_OPTIONS = {
   retries: {
@@ -30,6 +30,28 @@ type ModelPickerPreferencesStore = {
   entries: Record<string, ModelPickerPreferencesEntry>;
 };
 
+function sanitizePreferenceEntries(entries: unknown): Record<string, ModelPickerPreferencesEntry> {
+  if (!entries || typeof entries !== "object") {
+    return {};
+  }
+  const normalizedEntries: Record<string, ModelPickerPreferencesEntry> = {};
+  for (const [key, value] of Object.entries(entries)) {
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+    const typedValue = value as {
+      recent?: unknown;
+      updatedAt?: unknown;
+    };
+    const recent = Array.isArray(typedValue.recent)
+      ? typedValue.recent.filter((item: unknown): item is string => typeof item === "string")
+      : [];
+    const updatedAt = typeof typedValue.updatedAt === "string" ? typedValue.updatedAt : "";
+    normalizedEntries[key] = { recent, updatedAt };
+  }
+  return normalizedEntries;
+}
+
 export type DiscordModelPickerPreferenceScope = {
   accountId?: string;
   guildId?: string;
@@ -37,12 +59,12 @@ export type DiscordModelPickerPreferenceScope = {
 };
 
 function resolvePreferencesStorePath(env: NodeJS.ProcessEnv = process.env): string {
-  const stateDir = resolveStateDir(env, () => resolveRequiredHomeDir(env, os.homedir));
+  const stateDir = resolveStateDir(env, os.homedir);
   return path.join(stateDir, "discord", "model-picker-preferences.json");
 }
 
 function normalizeId(value?: string): string {
-  return value?.trim() ?? "";
+  return normalizeOptionalString(value) ?? "";
 }
 
 export function buildDiscordModelPickerPreferenceKey(
@@ -95,16 +117,16 @@ function sanitizeRecentModels(models: string[] | undefined, limit: number): stri
 }
 
 async function readPreferencesStore(filePath: string): Promise<ModelPickerPreferencesStore> {
-  const { value } = await readJsonFileWithFallback<ModelPickerPreferencesStore>(filePath, {
+  const { value } = await readJsonFileWithFallback(filePath, {
     version: 1,
-    entries: {},
+    entries: {} as Record<string, ModelPickerPreferencesEntry>,
   });
   if (!value || typeof value !== "object" || value.version !== 1) {
     return { version: 1, entries: {} };
   }
   return {
     version: 1,
-    entries: value.entries && typeof value.entries === "object" ? value.entries : {},
+    entries: sanitizePreferenceEntries(value.entries),
   };
 }
 

@@ -4,10 +4,10 @@ export type {
   ChannelStatusIssue,
 } from "../channels/plugins/types.js";
 export type { ChannelPlugin } from "../channels/plugins/types.plugin.js";
-export type { GodsEyeConfig } from "../config/config.js";
+export type { OpenClawConfig } from "../config/config.js";
 export type { ReplyPayload } from "../auto-reply/types.js";
 export type { ChannelSetupAdapter } from "../channels/plugins/types.adapters.js";
-export type { GodsEyePluginApi, PluginRuntime } from "./channel-plugin-common.js";
+export type { OpenClawPluginApi, PluginRuntime } from "./channel-plugin-common.js";
 
 export {
   DEFAULT_ACCOUNT_ID,
@@ -31,14 +31,10 @@ export {
   normalizeAccountId,
   resolveDefaultLineAccountId,
   resolveLineAccount,
-} from "../../extensions/line/api.js";
-export { LineConfigSchema } from "../../extensions/line/api.js";
-export type {
-  LineChannelData,
-  LineConfig,
-  ResolvedLineAccount,
-} from "../../extensions/line/api.js";
-export type { LineProbeResult } from "../../extensions/line/api.js";
+} from "./line-surface.js";
+export { LineConfigSchema } from "./line-surface.js";
+export type { LineChannelData, LineConfig, ResolvedLineAccount } from "./line-surface.js";
+export type { LineProbeResult } from "./line-surface.js";
 export {
   createActionCard,
   createAgendaCard,
@@ -52,5 +48,5 @@ export {
   createReceiptCard,
   type CardAction,
   type ListItem,
-} from "../../extensions/line/api.js";
-export { processLineMessage } from "../../extensions/line/api.js";
+} from "./line-surface.js";
+export { processLineMessage } from "./line-surface.js";

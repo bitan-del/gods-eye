@@ -14,7 +14,7 @@ const noopLogger = createNoopLogger();
 installCronTestHooks({ logger: noopLogger });
 
 async function makeStorePath() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-cron-store-load-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cron-store-load-"));
   return {
     dir,
     storePath: path.join(dir, "cron", "jobs.json"),
@@ -71,7 +71,7 @@ describe("CronService store load", () => {
 
     const jobs = await cron.list({ includeDisabled: true });
     expect(jobs[0]?.state.lastStatus).toBe("skipped");
-    expect(jobs[0]?.state.lastError).toMatch(/main job requires/i);
+    expect(jobs[0]?.state.lastError).toMatch(/main cron jobs require payload\.kind/i);
 
     cron.stop();
   });

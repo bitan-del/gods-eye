@@ -4,4 +4,4 @@ export {
   resolvePinnedHostnameWithPolicy,
   type LookupFn,
   type SsrFPolicy,
-} from "openclaw/plugin-sdk/browser-security-runtime";
+} from "godseye/plugin-sdk/browser-security-runtime";

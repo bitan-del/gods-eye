@@ -1,9 +1,12 @@
 {
   "name": "@godseye/ollama-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Ollama provider plugin",
+  "description": "OpenClaw Ollama provider plugin",
   "type": "module",
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
     "extensions": [
       "./index.ts"

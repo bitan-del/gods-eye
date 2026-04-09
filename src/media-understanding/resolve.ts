@@ -1,5 +1,5 @@
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type {
   MediaUnderstandingConfig,
   MediaUnderstandingModelConfig,
@@ -12,6 +12,7 @@ import {
   DEFAULT_MEDIA_CONCURRENCY,
   DEFAULT_PROMPT,
 } from "./defaults.js";
+import { resolveEffectiveMediaEntryCapabilities } from "./entry-capabilities.js";
 import { normalizeMediaProviderId } from "./provider-id.js";
 import { normalizeMediaUnderstandingChatType, resolveMediaUnderstandingScope } from "./scope.js";
 import type { MediaUnderstandingCapability } from "./types.js";
@@ -36,7 +37,7 @@ export function resolvePrompt(
 export function resolveMaxChars(params: {
   capability: MediaUnderstandingCapability;
   entry: MediaUnderstandingModelConfig;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   config?: MediaUnderstandingConfig;
 }): number | undefined {
   const { capability, entry, cfg } = params;
@@ -51,7 +52,7 @@ export function resolveMaxChars(params: {
 export function resolveMaxBytes(params: {
   capability: MediaUnderstandingCapability;
   entry: MediaUnderstandingModelConfig;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   config?: MediaUnderstandingConfig;
 }): number {
   const configured =
@@ -65,7 +66,7 @@ export function resolveMaxBytes(params: {
 }
 
 export function resolveCapabilityConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   capability: MediaUnderstandingCapability,
 ): MediaUnderstandingConfig | undefined {
   return cfg.tools?.media?.[capability];
@@ -83,23 +84,8 @@ export function resolveScopeDecision(params: {
   });
 }
 
-function resolveEntryCapabilities(params: {
-  entry: MediaUnderstandingModelConfig;
-  providerRegistry: Map<string, { capabilities?: MediaUnderstandingCapability[] }>;
-}): MediaUnderstandingCapability[] | undefined {
-  const entryType = params.entry.type ?? (params.entry.command ? "cli" : "provider");
-  if (entryType === "cli") {
-    return undefined;
-  }
-  const providerId = normalizeMediaProviderId(params.entry.provider ?? "");
-  if (!providerId) {
-    return undefined;
-  }
-  return params.providerRegistry.get(providerId)?.capabilities;
-}
-
 export function resolveModelEntries(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   capability: MediaUnderstandingCapability;
   config?: MediaUnderstandingConfig;
   providerRegistry: Map<string, { capabilities?: MediaUnderstandingCapability[] }>;
@@ -116,12 +102,11 @@ export function resolveModelEntries(params: {
 
   return entries
     .filter(({ entry, source }) => {
-      const caps =
-        entry.capabilities && entry.capabilities.length > 0
-          ? entry.capabilities
-          : source === "shared"
-            ? resolveEntryCapabilities({ entry, providerRegistry: params.providerRegistry })
-            : undefined;
+      const caps = resolveEffectiveMediaEntryCapabilities({
+        entry,
+        source,
+        providerRegistry: params.providerRegistry,
+      });
       if (!caps || caps.length === 0) {
         if (source === "shared") {
           if (shouldLogVerbose()) {
@@ -138,7 +123,7 @@ export function resolveModelEntries(params: {
     .map(({ entry }) => entry);
 }
 
-export function resolveConcurrency(cfg: GodsEyeConfig): number {
+export function resolveConcurrency(cfg: OpenClawConfig): number {
   const configured = cfg.tools?.media?.concurrency;
   if (typeof configured === "number" && Number.isFinite(configured) && configured > 0) {
     return Math.floor(configured);
@@ -147,7 +132,7 @@ export function resolveConcurrency(cfg: GodsEyeConfig): number {
 }
 
 export function resolveEntriesWithActiveFallback(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   capability: MediaUnderstandingCapability;
   config?: MediaUnderstandingConfig;
   providerRegistry: Map<string, { capabilities?: MediaUnderstandingCapability[] }>;

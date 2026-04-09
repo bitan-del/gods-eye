@@ -5,15 +5,15 @@ import { createTempHomeEnv } from "../test-utils/temp-home.js";
 
 export function setTempStateDir(workspaceDir: string): string {
   const stateDir = path.join(workspaceDir, "state");
-  process.env.GODSEYE_STATE_DIR = stateDir;
+  process.env.OPENCLAW_STATE_DIR = stateDir;
   return stateDir;
 }
 
 export async function withTempWorkspace(
   run: (params: { workspaceDir: string; stateDir: string }) => Promise<void>,
 ) {
-  const tempHome = await createTempHomeEnv("godseye-skills-install-home-");
-  const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-skills-install-"));
+  const tempHome = await createTempHomeEnv("openclaw-skills-install-home-");
+  const workspaceDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-skills-install-"));
   try {
     const stateDir = setTempStateDir(workspaceDir);
     await run({ workspaceDir, stateDir });
@@ -35,7 +35,7 @@ export async function writeDownloadSkill(params: {
   const skillDir = path.join(params.workspaceDir, "skills", params.name);
   await fs.mkdir(skillDir, { recursive: true });
   const meta = {
-    godseye: {
+    openclaw: {
       install: [
         {
           id: params.installId,

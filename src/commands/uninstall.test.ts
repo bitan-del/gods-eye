@@ -28,12 +28,12 @@ describe("uninstallCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveCleanupPlanFromDisk.mockReturnValue({
-      stateDir: "/tmp/.godseye",
-      configPath: "/tmp/.godseye/godseye.json",
-      oauthDir: "/tmp/.godseye/credentials",
+      stateDir: "/tmp/.openclaw",
+      configPath: "/tmp/.openclaw/openclaw.json",
+      oauthDir: "/tmp/.openclaw/credentials",
       configInsideState: true,
       oauthInsideState: true,
-      workspaceDirs: ["/tmp/.godseye/workspace"],
+      workspaceDirs: ["/tmp/.openclaw/workspace"],
     });
     removePath.mockResolvedValue({ ok: true });
     removeStateAndLinkedPaths.mockResolvedValue(undefined);
@@ -50,7 +50,7 @@ describe("uninstallCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("godseye backup create"));
+    expect(runtime.log).toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
   });
 
   it("does not recommend backup for service-only uninstall", async () => {
@@ -61,6 +61,6 @@ describe("uninstallCommand", () => {
       dryRun: true,
     });
 
-    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("godseye backup create"));
+    expect(runtime.log).not.toHaveBeenCalledWith(expect.stringContaining("openclaw backup create"));
   });
 });

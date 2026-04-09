@@ -11,9 +11,9 @@ import {
 } from "@buape/carbon";
 import type { APISelectMenuOption } from "discord-api-types/v10";
 import { ButtonStyle } from "discord-api-types/v10";
-import { normalizeProviderId } from "godseye/plugin-sdk/agent-runtime";
-import { buildModelsProviderData, type ModelsProviderData } from "godseye/plugin-sdk/command-auth";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ModelsProviderData } from "godseye/plugin-sdk/models-provider-runtime";
+import { normalizeProviderId } from "godseye/plugin-sdk/provider-model-shared";
 
 export const DISCORD_MODEL_PICKER_CUSTOM_ID_KEY = "mdlpk";
 export const DISCORD_CUSTOM_ID_MAX_CHARS = 100;
@@ -138,6 +138,15 @@ export type DiscordModelPickerModelViewParams = {
   quickModels?: string[];
   layout?: DiscordModelPickerLayout;
 };
+
+let modelsProviderRuntimePromise:
+  | Promise<typeof import("godseye/plugin-sdk/models-provider-runtime")>
+  | undefined;
+
+async function loadModelsProviderRuntime() {
+  modelsProviderRuntimePromise ??= import("godseye/plugin-sdk/models-provider-runtime");
+  return await modelsProviderRuntimePromise;
+}
 
 function encodeCustomIdValue(value: string): string {
   return encodeURIComponent(value);
@@ -538,9 +547,10 @@ function buildModelRows(params: {
  * same provider/model resolver used by text and Telegram model commands.
  */
 export async function loadDiscordModelPickerData(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId?: string,
 ): Promise<ModelsProviderData> {
+  const { buildModelsProviderData } = await loadModelsProviderRuntime();
   return buildModelsProviderData(cfg, agentId);
 }
 

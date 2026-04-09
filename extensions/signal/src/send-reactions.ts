@@ -2,14 +2,14 @@
  * Signal reactions via signal-cli JSON-RPC API
  */
 
-import { loadConfig } from "godseye/plugin-sdk/config-runtime";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { resolveSignalAccount } from "./accounts.js";
 import { signalRpcRequest } from "./client.js";
 import { resolveSignalRpcContext } from "./rpc-context.js";
 
 export type SignalReactionOpts = {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   baseUrl?: string;
   account?: string;
   accountId?: string;
@@ -31,6 +31,15 @@ type SignalReactionErrorMessages = {
   missingTargetAuthor: string;
 };
 
+let signalConfigRuntimePromise:
+  | Promise<typeof import("godseye/plugin-sdk/config-runtime")>
+  | undefined;
+
+async function loadSignalConfigRuntime() {
+  signalConfigRuntimePromise ??= import("godseye/plugin-sdk/config-runtime");
+  return await signalConfigRuntimePromise;
+}
+
 function normalizeSignalId(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) {
@@ -44,7 +53,7 @@ function normalizeSignalUuid(raw: string): string {
   if (!trimmed) {
     return "";
   }
-  if (trimmed.toLowerCase().startsWith("uuid:")) {
+  if (normalizeLowercaseStringOrEmpty(trimmed).startsWith("uuid:")) {
     return trimmed.slice("uuid:".length).trim();
   }
   return trimmed;
@@ -77,7 +86,7 @@ async function sendReactionSignalCore(params: {
   opts: SignalReactionOpts;
   errors: SignalReactionErrorMessages;
 }): Promise<SignalReactionResult> {
-  const cfg = params.opts.cfg ?? loadConfig();
+  const cfg = params.opts.cfg ?? (await loadSignalConfigRuntime()).loadConfig();
   const accountInfo = resolveSignalAccount({
     cfg,
     accountId: params.opts.accountId,

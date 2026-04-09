@@ -22,10 +22,11 @@ import {
   resolveControlUiLinks,
 } from "../commands/onboard-helpers.js";
 import type { OnboardOptions } from "../commands/onboard-types.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { describeGatewayServiceRestart, resolveGatewayService } from "../daemon/service.js";
 import { isSystemdUserServiceAvailable } from "../daemon/systemd.js";
 import { ensureControlUiAssetsBuilt } from "../infra/control-ui-assets.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { restoreTerminalState } from "../terminal/restore.js";
 import { runTui } from "../tui/tui.js";
@@ -39,8 +40,8 @@ import type { GatewayWizardSettings, WizardFlow } from "./setup.types.js";
 type FinalizeOnboardingOptions = {
   flow: WizardFlow;
   opts: OnboardOptions;
-  baseConfig: GodsEyeConfig;
-  nextConfig: GodsEyeConfig;
+  baseConfig: OpenClawConfig;
+  nextConfig: OpenClawConfig;
   workspaceDir: string;
   settings: GatewayWizardSettings;
   prompter: WizardPrompter;
@@ -51,6 +52,7 @@ export async function finalizeSetupWizard(
   options: FinalizeOnboardingOptions,
 ): Promise<{ launchedTui: boolean }> {
   const { flow, opts, baseConfig, nextConfig, settings, prompter, runtime } = options;
+  let gatewayProbe: { ok: boolean; detail?: string } = { ok: true };
 
   const withWizardProgress = async <T>(
     label: string,
@@ -211,7 +213,7 @@ export async function finalizeSetupWizard(
           });
         }
       } catch (err) {
-        installError = err instanceof Error ? err.message : String(err);
+        installError = formatErrorMessage(err);
       } finally {
         progress.stop(
           installError ? "Gateway service install failed." : "Gateway service installed.",
@@ -232,22 +234,51 @@ export async function finalizeSetupWizard(
       basePath: undefined,
     });
     // Daemon install/restart can briefly flap the WS; wait a bit so health check doesn't false-fail.
-    await waitForGatewayReachable({
+    gatewayProbe = await waitForGatewayReachable({
       url: probeLinks.wsUrl,
       token: settings.gatewayToken,
       deadlineMs: 15_000,
     });
-    try {
-      await healthCommand({ json: false, timeoutMs: 10_000 }, runtime);
-    } catch (err) {
-      runtime.error(formatHealthCheckFailure(err));
+    if (gatewayProbe.ok) {
+      try {
+        await healthCommand({ json: false, timeoutMs: 10_000 }, runtime);
+      } catch (err) {
+        runtime.error(formatHealthCheckFailure(err));
+        await prompter.note(
+          [
+            "Docs:",
+            "https://docs.openclaw.ai/gateway/health",
+            "https://docs.openclaw.ai/gateway/troubleshooting",
+          ].join("\n"),
+          "Health check help",
+        );
+      }
+    } else if (installDaemon) {
+      runtime.error(
+        formatHealthCheckFailure(
+          new Error(
+            gatewayProbe.detail ?? `gateway did not become reachable at ${probeLinks.wsUrl}`,
+          ),
+        ),
+      );
       await prompter.note(
         [
           "Docs:",
-          "https://docs.gods-eye.org/gateway/health",
-          "https://docs.gods-eye.org/gateway/troubleshooting",
+          "https://docs.openclaw.ai/gateway/health",
+          "https://docs.openclaw.ai/gateway/troubleshooting",
         ].join("\n"),
         "Health check help",
+      );
+    } else {
+      await prompter.note(
+        [
+          "Gateway not detected yet.",
+          "Setup was run without Gateway service install, so no background gateway is expected.",
+          `Start now: ${formatCliCommand("openclaw gateway run")}`,
+          `Or rerun with: ${formatCliCommand("openclaw onboard --install-daemon")}`,
+          `Or skip this probe next time: ${formatCliCommand("openclaw onboard --skip-health")}`,
+        ].join("\n"),
+        "Gateway",
       );
     }
   }
@@ -297,18 +328,20 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           "Could not resolve gateway.auth.password SecretRef for setup auth.",
-          error instanceof Error ? error.message : String(error),
+          formatErrorMessage(error),
         ].join("\n"),
         "Gateway auth",
       );
     }
   }
 
-  const gatewayProbe = await probeGatewayReachable({
-    url: links.wsUrl,
-    token: settings.authMode === "token" ? settings.gatewayToken : undefined,
-    password: settings.authMode === "password" ? resolvedGatewayPassword : "",
-  });
+  if (opts.skipHealth || !gatewayProbe.ok) {
+    gatewayProbe = await probeGatewayReachable({
+      url: links.wsUrl,
+      token: settings.authMode === "token" ? settings.gatewayToken : undefined,
+      password: settings.authMode === "password" ? resolvedGatewayPassword : "",
+    });
+  }
   const gatewayStatusLine = gatewayProbe.ok
     ? "Gateway: reachable"
     : `Gateway: not detected${gatewayProbe.detail ? ` (${gatewayProbe.detail})` : ""}`;
@@ -329,7 +362,7 @@ export async function finalizeSetupWizard(
         : undefined,
       `Gateway WS: ${links.wsUrl}`,
       gatewayStatusLine,
-      "Docs: https://docs.gods-eye.org/web/control-ui",
+      "Docs: https://docs.openclaw.ai/web/control-ui",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -358,11 +391,11 @@ export async function finalizeSetupWizard(
     await prompter.note(
       [
         "Gateway token: shared auth for the Gateway + Control UI.",
-        "Stored in: ~/.godseye/godseye.json (gateway.auth.token) or GODSEYE_GATEWAY_TOKEN.",
-        `View token: ${formatCliCommand("godseye config get gateway.auth.token")}`,
-        `Generate token: ${formatCliCommand("godseye doctor --generate-gateway-token")}`,
+        "Stored in: $OPENCLAW_CONFIG_PATH (default: ~/.openclaw/openclaw.json) under gateway.auth.token, or in OPENCLAW_GATEWAY_TOKEN.",
+        `View token: ${formatCliCommand("openclaw config get gateway.auth.token")}`,
+        `Generate token: ${formatCliCommand("openclaw doctor --generate-gateway-token")}`,
         "Web UI keeps dashboard URL tokens in memory for the current tab and strips them from the URL after load.",
-        `Open the dashboard anytime: ${formatCliCommand("godseye dashboard --no-open")}`,
+        `Open the dashboard anytime: ${formatCliCommand("openclaw dashboard --no-open")}`,
         "If prompted: paste the token into Control UI settings (or use the tokenized dashboard URL).",
       ].join("\n"),
       "Token",
@@ -411,8 +444,8 @@ export async function finalizeSetupWizard(
         [
           `Dashboard link (with token): ${authedUrl}`,
           controlUiOpened
-            ? "Opened in your browser. Keep that tab to control GodsEye."
-            : "Copy/paste this URL in a browser on this machine to control GodsEye.",
+            ? "Opened in your browser. Keep that tab to control OpenClaw."
+            : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
           controlUiOpenHint,
         ]
           .filter(Boolean)
@@ -421,7 +454,7 @@ export async function finalizeSetupWizard(
       );
     } else {
       await prompter.note(
-        `When you're ready: ${formatCliCommand("godseye dashboard --no-open")}`,
+        `When you're ready: ${formatCliCommand("openclaw dashboard --no-open")}`,
         "Later",
       );
     }
@@ -432,13 +465,13 @@ export async function finalizeSetupWizard(
   await prompter.note(
     [
       "Back up your agent workspace.",
-      "Docs: https://docs.gods-eye.org/concepts/agent-workspace",
+      "Docs: https://docs.openclaw.ai/concepts/agent-workspace",
     ].join("\n"),
     "Workspace backup",
   );
 
   await prompter.note(
-    "Running agents on your computer is risky — harden your setup: https://docs.gods-eye.org/security",
+    "Running agents on your computer is risky — harden your setup: https://docs.openclaw.ai/security",
     "Security",
   );
 
@@ -446,6 +479,7 @@ export async function finalizeSetupWizard(
 
   const shouldOpenControlUi =
     !opts.skipUi &&
+    gatewayProbe.ok &&
     settings.authMode === "token" &&
     Boolean(settings.gatewayToken) &&
     hatchChoice === null;
@@ -472,8 +506,8 @@ export async function finalizeSetupWizard(
       [
         `Dashboard link (with token): ${authedUrl}`,
         controlUiOpened
-          ? "Opened in your browser. Keep that tab to control GodsEye."
-          : "Copy/paste this URL in a browser on this machine to control GodsEye.",
+          ? "Opened in your browser. Keep that tab to control OpenClaw."
+          : "Copy/paste this URL in a browser on this machine to control OpenClaw.",
         controlUiOpenHint,
       ]
         .filter(Boolean)
@@ -482,6 +516,8 @@ export async function finalizeSetupWizard(
     );
   }
 
+  const { describeCodexNativeWebSearch } = await import("../agents/codex-native-web-search.js");
+  const codexNativeSummary = describeCodexNativeWebSearch(nextConfig);
   const webSearchProvider = nextConfig.tools?.web?.search?.provider;
   const webSearchEnabled = nextConfig.tools?.web?.search?.enabled;
   const configuredSearchProviders = listConfiguredWebSearchProviders({ config: nextConfig });
@@ -506,9 +542,9 @@ export async function finalizeSetupWizard(
         [
           `Web search provider ${label} is selected but unavailable under the current plugin policy.`,
           "web_search will not work until the provider is re-enabled or a different provider is selected.",
-          `  ${formatCliCommand("godseye configure --section web")}`,
+          `  ${formatCliCommand("openclaw configure --section web")}`,
           "",
-          "Docs: https://docs.gods-eye.org/tools/web",
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -519,7 +555,7 @@ export async function finalizeSetupWizard(
           "",
           `Provider: ${label}`,
           ...(keySource ? [keySource] : []),
-          "Docs: https://docs.gods-eye.org/tools/web",
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -528,10 +564,10 @@ export async function finalizeSetupWizard(
         [
           `Provider ${label} is selected but no API key was found.`,
           "web_search will not work until a key is added.",
-          `  ${formatCliCommand("godseye configure --section web")}`,
+          `  ${formatCliCommand("openclaw configure --section web")}`,
           "",
-          `Get your key at: ${entry?.signupUrl ?? "https://docs.gods-eye.org/tools/web"}`,
-          "Docs: https://docs.gods-eye.org/tools/web",
+          `Get your key at: ${entry?.signupUrl ?? "https://docs.openclaw.ai/tools/web"}`,
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -539,9 +575,9 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           `Web search (${label}) is configured but disabled.`,
-          `Re-enable: ${formatCliCommand("godseye configure --section web")}`,
+          `Re-enable: ${formatCliCommand("openclaw configure --section web")}`,
           "",
-          "Docs: https://docs.gods-eye.org/tools/web",
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -557,7 +593,16 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           `Web search is available via ${legacyDetected.label} (auto-detected).`,
-          "Docs: https://docs.gods-eye.org/tools/web",
+          "Docs: https://docs.openclaw.ai/tools/web",
+        ].join("\n"),
+        "Web search",
+      );
+    } else if (codexNativeSummary) {
+      await prompter.note(
+        [
+          "Managed web search provider was skipped.",
+          codexNativeSummary,
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
@@ -565,26 +610,37 @@ export async function finalizeSetupWizard(
       await prompter.note(
         [
           "Web search was skipped. You can enable it later:",
-          `  ${formatCliCommand("godseye configure --section web")}`,
+          `  ${formatCliCommand("openclaw configure --section web")}`,
           "",
-          "Docs: https://docs.gods-eye.org/tools/web",
+          "Docs: https://docs.openclaw.ai/tools/web",
         ].join("\n"),
         "Web search",
       );
     }
   }
 
+  if (codexNativeSummary) {
+    await prompter.note(
+      [
+        codexNativeSummary,
+        "Used only for Codex-capable models.",
+        "Docs: https://docs.openclaw.ai/tools/web",
+      ].join("\n"),
+      "Codex native search",
+    );
+  }
+
   await prompter.note(
-    'What now: https://gods-eye.org/showcase ("What People Are Building").',
+    'What now: https://openclaw.ai/showcase ("What People Are Building").',
     "What now",
   );
 
   await prompter.outro(
     controlUiOpened
-      ? "Onboarding complete. Dashboard opened; keep that tab to control GodsEye."
+      ? "Onboarding complete. Dashboard opened; keep that tab to control OpenClaw."
       : seededInBackground
         ? "Onboarding complete. Web UI seeded in the background; open it anytime with the dashboard link above."
-        : "Onboarding complete. Use the dashboard link above to control GodsEye.",
+        : "Onboarding complete. Use the dashboard link above to control OpenClaw.",
   );
 
   return { launchedTui };

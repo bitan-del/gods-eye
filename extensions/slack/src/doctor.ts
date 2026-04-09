@@ -1,5 +1,5 @@
-import { type ChannelDoctorAdapter } from "openclaw/plugin-sdk/channel-contract";
-import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "openclaw/plugin-sdk/channel-policy";
+import { type ChannelDoctorAdapter } from "godseye/plugin-sdk/channel-contract";
+import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "godseye/plugin-sdk/channel-policy";
 import {
   legacyConfigRules as SLACK_LEGACY_CONFIG_RULES,
   normalizeCompatibilityConfig as normalizeSlackCompatibilityConfig,

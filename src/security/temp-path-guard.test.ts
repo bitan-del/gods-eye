@@ -196,25 +196,21 @@ describe("temp path guard", () => {
 
   it("detects dynamic and ignores static fixtures", () => {
     const dynamicFixtures = [
-      "const p = path.join(os.tmpdir(), `godseye-${id}`);",
+      "const p = path.join(os.tmpdir(), `openclaw-${id}`);",
       "const p = path.join(os.tmpdir(), 'safe', `${token}`);",
     ];
     const staticFixtures = [
-      "const p = path.join(os.tmpdir(), 'godseye-fixed');",
-      "const p = path.join(os.tmpdir(), `godseye-fixed`);",
+      "const p = path.join(os.tmpdir(), 'openclaw-fixed');",
+      "const p = path.join(os.tmpdir(), `openclaw-fixed`);",
       "const p = path.join(os.tmpdir(), prefix + '-x');",
       "const p = path.join(os.tmpdir(), segment);",
-      "const p = path.join('/tmp', `godseye-${id}`);",
-      "// path.join(os.tmpdir(), `godseye-${id}`)",
+      "const p = path.join('/tmp', `openclaw-${id}`);",
+      "// path.join(os.tmpdir(), `openclaw-${id}`)",
       "const p = path.join(os.tmpdir());",
     ];
 
-    for (const fixture of dynamicFixtures) {
-      expect(hasDynamicTmpdirJoin(fixture)).toBe(true);
-    }
-    for (const fixture of staticFixtures) {
-      expect(hasDynamicTmpdirJoin(fixture)).toBe(false);
-    }
+    expect(dynamicFixtures.every((fixture) => hasDynamicTmpdirJoin(fixture))).toBe(true);
+    expect(staticFixtures.every((fixture) => !hasDynamicTmpdirJoin(fixture))).toBe(true);
   });
 
   it("enforces runtime guardrails for tmpdir joins and weak randomness", async () => {

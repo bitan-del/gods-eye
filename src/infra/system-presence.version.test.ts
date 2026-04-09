@@ -1,6 +1,8 @@
 import os from "node:os";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { importFreshModule } from "../../test/helpers/import-fresh.js";
 import { withEnvAsync } from "../test-utils/env.js";
+import { VERSION as runtimeVersion } from "../version.js";
 
 vi.unmock("../version.js");
 
@@ -10,14 +12,16 @@ async function withPresenceModule<T>(
 ): Promise<T> {
   return withEnvAsync(
     {
-      GODSEYE_VERSION: undefined,
-      GODSEYE_SERVICE_VERSION: undefined,
+      OPENCLAW_VERSION: undefined,
+      OPENCLAW_SERVICE_VERSION: undefined,
       npm_package_version: undefined,
       ...env,
     },
     async () => {
-      vi.resetModules();
-      const module = await import("./system-presence.js");
+      const module = await importFreshModule<typeof import("./system-presence.js")>(
+        import.meta.url,
+        `./system-presence.js?scope=${JSON.stringify(env)}`,
+      );
       return await run(module);
     },
   );
@@ -40,57 +44,57 @@ describe("system-presence version fallback", () => {
     });
   }
 
-  it("uses runtime VERSION when GODSEYE_VERSION is not set", async () => {
+  it("uses runtime VERSION when OPENCLAW_VERSION is not set", async () => {
     await expectSelfVersion(
       {
-        GODSEYE_SERVICE_VERSION: "2.4.6-service",
+        OPENCLAW_SERVICE_VERSION: "2.4.6-service",
         npm_package_version: "1.0.0-package",
       },
-      async () => (await import("../version.js")).VERSION,
+      runtimeVersion,
     );
   });
 
-  it("prefers GODSEYE_VERSION over runtime VERSION", async () => {
+  it("prefers OPENCLAW_VERSION over runtime VERSION", async () => {
     await expectSelfVersion(
       {
-        GODSEYE_VERSION: "9.9.9-cli",
-        GODSEYE_SERVICE_VERSION: "2.4.6-service",
+        OPENCLAW_VERSION: "9.9.9-cli",
+        OPENCLAW_SERVICE_VERSION: "2.4.6-service",
         npm_package_version: "1.0.0-package",
       },
       "9.9.9-cli",
     );
   });
 
-  it("still prefers runtime VERSION over GODSEYE_SERVICE_VERSION when GODSEYE_VERSION is blank", async () => {
+  it("still prefers runtime VERSION over OPENCLAW_SERVICE_VERSION when OPENCLAW_VERSION is blank", async () => {
     await expectSelfVersion(
       {
-        GODSEYE_VERSION: " ",
-        GODSEYE_SERVICE_VERSION: "2.4.6-service",
+        OPENCLAW_VERSION: " ",
+        OPENCLAW_SERVICE_VERSION: "2.4.6-service",
         npm_package_version: "1.0.0-package",
       },
-      async () => (await import("../version.js")).VERSION,
+      runtimeVersion,
     );
   });
 
   it("still prefers runtime VERSION over npm_package_version when service markers are blank", async () => {
     await expectSelfVersion(
       {
-        GODSEYE_VERSION: " ",
-        GODSEYE_SERVICE_VERSION: "\t",
+        OPENCLAW_VERSION: " ",
+        OPENCLAW_SERVICE_VERSION: "\t",
         npm_package_version: "1.0.0-package",
       },
-      async () => (await import("../version.js")).VERSION,
+      runtimeVersion,
     );
   });
 
-  it("uses runtime VERSION when GODSEYE_VERSION and GODSEYE_SERVICE_VERSION are blank", async () => {
+  it("uses runtime VERSION when OPENCLAW_VERSION and OPENCLAW_SERVICE_VERSION are blank", async () => {
     await expectSelfVersion(
       {
-        GODSEYE_VERSION: " ",
-        GODSEYE_SERVICE_VERSION: "\t",
+        OPENCLAW_VERSION: " ",
+        OPENCLAW_SERVICE_VERSION: "\t",
         npm_package_version: "1.0.0-package",
       },
-      async () => (await import("../version.js")).VERSION,
+      runtimeVersion,
     );
   });
 
@@ -100,8 +104,10 @@ describe("system-presence version fallback", () => {
       vi.spyOn(os, "networkInterfaces").mockImplementation(() => {
         throw new Error("uv_interface_addresses failed");
       });
-      vi.resetModules();
-      const module = await import("./system-presence.js");
+      const module = await importFreshModule<typeof import("./system-presence.js")>(
+        import.meta.url,
+        "./system-presence.js?scope=hostname-fallback",
+      );
       const selfEntry = module.listSystemPresence().find((entry) => entry.reason === "self");
       expect(selfEntry?.host).toBe("test-host");
       expect(selfEntry?.ip).toBe("test-host");

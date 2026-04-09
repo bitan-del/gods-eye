@@ -2,10 +2,10 @@ import {
   buildExecApprovalPendingReplyPayload,
   resolveExecApprovalRequestAllowedDecisions,
   resolveExecApprovalCommandDisplay,
-} from "openclaw/plugin-sdk/approval-reply-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import type { ExecApprovalRequest } from "openclaw/plugin-sdk/infra-runtime";
-import { normalizeMessageChannel } from "openclaw/plugin-sdk/routing";
+} from "godseye/plugin-sdk/approval-reply-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ExecApprovalRequest } from "godseye/plugin-sdk/infra-runtime";
+import { normalizeMessageChannel } from "godseye/plugin-sdk/routing";
 import { isTelegramExecApprovalClientEnabled } from "./exec-approvals.js";
 
 export function shouldSuppressTelegramExecApprovalForwardingFallback(params: {

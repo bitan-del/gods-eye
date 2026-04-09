@@ -8,13 +8,20 @@ import {
   resolveAccountEntry,
   resolveListedDefaultAccountId,
   resolveAccountWithDefaultFallback,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/account-resolution";
-import { isTruthyEnvValue } from "godseye/plugin-sdk/infra-runtime";
-import { listBoundAccountIds, resolveDefaultAgentBoundAccountId } from "godseye/plugin-sdk/routing";
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/account-core";
+import type {
+  TelegramAccountConfig,
+  TelegramActionConfig,
+} from "godseye/plugin-sdk/config-runtime";
+import {
+  listBoundAccountIds,
+  resolveDefaultAgentBoundAccountId,
+} from "godseye/plugin-sdk/routing";
 import { formatSetExplicitDefaultInstruction } from "godseye/plugin-sdk/routing";
-import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
-import type { TelegramAccountConfig, TelegramActionConfig } from "../runtime-api.js";
+import { createSubsystemLogger, isTruthyEnvValue } from "godseye/plugin-sdk/runtime-env";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import type { TelegramTransport } from "./fetch.js";
 import { resolveTelegramToken } from "./token.js";
 
 let log: ReturnType<typeof createSubsystemLogger> | null = null;
@@ -37,7 +44,7 @@ function formatDebugArg(value: unknown): string {
 }
 
 const debugAccounts = (...args: unknown[]) => {
-  if (isTruthyEnvValue(process.env.GODSEYE_DEBUG_TELEGRAM_ACCOUNTS)) {
+  if (isTruthyEnvValue(process.env.OPENCLAW_DEBUG_TELEGRAM_ACCOUNTS)) {
     const parts = args.map((arg) => formatDebugArg(arg));
     getLog().warn(parts.join(" ").trim());
   }
@@ -52,7 +59,15 @@ export type ResolvedTelegramAccount = {
   config: TelegramAccountConfig;
 };
 
-function listConfiguredAccountIds(cfg: GodsEyeConfig): string[] {
+export type TelegramMediaRuntimeOptions = {
+  token: string;
+  transport?: TelegramTransport;
+  apiRoot?: string;
+  trustedLocalFileRoots?: readonly string[];
+  dangerouslyAllowPrivateNetwork?: boolean;
+};
+
+function listConfiguredAccountIds(cfg: OpenClawConfig): string[] {
   const ids = new Set<string>();
   for (const key of Object.keys(cfg.channels?.telegram?.accounts ?? {})) {
     if (key) {
@@ -62,7 +77,7 @@ function listConfiguredAccountIds(cfg: GodsEyeConfig): string[] {
   return [...ids];
 }
 
-export function listTelegramAccountIds(cfg: GodsEyeConfig): string[] {
+export function listTelegramAccountIds(cfg: OpenClawConfig): string[] {
   const ids = listCombinedAccountIds({
     configuredAccountIds: listConfiguredAccountIds(cfg),
     additionalAccountIds: listBoundAccountIds(cfg, "telegram"),
@@ -79,7 +94,7 @@ export function resetMissingDefaultWarnFlag(): void {
   emittedMissingDefaultWarn = false;
 }
 
-export function resolveDefaultTelegramAccountId(cfg: GodsEyeConfig): string {
+export function resolveDefaultTelegramAccountId(cfg: OpenClawConfig): string {
   const boundDefault = resolveDefaultAgentBoundAccountId(cfg, "telegram");
   if (boundDefault) {
     return boundDefault;
@@ -103,7 +118,7 @@ export function resolveDefaultTelegramAccountId(cfg: GodsEyeConfig): string {
 }
 
 export function resolveTelegramAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): TelegramAccountConfig | undefined {
   const normalized = normalizeAccountId(accountId);
@@ -111,7 +126,7 @@ export function resolveTelegramAccountConfig(
 }
 
 export function mergeTelegramAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): TelegramAccountConfig {
   const {
@@ -131,7 +146,7 @@ export function mergeTelegramAccountConfig(
   // this failure disrupts message delivery for *all* accounts.
   // Single-account setups keep backward compat: channel-level groups still
   // applies when the account has no override.
-  // See: https://github.com/bitan-del/gods-eye/issues/30673
+  // See: https://github.com/openclaw/openclaw/issues/30673
   const configuredAccountIds = Object.keys(cfg.channels?.telegram?.accounts ?? {});
   const isMultiAccount = configuredAccountIds.length > 1;
   const groups = account.groups ?? (isMultiAccount ? undefined : channelGroups);
@@ -140,14 +155,35 @@ export function mergeTelegramAccountConfig(
 }
 
 export function createTelegramActionGate(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): (key: keyof TelegramActionConfig, defaultValue?: boolean) => boolean {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultTelegramAccountId(params.cfg),
+  );
   return createAccountActionGate({
     baseActions: params.cfg.channels?.telegram?.actions,
     accountActions: resolveTelegramAccountConfig(params.cfg, accountId)?.actions,
   });
+}
+
+export function resolveTelegramMediaRuntimeOptions(params: {
+  cfg: OpenClawConfig;
+  accountId?: string | null;
+  token: string;
+  transport?: TelegramTransport;
+}): TelegramMediaRuntimeOptions {
+  const normalizedAccountId = normalizeOptionalAccountId(params.accountId);
+  const accountCfg = normalizedAccountId
+    ? mergeTelegramAccountConfig(params.cfg, normalizedAccountId)
+    : params.cfg.channels?.telegram;
+  return {
+    token: params.token,
+    transport: params.transport,
+    apiRoot: accountCfg?.apiRoot,
+    trustedLocalFileRoots: accountCfg?.trustedLocalFileRoots,
+    dangerouslyAllowPrivateNetwork: accountCfg?.network?.dangerouslyAllowPrivateNetwork,
+  };
 }
 
 export type TelegramPollActionGateState = {
@@ -169,7 +205,7 @@ export function resolveTelegramPollActionGateState(
 }
 
 export function resolveTelegramAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedTelegramAccount {
   const baseEnabled = params.cfg.channels?.telegram?.enabled !== false;
@@ -187,7 +223,7 @@ export function resolveTelegramAccount(params: {
     return {
       accountId,
       enabled,
-      name: merged.name?.trim() || undefined,
+      name: normalizeOptionalString(merged.name),
       token: tokenResolution.token,
       tokenSource: tokenResolution.source,
       config: merged,
@@ -206,7 +242,7 @@ export function resolveTelegramAccount(params: {
   });
 }
 
-export function listEnabledTelegramAccounts(cfg: GodsEyeConfig): ResolvedTelegramAccount[] {
+export function listEnabledTelegramAccounts(cfg: OpenClawConfig): ResolvedTelegramAccount[] {
   return listTelegramAccountIds(cfg)
     .map((accountId) => resolveTelegramAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

@@ -1,9 +1,15 @@
 import { assertMediaNotDataUrl, resolveSandboxedMediaSource } from "../../agents/sandbox-paths.js";
 import { readStringParam } from "../../agents/tools/common.js";
 import type { ChannelId, ChannelMessageActionName } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { createRootScopedReadFile } from "../../infra/fs-safe.js";
 import { basenameFromMediaSource } from "../../infra/local-file-access.js";
+import {
+  buildOutboundMediaLoadOptions,
+  resolveOutboundMediaAccess,
+  type OutboundMediaAccess,
+  type OutboundMediaReadFile,
+} from "../../media/load-options.js";
 import { extensionForMime } from "../../media/mime.js";
 import { loadWebMedia } from "../../media/web-media.js";
 import { readBooleanParam as readBooleanParamShared } from "../../plugin-sdk/boolean-param.js";
@@ -32,7 +38,7 @@ function readAttachmentFileHint(args: Record<string, unknown>): string | undefin
 }
 
 function resolveAttachmentMaxBytes(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
 }): number | undefined {
@@ -101,12 +107,14 @@ export type AttachmentMediaPolicy =
     }
   | {
       mode: "host";
-      localRoots?: readonly string[];
+      mediaAccess?: OutboundMediaAccess;
     };
 
 export function resolveAttachmentMediaPolicy(params: {
   sandboxRoot?: string;
+  mediaAccess?: OutboundMediaAccess;
   mediaLocalRoots?: readonly string[];
+  mediaReadFile?: OutboundMediaReadFile;
 }): AttachmentMediaPolicy {
   const sandboxRoot = params.sandboxRoot?.trim();
   if (sandboxRoot) {
@@ -117,7 +125,11 @@ export function resolveAttachmentMediaPolicy(params: {
   }
   return {
     mode: "host",
-    localRoots: params.mediaLocalRoots,
+    mediaAccess: resolveOutboundMediaAccess({
+      mediaAccess: params.mediaAccess,
+      mediaLocalRoots: params.mediaLocalRoots,
+      mediaReadFile: params.mediaReadFile,
+    }),
   };
 }
 
@@ -132,7 +144,9 @@ function buildAttachmentMediaLoadOptions(params: {
     }
   | {
       maxBytes?: number;
-      localRoots?: readonly string[];
+      localRoots?: readonly string[] | "any";
+      readFile?: OutboundMediaReadFile;
+      hostReadCapability?: boolean;
     } {
   if (params.policy.mode === "sandbox") {
     const readSandboxFile = createRootScopedReadFile({
@@ -144,14 +158,14 @@ function buildAttachmentMediaLoadOptions(params: {
       readFile: readSandboxFile,
     };
   }
-  return {
+  return buildOutboundMediaLoadOptions({
     maxBytes: params.maxBytes,
-    localRoots: params.policy.localRoots,
-  };
+    mediaAccess: params.policy.mediaAccess,
+  });
 }
 
 async function hydrateAttachmentPayload(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
   args: Record<string, unknown>;
@@ -253,7 +267,7 @@ export async function normalizeSandboxMediaList(params: {
 }
 
 async function hydrateAttachmentActionPayload(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
   args: Record<string, unknown>;
@@ -289,7 +303,7 @@ async function hydrateAttachmentActionPayload(params: {
 }
 
 export async function hydrateAttachmentParamsForAction(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: ChannelId;
   accountId?: string | null;
   args: Record<string, unknown>;
@@ -297,7 +311,12 @@ export async function hydrateAttachmentParamsForAction(params: {
   dryRun?: boolean;
   mediaPolicy: AttachmentMediaPolicy;
 }): Promise<void> {
-  if (params.action !== "sendAttachment" && params.action !== "setGroupIcon") {
+  const shouldHydrateUploadFile = params.action === "upload-file";
+  if (
+    params.action !== "sendAttachment" &&
+    params.action !== "setGroupIcon" &&
+    !shouldHydrateUploadFile
+  ) {
     return;
   }
   await hydrateAttachmentActionPayload({
@@ -307,7 +326,7 @@ export async function hydrateAttachmentParamsForAction(params: {
     args: params.args,
     dryRun: params.dryRun,
     mediaPolicy: params.mediaPolicy,
-    allowMessageCaptionFallback: params.action === "sendAttachment",
+    allowMessageCaptionFallback: params.action === "sendAttachment" || shouldHydrateUploadFile,
   });
 }
 

@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { createRestrictedAgentSandboxConfig } from "./test-helpers/sandbox-agent-config-fixtures.js";
 
 type SpawnCall = {
@@ -12,8 +12,8 @@ type SpawnCall = {
 
 const spawnCalls: SpawnCall[] = [];
 
-vi.mock("node:child_process", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:child_process")>();
+vi.mock("node:child_process", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
   return {
     ...actual,
     spawn: (command: string, args: string[]) => {
@@ -42,8 +42,8 @@ vi.mock("node:child_process", async (importOriginal) => {
   };
 });
 
-vi.mock("./skills.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./skills.js")>();
+vi.mock("./skills.js", async () => {
+  const actual = await vi.importActual<typeof import("./skills.js")>("./skills.js");
   return {
     ...actual,
     syncSkillsToWorkspace: vi.fn(async () => undefined),
@@ -54,7 +54,7 @@ let resolveSandboxContext: typeof import("./sandbox/context.js").resolveSandboxC
 let resolveSandboxConfigForAgent: typeof import("./sandbox/config.js").resolveSandboxConfigForAgent;
 let resolveSandboxRuntimeStatus: typeof import("./sandbox/runtime-status.js").resolveSandboxRuntimeStatus;
 
-async function resolveContext(config: GodsEyeConfig, sessionKey: string, workspaceDir: string) {
+async function resolveContext(config: OpenClawConfig, sessionKey: string, workspaceDir: string) {
   return resolveSandboxContext({
     config,
     sessionKey,
@@ -76,7 +76,7 @@ function expectDockerSetupCommand(command: string) {
 
 function createDefaultsSandboxConfig(
   scope: "agent" | "shared" | "session" = "agent",
-): GodsEyeConfig {
+): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -89,7 +89,7 @@ function createDefaultsSandboxConfig(
   };
 }
 
-function createWorkSetupCommandConfig(scope: "agent" | "shared"): GodsEyeConfig {
+function createWorkSetupCommandConfig(scope: "agent" | "shared"): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -104,7 +104,7 @@ function createWorkSetupCommandConfig(scope: "agent" | "shared"): GodsEyeConfig 
       list: [
         {
           id: "work",
-          workspace: "~/godseye-work",
+          workspace: "~/openclaw-work",
           sandbox: {
             mode: "all",
             scope,
@@ -133,19 +133,19 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should use agent-specific workspaceRoot", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
             mode: "all",
             scope: "agent",
-            workspaceRoot: "~/.godseye/sandboxes",
+            workspaceRoot: "~/.openclaw/sandboxes",
           },
         },
         list: [
           {
             id: "isolated",
-            workspace: "~/godseye-isolated",
+            workspace: "~/openclaw-isolated",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -163,7 +163,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should prefer agent config over global for multiple agents", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -174,14 +174,14 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "main",
-            workspace: "~/godseye",
+            workspace: "~/openclaw",
             sandbox: {
               mode: "off",
             },
           },
           {
             id: "family",
-            workspace: "~/godseye-family",
+            workspace: "~/openclaw-family",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -230,7 +230,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should use global sandbox config when no agent-specific config exists", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -241,7 +241,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "main",
-            workspace: "~/godseye",
+            workspace: "~/openclaw",
           },
         ],
       },
@@ -276,7 +276,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should allow agent-specific docker settings beyond setupCommand", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -291,7 +291,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/godseye-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -324,14 +324,14 @@ describe("Agent-specific sandbox config", () => {
             list: [
               {
                 id: "main",
-                workspace: "~/godseye",
+                workspace: "~/openclaw",
                 sandbox: {
                   mode: "off",
                 },
               },
             ],
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         sessionKey: "agent:main:main",
         assert: (runtime: ReturnType<typeof resolveSandboxRuntimeStatus>) => {
           expect(runtime.mode).toBe("off");
@@ -349,7 +349,7 @@ describe("Agent-specific sandbox config", () => {
             list: [
               {
                 id: "family",
-                workspace: "~/godseye-family",
+                workspace: "~/openclaw-family",
                 sandbox: {
                   mode: "all",
                   scope: "agent",
@@ -357,7 +357,7 @@ describe("Agent-specific sandbox config", () => {
               },
             ],
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         sessionKey: "agent:family:whatsapp:group:123",
         assert: (runtime: ReturnType<typeof resolveSandboxRuntimeStatus>) => {
           expect(runtime.mode).toBe("all");
@@ -374,7 +374,7 @@ describe("Agent-specific sandbox config", () => {
   });
 
   it("should use agent-specific scope", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           sandbox: {
@@ -385,7 +385,7 @@ describe("Agent-specific sandbox config", () => {
         list: [
           {
             id: "work",
-            workspace: "~/godseye-work",
+            workspace: "~/openclaw-work",
             sandbox: {
               mode: "all",
               scope: "agent",
@@ -423,7 +423,7 @@ describe("Agent-specific sandbox config", () => {
               },
             },
           },
-        } satisfies GodsEyeConfig,
+        } satisfies OpenClawConfig,
         expected: ["image"],
       },
     ]) {

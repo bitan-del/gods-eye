@@ -1,10 +1,10 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { resolveThreadSessionKeys } from "godseye/plugin-sdk/routing";
 import { describe, expect, it } from "vitest";
 import { resolveTelegramConversationBaseSessionKey } from "./conversation-route.js";
 
 describe("resolveTelegramConversationBaseSessionKey", () => {
-  const cfg: GodsEyeConfig = {};
+  const cfg: OpenClawConfig = {};
 
   it("keeps the routed session key for the default account", () => {
     expect(

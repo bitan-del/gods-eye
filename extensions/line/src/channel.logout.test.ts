@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRuntimeEnv } from "../../../test/helpers/extensions/runtime-env.js";
-import type { GodsEyeConfig, PluginRuntime, ResolvedLineAccount } from "../api.js";
-import { linePlugin } from "./channel.js";
+import { createRuntimeEnv } from "../../../test/helpers/plugins/runtime-env.js";
+import type { OpenClawConfig, PluginRuntime, ResolvedLineAccount } from "../api.js";
+import { lineGatewayAdapter } from "./gateway.js";
 import { setLineRuntime } from "./runtime.js";
 
 const DEFAULT_ACCOUNT_ID = "default";
@@ -14,7 +14,7 @@ type LineRuntimeMocks = {
 function createRuntime(): { runtime: PluginRuntime; mocks: LineRuntimeMocks } {
   const writeConfigFile = vi.fn(async () => {});
   const resolveLineAccount = vi.fn(
-    ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId?: string }) => {
+    ({ cfg, accountId }: { cfg: OpenClawConfig; accountId?: string }) => {
       const lineConfig = (cfg.channels?.line ?? {}) as {
         tokenFile?: string;
         secretFile?: string;
@@ -27,9 +27,7 @@ function createRuntime(): { runtime: PluginRuntime; mocks: LineRuntimeMocks } {
           ? (lineConfig.accounts?.[accountId] ?? {})
           : lineConfig;
       const hasToken =
-        // oxlint-disable-next-line typescript/no-explicit-any
         Boolean((entry as any).channelAccessToken) || Boolean((entry as any).tokenFile);
-      // oxlint-disable-next-line typescript/no-explicit-any
       const hasSecret = Boolean((entry as any).channelSecret) || Boolean((entry as any).secretFile);
       return { tokenSource: hasToken && hasSecret ? "config" : "none" };
     },
@@ -37,7 +35,6 @@ function createRuntime(): { runtime: PluginRuntime; mocks: LineRuntimeMocks } {
 
   const runtime = {
     config: { writeConfigFile },
-    channel: { line: { resolveLineAccount } },
   } as unknown as PluginRuntime;
 
   return { runtime, mocks: { writeConfigFile, resolveLineAccount } };
@@ -45,24 +42,24 @@ function createRuntime(): { runtime: PluginRuntime; mocks: LineRuntimeMocks } {
 
 function resolveAccount(
   resolveLineAccount: LineRuntimeMocks["resolveLineAccount"],
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): ResolvedLineAccount {
   const resolver = resolveLineAccount as unknown as (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string;
   }) => ResolvedLineAccount;
   return resolver({ cfg, accountId });
 }
 
-async function runLogoutScenario(params: { cfg: GodsEyeConfig; accountId: string }): Promise<{
-  result: Awaited<ReturnType<NonNullable<NonNullable<typeof linePlugin.gateway>["logoutAccount"]>>>;
+async function runLogoutScenario(params: { cfg: OpenClawConfig; accountId: string }): Promise<{
+  result: Awaited<ReturnType<NonNullable<typeof lineGatewayAdapter.logoutAccount>>>;
   mocks: LineRuntimeMocks;
 }> {
   const { runtime, mocks } = createRuntime();
   setLineRuntime(runtime);
   const account = resolveAccount(mocks.resolveLineAccount, params.cfg, params.accountId);
-  const result = await linePlugin.gateway!.logoutAccount!({
+  const result = await lineGatewayAdapter.logoutAccount!({
     accountId: params.accountId,
     cfg: params.cfg,
     account,
@@ -77,7 +74,7 @@ describe("linePlugin gateway.logoutAccount", () => {
   });
 
   it("clears tokenFile/secretFile on default account logout", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           tokenFile: "/tmp/token",
@@ -96,7 +93,7 @@ describe("linePlugin gateway.logoutAccount", () => {
   });
 
   it("clears tokenFile/secretFile on account logout", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           accounts: {
@@ -119,7 +116,7 @@ describe("linePlugin gateway.logoutAccount", () => {
   });
 
   it("does not write config when account has no token/secret fields", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         line: {
           accounts: {

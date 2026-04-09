@@ -1,5 +1,5 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import {
   computeBackoff,
   DEFAULT_HEARTBEAT_SECONDS,
@@ -10,7 +10,7 @@ import {
 } from "./reconnect.js";
 
 describe("web reconnect helpers", () => {
-  const cfg: GodsEyeConfig = {};
+  const cfg: OpenClawConfig = {};
 
   it("resolves sane reconnect defaults with clamps", () => {
     const policy = resolveReconnectPolicy(cfg, {

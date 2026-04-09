@@ -6,7 +6,7 @@ describe("doctor empty allowlist policy warnings", () => {
     const warnings = collectEmptyAllowlistPolicyWarningsForAccount({
       account: { dmPolicy: "allowlist" },
       channelName: "signal",
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
       prefix: "channels.signal",
     });
 
@@ -19,12 +19,12 @@ describe("doctor empty allowlist policy warnings", () => {
     const warnings = collectEmptyAllowlistPolicyWarningsForAccount({
       account: { groupPolicy: "allowlist" },
       channelName: "imessage",
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
       prefix: "channels.imessage",
     });
 
     expect(warnings).toEqual([
-      expect.stringContaining("this channel does not fall back to allowFrom"),
+      expect.stringContaining('channels.imessage.groupPolicy is "allowlist"'),
     ]);
   });
 
@@ -32,7 +32,7 @@ describe("doctor empty allowlist policy warnings", () => {
     const warnings = collectEmptyAllowlistPolicyWarningsForAccount({
       account: { groupPolicy: "allowlist" },
       channelName: "zalouser",
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
       prefix: "channels.zalouser",
     });
 
@@ -43,7 +43,7 @@ describe("doctor empty allowlist policy warnings", () => {
     const warnings = collectEmptyAllowlistPolicyWarningsForAccount({
       account: { groupPolicy: "allowlist" },
       channelName: "discord",
-      doctorFixCommand: "godseye doctor --fix",
+      doctorFixCommand: "openclaw doctor --fix",
       prefix: "channels.discord",
     });
 

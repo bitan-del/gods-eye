@@ -1,4 +1,4 @@
-import { resolveCommandAuthorizedFromAuthorizers } from "godseye/plugin-sdk/command-auth";
+import { resolveCommandAuthorizedFromAuthorizers } from "godseye/plugin-sdk/command-auth-native";
 import {
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,

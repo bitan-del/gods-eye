@@ -14,10 +14,8 @@ const mocks = vi.hoisted(() => ({
   applyMatrixProfileUpdate: vi.fn(),
 }));
 
-vi.mock("./matrix/actions.js", async () => {
-  const actual = await vi.importActual<typeof import("./matrix/actions.js")>("./matrix/actions.js");
+vi.mock("./matrix/actions.js", () => {
   return {
-    ...actual,
     getMatrixMemberInfo: mocks.getMatrixMemberInfo,
     getMatrixRoomInfo: mocks.getMatrixRoomInfo,
     listMatrixReactions: mocks.listMatrixReactions,
@@ -28,10 +26,8 @@ vi.mock("./matrix/actions.js", async () => {
   };
 });
 
-vi.mock("./matrix/send.js", async () => {
-  const actual = await vi.importActual<typeof import("./matrix/send.js")>("./matrix/send.js");
+vi.mock("./matrix/send.js", () => {
   return {
-    ...actual,
     reactMatrixMessage: mocks.reactMatrixMessage,
   };
 });
@@ -213,14 +209,14 @@ describe("handleMatrixAction pollVote", () => {
         threadId: "$thread",
       },
       cfg,
-      { mediaLocalRoots: ["/tmp/godseye-matrix-test"] },
+      { mediaLocalRoots: ["/tmp/openclaw-matrix-test"] },
     );
 
     expect(mocks.sendMatrixMessage).toHaveBeenCalledWith("room:!room:example", "hello", {
       cfg,
       accountId: "ops",
       mediaUrl: undefined,
-      mediaLocalRoots: ["/tmp/godseye-matrix-test"],
+      mediaLocalRoots: ["/tmp/openclaw-matrix-test"],
       replyToId: undefined,
       threadId: "$thread",
     });
@@ -236,14 +232,14 @@ describe("handleMatrixAction pollVote", () => {
         mediaUrl: "file:///tmp/photo.png",
       },
       cfg,
-      { mediaLocalRoots: ["/tmp/godseye-matrix-test"] },
+      { mediaLocalRoots: ["/tmp/openclaw-matrix-test"] },
     );
 
     expect(mocks.sendMatrixMessage).toHaveBeenCalledWith("room:!room:example", undefined, {
       cfg,
       accountId: "ops",
       mediaUrl: "file:///tmp/photo.png",
-      mediaLocalRoots: ["/tmp/godseye-matrix-test"],
+      mediaLocalRoots: ["/tmp/openclaw-matrix-test"],
       replyToId: undefined,
       threadId: undefined,
     });
@@ -260,14 +256,14 @@ describe("handleMatrixAction pollVote", () => {
         asVoice: true,
       },
       cfg,
-      { mediaLocalRoots: ["/tmp/godseye-matrix-test"] },
+      { mediaLocalRoots: ["/tmp/openclaw-matrix-test"] },
     );
 
     expect(mocks.sendMatrixMessage).toHaveBeenCalledWith("room:!room:example", undefined, {
       cfg,
       accountId: "ops",
       mediaUrl: "/tmp/clip.mp3",
-      mediaLocalRoots: ["/tmp/godseye-matrix-test"],
+      mediaLocalRoots: ["/tmp/openclaw-matrix-test"],
       replyToId: undefined,
       threadId: undefined,
       audioAsVoice: true,
@@ -283,7 +279,7 @@ describe("handleMatrixAction pollVote", () => {
         avatarPath: "/tmp/avatar.jpg",
       },
       cfg,
-      { mediaLocalRoots: ["/tmp/godseye-matrix-test"] },
+      { mediaLocalRoots: ["/tmp/openclaw-matrix-test"] },
     );
 
     expect(mocks.applyMatrixProfileUpdate).toHaveBeenCalledWith(
@@ -291,7 +287,7 @@ describe("handleMatrixAction pollVote", () => {
         cfg,
         account: "ops",
         avatarPath: "/tmp/avatar.jpg",
-        mediaLocalRoots: ["/tmp/godseye-matrix-test"],
+        mediaLocalRoots: ["/tmp/openclaw-matrix-test"],
       }),
     );
   });

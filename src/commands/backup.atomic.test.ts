@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTempHomeEnv, type TempHomeEnv } from "../test-utils/temp-home.js";
+import * as backupShared from "./backup-shared.js";
+import { resolveBackupPlanFromPaths } from "./backup-shared.js";
+import { backupCreateCommand } from "./backup.js";
 
 const tarCreateMock = vi.hoisted(() => vi.fn());
 const backupVerifyCommandMock = vi.hoisted(() => vi.fn());
@@ -15,19 +18,17 @@ vi.mock("./backup-verify.js", () => ({
   backupVerifyCommand: backupVerifyCommandMock,
 }));
 
-const { backupCreateCommand } = await import("./backup.js");
-
 describe("backupCreateCommand atomic archive write", () => {
   let tempHome: TempHomeEnv;
 
   async function resetTempHome() {
     await fs.rm(tempHome.home, { recursive: true, force: true });
-    await fs.mkdir(path.join(tempHome.home, ".godseye"), { recursive: true });
-    delete process.env.GODSEYE_CONFIG_PATH;
+    await fs.mkdir(path.join(tempHome.home, ".openclaw"), { recursive: true });
+    delete process.env.OPENCLAW_CONFIG_PATH;
   }
 
   beforeAll(async () => {
-    tempHome = await createTempHomeEnv("godseye-backup-atomic-test-");
+    tempHome = await createTempHomeEnv("openclaw-backup-atomic-test-");
   });
 
   beforeEach(async () => {
@@ -45,10 +46,10 @@ describe("backupCreateCommand atomic archive write", () => {
   });
 
   it("does not leave a partial final archive behind when tar creation fails", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-failure-"));
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-failure-"));
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+      await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
       await fs.writeFile(path.join(stateDir, "state.txt"), "state\n", "utf8");
 
       tarCreateMock.mockRejectedValueOnce(new Error("disk full"));
@@ -59,6 +60,17 @@ describe("backupCreateCommand atomic archive write", () => {
         exit: vi.fn(),
       };
       const outputPath = path.join(archiveDir, "backup.tar.gz");
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath: path.join(stateDir, "openclaw.json"),
+          oauthDir: path.join(stateDir, "credentials"),
+          includeWorkspace: false,
+          configInsideState: true,
+          oauthInsideState: true,
+          nowMs: 123,
+        }),
+      );
 
       await expect(
         backupCreateCommand(runtime, {
@@ -75,12 +87,12 @@ describe("backupCreateCommand atomic archive write", () => {
   });
 
   it("does not overwrite an archive created after readiness checks complete", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-race-"));
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-race-"));
     const realLink = fs.link.bind(fs);
     const linkSpy = vi.spyOn(fs, "link");
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+      await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
       await fs.writeFile(path.join(stateDir, "state.txt"), "state\n", "utf8");
 
       tarCreateMock.mockImplementationOnce(async ({ file }: { file: string }) => {
@@ -97,6 +109,17 @@ describe("backupCreateCommand atomic archive write", () => {
         exit: vi.fn(),
       };
       const outputPath = path.join(archiveDir, "backup.tar.gz");
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath: path.join(stateDir, "openclaw.json"),
+          oauthDir: path.join(stateDir, "credentials"),
+          includeWorkspace: false,
+          configInsideState: true,
+          oauthInsideState: true,
+          nowMs: 123,
+        }),
+      );
 
       await expect(
         backupCreateCommand(runtime, {
@@ -112,11 +135,11 @@ describe("backupCreateCommand atomic archive write", () => {
   });
 
   it("falls back to exclusive copy when hard-link publication is unsupported", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-copy-fallback-"));
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-copy-fallback-"));
     const linkSpy = vi.spyOn(fs, "link");
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+      await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
       await fs.writeFile(path.join(stateDir, "state.txt"), "state\n", "utf8");
 
       tarCreateMock.mockImplementationOnce(async ({ file }: { file: string }) => {
@@ -132,6 +155,17 @@ describe("backupCreateCommand atomic archive write", () => {
         exit: vi.fn(),
       };
       const outputPath = path.join(archiveDir, "backup.tar.gz");
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath: path.join(stateDir, "openclaw.json"),
+          oauthDir: path.join(stateDir, "credentials"),
+          includeWorkspace: false,
+          configInsideState: true,
+          oauthInsideState: true,
+          nowMs: 123,
+        }),
+      );
 
       const result = await backupCreateCommand(runtime, {
         output: outputPath,

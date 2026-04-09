@@ -1,7 +1,7 @@
-import { resolveApprovalOverGateway } from "openclaw/plugin-sdk/approval-gateway-runtime";
-import type { ExecApprovalReplyDecision } from "openclaw/plugin-sdk/approval-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { isApprovalNotFoundError } from "openclaw/plugin-sdk/error-runtime";
+import { resolveApprovalOverGateway } from "godseye/plugin-sdk/approval-gateway-runtime";
+import type { ExecApprovalReplyDecision } from "godseye/plugin-sdk/approval-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { isApprovalNotFoundError } from "godseye/plugin-sdk/error-runtime";
 
 export { isApprovalNotFoundError };
 

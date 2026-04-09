@@ -1,8 +1,8 @@
 import { resolveChannelGroupRequireMention } from "godseye/plugin-sdk/channel-policy";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/core";
 
 type GoogleChatGroupContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
 };

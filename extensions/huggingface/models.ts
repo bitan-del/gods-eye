@@ -1,5 +1,5 @@
-import type { ModelDefinitionConfig } from "openclaw/plugin-sdk/provider-model-types";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import type { ModelDefinitionConfig } from "godseye/plugin-sdk/provider-model-types";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 export const HUGGINGFACE_BASE_URL = "https://router.huggingface.co/v1";
 export const HUGGINGFACE_POLICY_SUFFIXES = ["cheapest", "fastest"] as const;

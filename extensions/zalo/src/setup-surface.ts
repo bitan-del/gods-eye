@@ -1,34 +1,36 @@
 import {
   buildSingleChannelSecretPromptState,
-  createTopLevelChannelDmPolicy,
   createStandardChannelSetupStatus,
   DEFAULT_ACCOUNT_ID,
   formatDocsLink,
   hasConfiguredSecretInput,
   mergeAllowFromEntries,
-  normalizeAccountId,
   promptSingleChannelSecretInput,
   runSingleChannelSecretStep,
   type ChannelSetupDmPolicy,
   type ChannelSetupWizard,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   type SecretInput,
 } from "godseye/plugin-sdk/setup";
-import { listZaloAccountIds, resolveDefaultZaloAccountId, resolveZaloAccount } from "./accounts.js";
-import { zaloSetupAdapter } from "./setup-core.js";
+import { resolveZaloAccount } from "./accounts.js";
+import { zaloDmPolicy } from "./setup-core.js";
 
 const channel = "zalo" as const;
 
 type UpdateMode = "polling" | "webhook";
 
+type ZaloAccountSetupConfig = {
+  enabled?: boolean;
+};
+
 function setZaloUpdateMode(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   mode: UpdateMode,
   webhookUrl?: string,
   webhookSecret?: SecretInput,
   webhookPath?: string,
-): GodsEyeConfig {
+): OpenClawConfig {
   const isDefault = accountId === DEFAULT_ACCOUNT_ID;
   if (mode === "polling") {
     if (isDefault) {
@@ -44,7 +46,7 @@ function setZaloUpdateMode(
           ...cfg.channels,
           zalo: rest,
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
     }
     const accounts = { ...cfg.channels?.zalo?.accounts } as Record<string, Record<string, unknown>>;
     const existing = accounts[accountId] ?? {};
@@ -59,7 +61,7 @@ function setZaloUpdateMode(
           accounts,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   if (isDefault) {
@@ -74,7 +76,7 @@ function setZaloUpdateMode(
           webhookPath,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   const accounts = { ...cfg.channels?.zalo?.accounts } as Record<string, Record<string, unknown>>;
@@ -93,7 +95,7 @@ function setZaloUpdateMode(
         accounts,
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 async function noteZaloTokenHelp(
@@ -112,10 +114,10 @@ async function noteZaloTokenHelp(
 }
 
 async function promptZaloAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: Parameters<NonNullable<ChannelSetupDmPolicy["promptAllowFrom"]>>[0]["prompter"];
   accountId: string;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   const { cfg, prompter, accountId } = params;
   const resolved = resolveZaloAccount({ cfg, accountId });
   const existingAllowFrom = resolved.config.allowFrom ?? [];
@@ -149,9 +151,12 @@ async function promptZaloAllowFrom(params: {
           allowFrom: unique,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
+  const currentAccount = cfg.channels?.zalo?.accounts?.[accountId] as
+    | ZaloAccountSetupConfig
+    | undefined;
   return {
     ...cfg,
     channels: {
@@ -162,35 +167,16 @@ async function promptZaloAllowFrom(params: {
         accounts: {
           ...cfg.channels?.zalo?.accounts,
           [accountId]: {
-            ...cfg.channels?.zalo?.accounts?.[accountId],
-            enabled: cfg.channels?.zalo?.accounts?.[accountId]?.enabled ?? true,
+            ...currentAccount,
+            enabled: currentAccount?.enabled ?? true,
             dmPolicy: "allowlist",
             allowFrom: unique,
           },
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
-
-const zaloDmPolicy: ChannelSetupDmPolicy = createTopLevelChannelDmPolicy({
-  label: "Zalo",
-  channel,
-  policyKey: "channels.zalo.dmPolicy",
-  allowFromKey: "channels.zalo.allowFrom",
-  getCurrent: (cfg) => (cfg.channels?.zalo?.dmPolicy ?? "pairing") as "pairing",
-  promptAllowFrom: async ({ cfg, prompter, accountId }) => {
-    const id =
-      accountId && normalizeAccountId(accountId)
-        ? (normalizeAccountId(accountId) ?? DEFAULT_ACCOUNT_ID)
-        : resolveDefaultZaloAccountId(cfg as GodsEyeConfig);
-    return await promptZaloAllowFrom({
-      cfg: cfg as GodsEyeConfig,
-      prompter,
-      accountId: id,
-    });
-  },
-});
 
 export { zaloSetupAdapter } from "./setup-core.js";
 
@@ -205,19 +191,18 @@ export const zaloSetupWizard: ChannelSetupWizard = {
     configuredScore: 1,
     unconfiguredScore: 10,
     includeStatusLine: true,
-    resolveConfigured: ({ cfg }) =>
-      listZaloAccountIds(cfg).some((accountId) => {
-        const account = resolveZaloAccount({
-          cfg,
-          accountId,
-          allowUnresolvedSecretRef: true,
-        });
-        return (
-          Boolean(account.token) ||
-          hasConfiguredSecretInput(account.config.botToken) ||
-          Boolean(account.config.tokenFile?.trim())
-        );
-      }),
+    resolveConfigured: ({ cfg, accountId }) => {
+      const account = resolveZaloAccount({
+        cfg,
+        accountId,
+        allowUnresolvedSecretRef: true,
+      });
+      return (
+        Boolean(account.token) ||
+        hasConfiguredSecretInput(account.config.botToken) ||
+        Boolean(account.config.tokenFile?.trim())
+      );
+    },
   }),
   credentials: [],
   finalize: async ({ cfg, accountId, forceAllowFrom, options, prompter }) => {
@@ -258,7 +243,7 @@ export const zaloSetupWizard: ChannelSetupWizard = {
                   enabled: true,
                 },
               },
-            } as GodsEyeConfig)
+            } as OpenClawConfig)
           : currentCfg,
       applySet: async (currentCfg, value) =>
         accountId === DEFAULT_ACCOUNT_ID
@@ -272,7 +257,7 @@ export const zaloSetupWizard: ChannelSetupWizard = {
                   botToken: value,
                 },
               },
-            } as GodsEyeConfig)
+            } as OpenClawConfig)
           : ({
               ...currentCfg,
               channels: {
@@ -283,14 +268,16 @@ export const zaloSetupWizard: ChannelSetupWizard = {
                   accounts: {
                     ...currentCfg.channels?.zalo?.accounts,
                     [accountId]: {
-                      ...currentCfg.channels?.zalo?.accounts?.[accountId],
+                      ...(currentCfg.channels?.zalo?.accounts?.[accountId] as
+                        | Record<string, unknown>
+                        | undefined),
                       enabled: true,
                       botToken: value,
                     },
                   },
                 },
               },
-            } as GodsEyeConfig),
+            } as OpenClawConfig),
     });
     next = tokenStep.cfg;
 

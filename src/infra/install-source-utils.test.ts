@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createTrackedTempDirs } from "../test-utils/tracked-temp-dirs.js";
 import {
   packNpmSpecToArchive,
   resolveArchiveSourcePath,
@@ -9,18 +9,15 @@ import {
 } from "./install-source-utils.js";
 
 const runCommandWithTimeoutMock = vi.fn();
-const TEMP_DIR_PREFIX = "godseye-install-source-utils-";
+const TEMP_DIR_PREFIX = "openclaw-install-source-utils-";
+const tempDirs = createTrackedTempDirs();
 
 vi.mock("../process/exec.js", () => ({
   runCommandWithTimeout: (...args: unknown[]) => runCommandWithTimeoutMock(...args),
 }));
 
-const tempDirs: string[] = [];
-
 async function createTempDir(prefix: string) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
-  return dir;
+  return await tempDirs.make(prefix);
 }
 
 async function createFixtureDir() {
@@ -60,8 +57,8 @@ async function expectPackFallsBackToDetectedArchive(params: {
   stdout: string;
   expectedMetadata?: Record<string, unknown>;
 }) {
-  const cwd = await createTempDir("godseye-install-source-utils-");
-  const archivePath = path.join(cwd, "godseye-plugin-1.2.3.tgz");
+  const cwd = await createTempDir("openclaw-install-source-utils-");
+  const archivePath = path.join(cwd, "openclaw-plugin-1.2.3.tgz");
   await fs.writeFile(archivePath, "", "utf-8");
   runCommandWithTimeoutMock.mockResolvedValue({
     stdout: params.stdout,
@@ -72,7 +69,7 @@ async function expectPackFallsBackToDetectedArchive(params: {
   });
 
   const result = await packNpmSpecToArchive({
-    spec: "godseye-plugin@1.2.3",
+    spec: "openclaw-plugin@1.2.3",
     timeoutMs: 5000,
     cwd,
   });
@@ -84,18 +81,22 @@ async function expectPackFallsBackToDetectedArchive(params: {
   });
 }
 
+function expectPackError(result: { ok: boolean; error?: string }, expected: string[]): void {
+  expect(result.ok).toBe(false);
+  if (result.ok) {
+    return;
+  }
+  for (const part of expected) {
+    expect(result.error ?? "").toContain(part);
+  }
+}
+
 beforeEach(() => {
   runCommandWithTimeoutMock.mockClear();
 });
 
 afterEach(async () => {
-  while (tempDirs.length > 0) {
-    const dir = tempDirs.pop();
-    if (!dir) {
-      break;
-    }
-    await fs.rm(dir, { recursive: true, force: true });
-  }
+  await tempDirs.cleanup();
 });
 
 describe("withTempDir", () => {
@@ -103,7 +104,7 @@ describe("withTempDir", () => {
     let observedDir = "";
     const markerFile = "marker.txt";
 
-    const value = await withTempDir("godseye-install-source-utils-", async (tmpDir) => {
+    const value = await withTempDir("openclaw-install-source-utils-", async (tmpDir) => {
       observedDir = tmpDir;
       await fs.writeFile(path.join(tmpDir, markerFile), "ok", "utf-8");
       await expect(fs.stat(path.join(tmpDir, markerFile))).resolves.toBeDefined();
@@ -116,25 +117,25 @@ describe("withTempDir", () => {
 });
 
 describe("resolveArchiveSourcePath", () => {
-  it("returns not found error for missing archive paths", async () => {
-    const result = await resolveArchiveSourcePath("/tmp/does-not-exist-godseye-archive.tgz");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("archive not found");
-    }
-  });
-
-  it("rejects unsupported archive extensions", async () => {
-    const { filePath } = await createFixtureFile({
-      fileName: "plugin.txt",
-      contents: "not-an-archive",
-    });
-
-    const result = await resolveArchiveSourcePath(filePath);
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("unsupported archive");
-    }
+  it.each([
+    {
+      name: "returns not found error for missing archive paths",
+      path: async () => "/tmp/does-not-exist-openclaw-archive.tgz",
+      expected: "archive not found",
+    },
+    {
+      name: "rejects unsupported archive extensions",
+      path: async () =>
+        (
+          await createFixtureFile({
+            fileName: "plugin.txt",
+            contents: "not-an-archive",
+          })
+        ).filePath,
+      expected: "unsupported archive",
+    },
+  ])("$name", async ({ path: resolvePath, expected }) => {
+    expectPackError(await resolveArchiveSourcePath(await resolvePath()), [expected]);
   });
 
   it.each(["plugin.zip", "plugin.tgz", "plugin.tar.gz"])(
@@ -154,36 +155,36 @@ describe("resolveArchiveSourcePath", () => {
 describe("packNpmSpecToArchive", () => {
   it("packs spec and returns archive path using JSON output metadata", async () => {
     const cwd = await createFixtureDir();
-    const archivePath = path.join(cwd, "godseye-plugin-1.2.3.tgz");
+    const archivePath = path.join(cwd, "openclaw-plugin-1.2.3.tgz");
     await fs.writeFile(archivePath, "", "utf-8");
     mockPackCommandResult({
       stdout: JSON.stringify([
         {
-          id: "godseye-plugin@1.2.3",
-          name: "godseye-plugin",
+          id: "openclaw-plugin@1.2.3",
+          name: "openclaw-plugin",
           version: "1.2.3",
-          filename: "godseye-plugin-1.2.3.tgz",
+          filename: "openclaw-plugin-1.2.3.tgz",
           integrity: "sha512-test-integrity",
           shasum: "abc123",
         },
       ]),
     });
 
-    const result = await runPack("godseye-plugin@1.2.3", cwd);
+    const result = await runPack("openclaw-plugin@1.2.3", cwd);
 
     expect(result).toEqual({
       ok: true,
       archivePath,
       metadata: {
-        name: "godseye-plugin",
+        name: "openclaw-plugin",
         version: "1.2.3",
-        resolvedSpec: "godseye-plugin@1.2.3",
+        resolvedSpec: "openclaw-plugin@1.2.3",
         integrity: "sha512-test-integrity",
         shasum: "abc123",
       },
     });
     expect(runCommandWithTimeoutMock).toHaveBeenCalledWith(
-      ["npm", "pack", "godseye-plugin@1.2.3", "--ignore-scripts", "--json"],
+      ["npm", "pack", "openclaw-plugin@1.2.3", "--ignore-scripts", "--json"],
       expect.objectContaining({
         cwd,
         timeoutMs: 300_000,
@@ -193,13 +194,13 @@ describe("packNpmSpecToArchive", () => {
 
   it("falls back to parsing final stdout line when npm json output is unavailable", async () => {
     const cwd = await createFixtureDir();
-    const expectedArchivePath = path.join(cwd, "godseye-plugin-1.2.3.tgz");
+    const expectedArchivePath = path.join(cwd, "openclaw-plugin-1.2.3.tgz");
     await fs.writeFile(expectedArchivePath, "", "utf-8");
     mockPackCommandResult({
-      stdout: "npm notice created package\ngodseye-plugin-1.2.3.tgz\n",
+      stdout: "npm notice created package\nopenclaw-plugin-1.2.3.tgz\n",
     });
 
-    const result = await runPack("godseye-plugin@1.2.3", cwd);
+    const result = await runPack("openclaw-plugin@1.2.3", cwd);
 
     expect(result).toEqual({
       ok: true,
@@ -217,12 +218,7 @@ describe("packNpmSpecToArchive", () => {
     });
 
     const result = await runPack("bad-spec", cwd, 5000);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("npm pack failed");
-      expect(result.error).toContain("registry timeout");
-    }
+    expectPackError(result, ["npm pack failed", "registry timeout"]);
   });
 
   it.each([
@@ -237,11 +233,11 @@ describe("packNpmSpecToArchive", () => {
     {
       name: "falls back to cwd archive when logged JSON metadata omits filename",
       stdout:
-        'npm notice using cache\n[{"id":"godseye-plugin@1.2.3","name":"godseye-plugin","version":"1.2.3","integrity":"sha512-test-integrity","shasum":"abc123"}]\n',
+        'npm notice using cache\n[{"id":"openclaw-plugin@1.2.3","name":"openclaw-plugin","version":"1.2.3","integrity":"sha512-test-integrity","shasum":"abc123"}]\n',
       expectedMetadata: {
-        name: "godseye-plugin",
+        name: "openclaw-plugin",
         version: "1.2.3",
-        resolvedSpec: "godseye-plugin@1.2.3",
+        resolvedSpec: "openclaw-plugin@1.2.3",
         integrity: "sha512-test-integrity",
         shasum: "abc123",
       },
@@ -254,18 +250,16 @@ describe("packNpmSpecToArchive", () => {
     const cwd = await createFixtureDir();
     mockPackCommandResult({
       stdout: "",
-      stderr: "npm error code E404\nnpm error 404  '@godseye/whatsapp@*' is not in this registry.",
+      stderr: "npm error code E404\nnpm error 404  '@openclaw/whatsapp@*' is not in this registry.",
       code: 1,
     });
 
-    const result = await runPack("@godseye/whatsapp", cwd);
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toContain("Package not found on npm");
-      expect(result.error).toContain("@godseye/whatsapp");
-      expect(result.error).toContain("docs.gods-eye.org/tools/plugin");
-    }
+    const result = await runPack("@openclaw/whatsapp", cwd);
+    expectPackError(result, [
+      "Package not found on npm",
+      "@openclaw/whatsapp",
+      "docs.openclaw.ai/tools/plugin",
+    ]);
   });
 
   it("returns explicit error when npm pack produces no archive name", async () => {
@@ -274,7 +268,7 @@ describe("packNpmSpecToArchive", () => {
       stdout: " \n\n",
     });
 
-    const result = await runPack("godseye-plugin@1.2.3", cwd, 5000);
+    const result = await runPack("openclaw-plugin@1.2.3", cwd, 5000);
 
     expect(result).toEqual({
       ok: false,
@@ -284,24 +278,24 @@ describe("packNpmSpecToArchive", () => {
 
   it("parses scoped metadata from id-only json output even with npm notice prefix", async () => {
     const cwd = await createFixtureDir();
-    await fs.writeFile(path.join(cwd, "godseye-plugin-demo-2.0.0.tgz"), "", "utf-8");
+    await fs.writeFile(path.join(cwd, "openclaw-plugin-demo-2.0.0.tgz"), "", "utf-8");
     mockPackCommandResult({
       stdout:
         "npm notice creating package\n" +
         JSON.stringify([
           {
-            id: "@godseye/plugin-demo@2.0.0",
-            filename: "godseye-plugin-demo-2.0.0.tgz",
+            id: "@openclaw/plugin-demo@2.0.0",
+            filename: "openclaw-plugin-demo-2.0.0.tgz",
           },
         ]),
     });
 
-    const result = await runPack("@godseye/plugin-demo@2.0.0", cwd);
+    const result = await runPack("@openclaw/plugin-demo@2.0.0", cwd);
     expect(result).toEqual({
       ok: true,
-      archivePath: path.join(cwd, "godseye-plugin-demo-2.0.0.tgz"),
+      archivePath: path.join(cwd, "openclaw-plugin-demo-2.0.0.tgz"),
       metadata: {
-        resolvedSpec: "@godseye/plugin-demo@2.0.0",
+        resolvedSpec: "@openclaw/plugin-demo@2.0.0",
       },
     });
   });

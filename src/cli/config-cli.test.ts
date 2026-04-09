@@ -3,27 +3,35 @@ import os from "node:os";
 import path from "node:path";
 import { Command } from "commander";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ConfigFileSnapshot, GodsEyeConfig } from "../config/types.js";
+import type { ConfigFileSnapshot, OpenClawConfig } from "../config/types.js";
 import { createCliRuntimeCapture, mockRuntimeModule } from "./test-runtime-capture.js";
 
 /**
  * Test for issue #6070:
- * `godseye config set/unset` must update snapshot.resolved (user config after $include/${ENV},
+ * `openclaw config set/unset` must update snapshot.resolved (user config after $include/${ENV},
  * but before runtime defaults), so runtime defaults don't leak into the written config.
  */
 
 const mockReadConfigFileSnapshot = vi.fn<() => Promise<ConfigFileSnapshot>>();
 const mockWriteConfigFile = vi.fn<
-  (cfg: GodsEyeConfig, options?: { unsetPaths?: string[][] }) => Promise<void>
+  (cfg: OpenClawConfig, options?: { unsetPaths?: string[][] }) => Promise<void>
 >(async () => {});
 const mockResolveSecretRefValue = vi.fn();
 const mockReadBestEffortRuntimeConfigSchema = vi.fn();
 
-vi.mock("../config/config.js", () => ({
-  readConfigFileSnapshot: () => mockReadConfigFileSnapshot(),
-  writeConfigFile: (cfg: GodsEyeConfig, options?: { unsetPaths?: string[][] }) =>
-    mockWriteConfigFile(cfg, options),
-}));
+vi.mock("../config/config.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../config/config.js")>();
+  return {
+    ...actual,
+    readConfigFileSnapshot: () => mockReadConfigFileSnapshot(),
+    writeConfigFile: (cfg: OpenClawConfig, options?: { unsetPaths?: string[][] }) =>
+      mockWriteConfigFile(cfg, options),
+    replaceConfigFile: (params: {
+      nextConfig: OpenClawConfig;
+      writeOptions?: { unsetPaths?: string[][] };
+    }) => mockWriteConfigFile(params.nextConfig, params.writeOptions),
+  };
+});
 
 vi.mock("../secrets/resolve.js", () => ({
   resolveSecretRefValue: (...args: unknown[]) => mockResolveSecretRefValue(...args),
@@ -38,21 +46,26 @@ const mockLog = defaultRuntime.log;
 const mockError = defaultRuntime.error;
 const mockExit = defaultRuntime.exit;
 
-vi.mock("../runtime.js", async (importOriginal) => {
-  return mockRuntimeModule(importOriginal<typeof import("../runtime.js")>, defaultRuntime);
+vi.mock("../runtime.js", async () => {
+  return mockRuntimeModule(
+    () => vi.importActual<typeof import("../runtime.js")>("../runtime.js"),
+    defaultRuntime,
+  );
 });
 
 function buildSnapshot(params: {
-  resolved: GodsEyeConfig;
-  config: GodsEyeConfig;
+  resolved: OpenClawConfig;
+  config: OpenClawConfig;
 }): ConfigFileSnapshot {
   return {
-    path: "/tmp/godseye.json",
+    path: "/tmp/openclaw.json",
     exists: true,
     raw: JSON.stringify(params.resolved),
     parsed: params.resolved,
+    sourceConfig: params.resolved,
     resolved: params.resolved,
     valid: true,
+    runtimeConfig: params.config,
     config: params.config,
     issues: [],
     warnings: [],
@@ -60,7 +73,7 @@ function buildSnapshot(params: {
   };
 }
 
-function setSnapshot(resolved: GodsEyeConfig, config: GodsEyeConfig) {
+function setSnapshot(resolved: OpenClawConfig, config: OpenClawConfig) {
   mockReadConfigFileSnapshot.mockResolvedValueOnce(buildSnapshot({ resolved, config }));
 }
 
@@ -68,7 +81,7 @@ function setSnapshotOnce(snapshot: ConfigFileSnapshot) {
   mockReadConfigFileSnapshot.mockResolvedValueOnce(snapshot);
 }
 
-function withRuntimeDefaults(resolved: GodsEyeConfig): GodsEyeConfig {
+function withRuntimeDefaults(resolved: OpenClawConfig): OpenClawConfig {
   return {
     ...resolved,
     agents: {
@@ -85,12 +98,14 @@ function makeInvalidSnapshot(params: {
   path?: string;
 }): ConfigFileSnapshot {
   return {
-    path: params.path ?? "/tmp/custom-godseye.json",
+    path: params.path ?? "/tmp/custom-openclaw.json",
     exists: true,
     raw: "{}",
     parsed: {},
+    sourceConfig: {},
     resolved: {},
     valid: false,
+    runtimeConfig: {},
     config: {},
     issues: params.issues,
     warnings: [],
@@ -171,7 +186,7 @@ describe("config cli", () => {
 
   describe("config set - issue #6070", () => {
     it("preserves existing config keys when setting a new value", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         agents: {
           list: [{ id: "main" }, { id: "oracle", workspace: "~/oracle-workspace" }],
         },
@@ -179,7 +194,7 @@ describe("config cli", () => {
         tools: { allow: ["group:fs"] },
         logging: { level: "debug" },
       };
-      const runtimeMerged: GodsEyeConfig = {
+      const runtimeMerged: OpenClawConfig = {
         ...withRuntimeDefaults(resolved),
       };
       setSnapshot(resolved, runtimeMerged);
@@ -197,7 +212,7 @@ describe("config cli", () => {
     });
 
     it("does not inject runtime defaults into the written config", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       const runtimeMerged = {
@@ -211,7 +226,7 @@ describe("config cli", () => {
         } as never,
         messages: { ackReaction: "✅" } as never,
         sessions: { persistence: { enabled: true } } as never,
-      } as unknown as GodsEyeConfig;
+      } as unknown as OpenClawConfig;
       setSnapshot(resolved, runtimeMerged);
 
       await runConfigCommand(["config", "set", "gateway.auth.mode", "token"]);
@@ -227,26 +242,39 @@ describe("config cli", () => {
       expect(written.gateway?.auth).toEqual({ mode: "token" });
     });
 
-    it("auto-seeds a valid Ollama provider when setting only models.providers.ollama.apiKey", async () => {
-      const resolved: GodsEyeConfig = {
-        gateway: { port: 18789 },
+    it("writes agents.defaults.videoGenerationModel.primary without disturbing sibling defaults", async () => {
+      const resolved: OpenClawConfig = {
+        agents: {
+          defaults: {
+            model: "openai/gpt-5.4",
+            imageGenerationModel: {
+              primary: "openai/gpt-image-1",
+            },
+          },
+        },
       };
       setSnapshot(resolved, resolved);
 
-      await runConfigCommand(["config", "set", "models.providers.ollama.apiKey", '"ollama-local"']);
+      await runConfigCommand([
+        "config",
+        "set",
+        "agents.defaults.videoGenerationModel.primary",
+        "qwen/wan2.6-t2v",
+      ]);
 
       expect(mockWriteConfigFile).toHaveBeenCalledTimes(1);
       const written = mockWriteConfigFile.mock.calls[0]?.[0];
-      expect(written.models?.providers?.ollama).toEqual({
-        baseUrl: "http://127.0.0.1:11434",
-        api: "ollama",
-        models: [],
-        apiKey: "ollama-local", // pragma: allowlist secret
+      expect(written.agents?.defaults?.model).toBe("openai/gpt-5.4");
+      expect(written.agents?.defaults?.imageGenerationModel).toEqual({
+        primary: "openai/gpt-image-1",
+      });
+      expect(written.agents?.defaults?.videoGenerationModel).toEqual({
+        primary: "qwen/wan2.6-t2v",
       });
     });
 
     it("drops gateway.auth.password when switching mode to token", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: {
           auth: {
             mode: "password",
@@ -275,7 +303,7 @@ describe("config cli", () => {
     });
 
     it("drops gateway.auth.token when switching mode to password", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: {
           auth: {
             mode: "token",
@@ -302,7 +330,7 @@ describe("config cli", () => {
     });
 
     it("applies mode-based credential cleanup using the final batch result", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: {
           auth: {
             mode: "password",
@@ -336,7 +364,7 @@ describe("config cli", () => {
 
   describe("config get", () => {
     it("redacts sensitive values", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: {
           auth: {
             token: "super-secret-token",
@@ -347,13 +375,13 @@ describe("config cli", () => {
 
       await runConfigCommand(["config", "get", "gateway.auth.token"]);
 
-      expect(mockLog).toHaveBeenCalledWith("__GODSEYE_REDACTED__");
+      expect(mockLog).toHaveBeenCalledWith("__OPENCLAW_REDACTED__");
     });
   });
 
   describe("config validate", () => {
     it("prints success and exits 0 when config is valid", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       setSnapshot(resolved, resolved);
@@ -395,7 +423,7 @@ describe("config cli", () => {
 
       const payload = await runValidateJsonAndGetPayload();
       expect(payload.valid).toBe(false);
-      expect(payload.path).toBe("/tmp/custom-godseye.json");
+      expect(payload.path).toBe("/tmp/custom-openclaw.json");
       expect(payload.issues).toEqual([{ path: "gateway.bind", message: "Invalid enum value" }]);
       expect(mockError).not.toHaveBeenCalled();
     });
@@ -416,7 +444,7 @@ describe("config cli", () => {
 
       const payload = await runValidateJsonAndGetPayload();
       expect(payload.valid).toBe(false);
-      expect(payload.path).toBe("/tmp/custom-godseye.json");
+      expect(payload.path).toBe("/tmp/custom-openclaw.json");
       expect(payload.issues).toEqual([
         {
           path: "update.channel",
@@ -429,13 +457,15 @@ describe("config cli", () => {
 
     it("prints file-not-found and exits 1 when config file is missing", async () => {
       setSnapshotOnce({
-        path: "/tmp/godseye.json",
+        path: "/tmp/openclaw.json",
         exists: false,
         raw: null,
         parsed: {},
         resolved: {},
+        sourceConfig: {},
         valid: true,
         config: {},
+        runtimeConfig: {},
         issues: [],
         warnings: [],
         legacyIssues: [],
@@ -449,6 +479,13 @@ describe("config cli", () => {
 
   describe("config schema", () => {
     it("prints the generated JSON schema as plain text", async () => {
+      const { computeBaseConfigSchemaResponse } = await import("../config/schema-base.js");
+      mockReadBestEffortRuntimeConfigSchema.mockResolvedValueOnce(
+        computeBaseConfigSchemaResponse({
+          generatedAt: "2026-03-25T00:00:00.000Z",
+        }),
+      );
+
       await runConfigCommand(["config", "schema"]);
 
       expect(mockExit).not.toHaveBeenCalled();
@@ -459,23 +496,28 @@ describe("config cli", () => {
       const payload = JSON.parse(String(raw)) as {
         properties?: Record<string, unknown>;
       };
+      const gateway = payload.properties?.gateway as
+        | { properties?: Record<string, unknown> }
+        | undefined;
+      const gatewayPort = gateway?.properties?.port as
+        | { title?: string; description?: string }
+        | undefined;
       expect(payload.properties?.$schema).toEqual({ type: "string" });
-      expect(payload.properties?.channels).toEqual({
-        type: "object",
-        properties: {
-          telegram: {
-            type: "object",
-            properties: {
-              token: { type: "string" },
-            },
-          },
-        },
+      expect(gatewayPort).toMatchObject({
+        title: "Gateway Port",
+        description: expect.stringContaining("TCP port used by the gateway listener"),
       });
-      expect(payload.properties?.plugins).toEqual({
-        type: "object",
+      expect(payload.properties?.channels).toMatchObject({
+        title: "Channels",
+        properties: {},
+        additionalProperties: true,
+      });
+      expect(payload.properties?.plugins).toMatchObject({
+        title: "Plugins",
+        description: expect.stringContaining("Plugin system controls"),
         properties: {
           entries: {
-            type: "object",
+            title: "Plugin Entries",
           },
         },
       });
@@ -517,7 +559,7 @@ describe("config cli", () => {
 
   describe("config set parsing flags", () => {
     it("falls back to raw string when parsing fails and strict mode is off", async () => {
-      const resolved: GodsEyeConfig = { gateway: { port: 18789 } };
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
       setSnapshot(resolved, resolved);
 
       await runConfigCommand(["config", "set", "gateway.auth.mode", "{bad"]);
@@ -555,7 +597,7 @@ describe("config cli", () => {
     });
 
     it("accepts --strict-json with batch mode and applies batch payload", async () => {
-      const resolved: GodsEyeConfig = { gateway: { port: 18789 } };
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
       setSnapshot(resolved, resolved);
 
       await runConfigCommand([
@@ -589,20 +631,20 @@ describe("config cli", () => {
       expect(helpText).toContain("--batch-json");
       expect(helpText).toContain("--dry-run");
       expect(helpText).toContain("--allow-exec");
-      expect(helpText).toContain("godseye config set gateway.port 19001 --strict-json");
+      expect(helpText).toContain("openclaw config set gateway.port 19001 --strict-json");
       expect(helpText).toContain(
-        "godseye config set channels.discord.token --ref-provider default --ref-source",
+        "openclaw config set channels.discord.token --ref-provider default --ref-source",
       );
       expect(helpText).toContain("--ref-id DISCORD_BOT_TOKEN");
       expect(helpText).toContain(
-        "godseye config set --batch-file ./config-set.batch.json --dry-run",
+        "openclaw config set --batch-file ./config-set.batch.json --dry-run",
       );
     });
   });
 
   describe("config set builders and dry-run", () => {
     it("supports SecretRef builder mode without requiring a value argument", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       setSnapshot(resolved, resolved);
@@ -628,8 +670,58 @@ describe("config cli", () => {
       });
     });
 
+    it("fails early when unsupported mutable paths are assigned SecretRef objects (builder mode)", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "hooks.token",
+          "--ref-provider",
+          "default",
+          "--ref-source",
+          "env",
+          "--ref-id",
+          "HOOK_TOKEN",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalledWith(
+        expect.stringContaining("Config policy validation failed: unsupported SecretRef usage"),
+      );
+      expect(mockError).toHaveBeenCalledWith(expect.stringContaining("hooks.token"));
+    });
+
+    it("fails early when parent-object writes include unsupported SecretRef objects", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "hooks",
+          '{"token":{"source":"env","provider":"default","id":"HOOK_TOKEN"}}',
+          "--strict-json",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalledWith(
+        expect.stringContaining("Config policy validation failed: unsupported SecretRef usage"),
+      );
+      expect(mockError).toHaveBeenCalledWith(expect.stringContaining("hooks.token"));
+    });
+
     it("supports provider builder mode under secrets.providers.<alias>", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       setSnapshot(resolved, resolved);
@@ -656,7 +748,7 @@ describe("config cli", () => {
     });
 
     it("runs resolvability checks in builder dry-run mode without writing", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -694,7 +786,7 @@ describe("config cli", () => {
     });
 
     it("requires schema validation in JSON dry-run mode", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       setSnapshot(resolved, resolved);
@@ -716,8 +808,95 @@ describe("config cli", () => {
       );
     });
 
+    it("fails dry-run when unsupported mutable paths receive SecretRef objects in value/json mode", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+        secrets: {
+          providers: {
+            default: { source: "env" },
+          },
+        },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "hooks.token",
+          '{"source":"env","provider":"default","id":"HOOK_TOKEN"}',
+          "--strict-json",
+          "--dry-run",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalledWith(
+        expect.stringContaining("Dry run failed: config schema validation failed."),
+      );
+      expect(mockError).toHaveBeenCalledWith(expect.stringContaining("hooks.token"));
+    });
+
+    it("aggregates policy failures across batch entries", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "--batch-json",
+          '[{"path":"hooks.token","ref":{"source":"env","provider":"default","id":"HOOK_TOKEN"}},{"path":"commands.ownerDisplaySecret","ref":{"source":"env","provider":"default","id":"OWNER_DISPLAY_SECRET"}}]',
+          "--dry-run",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      expect(mockError).toHaveBeenCalledWith(expect.stringContaining("hooks.token"));
+      expect(mockError).toHaveBeenCalledWith(
+        expect.stringContaining("commands.ownerDisplaySecret"),
+      );
+    });
+
+    it("does not duplicate policy errors in --dry-run --json mode for parent-object writes", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "hooks",
+          '{"token":{"source":"env","provider":"default","id":"HOOK_TOKEN"}}',
+          "--strict-json",
+          "--dry-run",
+          "--json",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      const raw = mockLog.mock.calls.at(-1)?.[0];
+      expect(typeof raw).toBe("string");
+      const payload = JSON.parse(String(raw)) as {
+        ok: boolean;
+        checks: { schema: boolean; resolvability: boolean; resolvabilityComplete: boolean };
+        errors?: Array<{ kind: string; message: string; ref?: string }>;
+      };
+      expect(payload.ok).toBe(false);
+      expect(payload.checks.schema).toBe(true);
+      const hooksTokenErrors =
+        payload.errors?.filter(
+          (entry) => entry.kind === "schema" && entry.message.includes("hooks.token"),
+        ) ?? [];
+      expect(hooksTokenErrors).toHaveLength(1);
+    });
+
     it("logs a dry-run note when value mode performs no validation checks", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
       };
       setSnapshot(resolved, resolved);
@@ -737,7 +916,7 @@ describe("config cli", () => {
     });
 
     it("supports batch mode for refs/providers in dry-run", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -760,7 +939,7 @@ describe("config cli", () => {
     });
 
     it("skips exec SecretRef resolvability checks in dry-run by default", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -797,7 +976,7 @@ describe("config cli", () => {
     });
 
     it("allows exec SecretRef resolvability checks in dry-run when --allow-exec is set", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -843,7 +1022,7 @@ describe("config cli", () => {
     it("rejects --allow-exec without --dry-run", async () => {
       const nonexistentBatchPath = path.join(
         os.tmpdir(),
-        `godseye-config-batch-nonexistent-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+        `openclaw-config-batch-nonexistent-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
       );
       await expect(
         runConfigCommand(["config", "set", "--batch-file", nonexistentBatchPath, "--allow-exec"]),
@@ -857,7 +1036,7 @@ describe("config cli", () => {
     });
 
     it("fails dry-run when skipped exec refs use an unconfigured provider", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {},
@@ -887,7 +1066,7 @@ describe("config cli", () => {
     });
 
     it("fails dry-run when skipped exec refs use a provider with mismatched source", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -923,7 +1102,7 @@ describe("config cli", () => {
     });
 
     it("writes sibling SecretRef paths when target uses sibling-ref shape", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         channels: {
           googlechat: {
@@ -1001,12 +1180,12 @@ describe("config cli", () => {
     });
 
     it("supports batch-file mode", async () => {
-      const resolved: GodsEyeConfig = { gateway: { port: 18789 } };
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
       setSnapshot(resolved, resolved);
 
       const pathname = path.join(
         os.tmpdir(),
-        `godseye-config-batch-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+        `openclaw-config-batch-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
       );
       fs.writeFileSync(pathname, '[{"path":"gateway.auth.mode","value":"token"}]', "utf8");
       try {
@@ -1023,7 +1202,7 @@ describe("config cli", () => {
     it("rejects malformed batch-file payloads", async () => {
       const pathname = path.join(
         os.tmpdir(),
-        `godseye-config-batch-invalid-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
+        `openclaw-config-batch-invalid-${Date.now()}-${Math.random().toString(16).slice(2)}.json`,
       );
       fs.writeFileSync(pathname, '{"path":"gateway.auth.mode","value":"token"}', "utf8");
       try {
@@ -1055,7 +1234,7 @@ describe("config cli", () => {
     });
 
     it("fails dry-run when a builder-assigned SecretRef is unresolved", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1087,7 +1266,7 @@ describe("config cli", () => {
     });
 
     it("emits structured JSON for --dry-run --json success", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1132,7 +1311,7 @@ describe("config cli", () => {
     });
 
     it("emits skipped exec metadata for --dry-run --json success", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1176,7 +1355,7 @@ describe("config cli", () => {
     });
 
     it("emits structured JSON for --dry-run --json failure", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1216,8 +1395,48 @@ describe("config cli", () => {
       ).toBe(true);
     });
 
+    it("keeps distinct resolvability failures when messages are identical but refs differ", async () => {
+      const resolved: OpenClawConfig = {
+        gateway: { port: 18789 },
+        secrets: {
+          providers: {
+            default: { source: "env" },
+          },
+        },
+      };
+      setSnapshot(resolved, resolved);
+
+      await expect(
+        runConfigCommand([
+          "config",
+          "set",
+          "--batch-json",
+          '[{"path":"channels.discord.token","ref":{"source":"exec","provider":"default","id":"DISCORD_BOT_TOKEN"}},{"path":"channels.telegram.botToken","ref":{"source":"exec","provider":"default","id":"TELEGRAM_BOT_TOKEN"}}]',
+          "--dry-run",
+          "--json",
+        ]),
+      ).rejects.toThrow("__exit__:1");
+
+      const raw = mockLog.mock.calls.at(-1)?.[0];
+      expect(typeof raw).toBe("string");
+      const payload = JSON.parse(String(raw)) as {
+        ok: boolean;
+        errors?: Array<{ kind: string; message: string; ref?: string }>;
+      };
+      expect(payload.ok).toBe(false);
+      const resolvabilityErrors =
+        payload.errors?.filter((entry) => entry.kind === "resolvability") ?? [];
+      expect(resolvabilityErrors).toHaveLength(2);
+      expect(
+        resolvabilityErrors.some((entry) => entry.ref === "exec:default:DISCORD_BOT_TOKEN"),
+      ).toBe(true);
+      expect(
+        resolvabilityErrors.some((entry) => entry.ref === "exec:default:TELEGRAM_BOT_TOKEN"),
+      ).toBe(true);
+    });
+
     it("aggregates schema and resolvability failures in --dry-run --json mode", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1254,7 +1473,7 @@ describe("config cli", () => {
     });
 
     it("fails dry-run when provider updates make existing refs unresolvable", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1297,7 +1516,7 @@ describe("config cli", () => {
     });
 
     it("fails dry-run for nested provider edits that make existing refs unresolvable", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         gateway: { port: 18789 },
         secrets: {
           providers: {
@@ -1378,7 +1597,7 @@ describe("config cli", () => {
 
   describe("config unset - issue #6070", () => {
     it("preserves existing config keys when unsetting a value", async () => {
-      const resolved: GodsEyeConfig = {
+      const resolved: OpenClawConfig = {
         agents: { list: [{ id: "main" }] },
         gateway: { port: 18789 },
         tools: {
@@ -1387,7 +1606,7 @@ describe("config cli", () => {
         },
         logging: { level: "debug" },
       };
-      const runtimeMerged: GodsEyeConfig = {
+      const runtimeMerged: OpenClawConfig = {
         ...withRuntimeDefaults(resolved),
       };
       setSnapshot(resolved, runtimeMerged);
@@ -1410,24 +1629,24 @@ describe("config cli", () => {
 
   describe("config file", () => {
     it("prints the active config file path", async () => {
-      const resolved: GodsEyeConfig = { gateway: { port: 18789 } };
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
       setSnapshot(resolved, resolved);
 
       await runConfigCommand(["config", "file"]);
 
-      expect(mockLog).toHaveBeenCalledWith("/tmp/godseye.json");
+      expect(mockLog).toHaveBeenCalledWith("/tmp/openclaw.json");
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
 
     it("handles config file path with home directory", async () => {
-      const resolved: GodsEyeConfig = { gateway: { port: 18789 } };
+      const resolved: OpenClawConfig = { gateway: { port: 18789 } };
       const snapshot = buildSnapshot({ resolved, config: resolved });
-      snapshot.path = "/home/user/.godseye/godseye.json";
+      snapshot.path = "/home/user/.openclaw/openclaw.json";
       mockReadConfigFileSnapshot.mockResolvedValueOnce(snapshot);
 
       await runConfigCommand(["config", "file"]);
 
-      expect(mockLog).toHaveBeenCalledWith("/home/user/.godseye/godseye.json");
+      expect(mockLog).toHaveBeenCalledWith("/home/user/.openclaw/openclaw.json");
     });
   });
 });

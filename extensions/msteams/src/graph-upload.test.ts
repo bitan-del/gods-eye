@@ -1,5 +1,5 @@
+import { withFetchPreconnect } from "godseye/plugin-sdk/testing";
 import { describe, expect, it, vi } from "vitest";
-import { withFetchPreconnect } from "../../../test/helpers/extensions/fetch-mock.js";
 import { buildTeamsFileInfoCard } from "./graph-chat.js";
 import { resolveGraphChatId, uploadToOneDrive, uploadToSharePoint } from "./graph-upload.js";
 
@@ -28,12 +28,13 @@ describe("graph upload helpers", () => {
     });
 
     expect(fetchFn).toHaveBeenCalledWith(
-      "https://graph.microsoft.com/v1.0/me/drive/root:/GodsEyeShared/a.txt:/content",
+      "https://graph.microsoft.com/v1.0/me/drive/root:/OpenClawShared/a.txt:/content",
       expect.objectContaining({
         method: "PUT",
         headers: expect.objectContaining({
           Authorization: "Bearer graph-token",
           "Content-Type": "application/octet-stream",
+          "User-Agent": expect.stringMatching(/^teams\.ts\[apps\]\/.+ OpenClaw\/.+$/),
         }),
       }),
     );
@@ -65,12 +66,13 @@ describe("graph upload helpers", () => {
     });
 
     expect(fetchFn).toHaveBeenCalledWith(
-      "https://graph.microsoft.com/v1.0/sites/site-123/drive/root:/GodsEyeShared/b.txt:/content",
+      "https://graph.microsoft.com/v1.0/sites/site-123/drive/root:/OpenClawShared/b.txt:/content",
       expect.objectContaining({
         method: "PUT",
         headers: expect.objectContaining({
           Authorization: "Bearer graph-token",
           "Content-Type": "application/octet-stream",
+          "User-Agent": expect.stringMatching(/^teams\.ts\[apps\]\/.+ OpenClaw\/.+$/),
         }),
       }),
     );
@@ -138,7 +140,10 @@ describe("resolveGraphChatId", () => {
     expect(fetchFn).toHaveBeenCalledWith(
       expect.stringContaining("/me/chats"),
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer graph-token" }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer graph-token",
+          "User-Agent": expect.stringMatching(/^teams\.ts\[apps\]\/.+ OpenClaw\/.+$/),
+        }),
       }),
     );
     const firstCall = fetchFn.mock.calls[0];

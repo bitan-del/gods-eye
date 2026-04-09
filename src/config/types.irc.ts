@@ -2,7 +2,7 @@ import type { CommonChannelMessagingConfig } from "./types.channel-messaging-com
 import type { GroupToolPolicyBySenderConfig, GroupToolPolicyConfig } from "./types.tools.js";
 
 export type IrcAccountConfig = CommonChannelMessagingConfig & {
-  /** IRC server hostname (example: irc.libera.chat). */
+  /** IRC server hostname (example: irc.example.com). */
   host?: string;
   /** IRC server port (default: 6697 with TLS, otherwise 6667). */
   port?: number;
@@ -12,7 +12,7 @@ export type IrcAccountConfig = CommonChannelMessagingConfig & {
   nick?: string;
   /** IRC USER field username (defaults to nick). */
   username?: string;
-  /** IRC USER field realname (default: GodsEye). */
+  /** IRC USER field realname (default: OpenClaw). */
   realname?: string;
   /** Optional IRC server password (sensitive). */
   password?: string;
@@ -33,7 +33,7 @@ export type IrcAccountConfig = CommonChannelMessagingConfig & {
     /** Email used with NickServ REGISTER. */
     registerEmail?: string;
   };
-  /** Auto-join channel list at connect (example: ["#godseye"]). */
+  /** Auto-join channel list at connect (example: ["#openclaw"]). */
   channels?: string[];
   /** Outbound text chunk size (chars). Default: 350. */
   textChunkLimit?: number;
@@ -59,3 +59,9 @@ export type IrcConfig = {
   /** Optional default account id when multiple accounts are configured. */
   defaultAccount?: string;
 } & IrcAccountConfig;
+
+declare module "./types.channels.js" {
+  interface ChannelsConfig {
+    irc?: IrcConfig;
+  }
+}

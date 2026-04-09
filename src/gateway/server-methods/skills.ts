@@ -3,88 +3,36 @@ import {
   resolveAgentWorkspaceDir,
   resolveDefaultAgentId,
 } from "../../agents/agent-scope.js";
-import { installSkillFromClawHub, updateSkillsFromClawHub } from "../../agents/skills-clawhub.js";
+import { canExecRequestNode } from "../../agents/exec-defaults.js";
+import {
+  installSkillFromClawHub,
+  searchSkillsFromClawHub,
+  updateSkillsFromClawHub,
+} from "../../agents/skills-clawhub.js";
 import { installSkill } from "../../agents/skills-install.js";
 import { buildWorkspaceSkillStatus } from "../../agents/skills-status.js";
 import { loadWorkspaceSkillEntries, type SkillEntry } from "../../agents/skills.js";
 import { listAgentWorkspaceDirs } from "../../agents/workspace-dirs.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { loadConfig, writeConfigFile } from "../../config/config.js";
-import {
-  fetchClawHubSkillDetail,
-  listClawHubPackages,
-  searchClawHubSkills,
-} from "../../infra/clawhub.js";
+import { fetchClawHubSkillDetail } from "../../infra/clawhub.js";
+import { formatErrorMessage } from "../../infra/errors.js";
 import { getRemoteSkillEligibility } from "../../infra/skills-remote.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 import {
   ErrorCodes,
   errorShape,
   formatValidationErrors,
   validateSkillsBinsParams,
+  validateSkillsDetailParams,
   validateSkillsInstallParams,
+  validateSkillsSearchParams,
   validateSkillsStatusParams,
-  validateSkillsStoreListParams,
   validateSkillsUpdateParams,
 } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
-
-// CJK character detection regex
-const CJK_RE = /[\u2E80-\u9FFF\uF900-\uFAFF\uFE30-\uFE4F]/;
-
-/** Translate a single text string from auto-detected language to English via Google Translate. */
-async function translateToEnglish(text: string): Promise<string> {
-  if (!text || !CJK_RE.test(text)) {
-    return text;
-  }
-  try {
-    const url = new URL("https://translate.googleapis.com/translate_a/single");
-    url.searchParams.set("client", "gtx");
-    url.searchParams.set("sl", "auto");
-    url.searchParams.set("tl", "en");
-    url.searchParams.set("dt", "t");
-    url.searchParams.set("q", text);
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) {
-      return text;
-    }
-    const data = (await res.json()) as [Array<[string]>];
-    // Response is [[["translated", "original", ...], ...], ...]
-    const translated = data?.[0]?.map((seg) => seg[0]).join("") ?? text;
-    return translated || text;
-  } catch {
-    return text;
-  }
-}
-
-type StoreItem = {
-  slug: string;
-  displayName: string;
-  summary: string;
-  score?: number;
-  owner?: string;
-  updatedAt?: number;
-};
-
-/** Auto-translate CJK fields in store items to English, in parallel. */
-async function translateStoreItems(items: StoreItem[]): Promise<StoreItem[]> {
-  const tasks = items.map(async (item) => {
-    const needsNameTranslation = CJK_RE.test(item.displayName);
-    const needsSummaryTranslation = CJK_RE.test(item.summary);
-    if (!needsNameTranslation && !needsSummaryTranslation) {
-      return item;
-    }
-    const [translatedName, translatedSummary] = await Promise.all([
-      needsNameTranslation
-        ? translateToEnglish(item.displayName)
-        : Promise.resolve(item.displayName),
-      needsSummaryTranslation ? translateToEnglish(item.summary) : Promise.resolve(item.summary),
-    ]);
-    return { ...item, displayName: translatedName, summary: translatedSummary };
-  });
-  return Promise.all(tasks);
-}
 
 function collectSkillBins(entries: SkillEntry[]): string[] {
   const bins = new Set<string>();
@@ -107,7 +55,7 @@ function collectSkillBins(entries: SkillEntry[]): string[] {
     for (const spec of install) {
       const specBins = spec?.bins ?? [];
       for (const bin of specBins) {
-        const trimmed = String(bin).trim();
+        const trimmed = normalizeOptionalString(String(bin)) ?? "";
         if (trimmed) {
           bins.add(trimmed);
         }
@@ -131,7 +79,7 @@ export const skillsHandlers: GatewayRequestHandlers = {
       return;
     }
     const cfg = loadConfig();
-    const agentIdRaw = typeof params?.agentId === "string" ? params.agentId.trim() : "";
+    const agentIdRaw = normalizeOptionalString(params?.agentId) ?? "";
     const agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : resolveDefaultAgentId(cfg);
     if (agentIdRaw) {
       const knownAgents = listAgentIds(cfg);
@@ -147,7 +95,14 @@ export const skillsHandlers: GatewayRequestHandlers = {
     const workspaceDir = resolveAgentWorkspaceDir(cfg, agentId);
     const report = buildWorkspaceSkillStatus(workspaceDir, {
       config: cfg,
-      eligibility: { remote: getRemoteSkillEligibility() },
+      eligibility: {
+        remote: getRemoteSkillEligibility({
+          advertiseExecNode: canExecRequestNode({
+            cfg,
+            agentId,
+          }),
+        }),
+      },
     });
     respond(true, report, undefined);
   },
@@ -173,6 +128,49 @@ export const skillsHandlers: GatewayRequestHandlers = {
       }
     }
     respond(true, { bins: [...bins].toSorted() }, undefined);
+  },
+  "skills.search": async ({ params, respond }) => {
+    if (!validateSkillsSearchParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid skills.search params: ${formatValidationErrors(validateSkillsSearchParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    try {
+      const results = await searchSkillsFromClawHub({
+        query: (params as { query?: string }).query,
+        limit: (params as { limit?: number }).limit,
+      });
+      respond(true, { results }, undefined);
+    } catch (err) {
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, formatErrorMessage(err)));
+    }
+  },
+  "skills.detail": async ({ params, respond }) => {
+    if (!validateSkillsDetailParams(params)) {
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `invalid skills.detail params: ${formatValidationErrors(validateSkillsDetailParams.errors)}`,
+        ),
+      );
+      return;
+    }
+    try {
+      const detail = await fetchClawHubSkillDetail({
+        slug: (params as { slug: string }).slug,
+      });
+      respond(true, detail, undefined);
+    } catch (err) {
+      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, formatErrorMessage(err)));
+    }
   },
   "skills.install": async ({ params, respond }) => {
     if (!validateSkillsInstallParams(params)) {
@@ -222,12 +220,14 @@ export const skillsHandlers: GatewayRequestHandlers = {
     const p = params as {
       name: string;
       installId: string;
+      dangerouslyForceUnsafeInstall?: boolean;
       timeoutMs?: number;
     };
     const result = await installSkill({
       workspaceDir: workspaceDirRaw,
       skillName: p.name,
       installId: p.installId,
+      dangerouslyForceUnsafeInstall: p.dangerouslyForceUnsafeInstall,
       timeoutMs: p.timeoutMs,
       config: cfg,
     });
@@ -336,91 +336,11 @@ export const skillsHandlers: GatewayRequestHandlers = {
     }
     entries[p.skillKey] = current;
     skills.entries = entries;
-    const nextConfig: GodsEyeConfig = {
+    const nextConfig: OpenClawConfig = {
       ...cfg,
       skills,
     };
     await writeConfigFile(nextConfig);
     respond(true, { ok: true, skillKey: p.skillKey, config: current }, undefined);
-  },
-  "skills.store.list": async ({ params, respond }) => {
-    if (!validateSkillsStoreListParams(params)) {
-      respond(
-        false,
-        undefined,
-        errorShape(
-          ErrorCodes.INVALID_REQUEST,
-          `invalid skills.store.list params: ${formatValidationErrors(validateSkillsStoreListParams.errors)}`,
-        ),
-      );
-      return;
-    }
-    try {
-      const p = (params ?? {}) as { query?: string; limit?: number };
-      if (p.query?.trim()) {
-        const results = await searchClawHubSkills({
-          query: p.query.trim(),
-          limit: p.limit ?? 50,
-        });
-        const items = results.map((r) => ({
-          slug: r.slug,
-          displayName: r.displayName,
-          summary: r.summary ?? "",
-          score: r.score,
-          updatedAt: r.updatedAt,
-        }));
-        const translated = await translateStoreItems(items);
-        respond(true, { items: translated }, undefined);
-      } else {
-        const result = await listClawHubPackages({ family: "skill", limit: p.limit ?? 50 });
-        const items = result.items.map((item) => ({
-          slug: item.name,
-          displayName: item.displayName,
-          summary: item.summary ?? "",
-          owner: item.ownerHandle ?? undefined,
-          updatedAt: item.updatedAt,
-        }));
-        const translated = await translateStoreItems(items);
-        respond(true, { items: translated }, undefined);
-      }
-    } catch (err) {
-      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
-    }
-  },
-  "skills.store.detail": async ({ params, respond }) => {
-    const slug = (params as { slug?: string })?.slug?.trim();
-    if (!slug) {
-      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "slug is required"));
-      return;
-    }
-    try {
-      const detail = await fetchClawHubSkillDetail({ slug });
-      respond(
-        true,
-        {
-          slug: detail.skill?.slug ?? slug,
-          displayName: await translateToEnglish(detail.skill?.displayName ?? slug),
-          summary: await translateToEnglish(detail.skill?.summary ?? ""),
-          version: detail.latestVersion?.version ?? "",
-          changelog: await translateToEnglish(detail.latestVersion?.changelog ?? ""),
-          license: (detail.latestVersion as { license?: string })?.license ?? "",
-          downloads: (detail.skill as { stats?: { downloads?: number } })?.stats?.downloads ?? 0,
-          stars: (detail.skill as { stats?: { stars?: number } })?.stats?.stars ?? 0,
-          installs:
-            (detail.skill as { stats?: { installsCurrent?: number } })?.stats?.installsCurrent ?? 0,
-          os: detail.metadata?.os ?? [],
-          owner: {
-            handle: detail.owner?.handle ?? "",
-            displayName: detail.owner?.displayName ?? "",
-            image: detail.owner?.image ?? "",
-          },
-          createdAt: detail.skill?.createdAt ?? 0,
-          updatedAt: detail.skill?.updatedAt ?? 0,
-        },
-        undefined,
-      );
-    } catch (err) {
-      respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, String(err)));
-    }
   },
 };

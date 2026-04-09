@@ -1,8 +1,8 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { STATE_DIR } from "../config/paths.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import type { PluginRegistry } from "./registry.js";
-import type { GodsEyePluginServiceContext, PluginLogger } from "./types.js";
+import type { OpenClawPluginServiceContext, PluginLogger } from "./types.js";
 
 const log = createSubsystemLogger("plugins");
 function createPluginLogger(): PluginLogger {
@@ -15,9 +15,9 @@ function createPluginLogger(): PluginLogger {
 }
 
 function createServiceContext(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   workspaceDir?: string;
-}): GodsEyePluginServiceContext {
+}): OpenClawPluginServiceContext {
   return {
     config: params.config,
     workspaceDir: params.workspaceDir,
@@ -32,7 +32,7 @@ export type PluginServicesHandle = {
 
 export async function startPluginServices(params: {
   registry: PluginRegistry;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   workspaceDir?: string;
 }): Promise<PluginServicesHandle> {
   const running: Array<{

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createMockGatewayService } from "../../daemon/service.test-helpers.js";
 import { captureEnv } from "../../test-utils/env.js";
 import type { GatewayRestartSnapshot } from "./restart-health.js";
+import { gatherDaemonStatus } from "./status.gather.js";
 
 const callGatewayStatusProbe = vi.fn<
   (opts?: unknown) => Promise<{ ok: boolean; url?: string; error?: string | null }>
@@ -41,8 +43,8 @@ const serviceReadCommand = vi.fn<
 >(async (_env?: NodeJS.ProcessEnv) => ({
   programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
   environment: {
-    GODSEYE_STATE_DIR: "/tmp/godseye-daemon",
-    GODSEYE_CONFIG_PATH: "/tmp/godseye-daemon/godseye.json",
+    OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
+    OPENCLAW_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
   },
 }));
 const resolveGatewayBindHost = vi.fn(
@@ -51,11 +53,13 @@ const resolveGatewayBindHost = vi.fn(
 const pickPrimaryTailnetIPv4 = vi.fn(() => "100.64.0.9");
 const resolveGatewayPort = vi.fn((_cfg?: unknown, _env?: unknown) => 18789);
 const resolveStateDir = vi.fn(
-  (env: NodeJS.ProcessEnv) => env.GODSEYE_STATE_DIR ?? "/tmp/godseye-cli",
+  (env: NodeJS.ProcessEnv) => env.OPENCLAW_STATE_DIR ?? "/tmp/openclaw-cli",
 );
 const resolveConfigPath = vi.fn((env: NodeJS.ProcessEnv, stateDir: string) => {
-  return env.GODSEYE_CONFIG_PATH ?? `${stateDir}/godseye.json`;
+  return env.OPENCLAW_CONFIG_PATH ?? `${stateDir}/openclaw.json`;
 });
+const readConfigFileSnapshotCalls = vi.fn((configPath: string) => configPath);
+const loadConfigCalls = vi.fn((configPath: string) => configPath);
 let daemonLoadedConfig: Record<string, unknown> = {
   gateway: {
     bind: "lan",
@@ -71,17 +75,27 @@ let cliLoadedConfig: Record<string, unknown> = {
 
 vi.mock("../../config/config.js", () => ({
   createConfigIO: ({ configPath }: { configPath: string }) => {
-    const isDaemon = configPath.includes("/godseye-daemon/");
+    const isDaemon = configPath.includes("/openclaw-daemon/");
+    const runtimeConfig = isDaemon ? daemonLoadedConfig : cliLoadedConfig;
     return {
-      readConfigFileSnapshot: async () => ({
-        path: configPath,
-        exists: true,
-        valid: true,
-        issues: [],
-      }),
-      loadConfig: () => (isDaemon ? daemonLoadedConfig : cliLoadedConfig),
+      readConfigFileSnapshot: async () => {
+        readConfigFileSnapshotCalls(configPath);
+        return {
+          path: configPath,
+          exists: true,
+          valid: true,
+          issues: [],
+          runtimeConfig,
+          config: runtimeConfig,
+        };
+      },
+      loadConfig: () => {
+        loadConfigCalls(configPath);
+        return runtimeConfig;
+      },
     };
   },
+  loadConfig: () => cliLoadedConfig,
   resolveConfigPath: (env: NodeJS.ProcessEnv, stateDir: string) => resolveConfigPath(env, stateDir),
   resolveGatewayPort: (cfg?: unknown, env?: unknown) => resolveGatewayPort(cfg, env),
   resolveStateDir: (env: NodeJS.ProcessEnv) => resolveStateDir(env),
@@ -100,19 +114,12 @@ vi.mock("../../daemon/service-audit.js", () => ({
 }));
 
 vi.mock("../../daemon/service.js", () => ({
-  resolveGatewayService: () => ({
-    label: "LaunchAgent",
-    loadedText: "loaded",
-    notLoadedText: "not loaded",
-    stage: vi.fn(async () => {}),
-    install: vi.fn(async () => {}),
-    uninstall: vi.fn(async () => {}),
-    stop: vi.fn(async () => {}),
-    restart: vi.fn(async () => ({ outcome: "completed" as const })),
-    isLoaded: serviceIsLoaded,
-    readCommand: serviceReadCommand,
-    readRuntime: serviceReadRuntime,
-  }),
+  resolveGatewayService: () =>
+    createMockGatewayService({
+      isLoaded: serviceIsLoaded,
+      readCommand: serviceReadCommand,
+      readRuntime: serviceReadRuntime,
+    }),
 }));
 
 vi.mock("../../gateway/net.js", () => ({
@@ -141,29 +148,29 @@ vi.mock("./restart-health.js", () => ({
   inspectGatewayRestart: (opts: unknown) => inspectGatewayRestart(opts),
 }));
 
-const { gatherDaemonStatus } = await import("./status.gather.js");
-
 describe("gatherDaemonStatus", () => {
   let envSnapshot: ReturnType<typeof captureEnv>;
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "GODSEYE_STATE_DIR",
-      "GODSEYE_CONFIG_PATH",
-      "GODSEYE_GATEWAY_TOKEN",
-      "GODSEYE_GATEWAY_PASSWORD",
+      "OPENCLAW_STATE_DIR",
+      "OPENCLAW_CONFIG_PATH",
+      "OPENCLAW_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
       "DAEMON_GATEWAY_TOKEN",
       "DAEMON_GATEWAY_PASSWORD",
     ]);
-    process.env.GODSEYE_STATE_DIR = "/tmp/godseye-cli";
-    process.env.GODSEYE_CONFIG_PATH = "/tmp/godseye-cli/godseye.json";
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
+    process.env.OPENCLAW_STATE_DIR = "/tmp/openclaw-cli";
+    process.env.OPENCLAW_CONFIG_PATH = "/tmp/openclaw-cli/openclaw.json";
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
     delete process.env.DAEMON_GATEWAY_TOKEN;
     delete process.env.DAEMON_GATEWAY_PASSWORD;
     callGatewayStatusProbe.mockClear();
     loadGatewayTlsRuntime.mockClear();
     inspectGatewayRestart.mockClear();
+    readConfigFileSnapshotCalls.mockClear();
+    loadConfigCalls.mockClear();
     daemonLoadedConfig = {
       gateway: {
         bind: "lan",
@@ -200,6 +207,56 @@ describe("gatherDaemonStatus", () => {
     expect(status.gateway?.probeUrl).toBe("wss://127.0.0.1:19001");
     expect(status.rpc?.url).toBe("wss://127.0.0.1:19001");
     expect(status.rpc?.ok).toBe(true);
+  });
+
+  it("forwards requireRpc and configPath to the daemon probe", async () => {
+    await gatherDaemonStatus({
+      rpc: {},
+      probe: true,
+      requireRpc: true,
+      deep: false,
+    });
+
+    expect(callGatewayStatusProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requireRpc: true,
+        configPath: "/tmp/openclaw-daemon/openclaw.json",
+      }),
+    );
+  });
+
+  it("reuses the shared CLI config snapshot when the daemon uses the same config path", async () => {
+    serviceReadCommand.mockResolvedValueOnce({
+      programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
+    });
+
+    await gatherDaemonStatus({
+      rpc: {},
+      probe: true,
+      deep: false,
+    });
+
+    expect(readConfigFileSnapshotCalls).toHaveBeenCalledTimes(1);
+    expect(readConfigFileSnapshotCalls).toHaveBeenCalledWith("/tmp/openclaw-cli/openclaw.json");
+    expect(loadConfigCalls).not.toHaveBeenCalled();
+  });
+
+  it("defaults unset daemon bind mode to loopback for host-side status reporting", async () => {
+    daemonLoadedConfig = {
+      gateway: {
+        tls: { enabled: true },
+        auth: { token: "daemon-token" },
+      },
+    };
+
+    const status = await gatherDaemonStatus({
+      rpc: {},
+      probe: true,
+      deep: false,
+    });
+
+    expect(resolveGatewayBindHost).toHaveBeenCalledWith("loopback", undefined);
+    expect(status.gateway?.bindMode).toBe("loopback");
   });
 
   it("does not force local TLS fingerprint when probe URL is explicitly overridden", async () => {
@@ -254,14 +311,14 @@ describe("gatherDaemonStatus", () => {
     serviceReadCommand.mockResolvedValueOnce({
       programArguments: ["/bin/node", "cli", "gateway", "--port", "19001"],
       environment: {
-        GODSEYE_GATEWAY_PORT: "19001",
-        GODSEYE_CONFIG_PATH: "/tmp/godseye-daemon/godseye.json",
-        GODSEYE_STATE_DIR: "/tmp/godseye-daemon",
+        OPENCLAW_GATEWAY_PORT: "19001",
+        OPENCLAW_CONFIG_PATH: "/tmp/openclaw-daemon/openclaw.json",
+        OPENCLAW_STATE_DIR: "/tmp/openclaw-daemon",
       } as Record<string, string>,
     });
     serviceReadRuntime.mockImplementationOnce(async (env?: NodeJS.ProcessEnv) => ({
-      status: env?.GODSEYE_GATEWAY_PORT === "19001" ? "running" : "unknown",
-      detail: env?.GODSEYE_GATEWAY_PORT ?? "missing-port",
+      status: env?.OPENCLAW_GATEWAY_PORT === "19001" ? "running" : "unknown",
+      detail: env?.OPENCLAW_GATEWAY_PORT ?? "missing-port",
     }));
 
     const status = await gatherDaemonStatus({
@@ -272,7 +329,7 @@ describe("gatherDaemonStatus", () => {
 
     expect(serviceReadRuntime).toHaveBeenCalledWith(
       expect.objectContaining({
-        GODSEYE_GATEWAY_PORT: "19001",
+        OPENCLAW_GATEWAY_PORT: "19001",
       }),
     );
     expect(status.service.runtime).toMatchObject({
@@ -435,7 +492,9 @@ describe("gatherDaemonStatus", () => {
     });
 
     expect(status.rpc?.ok).toBe(false);
-    expect(status.rpc?.authWarning).toContain("gateway.auth.token SecretRef is unavailable");
+    expect(status.rpc?.authWarning).toContain(
+      "gateway.auth.token SecretRef is unresolved in this command path",
+    );
     expect(status.rpc?.authWarning).toContain("probing without configured auth credentials");
   });
 
@@ -454,8 +513,8 @@ describe("gatherDaemonStatus", () => {
         },
       },
     };
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
-    process.env.GODSEYE_GATEWAY_PASSWORD = "env-password"; // pragma: allowlist secret
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "env-password"; // pragma: allowlist secret
 
     await gatherDaemonStatus({
       rpc: {},
@@ -489,7 +548,7 @@ describe("gatherDaemonStatus", () => {
       portUsage: {
         port: 19001,
         status: "busy",
-        listeners: [{ pid: 9000, ppid: 8999, commandLine: "godseye-gateway" }],
+        listeners: [{ pid: 9000, ppid: 8999, commandLine: "openclaw-gateway" }],
         hints: [],
       },
       healthy: false,

@@ -1,29 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { isGodsEyeManagedMatrixDevice, summarizeMatrixDeviceHealth } from "./device-health.js";
+import { isOpenClawManagedMatrixDevice, summarizeMatrixDeviceHealth } from "./device-health.js";
 
 describe("matrix device health", () => {
-  it("detects GodsEye-managed device names", () => {
-    expect(isGodsEyeManagedMatrixDevice("GodsEye Gateway")).toBe(true);
-    expect(isGodsEyeManagedMatrixDevice("GodsEye Debug")).toBe(true);
-    expect(isGodsEyeManagedMatrixDevice("Element iPhone")).toBe(false);
-    expect(isGodsEyeManagedMatrixDevice(null)).toBe(false);
+  it("detects OpenClaw-managed device names", () => {
+    expect(isOpenClawManagedMatrixDevice("OpenClaw Gateway")).toBe(true);
+    expect(isOpenClawManagedMatrixDevice("OpenClaw Debug")).toBe(true);
+    expect(isOpenClawManagedMatrixDevice("Element iPhone")).toBe(false);
+    expect(isOpenClawManagedMatrixDevice(null)).toBe(false);
   });
 
-  it("summarizes stale GodsEye-managed devices separately from the current device", () => {
+  it("summarizes stale OpenClaw-managed devices separately from the current device", () => {
     const summary = summarizeMatrixDeviceHealth([
       {
         deviceId: "du314Zpw3A",
-        displayName: "GodsEye Gateway",
+        displayName: "OpenClaw Gateway",
         current: true,
       },
       {
         deviceId: "BritdXC6iL",
-        displayName: "GodsEye Gateway",
+        displayName: "OpenClaw Gateway",
         current: false,
       },
       {
         deviceId: "G6NJU9cTgs",
-        displayName: "GodsEye Debug",
+        displayName: "OpenClaw Debug",
         current: false,
       },
       {
@@ -34,10 +34,10 @@ describe("matrix device health", () => {
     ]);
 
     expect(summary.currentDeviceId).toBe("du314Zpw3A");
-    expect(summary.currentGodsEyeDevices).toEqual([
+    expect(summary.currentOpenClawDevices).toEqual([
       expect.objectContaining({ deviceId: "du314Zpw3A" }),
     ]);
-    expect(summary.staleGodsEyeDevices).toEqual([
+    expect(summary.staleOpenClawDevices).toEqual([
       expect.objectContaining({ deviceId: "BritdXC6iL" }),
       expect.objectContaining({ deviceId: "G6NJU9cTgs" }),
     ]);

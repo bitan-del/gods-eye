@@ -81,11 +81,11 @@ describe("tool display details", () => {
     const detail = formatToolDetail(
       resolveToolDisplay({
         name: "web_search",
-        args: { query: "GodsEye docs", count: 3 },
+        args: { query: "OpenClaw docs", count: 3 },
       }),
     );
 
-    expect(detail).toBe('for "GodsEye docs" (top 3)');
+    expect(detail).toBe('for "OpenClaw docs" (top 3)');
   });
 
   it("summarizes exec commands with context", () => {
@@ -94,14 +94,14 @@ describe("tool display details", () => {
         name: "exec",
         args: {
           command:
-            "set -euo pipefail\ngit -C /Users/adityasingh/.godseye/workspace status --short | head -n 3",
-          workdir: "/Users/adityasingh/.godseye/workspace",
+            "set -euo pipefail\ngit -C /Users/adityasingh/.openclaw/workspace status --short | head -n 3",
+          workdir: "/Users/adityasingh/.openclaw/workspace",
         },
       }),
     );
 
     expect(detail).toContain("check git status -> show first 3 lines");
-    expect(detail).toContain(".godseye/workspace)");
+    expect(detail).toContain(".openclaw/workspace)");
   });
 
   it("moves cd path to context suffix and appends raw command", () => {
@@ -265,7 +265,7 @@ describe("tool display details", () => {
         name: "exec",
         args: {
           command: "python3 <<PY\nprint('x')\nPY",
-          workdir: "/Users/adityasingh/.godseye/workspace",
+          workdir: "/Users/adityasingh/.openclaw/workspace",
         },
       }),
     );
@@ -274,7 +274,7 @@ describe("tool display details", () => {
         name: "exec",
         args: {
           command: "node --check /tmp/test.js",
-          workdir: "/Users/adityasingh/.godseye/workspace",
+          workdir: "/Users/adityasingh/.openclaw/workspace",
         },
       }),
     );
@@ -283,7 +283,7 @@ describe("tool display details", () => {
         name: "exec",
         args: {
           command: "node -c /tmp/test.js",
-          workdir: "/Users/adityasingh/.godseye/workspace",
+          workdir: "/Users/adityasingh/.openclaw/workspace",
         },
       }),
     );

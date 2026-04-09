@@ -1,22 +1,22 @@
 {
-  "name": "@openclaw/qa-channel",
+  "name": "@godseye/qa-channel",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw QA synthetic channel plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
-    "openclaw": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*",
+    "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.4.10"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
-    "openclaw": {
+    "godseye": {
       "optional": true
     }
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ],
@@ -38,7 +38,7 @@
       }
     },
     "install": {
-      "npmSpec": "@openclaw/qa-channel",
+      "npmSpec": "@godseye/qa-channel",
       "defaultChoice": "npm",
       "minHostVersion": ">=2026.4.10"
     }

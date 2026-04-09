@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   rewriteUpdateFlagArgv,
+  resolveMissingPluginCommandMessage,
   shouldEnsureCliPath,
-  shouldRegisterPrimarySubcommand,
-  shouldSkipPluginCommandRegistration,
   shouldUseRootHelpFastPath,
 } from "./run-main.js";
 
@@ -41,98 +40,69 @@ describe("rewriteUpdateFlagArgv", () => {
   });
 });
 
-describe("shouldRegisterPrimarySubcommand", () => {
-  it("skips eager primary registration for help/version invocations", () => {
-    expect(shouldRegisterPrimarySubcommand(["node", "godseye", "status", "--help"])).toBe(false);
-    expect(shouldRegisterPrimarySubcommand(["node", "godseye", "-V"])).toBe(false);
-    expect(shouldRegisterPrimarySubcommand(["node", "godseye", "-v"])).toBe(false);
-  });
-
-  it("keeps eager primary registration for regular command runs", () => {
-    expect(shouldRegisterPrimarySubcommand(["node", "godseye", "status"])).toBe(true);
-    expect(shouldRegisterPrimarySubcommand(["node", "godseye", "acp", "-v"])).toBe(true);
-  });
-});
-
-describe("shouldSkipPluginCommandRegistration", () => {
-  it("skips plugin registration for root help/version", () => {
-    expect(
-      shouldSkipPluginCommandRegistration({
-        argv: ["node", "godseye", "--help"],
-        primary: null,
-        hasBuiltinPrimary: false,
-      }),
-    ).toBe(true);
-  });
-
-  it("skips plugin registration for builtin subcommand help", () => {
-    expect(
-      shouldSkipPluginCommandRegistration({
-        argv: ["node", "godseye", "config", "--help"],
-        primary: "config",
-        hasBuiltinPrimary: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("skips plugin registration for builtin command runs", () => {
-    expect(
-      shouldSkipPluginCommandRegistration({
-        argv: ["node", "godseye", "sessions", "--json"],
-        primary: "sessions",
-        hasBuiltinPrimary: true,
-      }),
-    ).toBe(true);
-  });
-
-  it("keeps plugin registration for non-builtin help", () => {
-    expect(
-      shouldSkipPluginCommandRegistration({
-        argv: ["node", "godseye", "voicecall", "--help"],
-        primary: "voicecall",
-        hasBuiltinPrimary: false,
-      }),
-    ).toBe(false);
-  });
-
-  it("keeps plugin registration for non-builtin command runs", () => {
-    expect(
-      shouldSkipPluginCommandRegistration({
-        argv: ["node", "godseye", "voicecall", "status"],
-        primary: "voicecall",
-        hasBuiltinPrimary: false,
-      }),
-    ).toBe(false);
-  });
-});
-
 describe("shouldEnsureCliPath", () => {
   it("skips path bootstrap for help/version invocations", () => {
-    expect(shouldEnsureCliPath(["node", "godseye", "--help"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "-V"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "-v"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "--help"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "-V"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "-v"])).toBe(false);
   });
 
   it("skips path bootstrap for read-only fast paths", () => {
-    expect(shouldEnsureCliPath(["node", "godseye", "status"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "--log-level", "debug", "status"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "sessions", "--json"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "config", "get", "update"])).toBe(false);
-    expect(shouldEnsureCliPath(["node", "godseye", "models", "status", "--json"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "status"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "--log-level", "debug", "status"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "sessions", "--json"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "config", "get", "update"])).toBe(false);
+    expect(shouldEnsureCliPath(["node", "openclaw", "models", "status", "--json"])).toBe(false);
   });
 
   it("keeps path bootstrap for mutating or unknown commands", () => {
-    expect(shouldEnsureCliPath(["node", "godseye", "message", "send"])).toBe(true);
-    expect(shouldEnsureCliPath(["node", "godseye", "voicecall", "status"])).toBe(true);
-    expect(shouldEnsureCliPath(["node", "godseye", "acp", "-v"])).toBe(true);
+    expect(shouldEnsureCliPath(["node", "openclaw", "message", "send"])).toBe(true);
+    expect(shouldEnsureCliPath(["node", "openclaw", "voicecall", "status"])).toBe(true);
+    expect(shouldEnsureCliPath(["node", "openclaw", "acp", "-v"])).toBe(true);
   });
 });
 
 describe("shouldUseRootHelpFastPath", () => {
   it("uses the fast path for root help only", () => {
-    expect(shouldUseRootHelpFastPath(["node", "godseye", "--help"])).toBe(true);
-    expect(shouldUseRootHelpFastPath(["node", "godseye", "--profile", "work", "-h"])).toBe(true);
-    expect(shouldUseRootHelpFastPath(["node", "godseye", "status", "--help"])).toBe(false);
-    expect(shouldUseRootHelpFastPath(["node", "godseye", "--help", "status"])).toBe(false);
+    expect(shouldUseRootHelpFastPath(["node", "openclaw", "--help"])).toBe(true);
+    expect(shouldUseRootHelpFastPath(["node", "openclaw", "--profile", "work", "-h"])).toBe(true);
+    expect(shouldUseRootHelpFastPath(["node", "openclaw", "status", "--help"])).toBe(false);
+    expect(shouldUseRootHelpFastPath(["node", "openclaw", "--help", "status"])).toBe(false);
+  });
+});
+
+describe("resolveMissingPluginCommandMessage", () => {
+  it("explains plugins.allow misses for a bundled plugin command", () => {
+    expect(
+      resolveMissingPluginCommandMessage("browser", {
+        plugins: {
+          allow: ["telegram"],
+        },
+      }),
+    ).toContain('`plugins.allow` excludes "browser"');
+  });
+
+  it("explains explicit bundled plugin disablement", () => {
+    expect(
+      resolveMissingPluginCommandMessage("browser", {
+        plugins: {
+          entries: {
+            browser: {
+              enabled: false,
+            },
+          },
+        },
+      }),
+    ).toContain("plugins.entries.browser.enabled=false");
+  });
+
+  it("returns null when the bundled plugin command is already allowed", () => {
+    expect(
+      resolveMissingPluginCommandMessage("browser", {
+        plugins: {
+          allow: ["browser"],
+        },
+      }),
+    ).toBeNull();
   });
 });

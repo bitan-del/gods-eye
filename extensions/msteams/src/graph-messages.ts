@@ -1,4 +1,5 @@
-import type { GodsEyeConfig } from "../runtime-api.js";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "../runtime-api.js";
 import { createMSTeamsConversationStoreFs } from "./conversation-store-fs.js";
 import {
   type GraphResponse,
@@ -74,7 +75,7 @@ async function resolveGraphConversationId(to: string): Promise<string> {
 
   // user:<aadId> — look up the conversation store for the real chat ID
   const store = createMSTeamsConversationStoreFs();
-  const found = await store.findByUserId(cleaned);
+  const found = await store.findPreferredDmByUserId(cleaned);
   if (!found) {
     throw new Error(
       `No conversation found for user:${cleaned}. ` +
@@ -109,7 +110,7 @@ function resolveConversationPath(to: string): {
     const [teamId, channelId] = cleaned.split("/", 2);
     return {
       kind: "channel",
-      basePath: `/teams/${encodeURIComponent(teamId!)}/channels/${encodeURIComponent(channelId!)}`,
+      basePath: `/teams/${encodeURIComponent(teamId)}/channels/${encodeURIComponent(channelId)}`,
       teamId,
       channelId,
     };
@@ -122,7 +123,7 @@ function resolveConversationPath(to: string): {
 }
 
 export type GetMessageMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   messageId: string;
 };
@@ -154,7 +155,7 @@ export async function getMessageMSTeams(
 }
 
 export type PinMessageMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   messageId: string;
 };
@@ -190,7 +191,7 @@ export async function pinMessageMSTeams(
 }
 
 export type UnpinMessageMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   /** The pinned-message resource ID returned by pin or list-pins (not the message ID). */
   pinnedMessageId: string;
@@ -213,7 +214,7 @@ export async function unpinMessageMSTeams(
 }
 
 export type ListPinsMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
 };
 
@@ -266,14 +267,14 @@ type GraphMessageWithReactions = GraphMessage & {
 };
 
 export type ReactMessageMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   messageId: string;
   reactionType: string;
 };
 
 export type ListReactionsMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   messageId: string;
 };
@@ -289,7 +290,7 @@ export type ListReactionsMSTeamsResult = {
 };
 
 function validateReactionType(raw: string): TeamsReactionType {
-  const normalized = raw.toLowerCase().trim();
+  const normalized = normalizeLowercaseStringOrEmpty(raw);
   if (!TEAMS_REACTION_TYPES.includes(normalized as TeamsReactionType)) {
     throw new Error(
       `Invalid reaction type "${raw}". Valid types: ${TEAMS_REACTION_TYPES.join(", ")}`,
@@ -369,7 +370,7 @@ export async function listReactionsMSTeams(
 // ---------------------------------------------------------------------------
 
 export type SearchMessagesMSTeamsParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   to: string;
   query: string;
   from?: string;

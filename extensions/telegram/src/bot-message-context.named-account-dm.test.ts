@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   getRecordedUpdateLastRoute,
   loadTelegramMessageContextRouteHarness,
@@ -6,19 +6,18 @@ import {
 } from "./bot-message-context.route-test-support.js";
 
 let buildTelegramMessageContextForTest: typeof import("./bot-message-context.test-harness.js").buildTelegramMessageContextForTest;
-let clearRuntimeConfigSnapshot: typeof import("../../../src/config/config.js").clearRuntimeConfigSnapshot;
-let setRuntimeConfigSnapshot: typeof import("../../../src/config/config.js").setRuntimeConfigSnapshot;
+let clearRuntimeConfigSnapshot: typeof import("godseye/plugin-sdk/config-runtime").clearRuntimeConfigSnapshot;
+let setRuntimeConfigSnapshot: typeof import("godseye/plugin-sdk/config-runtime").setRuntimeConfigSnapshot;
 
 describe("buildTelegramMessageContext named-account DM fallback", () => {
   const baseCfg = {
-    agents: { defaults: { model: "anthropic/claude-opus-4-5", workspace: "/tmp/godseye" } },
+    agents: { defaults: { model: "anthropic/claude-opus-4-5", workspace: "/tmp/openclaw" } },
     channels: { telegram: {} },
     messages: { groupChat: { mentionPatterns: [] } },
   };
 
   afterEach(() => {
     clearRuntimeConfigSnapshot();
-    recordInboundSessionMock.mockClear();
   });
 
   beforeAll(async () => {

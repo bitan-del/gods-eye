@@ -1,8 +1,10 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { DmPolicy, GroupPolicy } from "../../config/types.js";
 import type { SecretInput } from "../../config/types.secrets.js";
 import { resolveSecretInputModeForEnvSelection } from "../../plugins/provider-auth-mode.js";
 import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "../../routing/session-key.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
+import { normalizeStringEntries } from "../../shared/string-normalization.js";
 import type { WizardPrompter } from "../../wizard/prompts.js";
 import {
   moveSingleAccountChannelSectionToDefaultAccount,
@@ -49,10 +51,10 @@ export const promptAccountId: PromptAccountId = async (params: PromptAccountIdPa
 
   const entered = await params.prompter.text({
     message: `New ${params.label} account id`,
-    validate: (value) => (value?.trim() ? undefined : "Required"),
+    validate: (value) => (normalizeOptionalString(value) ? undefined : "Required"),
   });
   const normalized = normalizeAccountId(String(entered));
-  if (String(entered).trim() !== normalized) {
+  if ((normalizeOptionalString(entered) ?? "") !== normalized) {
     await params.prompter.note(
       `Normalized account id to "${normalized}".`,
       `${params.label} account`,
@@ -61,8 +63,8 @@ export const promptAccountId: PromptAccountId = async (params: PromptAccountIdPa
   return normalized;
 };
 
-export function addWildcardAllowFrom(allowFrom?: Array<string | number> | null): string[] {
-  const next = (allowFrom ?? []).map((v) => String(v).trim()).filter(Boolean);
+export function addWildcardAllowFrom(allowFrom?: ReadonlyArray<string | number> | null): string[] {
+  const next = normalizeStringEntries(allowFrom ?? []);
   if (!next.includes("*")) {
     next.push("*");
   }
@@ -73,7 +75,7 @@ export function mergeAllowFromEntries(
   current: Array<string | number> | null | undefined,
   additions: Array<string | number>,
 ): string[] {
-  const merged = [...(current ?? []), ...additions].map((v) => String(v).trim()).filter(Boolean);
+  const merged = normalizeStringEntries([...(current ?? []), ...additions]);
   return [...new Set(merged)];
 }
 
@@ -143,9 +145,7 @@ export function normalizeAllowFromEntries(
   entries: Array<string | number>,
   normalizeEntry?: (value: string) => string | null | undefined,
 ): string[] {
-  const normalized = entries
-    .map((entry) => String(entry).trim())
-    .filter(Boolean)
+  const normalized = normalizeStringEntries(entries)
     .map((entry) => {
       if (entry === "*") {
         return "*";
@@ -153,8 +153,7 @@ export function normalizeAllowFromEntries(
       if (!normalizeEntry) {
         return entry;
       }
-      const value = normalizeEntry(entry);
-      return typeof value === "string" ? value.trim() : "";
+      return normalizeOptionalString(normalizeEntry(entry)) ?? "";
     })
     .filter(Boolean);
   return [...new Set(normalized)];
@@ -171,7 +170,8 @@ export function createStandardChannelSetupStatus(params: {
   includeStatusLine?: boolean;
   resolveConfigured: ChannelSetupWizardStatus["resolveConfigured"];
   resolveExtraStatusLines?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
+    accountId?: string;
     configured: boolean;
   }) => string[] | Promise<string[]>;
 }): ChannelSetupWizardStatus {
@@ -190,13 +190,14 @@ export function createStandardChannelSetupStatus(params: {
   };
 
   if (params.includeStatusLine || params.resolveExtraStatusLines) {
-    status.resolveStatusLines = async ({ cfg, configured }) => {
+    status.resolveStatusLines = async ({ cfg, accountId, configured }) => {
       const lines = params.includeStatusLine
         ? [
             `${params.channelLabel}: ${configured ? params.configuredLabel : params.unconfiguredLabel}`,
           ]
         : [];
-      const extraLines = (await params.resolveExtraStatusLines?.({ cfg, configured })) ?? [];
+      const extraLines =
+        (await params.resolveExtraStatusLines?.({ cfg, accountId, configured })) ?? [];
       return [...lines, ...extraLines];
     };
   }
@@ -212,12 +213,12 @@ export function resolveSetupAccountId(params: {
 }
 
 export async function resolveAccountIdForConfigure(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   label: string;
   accountOverride?: string;
   shouldPromptAccountIds: boolean;
-  listAccountIds: (cfg: GodsEyeConfig) => string[];
+  listAccountIds: (cfg: OpenClawConfig) => string[];
   defaultAccountId: string;
 }): Promise<string> {
   const override = params.accountOverride?.trim();
@@ -236,11 +237,11 @@ export async function resolveAccountIdForConfigure(params: {
 }
 
 export function setAccountAllowFromForChannel(params: {
-  cfg: GodsEyeConfig;
-  channel: "imessage" | "signal";
+  cfg: OpenClawConfig;
+  channel: string;
   accountId: string;
   allowFrom: string[];
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const { cfg, channel, accountId, allowFrom } = params;
   return patchConfigForScopedAccount({
     cfg,
@@ -252,12 +253,12 @@ export function setAccountAllowFromForChannel(params: {
 }
 
 export function patchTopLevelChannelConfigSection(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   enabled?: boolean;
   clearFields?: string[];
   patch: Record<string, unknown>;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const channelConfig = {
     ...(params.cfg.channels?.[params.channel] as Record<string, unknown> | undefined),
   };
@@ -278,13 +279,13 @@ export function patchTopLevelChannelConfigSection(params: {
 }
 
 export function patchNestedChannelConfigSection(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   section: string;
   enabled?: boolean;
   clearFields?: string[];
   patch: Record<string, unknown>;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const channelConfig = {
     ...(params.cfg.channels?.[params.channel] as Record<string, unknown> | undefined),
   };
@@ -311,11 +312,11 @@ export function patchNestedChannelConfigSection(params: {
 }
 
 export function setTopLevelChannelAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   allowFrom: string[];
   enabled?: boolean;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchTopLevelChannelConfigSection({
     cfg: params.cfg,
     channel: params.channel,
@@ -325,12 +326,12 @@ export function setTopLevelChannelAllowFrom(params: {
 }
 
 export function setNestedChannelAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   section: string;
   allowFrom: string[];
   enabled?: boolean;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchNestedChannelConfigSection({
     cfg: params.cfg,
     channel: params.channel,
@@ -341,11 +342,11 @@ export function setNestedChannelAllowFrom(params: {
 }
 
 export function setTopLevelChannelDmPolicyWithAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   dmPolicy: DmPolicy;
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
-}): GodsEyeConfig {
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
+}): OpenClawConfig {
   const channelConfig =
     (params.cfg.channels?.[params.channel] as Record<string, unknown> | undefined) ?? {};
   const existingAllowFrom =
@@ -365,13 +366,13 @@ export function setTopLevelChannelDmPolicyWithAllowFrom(params: {
 }
 
 export function setNestedChannelDmPolicyWithAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   section: string;
   dmPolicy: DmPolicy;
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
   enabled?: boolean;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const channelConfig =
     (params.cfg.channels?.[params.channel] as Record<string, unknown> | undefined) ?? {};
   const sectionConfig =
@@ -395,11 +396,11 @@ export function setNestedChannelDmPolicyWithAllowFrom(params: {
 }
 
 export function setTopLevelChannelGroupPolicy(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: string;
   groupPolicy: GroupPolicy;
   enabled?: boolean;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchTopLevelChannelConfigSection({
     cfg: params.cfg,
     channel: params.channel,
@@ -413,9 +414,9 @@ export function createTopLevelChannelDmPolicy(params: {
   channel: string;
   policyKey: string;
   allowFromKey: string;
-  getCurrent: (cfg: GodsEyeConfig) => DmPolicy;
+  getCurrent: (cfg: OpenClawConfig) => DmPolicy;
   promptAllowFrom?: ChannelSetupDmPolicy["promptAllowFrom"];
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
 }): ChannelSetupDmPolicy {
   const setPolicy = createTopLevelChannelDmPolicySetter({
     channel: params.channel,
@@ -438,9 +439,9 @@ export function createNestedChannelDmPolicy(params: {
   section: string;
   policyKey: string;
   allowFromKey: string;
-  getCurrent: (cfg: GodsEyeConfig) => DmPolicy;
+  getCurrent: (cfg: OpenClawConfig) => DmPolicy;
   promptAllowFrom?: ChannelSetupDmPolicy["promptAllowFrom"];
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
   enabled?: boolean;
 }): ChannelSetupDmPolicy {
   const setPolicy = createNestedChannelDmPolicySetter({
@@ -462,8 +463,8 @@ export function createNestedChannelDmPolicy(params: {
 
 export function createTopLevelChannelDmPolicySetter(params: {
   channel: string;
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
-}): (cfg: GodsEyeConfig, dmPolicy: DmPolicy) => GodsEyeConfig {
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
+}): (cfg: OpenClawConfig, dmPolicy: DmPolicy) => OpenClawConfig {
   return (cfg, dmPolicy) =>
     setTopLevelChannelDmPolicyWithAllowFrom({
       cfg,
@@ -476,9 +477,9 @@ export function createTopLevelChannelDmPolicySetter(params: {
 export function createNestedChannelDmPolicySetter(params: {
   channel: string;
   section: string;
-  getAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number> | undefined;
+  getAllowFrom?: (cfg: OpenClawConfig) => Array<string | number> | undefined;
   enabled?: boolean;
-}): (cfg: GodsEyeConfig, dmPolicy: DmPolicy) => GodsEyeConfig {
+}): (cfg: OpenClawConfig, dmPolicy: DmPolicy) => OpenClawConfig {
   return (cfg, dmPolicy) =>
     setNestedChannelDmPolicyWithAllowFrom({
       cfg,
@@ -493,7 +494,7 @@ export function createNestedChannelDmPolicySetter(params: {
 export function createTopLevelChannelAllowFromSetter(params: {
   channel: string;
   enabled?: boolean;
-}): (cfg: GodsEyeConfig, allowFrom: string[]) => GodsEyeConfig {
+}): (cfg: OpenClawConfig, allowFrom: string[]) => OpenClawConfig {
   return (cfg, allowFrom) =>
     setTopLevelChannelAllowFrom({
       cfg,
@@ -507,7 +508,7 @@ export function createNestedChannelAllowFromSetter(params: {
   channel: string;
   section: string;
   enabled?: boolean;
-}): (cfg: GodsEyeConfig, allowFrom: string[]) => GodsEyeConfig {
+}): (cfg: OpenClawConfig, allowFrom: string[]) => OpenClawConfig {
   return (cfg, allowFrom) =>
     setNestedChannelAllowFrom({
       cfg,
@@ -521,7 +522,7 @@ export function createNestedChannelAllowFromSetter(params: {
 export function createTopLevelChannelGroupPolicySetter(params: {
   channel: string;
   enabled?: boolean;
-}): (cfg: GodsEyeConfig, groupPolicy: "open" | "allowlist" | "disabled") => GodsEyeConfig {
+}): (cfg: OpenClawConfig, groupPolicy: "open" | "allowlist" | "disabled") => OpenClawConfig {
   return (cfg, groupPolicy) =>
     setTopLevelChannelGroupPolicy({
       cfg,
@@ -532,10 +533,10 @@ export function createTopLevelChannelGroupPolicySetter(params: {
 }
 
 export function setChannelDmPolicyWithAllowFrom(params: {
-  cfg: GodsEyeConfig;
-  channel: "imessage" | "signal" | "telegram";
+  cfg: OpenClawConfig;
+  channel: string;
   dmPolicy: DmPolicy;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const { cfg, channel, dmPolicy } = params;
   const allowFrom =
     dmPolicy === "open" ? addWildcardAllowFrom(cfg.channels?.[channel]?.allowFrom) : undefined;
@@ -552,11 +553,11 @@ export function setChannelDmPolicyWithAllowFrom(params: {
   };
 }
 
-export function setLegacyChannelDmPolicyWithAllowFrom(params: {
-  cfg: GodsEyeConfig;
-  channel: LegacyDmChannel;
+export function setCompatChannelDmPolicyWithAllowFrom(params: {
+  cfg: OpenClawConfig;
+  channel: string;
   dmPolicy: DmPolicy;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const channelConfig = (params.cfg.channels?.[params.channel] as
     | {
         allowFrom?: Array<string | number>;
@@ -569,7 +570,7 @@ export function setLegacyChannelDmPolicyWithAllowFrom(params: {
   const existingAllowFrom = channelConfig.allowFrom ?? channelConfig.dm?.allowFrom;
   const allowFrom =
     params.dmPolicy === "open" ? addWildcardAllowFrom(existingAllowFrom) : undefined;
-  return patchLegacyDmChannelConfig({
+  return patchCompatDmChannelConfig({
     cfg: params.cfg,
     channel: params.channel,
     patch: {
@@ -579,12 +580,12 @@ export function setLegacyChannelDmPolicyWithAllowFrom(params: {
   });
 }
 
-export function setLegacyChannelAllowFrom(params: {
-  cfg: GodsEyeConfig;
-  channel: LegacyDmChannel;
+export function setCompatChannelAllowFrom(params: {
+  cfg: OpenClawConfig;
+  channel: string;
   allowFrom: string[];
-}): GodsEyeConfig {
-  return patchLegacyDmChannelConfig({
+}): OpenClawConfig {
+  return patchCompatDmChannelConfig({
     cfg: params.cfg,
     channel: params.channel,
     patch: { allowFrom: params.allowFrom },
@@ -592,11 +593,11 @@ export function setLegacyChannelAllowFrom(params: {
 }
 
 export function setAccountGroupPolicyForChannel(params: {
-  cfg: GodsEyeConfig;
-  channel: "discord" | "slack";
+  cfg: OpenClawConfig;
+  channel: string;
   accountId: string;
   groupPolicy: GroupPolicy;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchChannelConfigForAccount({
     cfg: params.cfg,
     channel: params.channel,
@@ -606,11 +607,11 @@ export function setAccountGroupPolicyForChannel(params: {
 }
 
 export function setAccountDmAllowFromForChannel(params: {
-  cfg: GodsEyeConfig;
-  channel: "discord" | "slack";
+  cfg: OpenClawConfig;
+  channel: string;
   accountId: string;
   allowFrom: string[];
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchChannelConfigForAccount({
     cfg: params.cfg,
     channel: params.channel,
@@ -619,9 +620,9 @@ export function setAccountDmAllowFromForChannel(params: {
   });
 }
 
-export function createLegacyCompatChannelDmPolicy(params: {
+export function createCompatChannelDmPolicy(params: {
   label: string;
-  channel: LegacyDmChannel;
+  channel: string;
   promptAllowFrom?: ChannelSetupDmPolicy["promptAllowFrom"];
 }): ChannelSetupDmPolicy {
   return {
@@ -629,30 +630,96 @@ export function createLegacyCompatChannelDmPolicy(params: {
     channel: params.channel,
     policyKey: `channels.${params.channel}.dmPolicy`,
     allowFromKey: `channels.${params.channel}.allowFrom`,
-    getCurrent: (cfg) =>
-      (
-        cfg.channels?.[params.channel] as
+    resolveConfigKeys: (_cfg, accountId) =>
+      accountId && accountId !== DEFAULT_ACCOUNT_ID
+        ? {
+            policyKey: `channels.${params.channel}.accounts.${accountId}.dmPolicy`,
+            allowFromKey: `channels.${params.channel}.accounts.${accountId}.allowFrom`,
+          }
+        : {
+            policyKey: `channels.${params.channel}.dmPolicy`,
+            allowFromKey: `channels.${params.channel}.allowFrom`,
+          },
+    getCurrent: (cfg, accountId) => {
+      const channelConfig =
+        (cfg.channels?.[params.channel] as
           | {
               dmPolicy?: DmPolicy;
               dm?: { policy?: DmPolicy };
+              accounts?: Record<string, { dmPolicy?: DmPolicy; dm?: { policy?: DmPolicy } }>;
             }
-          | undefined
-      )?.dmPolicy ??
-      (
-        cfg.channels?.[params.channel] as
-          | {
-              dmPolicy?: DmPolicy;
-              dm?: { policy?: DmPolicy };
-            }
-          | undefined
-      )?.dm?.policy ??
-      "pairing",
-    setPolicy: (cfg, policy) =>
-      setLegacyChannelDmPolicyWithAllowFrom({
-        cfg,
-        channel: params.channel,
-        dmPolicy: policy,
-      }),
+          | undefined) ?? {};
+      const accountConfig =
+        accountId && accountId !== DEFAULT_ACCOUNT_ID
+          ? channelConfig.accounts?.[accountId]
+          : undefined;
+      return (
+        accountConfig?.dmPolicy ??
+        accountConfig?.dm?.policy ??
+        channelConfig.dmPolicy ??
+        channelConfig.dm?.policy ??
+        "pairing"
+      );
+    },
+    setPolicy: (cfg, policy, accountId) =>
+      accountId && accountId !== DEFAULT_ACCOUNT_ID
+        ? patchChannelConfigForAccount({
+            cfg,
+            channel: params.channel,
+            accountId,
+            patch: {
+              dmPolicy: policy,
+              ...(policy === "open"
+                ? {
+                    allowFrom: addWildcardAllowFrom(
+                      (
+                        cfg.channels?.[params.channel] as
+                          | {
+                              accounts?: Record<
+                                string,
+                                {
+                                  allowFrom?: Array<string | number>;
+                                  dm?: { allowFrom?: Array<string | number> };
+                                }
+                              >;
+                            }
+                          | undefined
+                      )?.accounts?.[accountId]?.allowFrom ??
+                        (
+                          cfg.channels?.[params.channel] as
+                            | {
+                                allowFrom?: Array<string | number>;
+                                dm?: { allowFrom?: Array<string | number> };
+                              }
+                            | undefined
+                        )?.allowFrom ??
+                        (
+                          cfg.channels?.[params.channel] as
+                            | {
+                                accounts?: Record<
+                                  string,
+                                  { dm?: { allowFrom?: Array<string | number> } }
+                                >;
+                              }
+                            | undefined
+                        )?.accounts?.[accountId]?.dm?.allowFrom ??
+                        (
+                          cfg.channels?.[params.channel] as
+                            | {
+                                dm?: { allowFrom?: Array<string | number> };
+                              }
+                            | undefined
+                        )?.dm?.allowFrom,
+                    ),
+                  }
+                : {}),
+            },
+          })
+        : setCompatChannelDmPolicyWithAllowFrom({
+            cfg,
+            channel: params.channel,
+            dmPolicy: policy,
+          }),
     ...(params.promptAllowFrom ? { promptAllowFrom: params.promptAllowFrom } : {}),
   };
 }
@@ -683,7 +750,7 @@ export async function resolveGroupAllowlistWithLookupNotes<TResolved>(params: {
 }
 
 export function createAccountScopedAllowFromSection(params: {
-  channel: "discord" | "slack";
+  channel: string;
   credentialInputKey?: NonNullable<ChannelSetupWizard["allowFrom"]>["credentialInputKey"];
   helpTitle?: string;
   helpLines?: string[];
@@ -713,7 +780,7 @@ export function createAccountScopedAllowFromSection(params: {
 }
 
 export function createAccountScopedGroupAccessSection<TResolved>(params: {
-  channel: "discord" | "slack";
+  channel: string;
   label: string;
   placeholder: string;
   helpTitle?: string;
@@ -727,10 +794,10 @@ export function createAccountScopedGroupAccessSection<TResolved>(params: {
   >;
   fallbackResolved: (entries: string[]) => TResolved;
   applyAllowlist: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     resolved: TResolved;
-  }) => GodsEyeConfig;
+  }) => OpenClawConfig;
 }): NonNullable<ChannelSetupWizard["groupAccess"]> {
   return {
     label: params.label,
@@ -776,21 +843,14 @@ export function createAccountScopedGroupAccessSection<TResolved>(params: {
   };
 }
 
-type AccountScopedChannel =
-  | "bluebubbles"
-  | "discord"
-  | "imessage"
-  | "line"
-  | "signal"
-  | "slack"
-  | "telegram";
-type LegacyDmChannel = "discord" | "slack";
+type AccountScopedChannel = string;
+type CompatDmChannel = string;
 
-export function patchLegacyDmChannelConfig(params: {
-  cfg: GodsEyeConfig;
-  channel: LegacyDmChannel;
+export function patchCompatDmChannelConfig(params: {
+  cfg: OpenClawConfig;
+  channel: string;
   patch: Record<string, unknown>;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const { cfg, channel, patch } = params;
   const channelConfig = (cfg.channels?.[channel] as Record<string, unknown> | undefined) ?? {};
   const dmConfig = (channelConfig.dm as Record<string, unknown> | undefined) ?? {};
@@ -811,10 +871,10 @@ export function patchLegacyDmChannelConfig(params: {
 }
 
 export function setSetupChannelEnabled(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   channel: string,
   enabled: boolean,
-): GodsEyeConfig {
+): OpenClawConfig {
   const channelConfig = (cfg.channels?.[channel] as Record<string, unknown> | undefined) ?? {};
   return {
     ...cfg,
@@ -829,15 +889,21 @@ export function setSetupChannelEnabled(
 }
 
 function patchConfigForScopedAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: AccountScopedChannel;
   accountId: string;
   patch: Record<string, unknown>;
   ensureEnabled: boolean;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   const { cfg, channel, accountId, patch, ensureEnabled } = params;
+  const channelConfig = cfg.channels?.[channel] as
+    | { accounts?: Record<string, unknown> }
+    | undefined;
+  const hasExistingAccounts = Boolean(
+    channelConfig?.accounts && Object.keys(channelConfig.accounts).length > 0,
+  );
   const seededCfg =
-    accountId === DEFAULT_ACCOUNT_ID
+    accountId === DEFAULT_ACCOUNT_ID || hasExistingAccounts
       ? cfg
       : moveSingleAccountChannelSectionToDefaultAccount({
           cfg,
@@ -854,11 +920,11 @@ function patchConfigForScopedAccount(params: {
 }
 
 export function patchChannelConfigForAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: AccountScopedChannel;
   accountId: string;
   patch: Record<string, unknown>;
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return patchConfigForScopedAccount({
     ...params,
     ensureEnabled: true,
@@ -866,15 +932,15 @@ export function patchChannelConfigForAccount(params: {
 }
 
 export function applySingleTokenPromptResult(params: {
-  cfg: GodsEyeConfig;
-  channel: "discord" | "telegram";
+  cfg: OpenClawConfig;
+  channel: string;
   accountId: string;
-  tokenPatchKey: "token" | "botToken";
+  tokenPatchKey: string;
   tokenResult: {
     useEnv: boolean;
     token: SecretInput | null;
   };
-}): GodsEyeConfig {
+}): OpenClawConfig {
   let next = params.cfg;
   if (params.tokenResult.useEnv) {
     next = patchChannelConfigForAccount({
@@ -959,7 +1025,7 @@ export type SingleChannelSecretInputPromptResult =
   | { action: "set"; value: SecretInput; resolvedValue: string };
 
 export async function runSingleChannelSecretStep(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: Pick<WizardPrompter, "confirm" | "text" | "select" | "note">;
   providerHint: string;
   credentialLabel: string;
@@ -973,14 +1039,14 @@ export async function runSingleChannelSecretStep(params: {
   inputPrompt: string;
   preferredEnvVar?: string;
   onMissingConfigured?: () => Promise<void>;
-  applyUseEnv?: (cfg: GodsEyeConfig) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  applyUseEnv?: (cfg: OpenClawConfig) => OpenClawConfig | Promise<OpenClawConfig>;
   applySet?: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     value: SecretInput,
     resolvedValue: string,
-  ) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  ) => OpenClawConfig | Promise<OpenClawConfig>;
 }): Promise<{
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   action: SingleChannelSecretInputPromptResult["action"];
   resolvedValue?: string;
 }> {
@@ -1014,7 +1080,7 @@ export async function runSingleChannelSecretStep(params: {
     return {
       cfg: params.applyUseEnv ? await params.applyUseEnv(params.cfg) : params.cfg,
       action: result.action,
-      resolvedValue: params.envValue?.trim() || undefined,
+      resolvedValue: normalizeOptionalString(params.envValue),
     };
   }
 
@@ -1035,7 +1101,7 @@ export async function runSingleChannelSecretStep(params: {
 }
 
 export async function promptSingleChannelSecretInput(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: Pick<WizardPrompter, "confirm" | "text" | "select" | "note">;
   providerHint: string;
   credentialLabel: string;
@@ -1054,7 +1120,7 @@ export async function promptSingleChannelSecretInput(params: {
     copy: {
       modeMessage: `How do you want to provide this ${params.credentialLabel}?`,
       plaintextLabel: `Enter ${params.credentialLabel}`,
-      plaintextHint: "Stores the credential directly in GodsEye config",
+      plaintextHint: "Stores the credential directly in OpenClaw config",
       refLabel: "Use external secret provider",
       refHint: "Stores a reference to env or configured external secret providers",
     },
@@ -1097,9 +1163,9 @@ export async function promptSingleChannelSecretInput(params: {
     preferredEnvVar: params.preferredEnvVar,
     copy: {
       sourceMessage: `Where is this ${params.credentialLabel} stored?`,
-      envVarPlaceholder: params.preferredEnvVar ?? "GODSEYE_SECRET",
+      envVarPlaceholder: params.preferredEnvVar ?? "OPENCLAW_SECRET",
       envVarFormatError:
-        'Use an env var name like "GODSEYE_SECRET" (uppercase letters, numbers, underscores).',
+        'Use an env var name like "OPENCLAW_SECRET" (uppercase letters, numbers, underscores).',
       noProvidersMessage:
         "No file/exec secret providers are configured yet. Add one under secrets.providers, or select Environment variable.",
     },
@@ -1113,7 +1179,7 @@ export async function promptSingleChannelSecretInput(params: {
 
 type ParsedAllowFromResult = { entries: string[]; error?: string };
 
-export async function promptParsedAllowFromForAccount<TConfig extends GodsEyeConfig>(params: {
+export async function promptParsedAllowFromForAccount<TConfig extends OpenClawConfig>(params: {
   cfg: TConfig;
   accountId?: string;
   defaultAccountId: string;
@@ -1147,7 +1213,7 @@ export async function promptParsedAllowFromForAccount<TConfig extends GodsEyeCon
     placeholder: params.placeholder,
     initialValue: existing[0] ? String(existing[0]) : undefined,
     validate: (value) => {
-      const raw = String(value ?? "").trim();
+      const raw = normalizeOptionalString(value) ?? "";
       if (!raw) {
         return "Required";
       }
@@ -1167,7 +1233,7 @@ export async function promptParsedAllowFromForAccount<TConfig extends GodsEyeCon
   });
 }
 
-export function createPromptParsedAllowFromForAccount<TConfig extends GodsEyeConfig>(params: {
+export function createPromptParsedAllowFromForAccount<TConfig extends OpenClawConfig>(params: {
   defaultAccountId: string | ((cfg: TConfig) => string);
   noteTitle?: string;
   noteLines?: string[];
@@ -1203,8 +1269,8 @@ export function createPromptParsedAllowFromForAccount<TConfig extends GodsEyeCon
 }
 
 export async function promptParsedAllowFromForScopedChannel(params: {
-  cfg: GodsEyeConfig;
-  channel: "imessage" | "signal";
+  cfg: OpenClawConfig;
+  channel: string;
   accountId?: string;
   defaultAccountId: string;
   prompter: Pick<WizardPrompter, "note" | "text">;
@@ -1214,10 +1280,10 @@ export async function promptParsedAllowFromForScopedChannel(params: {
   placeholder: string;
   parseEntries: (raw: string) => ParsedAllowFromResult;
   getExistingAllowFrom: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
   }) => Array<string | number>;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   return await promptParsedAllowFromForAccount({
     cfg: params.cfg,
     accountId: params.accountId,
@@ -1241,48 +1307,61 @@ export async function promptParsedAllowFromForScopedChannel(params: {
 
 export function createTopLevelChannelParsedAllowFromPrompt(params: {
   channel: string;
-  defaultAccountId: string;
+  defaultAccountId: string | ((cfg: OpenClawConfig) => string);
   enabled?: boolean;
   noteTitle?: string;
   noteLines?: string[];
   message: string;
   placeholder: string;
   parseEntries: (raw: string) => ParsedAllowFromResult;
-  getExistingAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number>;
+  getExistingAllowFrom?: (cfg: OpenClawConfig) => Array<string | number>;
   mergeEntries?: (params: { existing: Array<string | number>; parsed: string[] }) => string[];
 }): NonNullable<ChannelSetupDmPolicy["promptAllowFrom"]> {
   const setAllowFrom = createTopLevelChannelAllowFromSetter({
     channel: params.channel,
     ...(params.enabled ? { enabled: true } : {}),
   });
-  return createPromptParsedAllowFromForAccount({
-    defaultAccountId: params.defaultAccountId,
+  const sharedParams = {
     ...(params.noteTitle ? { noteTitle: params.noteTitle } : {}),
     ...(params.noteLines ? { noteLines: params.noteLines } : {}),
     message: params.message,
     placeholder: params.placeholder,
     parseEntries: params.parseEntries,
-    getExistingAllowFrom: ({ cfg }) =>
+    getExistingAllowFrom: ({ cfg }: { cfg: OpenClawConfig }) =>
       params.getExistingAllowFrom?.(cfg) ??
       (cfg.channels?.[params.channel] as { allowFrom?: Array<string | number> } | undefined)
         ?.allowFrom ??
       [],
     ...(params.mergeEntries ? { mergeEntries: params.mergeEntries } : {}),
-    applyAllowFrom: ({ cfg, allowFrom }) => setAllowFrom(cfg, allowFrom),
+    applyAllowFrom: ({ cfg, allowFrom }: { cfg: OpenClawConfig; allowFrom: string[] }) =>
+      setAllowFrom(cfg, allowFrom),
+  };
+
+  if (typeof params.defaultAccountId === "function") {
+    return createPromptParsedAllowFromForAccount({
+      defaultAccountId: params.defaultAccountId,
+      ...sharedParams,
+    });
+  }
+
+  const defaultAccountId: string = params.defaultAccountId;
+  return createPromptParsedAllowFromForAccount({
+    defaultAccountId,
+    ...sharedParams,
   });
 }
 
 export function createNestedChannelParsedAllowFromPrompt(params: {
   channel: string;
   section: string;
-  defaultAccountId: string;
+  defaultAccountId: string | ((cfg: OpenClawConfig) => string);
   enabled?: boolean;
   noteTitle?: string;
   noteLines?: string[];
   message: string;
   placeholder: string;
   parseEntries: (raw: string) => ParsedAllowFromResult;
-  getExistingAllowFrom?: (cfg: GodsEyeConfig) => Array<string | number>;
+  getExistingAllowFrom?: (cfg: OpenClawConfig) => Array<string | number>;
   mergeEntries?: (params: { existing: Array<string | number>; parsed: string[] }) => string[];
 }): NonNullable<ChannelSetupDmPolicy["promptAllowFrom"]> {
   const setAllowFrom = createNestedChannelAllowFromSetter({
@@ -1290,14 +1369,14 @@ export function createNestedChannelParsedAllowFromPrompt(params: {
     section: params.section,
     ...(params.enabled ? { enabled: true } : {}),
   });
-  return createPromptParsedAllowFromForAccount({
-    defaultAccountId: params.defaultAccountId,
+  const defaultAccountId = params.defaultAccountId;
+  const sharedParams = {
     ...(params.noteTitle ? { noteTitle: params.noteTitle } : {}),
     ...(params.noteLines ? { noteLines: params.noteLines } : {}),
     message: params.message,
     placeholder: params.placeholder,
     parseEntries: params.parseEntries,
-    getExistingAllowFrom: ({ cfg }) =>
+    getExistingAllowFrom: ({ cfg }: { cfg: OpenClawConfig }) =>
       params.getExistingAllowFrom?.(cfg) ??
       (
         (cfg.channels?.[params.channel] as Record<string, unknown> | undefined)?.[params.section] as
@@ -1306,7 +1385,20 @@ export function createNestedChannelParsedAllowFromPrompt(params: {
       )?.allowFrom ??
       [],
     ...(params.mergeEntries ? { mergeEntries: params.mergeEntries } : {}),
-    applyAllowFrom: ({ cfg, allowFrom }) => setAllowFrom(cfg, allowFrom),
+    applyAllowFrom: ({ cfg, allowFrom }: { cfg: OpenClawConfig; allowFrom: string[] }) =>
+      setAllowFrom(cfg, allowFrom),
+  };
+
+  if (typeof defaultAccountId === "function") {
+    return createPromptParsedAllowFromForAccount({
+      defaultAccountId,
+      ...sharedParams,
+    });
+  }
+
+  return createPromptParsedAllowFromForAccount({
+    defaultAccountId,
+    ...sharedParams,
   });
 }
 
@@ -1423,7 +1515,7 @@ export async function promptResolvedAllowFrom(params: {
       message: params.message,
       placeholder: params.placeholder,
       initialValue: params.existing[0] ? String(params.existing[0]) : undefined,
-      validate: (value) => (String(value ?? "").trim() ? undefined : "Required"),
+      validate: (value) => (normalizeOptionalString(value) ? undefined : "Required"),
     });
     const parts = params.parseInputs(String(entry));
     if (!params.token) {
@@ -1459,8 +1551,8 @@ export async function promptResolvedAllowFrom(params: {
 }
 
 export async function promptLegacyChannelAllowFrom(params: {
-  cfg: GodsEyeConfig;
-  channel: LegacyDmChannel;
+  cfg: OpenClawConfig;
+  channel: CompatDmChannel;
   prompter: WizardPrompter;
   existing: Array<string | number>;
   token?: string | null;
@@ -1471,7 +1563,7 @@ export async function promptLegacyChannelAllowFrom(params: {
   parseId: (value: string) => string | null;
   invalidWithoutTokenNote: string;
   resolveEntries: (params: { token: string; entries: string[] }) => Promise<AllowFromResolution[]>;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   await params.prompter.note(params.noteLines.join("\n"), params.noteTitle);
   const unique = await promptResolvedAllowFrom({
     prompter: params.prompter,
@@ -1485,7 +1577,7 @@ export async function promptLegacyChannelAllowFrom(params: {
     invalidWithoutTokenNote: params.invalidWithoutTokenNote,
     resolveEntries: params.resolveEntries,
   });
-  return setLegacyChannelAllowFrom({
+  return setCompatChannelAllowFrom({
     cfg: params.cfg,
     channel: params.channel,
     allowFrom: unique,
@@ -1493,13 +1585,13 @@ export async function promptLegacyChannelAllowFrom(params: {
 }
 
 export async function promptLegacyChannelAllowFromForAccount<TAccount>(params: {
-  cfg: GodsEyeConfig;
-  channel: LegacyDmChannel;
+  cfg: OpenClawConfig;
+  channel: CompatDmChannel;
   prompter: WizardPrompter;
   accountId?: string;
   defaultAccountId: string;
-  resolveAccount: (cfg: GodsEyeConfig, accountId: string) => TAccount;
-  resolveExisting: (account: TAccount, cfg: GodsEyeConfig) => Array<string | number>;
+  resolveAccount: (cfg: OpenClawConfig, accountId: string) => TAccount;
+  resolveExisting: (account: TAccount, cfg: OpenClawConfig) => Array<string | number>;
   resolveToken: (account: TAccount) => string | null | undefined;
   noteTitle: string;
   noteLines: string[];
@@ -1508,7 +1600,7 @@ export async function promptLegacyChannelAllowFromForAccount<TAccount>(params: {
   parseId: (value: string) => string | null;
   invalidWithoutTokenNote: string;
   resolveEntries: (params: { token: string; entries: string[] }) => Promise<AllowFromResolution[]>;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   const accountId = resolveSetupAccountId({
     accountId: params.accountId,
     defaultAccountId: params.defaultAccountId,
@@ -1529,3 +1621,9 @@ export async function promptLegacyChannelAllowFromForAccount<TAccount>(params: {
     resolveEntries: params.resolveEntries,
   });
 }
+
+// Backwards-compatible aliases for existing setup SDK consumers.
+export const patchLegacyDmChannelConfig = patchCompatDmChannelConfig;
+export const setLegacyChannelDmPolicyWithAllowFrom = setCompatChannelDmPolicyWithAllowFrom;
+export const setLegacyChannelAllowFrom = setCompatChannelAllowFrom;
+export const createLegacyCompatChannelDmPolicy = createCompatChannelDmPolicy;

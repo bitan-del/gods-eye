@@ -80,7 +80,7 @@ describe("extractToolResultMediaPaths", () => {
   });
 
   it("falls back to details.path when image content exists but no MEDIA: text", () => {
-    // Pi SDK read tool doesn't include MEDIA: but GodsEye imageResult
+    // Pi SDK read tool doesn't include MEDIA: but OpenClaw imageResult
     // sets details.path as fallback.
     const result = {
       content: [
@@ -263,6 +263,18 @@ describe("extractToolResultMediaPaths", () => {
 
   it("trusts image_generate local MEDIA paths", () => {
     expect(isToolResultMediaTrusted("image_generate")).toBe(true);
+  });
+
+  it("trusts music_generate local MEDIA paths", () => {
+    expect(isToolResultMediaTrusted("music_generate")).toBe(true);
+  });
+
+  it("trusts video_generate local MEDIA paths", () => {
+    expect(isToolResultMediaTrusted("video_generate")).toBe(true);
+  });
+
+  it("trusts bundled plugin tool local MEDIA paths", () => {
+    expect(isToolResultMediaTrusted("music_generate")).toBe(true);
   });
 
   it("does not trust local MEDIA paths for MCP-provenance results", () => {

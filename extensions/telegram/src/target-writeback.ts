@@ -1,11 +1,18 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { readConfigFileSnapshotForWrite, writeConfigFile } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import {
+  readConfigFileSnapshotForWrite,
+  writeConfigFile,
+} from "godseye/plugin-sdk/config-runtime";
 import {
   loadCronStore,
   resolveCronStorePath,
   saveCronStore,
 } from "godseye/plugin-sdk/config-runtime";
 import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "godseye/plugin-sdk/text-runtime";
 import {
   normalizeTelegramChatId,
   normalizeTelegramLookupTarget,
@@ -27,7 +34,7 @@ function normalizeTelegramLookupTargetForMatch(raw: string): string | undefined 
   if (!normalized) {
     return undefined;
   }
-  return normalized.startsWith("@") ? normalized.toLowerCase() : normalized;
+  return normalized.startsWith("@") ? normalizeLowercaseStringOrEmpty(normalized) : normalized;
 }
 
 function normalizeTelegramTargetForMatch(raw: string): string | undefined {
@@ -85,7 +92,7 @@ function rewriteTargetIfMatch(params: {
   if (typeof params.rawValue !== "string" && typeof params.rawValue !== "number") {
     return null;
   }
-  const value = String(params.rawValue).trim();
+  const value = normalizeOptionalString(String(params.rawValue)) ?? "";
   if (!value) {
     return null;
   }
@@ -96,7 +103,7 @@ function rewriteTargetIfMatch(params: {
 }
 
 function replaceTelegramDefaultToTargets(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   matchKey: string;
   resolvedTarget: string;
 }): boolean {
@@ -135,7 +142,7 @@ function replaceTelegramDefaultToTargets(params: {
 }
 
 export async function maybePersistResolvedTelegramTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   rawTarget: string;
   resolvedChatId: string;
   verbose?: boolean;

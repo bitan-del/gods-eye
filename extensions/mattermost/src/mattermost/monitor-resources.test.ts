@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const fetchMattermostChannel = vi.hoisted(() => vi.fn());
 const fetchMattermostUser = vi.hoisted(() => vi.fn());
@@ -18,6 +18,20 @@ vi.mock("./interactions.js", () => ({
 }));
 
 describe("mattermost monitor resources", () => {
+  let createMattermostMonitorResources: typeof import("./monitor-resources.js").createMattermostMonitorResources;
+
+  beforeAll(async () => {
+    ({ createMattermostMonitorResources } = await import("./monitor-resources.js"));
+  });
+
+  beforeEach(() => {
+    fetchMattermostChannel.mockReset();
+    fetchMattermostUser.mockReset();
+    sendMattermostTyping.mockReset();
+    updateMattermostPost.mockReset();
+    buildButtonProps.mockReset();
+  });
+
   it("downloads media, preserves auth headers, and infers media kind", async () => {
     const fetchRemoteMedia = vi.fn(async () => ({
       buffer: new Uint8Array([1, 2, 3]),
@@ -27,11 +41,10 @@ describe("mattermost monitor resources", () => {
       path: "/tmp/file.png",
       contentType: "image/png",
     }));
-    const { createMattermostMonitorResources } = await import("./monitor-resources.js");
 
     const resources = createMattermostMonitorResources({
       accountId: "default",
-      callbackUrl: "https://godseye.test/callback",
+      callbackUrl: "https://openclaw.test/callback",
       client: {
         apiBaseUrl: "https://chat.example.com/api/v4",
         baseUrl: "https://chat.example.com",
@@ -69,11 +82,10 @@ describe("mattermost monitor resources", () => {
     fetchMattermostChannel.mockResolvedValue({ id: "chan-1", name: "town-square" });
     fetchMattermostUser.mockResolvedValue({ id: "user-1", username: "alice" });
     buildButtonProps.mockReturnValue(undefined);
-    const { createMattermostMonitorResources } = await import("./monitor-resources.js");
 
     const resources = createMattermostMonitorResources({
       accountId: "default",
-      callbackUrl: "https://godseye.test/callback",
+      callbackUrl: "https://openclaw.test/callback",
       client: {} as never,
       logger: {},
       mediaMaxBytes: 1024,
@@ -119,12 +131,11 @@ describe("mattermost monitor resources", () => {
   });
 
   it("proxies typing indicators to the mattermost client helper", async () => {
-    const { createMattermostMonitorResources } = await import("./monitor-resources.js");
     const client = {} as never;
 
     const resources = createMattermostMonitorResources({
       accountId: "default",
-      callbackUrl: "https://godseye.test/callback",
+      callbackUrl: "https://openclaw.test/callback",
       client,
       logger: {},
       mediaMaxBytes: 1024,

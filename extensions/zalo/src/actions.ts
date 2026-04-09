@@ -1,11 +1,12 @@
-import { createLazyRuntimeNamedExport } from "godseye/plugin-sdk/lazy-runtime";
-import { listEnabledZaloAccounts } from "./accounts.js";
+import { jsonResult, readStringParam } from "godseye/plugin-sdk/channel-actions";
 import type {
   ChannelMessageActionAdapter,
   ChannelMessageActionName,
-  GodsEyeConfig,
-} from "./runtime-api.js";
-import { extractToolSend, jsonResult, readStringParam } from "./runtime-api.js";
+} from "godseye/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { createLazyRuntimeNamedExport } from "godseye/plugin-sdk/lazy-runtime";
+import { extractToolSend } from "godseye/plugin-sdk/tool-send";
+import { listEnabledZaloAccounts, resolveZaloAccount } from "./accounts.js";
 
 const loadZaloActionsRuntime = createLazyRuntimeNamedExport(
   () => import("./actions.runtime.js"),
@@ -14,15 +15,15 @@ const loadZaloActionsRuntime = createLazyRuntimeNamedExport(
 
 const providerId = "zalo";
 
-function listEnabledAccounts(cfg: GodsEyeConfig) {
-  return listEnabledZaloAccounts(cfg).filter(
-    (account) => account.enabled && account.tokenSource !== "none",
-  );
+function listEnabledAccounts(cfg: OpenClawConfig, accountId?: string | null) {
+  return (
+    accountId ? [resolveZaloAccount({ cfg, accountId })] : listEnabledZaloAccounts(cfg)
+  ).filter((account) => account.enabled && account.tokenSource !== "none");
 }
 
 export const zaloMessageActions: ChannelMessageActionAdapter = {
-  describeMessageTool: ({ cfg }) => {
-    const accounts = listEnabledAccounts(cfg);
+  describeMessageTool: ({ cfg, accountId }) => {
+    const accounts = listEnabledAccounts(cfg, accountId);
     if (accounts.length === 0) {
       return null;
     }

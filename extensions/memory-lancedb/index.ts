@@ -1,5 +1,5 @@
 /**
- * GodsEye Memory (LanceDB) Plugin
+ * OpenClaw Memory (LanceDB) Plugin
  *
  * Long-term memory with vector search for AI conversations.
  * Uses LanceDB for storage and OpenAI for embeddings.
@@ -9,9 +9,10 @@
 import { randomUUID } from "node:crypto";
 import type * as LanceDB from "@lancedb/lancedb";
 import { Type } from "@sinclair/typebox";
-import { ensureGlobalUndiciEnvProxyDispatcher } from "godseye/plugin-sdk/infra-runtime";
 import OpenAI from "openai";
-import { definePluginEntry, type GodsEyePluginApi } from "./api.js";
+import { ensureGlobalUndiciEnvProxyDispatcher } from "godseye/plugin-sdk/runtime-env";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import { definePluginEntry, type OpenClawPluginApi } from "./api.js";
 import {
   DEFAULT_CAPTURE_MAX_CHARS,
   MEMORY_CATEGORIES,
@@ -259,7 +260,7 @@ export function shouldCapture(text: string, options?: { maxChars?: number }): bo
 }
 
 export function detectCategory(text: string): MemoryCategory {
-  const lower = text.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(text);
   if (/prefer|radši|like|love|hate|want/i.test(lower)) {
     return "preference";
   }
@@ -286,7 +287,7 @@ export default definePluginEntry({
   kind: "memory" as const,
   configSchema: memoryConfigSchema,
 
-  register(api: GodsEyePluginApi) {
+  register(api: OpenClawPluginApi) {
     const cfg = memoryConfigSchema.parse(api.pluginConfig);
     const resolvedDbPath = api.resolvePath(cfg.dbPath!);
     const { model, dimensions, apiKey, baseUrl } = cfg.embedding;

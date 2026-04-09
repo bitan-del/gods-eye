@@ -18,8 +18,9 @@ const sessionEntryState = vi.hoisted(() => ({
   sessionId: "",
 }));
 
-vi.mock("../session-utils.js", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../session-utils.js")>();
+vi.mock("../session-utils.js", async () => {
+  const original =
+    await vi.importActual<typeof import("../session-utils.js")>("../session-utils.js");
   return {
     ...original,
     loadSessionEntry: () => ({
@@ -81,7 +82,7 @@ afterEach(() => {
 
 describe("chat abort transcript persistence", () => {
   it("persists run-scoped abort partial with rpc metadata and idempotency", async () => {
-    const { transcriptPath, sessionId } = await createTranscriptFixture("godseye-chat-abort-run-");
+    const { transcriptPath, sessionId } = await createTranscriptFixture("openclaw-chat-abort-run-");
     const runId = "idem-abort-run-1";
     const respond = vi.fn();
     const context = createChatAbortContext({
@@ -134,7 +135,7 @@ describe("chat abort transcript persistence", () => {
     expect(persisted[0]).toMatchObject({
       stopReason: "stop",
       idempotencyKey: `${runId}:assistant`,
-      godseyeAbort: {
+      openclawAbort: {
         aborted: true,
         origin: "rpc",
         runId,
@@ -144,7 +145,7 @@ describe("chat abort transcript persistence", () => {
 
   it("persists session-scoped abort partials with rpc metadata", async () => {
     const { transcriptPath, sessionId } = await createTranscriptFixture(
-      "godseye-chat-abort-session-",
+      "openclaw-chat-abort-session-",
     );
     const respond = vi.fn();
     const context = createChatAbortContext({
@@ -184,7 +185,7 @@ describe("chat abort transcript persistence", () => {
 
     expect(runAPersisted).toMatchObject({
       idempotencyKey: "run-a:assistant",
-      godseyeAbort: {
+      openclawAbort: {
         aborted: true,
         origin: "rpc",
         runId: "run-a",
@@ -194,7 +195,7 @@ describe("chat abort transcript persistence", () => {
   });
 
   it("persists /stop partials with stop-command metadata", async () => {
-    const { transcriptPath, sessionId } = await createTranscriptFixture("godseye-chat-stop-");
+    const { transcriptPath, sessionId } = await createTranscriptFixture("openclaw-chat-stop-");
     const respond = vi.fn();
     const context = createChatAbortContext({
       chatAbortControllers: new Map([["run-stop-1", createActiveRun("main", { sessionId })]]),
@@ -231,7 +232,7 @@ describe("chat abort transcript persistence", () => {
 
     expect(persisted).toMatchObject({
       idempotencyKey: "run-stop-1:assistant",
-      godseyeAbort: {
+      openclawAbort: {
         aborted: true,
         origin: "stop-command",
         runId: "run-stop-1",
@@ -241,7 +242,7 @@ describe("chat abort transcript persistence", () => {
 
   it("skips run-scoped transcript persistence when partial text is blank", async () => {
     const { transcriptPath, sessionId } = await createTranscriptFixture(
-      "godseye-chat-abort-run-blank-",
+      "openclaw-chat-abort-run-blank-",
     );
     const runId = "idem-abort-run-blank";
     const respond = vi.fn();

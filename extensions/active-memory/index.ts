@@ -8,13 +8,13 @@ import {
   resolveAgentDir,
   resolveAgentEffectiveModelPrimary,
   resolveAgentWorkspaceDir,
-} from "openclaw/plugin-sdk/agent-runtime";
+} from "godseye/plugin-sdk/agent-runtime";
 import {
   resolveSessionStoreEntry,
   updateSessionStore,
   type OpenClawConfig,
-} from "openclaw/plugin-sdk/config-runtime";
-import { definePluginEntry, type OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+} from "godseye/plugin-sdk/config-runtime";
+import { definePluginEntry, type OpenClawPluginApi } from "godseye/plugin-sdk/plugin-entry";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEFAULT_AGENT_ID = "main";

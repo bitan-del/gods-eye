@@ -1,8 +1,7 @@
 import { describeAccountSnapshot } from "godseye/plugin-sdk/account-helpers";
 import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
 import { createHybridChannelConfigAdapter } from "godseye/plugin-sdk/channel-config-helpers";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { createChatChannelPlugin, type ChannelPlugin } from "godseye/plugin-sdk/core";
+import { createChatChannelPlugin, type ChannelPlugin } from "godseye/plugin-sdk/channel-core";
 import { createLazyRuntimeModule } from "godseye/plugin-sdk/lazy-runtime";
 import { createRuntimeOutboundDelegates } from "godseye/plugin-sdk/outbound-runtime";
 import {
@@ -10,34 +9,35 @@ import {
   createDefaultChannelRuntimeState,
 } from "godseye/plugin-sdk/status-helpers";
 import { tlonChannelConfigSchema } from "./config-schema.js";
+import { tlonDoctor } from "./doctor.js";
 import { resolveTlonOutboundSessionRoute } from "./session-route.js";
-import {
-  applyTlonSetupConfig,
-  createTlonSetupWizardBase,
-  resolveTlonSetupConfigured,
-  tlonSetupAdapter,
-} from "./setup-core.js";
+import { createTlonSetupWizardBase, tlonSetupAdapter } from "./setup-core.js";
 import {
   formatTargetHint,
   normalizeShip,
   parseTlonTarget,
   resolveTlonOutboundTarget,
 } from "./targets.js";
-import { resolveTlonAccount, listTlonAccountIds } from "./types.js";
-import { validateUrbitBaseUrl } from "./urbit/base-url.js";
+import { listTlonAccountIds, resolveTlonAccount } from "./types.js";
 
 const TLON_CHANNEL_ID = "tlon" as const;
 
 const loadTlonChannelRuntime = createLazyRuntimeModule(() => import("./channel.runtime.js"));
 
 const tlonSetupWizardProxy = createTlonSetupWizardBase({
-  resolveConfigured: async ({ cfg }) =>
-    await (await loadTlonChannelRuntime()).tlonSetupWizard.status.resolveConfigured({ cfg }),
-  resolveStatusLines: async ({ cfg, configured }) =>
+  resolveConfigured: async ({ cfg, accountId }) =>
+    await (
+      await loadTlonChannelRuntime()
+    ).tlonSetupWizard.status.resolveConfigured({
+      cfg,
+      accountId,
+    }),
+  resolveStatusLines: async ({ cfg, accountId, configured }) =>
     (await (
       await loadTlonChannelRuntime()
     ).tlonSetupWizard.status.resolveStatusLines?.({
       cfg,
+      accountId,
       configured,
     })) ?? [],
   finalize: async (params) =>
@@ -94,6 +94,7 @@ export const tlonPlugin = createChatChannelPlugin({
           },
         }),
     },
+    doctor: tlonDoctor,
     messaging: {
       normalizeTarget: (target) => {
         const parsed = parseTlonTarget(target);

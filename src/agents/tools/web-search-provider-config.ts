@@ -1,11 +1,11 @@
-import type { GodsEyeConfig } from "../../config/config.js";
-import { resolvePluginWebSearchConfig } from "../../config/legacy-web-search.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { resolvePluginWebSearchConfig } from "../../config/plugin-web-search-config.js";
 
 type ConfiguredWebSearchProvider = NonNullable<
-  NonNullable<NonNullable<GodsEyeConfig["tools"]>["web"]>["search"]
+  NonNullable<NonNullable<OpenClawConfig["tools"]>["web"]>["search"]
 >["provider"];
 
-export type WebSearchConfig = NonNullable<GodsEyeConfig["tools"]>["web"] extends infer Web
+export type WebSearchConfig = NonNullable<OpenClawConfig["tools"]>["web"] extends infer Web
   ? Web extends { search?: infer Search }
     ? Search
     : undefined
@@ -20,9 +20,9 @@ function cloneWithDescriptors<T extends object>(value: T | undefined): T {
 }
 
 export function withForcedProvider(
-  config: GodsEyeConfig | undefined,
+  config: OpenClawConfig | undefined,
   provider: ConfiguredWebSearchProvider,
-): GodsEyeConfig {
+): OpenClawConfig {
   const next = cloneWithDescriptors(config ?? {});
   const tools = cloneWithDescriptors(next.tools ?? {});
   const web = cloneWithDescriptors(tools.web ?? {});
@@ -102,7 +102,7 @@ export function mergeScopedSearchConfig(
   return next;
 }
 
-export function resolveSearchConfig(cfg?: GodsEyeConfig): WebSearchConfig {
+export function resolveSearchConfig(cfg?: OpenClawConfig): WebSearchConfig {
   const search = cfg?.tools?.web?.search;
   if (!search || typeof search !== "object") {
     return undefined;
@@ -111,7 +111,7 @@ export function resolveSearchConfig(cfg?: GodsEyeConfig): WebSearchConfig {
 }
 
 export function resolveProviderWebSearchPluginConfig(
-  config: GodsEyeConfig | undefined,
+  config: OpenClawConfig | undefined,
   pluginId: string,
 ): Record<string, unknown> | undefined {
   return resolvePluginWebSearchConfig(config, pluginId);
@@ -128,7 +128,7 @@ function ensureObject(target: Record<string, unknown>, key: string): Record<stri
 }
 
 export function setProviderWebSearchPluginConfigValue(
-  configTarget: GodsEyeConfig,
+  configTarget: OpenClawConfig,
   pluginId: string,
   key: string,
   value: unknown,

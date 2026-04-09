@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { expandTilde } from "./platform.js";
 
 // Canonical media tags. `qqmedia` is the generic auto-routing tag.

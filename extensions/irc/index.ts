@@ -1,15 +1,20 @@
-import type { ChannelPlugin } from "godseye/plugin-sdk/core";
-import { defineChannelPluginEntry } from "godseye/plugin-sdk/core";
-import { ircPlugin } from "./src/channel.js";
-import { setIrcRuntime } from "./src/runtime.js";
+import { defineBundledChannelEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export { ircPlugin } from "./src/channel.js";
-export { setIrcRuntime } from "./src/runtime.js";
-
-export default defineChannelPluginEntry({
+export default defineBundledChannelEntry({
   id: "irc",
   name: "IRC",
   description: "IRC channel plugin",
-  plugin: ircPlugin as ChannelPlugin,
-  setRuntime: setIrcRuntime,
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./channel-plugin-api.js",
+    exportName: "ircPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+  runtime: {
+    specifier: "./runtime-api.js",
+    exportName: "setIrcRuntime",
+  },
 });

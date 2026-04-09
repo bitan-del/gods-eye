@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
 import { resolveTelegramStreamMode } from "./bot/helpers.js";
 import { resolveTelegramDraftStreamingChunking } from "./draft-chunking.js";
@@ -36,7 +36,7 @@ describe("resolveTelegramDraftStreamingChunking", () => {
   });
 
   it("clamps to telegram.textChunkLimit", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: { telegram: { allowFrom: ["*"], textChunkLimit: 150 } },
     };
     const chunking = resolveTelegramDraftStreamingChunking(cfg, "default");
@@ -48,17 +48,21 @@ describe("resolveTelegramDraftStreamingChunking", () => {
   });
 
   it("supports per-account overrides", () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         telegram: {
           allowFrom: ["*"],
           accounts: {
             default: {
               allowFrom: ["*"],
-              draftChunk: {
-                minChars: 10,
-                maxChars: 20,
-                breakPreference: "sentence",
+              streaming: {
+                preview: {
+                  chunk: {
+                    minChars: 10,
+                    maxChars: 20,
+                    breakPreference: "sentence",
+                  },
+                },
               },
             },
           },

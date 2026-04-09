@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 import { createFeishuCardInteractionEnvelope } from "./card-interaction.js";
+import { feishuPlugin } from "./channel.js";
 import { looksLikeFeishuId, normalizeFeishuTarget, resolveReceiveIdType } from "./targets.js";
 
 const probeFeishuMock = vi.hoisted(() => vi.fn());
@@ -55,10 +56,48 @@ vi.mock("./channel.runtime.js", () => ({
   },
 }));
 
-import { feishuPlugin } from "./channel.js";
+vi.mock("../../../src/channels/plugins/bundled.js", () => ({
+  bundledChannelPlugins: [],
+  bundledChannelSetupPlugins: [],
+}));
 
-function getDescribedActions(cfg: GodsEyeConfig): string[] {
-  return [...(feishuPlugin.actions?.describeMessageTool?.({ cfg })?.actions ?? [])];
+function getDescribedActions(cfg: OpenClawConfig, accountId?: string): string[] {
+  return [...(feishuPlugin.actions?.describeMessageTool?.({ cfg, accountId })?.actions ?? [])];
+}
+
+function createLegacyFeishuButtonCard(value: { command?: string; text?: string }) {
+  return {
+    schema: "2.0",
+    body: {
+      elements: [
+        {
+          tag: "action",
+          actions: [
+            {
+              tag: "button",
+              text: { tag: "plain_text", content: "Run /new" },
+              value,
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+async function expectLegacyFeishuCardPayloadRejected(cfg: OpenClawConfig, card: unknown) {
+  await expect(
+    feishuPlugin.actions?.handleAction?.({
+      action: "send",
+      params: { to: "chat:oc_group_1", card },
+      cfg,
+      accountId: undefined,
+      toolContext: {},
+    } as never),
+  ).rejects.toThrow(
+    "Feishu card buttons that trigger text or commands must use structured interaction envelopes.",
+  );
+  expect(sendCardFeishuMock).not.toHaveBeenCalled();
 }
 
 describe("feishuPlugin.status.probeAccount", () => {
@@ -76,7 +115,7 @@ describe("feishuPlugin.status.probeAccount", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const account = feishuPlugin.config.resolveAccount(cfg, "main");
     probeFeishuMock.mockResolvedValueOnce({ ok: true, appId: "cli_main" });
@@ -99,6 +138,78 @@ describe("feishuPlugin.status.probeAccount", () => {
   });
 });
 
+describe("feishuPlugin.pairing.notifyApproval", () => {
+  beforeEach(() => {
+    sendMessageFeishuMock.mockReset();
+    sendMessageFeishuMock.mockResolvedValue({ messageId: "pairing-msg", chatId: "ou_user" });
+  });
+
+  it("preserves accountId when sending pairing approvals", async () => {
+    const cfg = {
+      channels: {
+        feishu: {
+          accounts: {
+            work: {
+              appId: "cli_work",
+              appSecret: "secret_work",
+              enabled: true,
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+
+    await feishuPlugin.pairing?.notifyApproval?.({
+      cfg,
+      id: "ou_user",
+      accountId: "work",
+    });
+
+    expect(sendMessageFeishuMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cfg,
+        to: "ou_user",
+        accountId: "work",
+      }),
+    );
+  });
+});
+
+describe("feishuPlugin messaging", () => {
+  it("owns sender/topic session inheritance candidates", () => {
+    expect(
+      feishuPlugin.messaging?.resolveSessionConversation?.({
+        kind: "group",
+        rawId: "oc_group_chat:topic:om_topic_root:sender:ou_topic_user",
+      }),
+    ).toEqual({
+      id: "oc_group_chat:topic:om_topic_root:sender:ou_topic_user",
+      baseConversationId: "oc_group_chat",
+      parentConversationCandidates: ["oc_group_chat:topic:om_topic_root", "oc_group_chat"],
+    });
+    expect(
+      feishuPlugin.messaging?.resolveSessionConversation?.({
+        kind: "group",
+        rawId: "oc_group_chat:topic:om_topic_root",
+      }),
+    ).toEqual({
+      id: "oc_group_chat:topic:om_topic_root",
+      baseConversationId: "oc_group_chat",
+      parentConversationCandidates: ["oc_group_chat"],
+    });
+    expect(
+      feishuPlugin.messaging?.resolveSessionConversation?.({
+        kind: "group",
+        rawId: "oc_group_chat:Topic:om_topic_root:Sender:ou_topic_user",
+      }),
+    ).toEqual({
+      id: "oc_group_chat:topic:om_topic_root:sender:ou_topic_user",
+      baseConversationId: "oc_group_chat",
+      parentConversationCandidates: ["oc_group_chat:topic:om_topic_root", "oc_group_chat"],
+    });
+  });
+});
+
 describe("feishuPlugin actions", () => {
   const cfg = {
     channels: {
@@ -111,7 +222,7 @@ describe("feishuPlugin actions", () => {
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,7 +258,7 @@ describe("feishuPlugin actions", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(getDescribedActions(disabledCfg)).toEqual([
       "send",
@@ -160,6 +271,58 @@ describe("feishuPlugin actions", () => {
       "member-info",
       "channel-info",
       "channel-list",
+    ]);
+  });
+
+  it("honors the selected Feishu account during discovery", () => {
+    const cfg = {
+      channels: {
+        feishu: {
+          enabled: true,
+          actions: { reactions: false },
+          accounts: {
+            default: {
+              enabled: true,
+              appId: "cli_main",
+              appSecret: "secret_main",
+              actions: { reactions: false },
+            },
+            work: {
+              enabled: true,
+              appId: "cli_work",
+              appSecret: "secret_work",
+              actions: { reactions: true },
+            },
+          },
+        },
+      },
+    } as OpenClawConfig;
+
+    expect(getDescribedActions(cfg, "default")).toEqual([
+      "send",
+      "read",
+      "edit",
+      "thread-reply",
+      "pin",
+      "list-pins",
+      "unpin",
+      "member-info",
+      "channel-info",
+      "channel-list",
+    ]);
+    expect(getDescribedActions(cfg, "work")).toEqual([
+      "send",
+      "read",
+      "edit",
+      "thread-reply",
+      "pin",
+      "list-pins",
+      "unpin",
+      "member-info",
+      "channel-info",
+      "channel-list",
+      "react",
+      "reactions",
     ]);
   });
 
@@ -248,69 +411,17 @@ describe("feishuPlugin actions", () => {
   });
 
   it("rejects raw legacy card command payloads", async () => {
-    const legacyCard = {
-      schema: "2.0",
-      body: {
-        elements: [
-          {
-            tag: "action",
-            actions: [
-              {
-                tag: "button",
-                text: { tag: "plain_text", content: "Run /new" },
-                value: { command: "/new" },
-              },
-            ],
-          },
-        ],
-      },
-    };
-
-    await expect(
-      feishuPlugin.actions?.handleAction?.({
-        action: "send",
-        params: { to: "chat:oc_group_1", card: legacyCard },
-        cfg,
-        accountId: undefined,
-        toolContext: {},
-      } as never),
-    ).rejects.toThrow(
-      "Feishu card buttons that trigger text or commands must use structured interaction envelopes.",
+    await expectLegacyFeishuCardPayloadRejected(
+      cfg,
+      createLegacyFeishuButtonCard({ command: "/new" }),
     );
-    expect(sendCardFeishuMock).not.toHaveBeenCalled();
   });
 
   it("rejects raw legacy card text payloads", async () => {
-    const legacyCard = {
-      schema: "2.0",
-      body: {
-        elements: [
-          {
-            tag: "action",
-            actions: [
-              {
-                tag: "button",
-                text: { tag: "plain_text", content: "Run /new" },
-                value: { text: "/new" },
-              },
-            ],
-          },
-        ],
-      },
-    };
-
-    await expect(
-      feishuPlugin.actions?.handleAction?.({
-        action: "send",
-        params: { to: "chat:oc_group_1", card: legacyCard },
-        cfg,
-        accountId: undefined,
-        toolContext: {},
-      } as never),
-    ).rejects.toThrow(
-      "Feishu card buttons that trigger text or commands must use structured interaction envelopes.",
+    await expectLegacyFeishuCardPayloadRejected(
+      cfg,
+      createLegacyFeishuButtonCard({ text: "/new" }),
     );
-    expect(sendCardFeishuMock).not.toHaveBeenCalled();
   });
 
   it("allows non-button controls to carry text metadata values", async () => {

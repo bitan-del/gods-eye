@@ -3,4 +3,4 @@ export {
   escapeRegExp,
   resolveUserPath,
   shortenHomePath,
-} from "openclaw/plugin-sdk/browser-config-support";
+} from "godseye/plugin-sdk/browser-config-support";

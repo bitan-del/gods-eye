@@ -12,14 +12,14 @@ import {
 describe("resolveEffectiveHomeDir", () => {
   it.each([
     {
-      name: "prefers GODSEYE_HOME over HOME and USERPROFILE",
+      name: "prefers OPENCLAW_HOME over HOME and USERPROFILE",
       env: {
-        GODSEYE_HOME: " /srv/godseye-home ",
+        OPENCLAW_HOME: " /srv/openclaw-home ",
         HOME: "/home/other",
         USERPROFILE: "C:/Users/other",
       } as NodeJS.ProcessEnv,
       homedir: () => "/fallback",
-      expected: "/srv/godseye-home",
+      expected: "/srv/openclaw-home",
     },
     {
       name: "falls back to HOME",
@@ -37,7 +37,7 @@ describe("resolveEffectiveHomeDir", () => {
     {
       name: "falls back to homedir when env values are blank",
       env: {
-        GODSEYE_HOME: " ",
+        OPENCLAW_HOME: " ",
         HOME: " ",
         USERPROFILE: "\t",
       } as NodeJS.ProcessEnv,
@@ -47,7 +47,7 @@ describe("resolveEffectiveHomeDir", () => {
     {
       name: "treats literal undefined env values as unset",
       env: {
-        GODSEYE_HOME: "undefined",
+        OPENCLAW_HOME: "undefined",
         HOME: "undefined",
         USERPROFILE: "null",
       } as NodeJS.ProcessEnv,
@@ -62,7 +62,7 @@ describe("resolveEffectiveHomeDir", () => {
     {
       name: "expands ~/ using HOME",
       env: {
-        GODSEYE_HOME: "~/svc",
+        OPENCLAW_HOME: "~/svc",
         HOME: "/home/alice",
       } as NodeJS.ProcessEnv,
       expected: "/home/alice/svc",
@@ -70,7 +70,7 @@ describe("resolveEffectiveHomeDir", () => {
     {
       name: "expands ~\\\\ using USERPROFILE",
       env: {
-        GODSEYE_HOME: "~\\svc",
+        OPENCLAW_HOME: "~\\svc",
         HOME: " ",
         USERPROFILE: "C:/Users/alice",
       } as NodeJS.ProcessEnv,
@@ -82,37 +82,40 @@ describe("resolveEffectiveHomeDir", () => {
 });
 
 describe("resolveRequiredHomeDir", () => {
-  it("returns cwd when no home source is available", () => {
-    expect(
-      resolveRequiredHomeDir({} as NodeJS.ProcessEnv, () => {
+  it.each([
+    {
+      name: "returns cwd when no home source is available",
+      env: {} as NodeJS.ProcessEnv,
+      homedir: () => {
         throw new Error("no home");
-      }),
-    ).toBe(process.cwd());
-  });
-
-  it("returns a fully resolved path for GODSEYE_HOME", () => {
-    const result = resolveRequiredHomeDir(
-      { GODSEYE_HOME: "/custom/home" } as NodeJS.ProcessEnv,
-      () => "/fallback",
-    );
-    expect(result).toBe(path.resolve("/custom/home"));
-  });
-
-  it("returns cwd when GODSEYE_HOME is tilde-only and no fallback home exists", () => {
-    expect(
-      resolveRequiredHomeDir({ GODSEYE_HOME: "~" } as NodeJS.ProcessEnv, () => {
+      },
+      expected: process.cwd(),
+    },
+    {
+      name: "returns a fully resolved path for OPENCLAW_HOME",
+      env: { OPENCLAW_HOME: "/custom/home" } as NodeJS.ProcessEnv,
+      homedir: () => "/fallback",
+      expected: path.resolve("/custom/home"),
+    },
+    {
+      name: "returns cwd when OPENCLAW_HOME is tilde-only and no fallback home exists",
+      env: { OPENCLAW_HOME: "~" } as NodeJS.ProcessEnv,
+      homedir: () => {
         throw new Error("no home");
-      }),
-    ).toBe(process.cwd());
+      },
+      expected: process.cwd(),
+    },
+  ])("$name", ({ env, homedir, expected }) => {
+    expect(resolveRequiredHomeDir(env, homedir)).toBe(expected);
   });
 });
 
 describe("resolveOsHomeDir", () => {
-  it("ignores GODSEYE_HOME and uses HOME", () => {
+  it("ignores OPENCLAW_HOME and uses HOME", () => {
     expect(
       resolveOsHomeDir(
         {
-          GODSEYE_HOME: "/srv/godseye-home",
+          OPENCLAW_HOME: "/srv/openclaw-home",
           HOME: "/home/alice",
           USERPROFILE: "C:/Users/alice",
         } as NodeJS.ProcessEnv,
@@ -128,15 +131,15 @@ describe("expandHomePrefix", () => {
       name: "expands ~/ using effective home",
       input: "~/x",
       opts: {
-        env: { GODSEYE_HOME: "/srv/godseye-home" } as NodeJS.ProcessEnv,
+        env: { OPENCLAW_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv,
       },
-      expected: `${path.resolve("/srv/godseye-home")}/x`,
+      expected: `${path.resolve("/srv/openclaw-home")}/x`,
     },
     {
       name: "expands exact ~ using explicit home",
       input: "~",
-      opts: { home: " /srv/godseye-home " },
-      expected: "/srv/godseye-home",
+      opts: { home: " /srv/openclaw-home " },
+      expected: "/srv/openclaw-home",
     },
     {
       name: "expands ~\\\\ using resolved env home",
@@ -157,41 +160,52 @@ describe("expandHomePrefix", () => {
 });
 
 describe("resolveHomeRelativePath", () => {
-  it("returns blank input unchanged", () => {
-    expect(resolveHomeRelativePath("   ")).toBe("");
-  });
-
-  it("resolves trimmed relative and absolute paths", () => {
-    expect(resolveHomeRelativePath(" ./tmp/file.txt ")).toBe(path.resolve("./tmp/file.txt"));
-    expect(resolveHomeRelativePath(" /tmp/file.txt ")).toBe(path.resolve("/tmp/file.txt"));
-  });
-
-  it("expands tilde paths using the resolved home directory", () => {
-    expect(
-      resolveHomeRelativePath("~/docs", {
-        env: { GODSEYE_HOME: "/srv/godseye-home" } as NodeJS.ProcessEnv,
-      }),
-    ).toBe(path.resolve("/srv/godseye-home/docs"));
-  });
-
-  it("falls back to cwd when tilde paths have no home source", () => {
-    expect(
-      resolveHomeRelativePath("~", {
+  it.each([
+    {
+      name: "returns blank input unchanged",
+      input: "   ",
+      expected: "",
+    },
+    {
+      name: "resolves trimmed relative paths",
+      input: " ./tmp/file.txt ",
+      expected: path.resolve("./tmp/file.txt"),
+    },
+    {
+      name: "resolves trimmed absolute paths",
+      input: " /tmp/file.txt ",
+      expected: path.resolve("/tmp/file.txt"),
+    },
+    {
+      name: "expands tilde paths using the resolved home directory",
+      input: "~/docs",
+      opts: {
+        env: { OPENCLAW_HOME: "/srv/openclaw-home" } as NodeJS.ProcessEnv,
+      },
+      expected: path.resolve("/srv/openclaw-home/docs"),
+    },
+    {
+      name: "falls back to cwd when tilde paths have no home source",
+      input: "~",
+      opts: {
         env: {} as NodeJS.ProcessEnv,
         homedir: () => {
           throw new Error("no home");
         },
-      }),
-    ).toBe(path.resolve(process.cwd()));
+      },
+      expected: path.resolve(process.cwd()),
+    },
+  ])("$name", ({ input, opts, expected }) => {
+    expect(resolveHomeRelativePath(input, opts)).toBe(expected);
   });
 });
 
 describe("resolveOsHomeRelativePath", () => {
-  it("expands tilde paths using the OS home instead of GODSEYE_HOME", () => {
+  it("expands tilde paths using the OS home instead of OPENCLAW_HOME", () => {
     expect(
       resolveOsHomeRelativePath("~/docs", {
         env: {
-          GODSEYE_HOME: "/srv/godseye-home",
+          OPENCLAW_HOME: "/srv/openclaw-home",
           HOME: "/home/alice",
         } as NodeJS.ProcessEnv,
       }),

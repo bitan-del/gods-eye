@@ -69,7 +69,7 @@ export class FakeProvider implements VoiceCallProvider {
 }
 
 export function createTestStorePath(): string {
-  return fs.mkdtempSync(path.join(os.tmpdir(), "godseye-voice-call-test-"));
+  return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-voice-call-test-"));
 }
 
 export async function createManagerHarness(

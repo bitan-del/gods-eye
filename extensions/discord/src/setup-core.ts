@@ -1,17 +1,11 @@
 import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
-import type { DiscordGuildEntry } from "godseye/plugin-sdk/config-runtime";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { createEnvPatchedAccountSetupAdapter } from "godseye/plugin-sdk/setup-adapter-runtime";
-import type {
-  ChannelSetupAdapter,
-  ChannelSetupDmPolicy,
-  ChannelSetupWizard,
-} from "godseye/plugin-sdk/setup-runtime";
+import type { DiscordGuildEntry, OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ChannelSetupDmPolicy, ChannelSetupWizard } from "godseye/plugin-sdk/setup-runtime";
 import { createStandardChannelSetupStatus } from "godseye/plugin-sdk/setup-runtime";
 import { formatDocsLink } from "godseye/plugin-sdk/setup-tools";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   inspectDiscordSetupAccount,
-  listDiscordSetupAccountIds,
   resolveDiscordSetupAccountConfig,
 } from "./setup-account-state.js";
 import {
@@ -35,13 +29,13 @@ export const DISCORD_TOKEN_HELP_LINES = [
 ];
 
 export function setDiscordGuildChannelAllowlist(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   entries: Array<{
     guildKey: string;
     channelKey?: string;
   }>,
-): GodsEyeConfig {
+): OpenClawConfig {
   const baseGuilds =
     accountId === DEFAULT_ACCOUNT_ID
       ? (cfg.channels?.discord?.guilds ?? {})
@@ -52,7 +46,7 @@ export function setDiscordGuildChannelAllowlist(
     const existing = guilds[guildKey] ?? {};
     if (entry.channelKey) {
       const channels = { ...existing.channels };
-      channels[entry.channelKey] = { allow: true };
+      channels[entry.channelKey] = { enabled: true };
       guilds[guildKey] = { ...existing, channels };
     } else {
       guilds[guildKey] = existing;
@@ -74,14 +68,6 @@ export function parseDiscordAllowFromId(value: string): string | null {
     idPattern: /^\d+$/,
   });
 }
-
-export const discordSetupAdapter: ChannelSetupAdapter = createEnvPatchedAccountSetupAdapter({
-  channelKey: channel,
-  defaultAccountOnlyEnvError: "DISCORD_BOT_TOKEN can only be used for the default account.",
-  missingCredentialError: "Discord requires token (or --use-env).",
-  hasCredentials: (input) => Boolean(input.token),
-  buildPatch: (input) => (input.token ? { token: input.token } : {}),
-});
 
 export function createDiscordSetupWizardBase(handlers: {
   promptAllowFrom: NonNullable<ChannelSetupDmPolicy["promptAllowFrom"]>;
@@ -108,11 +94,8 @@ export function createDiscordSetupWizardBase(handlers: {
       unconfiguredHint: "needs token",
       configuredScore: 2,
       unconfiguredScore: 1,
-      resolveConfigured: ({ cfg }) =>
-        listDiscordSetupAccountIds(cfg).some((accountId) => {
-          const account = inspectDiscordSetupAccount({ cfg, accountId });
-          return account.configured;
-        }),
+      resolveConfigured: ({ cfg, accountId }) =>
+        inspectDiscordSetupAccount({ cfg, accountId }).configured,
     }),
     credentials: [
       {
@@ -126,15 +109,15 @@ export function createDiscordSetupWizardBase(handlers: {
         keepPrompt: "Discord token already configured. Keep it?",
         inputPrompt: "Enter Discord bot token",
         allowEnv: ({ accountId }: { accountId: string }) => accountId === DEFAULT_ACCOUNT_ID,
-        inspect: ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId: string }) => {
+        inspect: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId: string }) => {
           const account = inspectDiscordSetupAccount({ cfg, accountId });
           return {
             accountConfigured: account.configured,
             hasConfiguredValue: account.tokenStatus !== "missing",
-            resolvedValue: account.token?.trim() || undefined,
+            resolvedValue: normalizeOptionalString(account.token),
             envValue:
               accountId === DEFAULT_ACCOUNT_ID
-                ? process.env.DISCORD_BOT_TOKEN?.trim() || undefined
+                ? normalizeOptionalString(process.env.DISCORD_BOT_TOKEN)
                 : undefined,
           };
         },
@@ -144,9 +127,9 @@ export function createDiscordSetupWizardBase(handlers: {
       channel,
       label: "Discord channels",
       placeholder: "My Server/#general, guildId/channelId, #support",
-      currentPolicy: ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId: string }) =>
+      currentPolicy: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId: string }) =>
         resolveDiscordSetupAccountConfig({ cfg, accountId }).config.groupPolicy ?? "allowlist",
-      currentEntries: ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId: string }) =>
+      currentEntries: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId: string }) =>
         Object.entries(
           resolveDiscordSetupAccountConfig({ cfg, accountId }).config.guilds ?? {},
         ).flatMap(([guildKey, value]) => {
@@ -158,7 +141,7 @@ export function createDiscordSetupWizardBase(handlers: {
           }
           return channelKeys.map((channelKey) => `${guildKey}/${channelKey}`);
         }),
-      updatePrompt: ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId: string }) =>
+      updatePrompt: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId: string }) =>
         Boolean(resolveDiscordSetupAccountConfig({ cfg, accountId }).config.guilds),
       resolveAllowlist: handlers.resolveGroupAllowlist,
       fallbackResolved: (entries) => entries.map((input) => ({ input, resolved: false })),
@@ -167,7 +150,7 @@ export function createDiscordSetupWizardBase(handlers: {
         accountId,
         resolved,
       }: {
-        cfg: GodsEyeConfig;
+        cfg: OpenClawConfig;
         accountId: string;
         resolved: unknown;
       }) => setDiscordGuildChannelAllowlist(cfg, accountId, resolved as never),
@@ -193,7 +176,7 @@ export function createDiscordSetupWizardBase(handlers: {
       resolveEntries: handlers.resolveAllowFromEntries,
     }),
     dmPolicy: discordDmPolicy,
-    disable: (cfg: GodsEyeConfig) => setSetupChannelEnabled(cfg, channel, false),
+    disable: (cfg: OpenClawConfig) => setSetupChannelEnabled(cfg, channel, false),
   } satisfies ChannelSetupWizard;
 }
 export function createDiscordSetupWizardProxy(loadWizard: () => Promise<ChannelSetupWizard>) {

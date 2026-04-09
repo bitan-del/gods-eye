@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { withTimeout } from "../../node-host/with-timeout.js";
 
 export const EMBEDDED_COMPACTION_TIMEOUT_MS = 900_000;
@@ -15,7 +15,7 @@ function createAbortError(signal: AbortSignal): Error {
   return err;
 }
 
-export function resolveCompactionTimeoutMs(cfg?: GodsEyeConfig): number {
+export function resolveCompactionTimeoutMs(cfg?: OpenClawConfig): number {
   const raw = cfg?.agents?.defaults?.compaction?.timeoutSeconds;
   if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) {
     return Math.min(Math.floor(raw) * 1000, MAX_SAFE_TIMEOUT_MS);

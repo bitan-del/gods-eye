@@ -67,7 +67,7 @@ describe("cron run log", () => {
   });
 
   it("appends JSONL and prunes by line count", async () => {
-    await withRunLogDir("godseye-cron-log-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-1.jsonl");
 
       for (let i = 0; i < 10; i++) {
@@ -98,7 +98,7 @@ describe("cron run log", () => {
   it.skipIf(process.platform === "win32")(
     "writes run log files with secure permissions",
     async () => {
-      await withRunLogDir("godseye-cron-log-perms-", async (dir) => {
+      await withRunLogDir("openclaw-cron-log-perms-", async (dir) => {
         const logPath = path.join(dir, "runs", "job-1.jsonl");
 
         await appendCronRunLog(logPath, {
@@ -117,7 +117,7 @@ describe("cron run log", () => {
   it.skipIf(process.platform === "win32")(
     "hardens an existing run-log directory to owner-only permissions",
     async () => {
-      await withRunLogDir("godseye-cron-log-dir-perms-", async (dir) => {
+      await withRunLogDir("openclaw-cron-log-dir-perms-", async (dir) => {
         const runDir = path.join(dir, "runs");
         const logPath = path.join(runDir, "job-1.jsonl");
         await fs.mkdir(runDir, { recursive: true, mode: 0o755 });
@@ -137,7 +137,7 @@ describe("cron run log", () => {
   );
 
   it("reads newest entries and filters by jobId", async () => {
-    await withRunLogDir("godseye-cron-log-read-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-read-", async (dir) => {
       const logPathA = path.join(dir, "runs", "a.jsonl");
       const logPathB = path.join(dir, "runs", "b.jsonl");
 
@@ -193,7 +193,7 @@ describe("cron run log", () => {
   });
 
   it("ignores invalid and non-finished lines while preserving delivery fields", async () => {
-    await withRunLogDir("godseye-cron-log-filter-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-filter-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-1.jsonl");
       await fs.mkdir(path.dirname(logPath), { recursive: true });
       await fs.writeFile(
@@ -224,7 +224,7 @@ describe("cron run log", () => {
   });
 
   it("reads telemetry fields", async () => {
-    await withRunLogDir("godseye-cron-log-telemetry-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-telemetry-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-1.jsonl");
 
       await appendCronRunLog(logPath, {
@@ -232,7 +232,7 @@ describe("cron run log", () => {
         jobId: "job-1",
         action: "finished",
         status: "ok",
-        model: "gpt-5.2",
+        model: "gpt-5.4",
         provider: "openai",
         usage: {
           input_tokens: 10,
@@ -258,7 +258,7 @@ describe("cron run log", () => {
       );
 
       const entries = await readCronRunLogEntries(logPath, { limit: 10, jobId: "job-1" });
-      expect(entries[0]?.model).toBe("gpt-5.2");
+      expect(entries[0]?.model).toBe("gpt-5.4");
       expect(entries[0]?.provider).toBe("openai");
       expect(entries[0]?.usage).toEqual({
         input_tokens: 10,
@@ -274,7 +274,7 @@ describe("cron run log", () => {
   });
 
   it("cleans up pending-write bookkeeping after appends complete", async () => {
-    await withRunLogDir("godseye-cron-log-pending-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-pending-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-cleanup.jsonl");
       await appendCronRunLog(logPath, {
         ts: 1,
@@ -288,7 +288,7 @@ describe("cron run log", () => {
   });
 
   it("read drains pending fire-and-forget writes", async () => {
-    await withRunLogDir("godseye-cron-log-drain-", async (dir) => {
+    await withRunLogDir("openclaw-cron-log-drain-", async (dir) => {
       const logPath = path.join(dir, "runs", "job-drain.jsonl");
 
       // Fire-and-forget write (simulates the `void appendCronRunLog(...)` pattern

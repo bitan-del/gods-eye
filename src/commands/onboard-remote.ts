@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { SecretInput } from "../config/types.secrets.js";
 import { isSecureWebSocketUrl } from "../gateway/net.js";
 import { discoverGatewayBeacons, type GatewayBonjourBeacon } from "../infra/bonjour-discovery.js";
@@ -34,24 +34,26 @@ function validateGatewayWebSocketUrl(value: string): string | undefined {
   }
   if (
     !isSecureWebSocketUrl(trimmed, {
-      allowPrivateWs: process.env.GODSEYE_ALLOW_INSECURE_PRIVATE_WS === "1",
+      allowPrivateWs: process.env.OPENCLAW_ALLOW_INSECURE_PRIVATE_WS === "1",
     })
   ) {
     return (
       "Use wss:// for remote hosts, or ws://127.0.0.1/localhost via SSH tunnel. " +
-      "Break-glass: GODSEYE_ALLOW_INSECURE_PRIVATE_WS=1 for trusted private networks."
+      "Break-glass: OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1 for trusted private networks."
     );
   }
   return undefined;
 }
 
 export async function promptRemoteGatewayConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   prompter: WizardPrompter,
   options?: { secretInputMode?: SecretInputMode },
-): Promise<GodsEyeConfig> {
+): Promise<OpenClawConfig> {
   let selectedBeacon: GatewayBonjourBeacon | null = null;
   let suggestedUrl = cfg.gateway?.remote?.url ?? DEFAULT_GATEWAY_URL;
+  let discoveryTlsFingerprint: string | undefined;
+  let trustedDiscoveryUrl: string | undefined;
 
   const hasBonjourTool = (await detectBinary("dns-sd")) || (await detectBinary("avahi-browse"));
   const wantsDiscover = hasBonjourTool
@@ -65,7 +67,7 @@ export async function promptRemoteGatewayConfig(
     await prompter.note(
       [
         "Bonjour discovery requires dns-sd (macOS) or avahi-browse (Linux).",
-        "Docs: https://docs.gods-eye.org/gateway/discovery",
+        "Docs: https://docs.openclaw.ai/gateway/discovery",
       ].join("\n"),
       "Discovery",
     );
@@ -113,21 +115,34 @@ export async function promptRemoteGatewayConfig(
       });
       if (mode === "direct") {
         suggestedUrl = `wss://${host}:${port}`;
-        await prompter.note(
-          [
-            "Direct remote access defaults to TLS.",
-            `Using: ${suggestedUrl}`,
-            "If your gateway is loopback-only, choose SSH tunnel and keep ws://127.0.0.1:18789.",
-          ].join("\n"),
-          "Direct remote",
-        );
+        const fingerprint = target.endpoint.gatewayTlsFingerprintSha256;
+        const trusted = await prompter.confirm({
+          message: `Trust this gateway? Host: ${host}:${port} TLS fingerprint: ${fingerprint ?? "not advertised (connection will not be pinned)"}`,
+          initialValue: false,
+        });
+        if (trusted) {
+          discoveryTlsFingerprint = fingerprint;
+          trustedDiscoveryUrl = suggestedUrl;
+          await prompter.note(
+            [
+              "Direct remote access defaults to TLS.",
+              `Using: ${suggestedUrl}`,
+              ...(fingerprint ? [`TLS pin: ${fingerprint}`] : []),
+              "If your gateway is loopback-only, choose SSH tunnel and keep ws://127.0.0.1:18789.",
+            ].join("\n"),
+            "Direct remote",
+          );
+        } else {
+          // Clear the discovered endpoint so the manual prompt falls back to a safe default.
+          suggestedUrl = DEFAULT_GATEWAY_URL;
+        }
       } else {
         suggestedUrl = DEFAULT_GATEWAY_URL;
         await prompter.note(
           [
             "Start a tunnel before using the CLI:",
             `ssh -N -L 18789:127.0.0.1:18789 <user>@${host}${target.sshPort ? ` -p ${target.sshPort}` : ""}`,
-            "Docs: https://docs.gods-eye.org/gateway/remote",
+            "Docs: https://docs.openclaw.ai/gateway/remote",
           ].join("\n"),
           "SSH tunnel",
         );
@@ -141,6 +156,8 @@ export async function promptRemoteGatewayConfig(
     validate: (value) => validateGatewayWebSocketUrl(String(value)),
   });
   const url = ensureWsUrl(String(urlInput));
+  const pinnedDiscoveryFingerprint =
+    discoveryTlsFingerprint && url === trustedDiscoveryUrl ? discoveryTlsFingerprint : undefined;
 
   const authChoice = await prompter.select({
     message: "Gateway auth",
@@ -160,7 +177,7 @@ export async function promptRemoteGatewayConfig(
       copy: {
         modeMessage: "How do you want to provide this gateway token?",
         plaintextLabel: "Enter token now",
-        plaintextHint: "Stores the token directly in GodsEye config",
+        plaintextHint: "Stores the token directly in OpenClaw config",
       },
     });
     if (selectedMode === "ref") {
@@ -168,10 +185,10 @@ export async function promptRemoteGatewayConfig(
         provider: "gateway-remote-token",
         config: cfg,
         prompter,
-        preferredEnvVar: "GODSEYE_GATEWAY_TOKEN",
+        preferredEnvVar: "OPENCLAW_GATEWAY_TOKEN",
         copy: {
           sourceMessage: "Where is this gateway token stored?",
-          envVarPlaceholder: "GODSEYE_GATEWAY_TOKEN",
+          envVarPlaceholder: "OPENCLAW_GATEWAY_TOKEN",
         },
       });
       token = resolved.ref;
@@ -192,7 +209,7 @@ export async function promptRemoteGatewayConfig(
       copy: {
         modeMessage: "How do you want to provide this gateway password?",
         plaintextLabel: "Enter password now",
-        plaintextHint: "Stores the password directly in GodsEye config",
+        plaintextHint: "Stores the password directly in OpenClaw config",
       },
     });
     if (selectedMode === "ref") {
@@ -200,10 +217,10 @@ export async function promptRemoteGatewayConfig(
         provider: "gateway-remote-password",
         config: cfg,
         prompter,
-        preferredEnvVar: "GODSEYE_GATEWAY_PASSWORD",
+        preferredEnvVar: "OPENCLAW_GATEWAY_PASSWORD",
         copy: {
           sourceMessage: "Where is this gateway password stored?",
-          envVarPlaceholder: "GODSEYE_GATEWAY_PASSWORD",
+          envVarPlaceholder: "OPENCLAW_GATEWAY_PASSWORD",
         },
       });
       password = resolved.ref;
@@ -231,6 +248,7 @@ export async function promptRemoteGatewayConfig(
         url,
         ...(token !== undefined ? { token } : {}),
         ...(password !== undefined ? { password } : {}),
+        ...(pinnedDiscoveryFingerprint ? { tlsFingerprint: pinnedDiscoveryFingerprint } : {}),
       },
     },
   };

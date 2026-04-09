@@ -1,4 +1,4 @@
-import { readStringValue } from "openclaw/plugin-sdk/text-runtime";
+import { readStringValue } from "godseye/plugin-sdk/text-runtime";
 
 type GoogleOauthApiKeyCredential = {
   type?: string;

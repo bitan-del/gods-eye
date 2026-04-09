@@ -26,11 +26,11 @@ const browserConfigMocks = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock("openclaw/plugin-sdk/browser-config-runtime", () => ({
+vi.mock("godseye/plugin-sdk/browser-config-runtime", () => ({
   loadConfig: configMocks.loadConfig,
 }));
 
-vi.mock("openclaw/plugin-sdk/browser-node-runtime", () => ({
+vi.mock("godseye/plugin-sdk/browser-node-runtime", () => ({
   withTimeout: vi.fn(
     async (
       run: (signal: AbortSignal | undefined) => Promise<unknown>,
@@ -65,7 +65,7 @@ vi.mock("openclaw/plugin-sdk/browser-node-runtime", () => ({
   ),
 }));
 
-vi.mock("openclaw/plugin-sdk/browser-setup-tools", () => ({
+vi.mock("godseye/plugin-sdk/browser-setup-tools", () => ({
   detectMime: vi.fn(async () => "image/png"),
 }));
 

@@ -1,9 +1,9 @@
 export { definePluginEntry } from "godseye/plugin-sdk/core";
 export type {
   AnyAgentTool,
-  GodsEyePluginApi,
-  GodsEyePluginToolContext,
-  GodsEyePluginToolFactory,
+  OpenClawPluginApi,
+  OpenClawPluginToolContext,
+  OpenClawPluginToolFactory,
 } from "godseye/plugin-sdk/core";
 export {
   applyWindowsSpawnProgramPolicy,

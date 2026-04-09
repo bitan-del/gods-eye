@@ -1,21 +1,5 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
-import { resolveSlackAccount } from "./accounts.js";
-import {
-  deleteSlackMessage,
-  downloadSlackFile,
-  editSlackMessage,
-  getSlackMemberInfo,
-  listSlackEmojis,
-  listSlackPins,
-  listSlackReactions,
-  pinSlackMessage,
-  reactSlackMessage,
-  readSlackMessages,
-  removeOwnSlackReactions,
-  removeSlackReaction,
-  sendSlackMessage,
-  unpinSlackMessage,
-} from "./actions.js";
+import { isSingleUseReplyToMode } from "godseye/plugin-sdk/reply-reference";
 import { parseSlackBlocksInput } from "./blocks-input.js";
 import {
   createActionGate,
@@ -24,7 +8,7 @@ import {
   readNumberParam,
   readReactionParams,
   readStringParam,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   withNormalizedTimestamp,
 } from "./runtime-api.js";
 import { recordSlackThreadParticipation } from "./sent-thread-cache.js";
@@ -42,23 +26,49 @@ const messagingActions = new Set([
 const reactionsActions = new Set(["react", "reactions"]);
 const pinActions = new Set(["pinMessage", "unpinMessage", "listPins"]);
 
+type SlackActionsRuntimeModule = typeof import("./actions.runtime.js");
+type SlackAccountsRuntimeModule = typeof import("./accounts.runtime.js");
+
+let slackActionsRuntimePromise: Promise<SlackActionsRuntimeModule> | undefined;
+let slackAccountsRuntimePromise: Promise<SlackAccountsRuntimeModule> | undefined;
+
+function loadSlackActionsRuntime(): Promise<SlackActionsRuntimeModule> {
+  slackActionsRuntimePromise ??= import("./actions.runtime.js");
+  return slackActionsRuntimePromise;
+}
+
+function loadSlackAccountsRuntime(): Promise<SlackAccountsRuntimeModule> {
+  slackAccountsRuntimePromise ??= import("./accounts.runtime.js");
+  return slackAccountsRuntimePromise;
+}
+
+function createLazySlackAction<K extends keyof SlackActionsRuntimeModule>(
+  key: K,
+): SlackActionsRuntimeModule[K] {
+  return (async (...args: unknown[]) => {
+    const runtime = await loadSlackActionsRuntime();
+    const action = runtime[key] as (...actionArgs: unknown[]) => unknown;
+    return action(...args);
+  }) as SlackActionsRuntimeModule[K];
+}
+
 export const slackActionRuntime = {
-  deleteSlackMessage,
-  downloadSlackFile,
-  editSlackMessage,
-  getSlackMemberInfo,
-  listSlackEmojis,
-  listSlackPins,
-  listSlackReactions,
+  deleteSlackMessage: createLazySlackAction("deleteSlackMessage"),
+  downloadSlackFile: createLazySlackAction("downloadSlackFile"),
+  editSlackMessage: createLazySlackAction("editSlackMessage"),
+  getSlackMemberInfo: createLazySlackAction("getSlackMemberInfo"),
+  listSlackEmojis: createLazySlackAction("listSlackEmojis"),
+  listSlackPins: createLazySlackAction("listSlackPins"),
+  listSlackReactions: createLazySlackAction("listSlackReactions"),
   parseSlackBlocksInput,
-  pinSlackMessage,
-  reactSlackMessage,
-  readSlackMessages,
+  pinSlackMessage: createLazySlackAction("pinSlackMessage"),
+  reactSlackMessage: createLazySlackAction("reactSlackMessage"),
+  readSlackMessages: createLazySlackAction("readSlackMessages"),
   recordSlackThreadParticipation,
-  removeOwnSlackReactions,
-  removeSlackReaction,
-  sendSlackMessage,
-  unpinSlackMessage,
+  removeOwnSlackReactions: createLazySlackAction("removeOwnSlackReactions"),
+  removeSlackReaction: createLazySlackAction("removeSlackReaction"),
+  sendSlackMessage: createLazySlackAction("sendSlackMessage"),
+  unpinSlackMessage: createLazySlackAction("unpinSlackMessage"),
 };
 
 export type SlackActionContext = {
@@ -67,17 +77,18 @@ export type SlackActionContext = {
   /** Current thread timestamp for auto-threading. */
   currentThreadTs?: string;
   /** Reply-to mode for auto-threading. */
-  replyToMode?: "off" | "first" | "all";
-  /** Mutable ref to track if a reply was sent (for "first" mode). */
+  replyToMode?: "off" | "first" | "all" | "batched";
+  /** Mutable ref to track if a reply was sent for single-use reply modes. */
   hasRepliedRef?: { value: boolean };
   /** Allowed local media directories for file uploads. */
   mediaLocalRoots?: readonly string[];
+  mediaReadFile?: (filePath: string) => Promise<Buffer>;
 };
 
 /**
  * Resolve threadTs for a Slack message based on context and replyToMode.
  * - "all": always inject threadTs
- * - "first": inject only for first message (updates hasRepliedRef)
+ * - "first"/"batched": inject only for the first eligible message (updates hasRepliedRef)
  * - "off": never auto-inject
  */
 function resolveThreadTsFromContext(
@@ -111,7 +122,11 @@ function resolveThreadTsFromContext(
   if (context.replyToMode === "all") {
     return context.currentThreadTs;
   }
-  if (context.replyToMode === "first" && context.hasRepliedRef && !context.hasRepliedRef.value) {
+  if (
+    isSingleUseReplyToMode(context.replyToMode ?? "off") &&
+    context.hasRepliedRef &&
+    !context.hasRepliedRef.value
+  ) {
     context.hasRepliedRef.value = true;
     return context.currentThreadTs;
   }
@@ -124,7 +139,7 @@ function readSlackBlocksParam(params: Record<string, unknown>) {
 
 export async function handleSlackAction(
   params: Record<string, unknown>,
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   context?: SlackActionContext,
 ): Promise<AgentToolResult<unknown>> {
   const resolveChannelId = () =>
@@ -135,6 +150,7 @@ export async function handleSlackAction(
     );
   const action = readStringParam(params, "action", { required: true });
   const accountId = readStringParam(params, "accountId");
+  const { resolveSlackAccount } = await loadSlackAccountsRuntime();
   const account = resolveSlackAccount({ cfg, accountId });
   const actionConfig = account.actions ?? cfg.channels?.slack?.actions;
   const isActionEnabled = createActionGate(actionConfig);
@@ -232,6 +248,7 @@ export async function handleSlackAction(
           ...writeOpts,
           mediaUrl: mediaUrl ?? undefined,
           mediaLocalRoots: context?.mediaLocalRoots,
+          mediaReadFile: context?.mediaReadFile,
           threadTs: threadTs ?? undefined,
           blocks,
         });
@@ -276,6 +293,7 @@ export async function handleSlackAction(
           ...writeOpts,
           mediaUrl: filePath,
           mediaLocalRoots: context?.mediaLocalRoots,
+          mediaReadFile: context?.mediaReadFile,
           threadTs: threadTs ?? undefined,
           ...(filename ? { uploadFileName: filename } : {}),
           ...(title ? { uploadTitle: title } : {}),
@@ -365,8 +383,10 @@ export async function handleSlackAction(
         const maxBytes = account.config?.mediaMaxMb
           ? account.config.mediaMaxMb * 1024 * 1024
           : 20 * 1024 * 1024;
+        const readToken = getTokenForOperation("read");
         const downloaded = await slackActionRuntime.downloadSlackFile(fileId, {
           ...readOpts,
+          ...(readToken && !readOpts?.token ? { token: readToken } : {}),
           maxBytes,
           channelId,
           threadId: threadId ?? undefined,

@@ -1,5 +1,5 @@
-import * as providerAuth from "openclaw/plugin-sdk/provider-auth-runtime";
-import * as providerHttp from "openclaw/plugin-sdk/provider-http";
+import * as providerAuth from "godseye/plugin-sdk/provider-auth-runtime";
+import * as providerHttp from "godseye/plugin-sdk/provider-http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   _setFalVideoFetchGuardForTesting,

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { asNullableObjectRecord } from "../shared/record-coerce.js";
 import { note } from "../terminal/note.js";
 
 const TLS_CERT_ERROR_CODES = new Set([
@@ -20,7 +21,7 @@ const TLS_CERT_ERROR_PATTERNS = [
 ];
 
 const OPENAI_AUTH_PROBE_URL =
-  "https://auth.openai.com/oauth/authorize?response_type=code&client_id=godseye-preflight&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&scope=openid+profile+email";
+  "https://auth.openai.com/oauth/authorize?response_type=code&client_id=openclaw-preflight&redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback&scope=openid+profile+email";
 
 type PreflightFailureKind = "tls-cert" | "network";
 
@@ -33,17 +34,13 @@ export type OpenAIOAuthTlsPreflightResult =
       message: string;
     };
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
 function extractFailure(error: unknown): {
   code?: string;
   message: string;
   kind: PreflightFailureKind;
 } {
-  const root = asRecord(error);
-  const rootCause = asRecord(root?.cause);
+  const root = asNullableObjectRecord(error);
+  const rootCause = asNullableObjectRecord(root?.cause);
   const code = typeof rootCause?.code === "string" ? rootCause.code : undefined;
   const message =
     typeof rootCause?.message === "string"
@@ -79,7 +76,7 @@ function resolveCertBundlePath(): string | null {
   return path.join(prefix, "etc", "openssl@3", "cert.pem");
 }
 
-function hasOpenAICodexOAuthProfile(cfg: GodsEyeConfig): boolean {
+function hasOpenAICodexOAuthProfile(cfg: OpenClawConfig): boolean {
   const profiles = cfg.auth?.profiles;
   if (!profiles) {
     return false;
@@ -90,7 +87,7 @@ function hasOpenAICodexOAuthProfile(cfg: GodsEyeConfig): boolean {
 }
 
 function shouldRunOpenAIOAuthTlsPrerequisites(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   deep?: boolean;
 }): boolean {
   if (params.deep === true) {
@@ -150,7 +147,7 @@ export function formatOpenAIOAuthTlsPreflightFix(
 }
 
 export async function noteOpenAIOAuthTlsPrerequisites(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   deep?: boolean;
 }): Promise<void> {
   if (!shouldRunOpenAIOAuthTlsPrerequisites(params)) {

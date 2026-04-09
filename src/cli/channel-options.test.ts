@@ -1,4 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { __testing, resolveCliChannelOptions } from "./channel-options.js";
 
 const readFileSyncMock = vi.hoisted(() => vi.fn());
 
@@ -15,16 +16,9 @@ vi.mock("node:fs", async () => {
   };
 });
 
-vi.mock("../channels/registry.js", () => ({
+vi.mock("../channels/ids.js", () => ({
   CHAT_CHANNEL_ORDER: ["telegram", "discord"],
 }));
-
-let resolveCliChannelOptions: typeof import("./channel-options.js").resolveCliChannelOptions;
-let __testing: typeof import("./channel-options.js").__testing;
-
-beforeAll(async () => {
-  ({ resolveCliChannelOptions, __testing } = await import("./channel-options.js"));
-});
 
 describe("resolveCliChannelOptions", () => {
   afterEach(() => {
@@ -49,10 +43,10 @@ describe("resolveCliChannelOptions", () => {
   });
 
   it("ignores external catalog env during CLI bootstrap", async () => {
-    process.env.GODSEYE_PLUGIN_CATALOG_PATHS = "/tmp/plugins-catalog.json";
+    process.env.OPENCLAW_PLUGIN_CATALOG_PATHS = "/tmp/plugins-catalog.json";
     readFileSyncMock.mockReturnValue(JSON.stringify({ channelOptions: ["cached", "telegram"] }));
 
     expect(resolveCliChannelOptions()).toEqual(["cached", "telegram"]);
-    delete process.env.GODSEYE_PLUGIN_CATALOG_PATHS;
+    delete process.env.OPENCLAW_PLUGIN_CATALOG_PATHS;
   });
 });

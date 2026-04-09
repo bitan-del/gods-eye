@@ -4,13 +4,13 @@ import {
   normalizeEnvVarKey,
 } from "../infra/host-env-security.js";
 import { containsEnvVarReference } from "./env-substitution.js";
-import type { GodsEyeConfig } from "./types.js";
+import type { OpenClawConfig } from "./types.js";
 
 function isBlockedConfigEnvVar(key: string): boolean {
   return isDangerousHostEnvVarName(key) || isDangerousHostEnvOverrideVarName(key);
 }
 
-function collectConfigEnvVarsByTarget(cfg?: GodsEyeConfig): Record<string, string> {
+function collectConfigEnvVarsByTarget(cfg?: OpenClawConfig): Record<string, string> {
   const envConfig = cfg?.env;
   if (!envConfig) {
     return {};
@@ -54,21 +54,21 @@ function collectConfigEnvVarsByTarget(cfg?: GodsEyeConfig): Record<string, strin
   return entries;
 }
 
-export function collectConfigRuntimeEnvVars(cfg?: GodsEyeConfig): Record<string, string> {
+export function collectConfigRuntimeEnvVars(cfg?: OpenClawConfig): Record<string, string> {
   return collectConfigEnvVarsByTarget(cfg);
 }
 
-export function collectConfigServiceEnvVars(cfg?: GodsEyeConfig): Record<string, string> {
+export function collectConfigServiceEnvVars(cfg?: OpenClawConfig): Record<string, string> {
   return collectConfigEnvVarsByTarget(cfg);
 }
 
 /** @deprecated Use `collectConfigRuntimeEnvVars` or `collectConfigServiceEnvVars`. */
-export function collectConfigEnvVars(cfg?: GodsEyeConfig): Record<string, string> {
+export function collectConfigEnvVars(cfg?: OpenClawConfig): Record<string, string> {
   return collectConfigRuntimeEnvVars(cfg);
 }
 
 export function createConfigRuntimeEnv(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   baseEnv: NodeJS.ProcessEnv = process.env,
 ): NodeJS.ProcessEnv {
   const env = { ...baseEnv };
@@ -76,7 +76,10 @@ export function createConfigRuntimeEnv(
   return env;
 }
 
-export function applyConfigEnvVars(cfg: GodsEyeConfig, env: NodeJS.ProcessEnv = process.env): void {
+export function applyConfigEnvVars(
+  cfg: OpenClawConfig,
+  env: NodeJS.ProcessEnv = process.env,
+): void {
   const entries = collectConfigRuntimeEnvVars(cfg);
   for (const [key, value] of Object.entries(entries)) {
     if (env[key]?.trim()) {
@@ -84,7 +87,7 @@ export function applyConfigEnvVars(cfg: GodsEyeConfig, env: NodeJS.ProcessEnv = 
     }
     // Skip values containing unresolved ${VAR} references — applyConfigEnvVars runs
     // before env substitution, so these would pollute process.env with literal placeholders
-    // (e.g. process.env.GODSEYE_GATEWAY_TOKEN = "${VAULT_TOKEN}") which downstream auth
+    // (e.g. process.env.OPENCLAW_GATEWAY_TOKEN = "${VAULT_TOKEN}") which downstream auth
     // resolution would accept as valid credentials.
     if (containsEnvVarReference(value)) {
       continue;

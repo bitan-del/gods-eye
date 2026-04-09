@@ -1,9 +1,6 @@
-import type { GodsEyeConfig } from "../../config/config.js";
-import {
-  findNormalizedProviderValue,
-  normalizeProviderId,
-  normalizeProviderIdForAuth,
-} from "../model-selection.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { findNormalizedProviderValue, normalizeProviderId } from "../model-selection.js";
+import { resolveProviderIdForAuth } from "../provider-auth-aliases.js";
 import {
   evaluateStoredCredentialEligibility,
   type AuthCredentialReasonCode,
@@ -28,23 +25,25 @@ export type AuthProfileEligibility = {
 };
 
 export function resolveAuthProfileEligibility(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   provider: string;
   profileId: string;
   now?: number;
 }): AuthProfileEligibility {
-  const providerAuthKey = normalizeProviderIdForAuth(params.provider);
+  const providerAuthKey = resolveProviderIdForAuth(params.provider, { config: params.cfg });
   const cred = params.store.profiles[params.profileId];
   if (!cred) {
     return { eligible: false, reasonCode: "profile_missing" };
   }
-  if (normalizeProviderIdForAuth(cred.provider) !== providerAuthKey) {
+  if (resolveProviderIdForAuth(cred.provider, { config: params.cfg }) !== providerAuthKey) {
     return { eligible: false, reasonCode: "provider_mismatch" };
   }
   const profileConfig = params.cfg?.auth?.profiles?.[params.profileId];
   if (profileConfig) {
-    if (normalizeProviderIdForAuth(profileConfig.provider) !== providerAuthKey) {
+    if (
+      resolveProviderIdForAuth(profileConfig.provider, { config: params.cfg }) !== providerAuthKey
+    ) {
       return { eligible: false, reasonCode: "provider_mismatch" };
     }
     if (profileConfig.mode !== cred.type) {
@@ -65,14 +64,14 @@ export function resolveAuthProfileEligibility(params: {
 }
 
 export function resolveAuthProfileOrder(params: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   store: AuthProfileStore;
   provider: string;
   preferredProfile?: string;
 }): string[] {
   const { cfg, store, provider, preferredProfile } = params;
   const providerKey = normalizeProviderId(provider);
-  const providerAuthKey = normalizeProviderIdForAuth(provider);
+  const providerAuthKey = resolveProviderIdForAuth(provider, { config: cfg });
   const now = Date.now();
 
   // Clear any cooldowns that have expired since the last check so profiles
@@ -84,7 +83,10 @@ export function resolveAuthProfileOrder(params: {
   const explicitOrder = storedOrder ?? configuredOrder;
   const explicitProfiles = cfg?.auth?.profiles
     ? Object.entries(cfg.auth.profiles)
-        .filter(([, profile]) => normalizeProviderIdForAuth(profile.provider) === providerAuthKey)
+        .filter(
+          ([, profile]) =>
+            resolveProviderIdForAuth(profile.provider, { config: cfg }) === providerAuthKey,
+        )
         .map(([profileId]) => profileId)
     : [];
   const baseOrder =
@@ -98,7 +100,7 @@ export function resolveAuthProfileOrder(params: {
     resolveAuthProfileEligibility({
       cfg,
       store,
-      provider: providerAuthKey,
+      provider,
       profileId,
       now,
     }).eligible;

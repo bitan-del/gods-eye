@@ -1,4 +1,4 @@
-import type { ChatType, GodsEyeConfig } from "../runtime-api.js";
+import type { ChatType, OpenClawConfig } from "./runtime-api.js";
 
 export function mapMattermostChannelTypeToChatType(channelType?: string | null): ChatType {
   if (!channelType) {
@@ -15,7 +15,7 @@ export function mapMattermostChannelTypeToChatType(channelType?: string | null):
 }
 
 export type MattermostRequireMentionResolverInput = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel: "mattermost";
   accountId: string;
   groupId: string;
@@ -24,7 +24,7 @@ export type MattermostRequireMentionResolverInput = {
 
 export type MattermostMentionGateInput = {
   kind: ChatType;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   channelId: string;
   threadRootId?: string;

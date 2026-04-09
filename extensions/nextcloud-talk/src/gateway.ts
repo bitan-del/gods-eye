@@ -1,5 +1,5 @@
-import { createAccountStatusSink } from "openclaw/plugin-sdk/channel-lifecycle";
-import { runStoppablePassiveMonitor } from "openclaw/plugin-sdk/extension-shared";
+import { createAccountStatusSink } from "godseye/plugin-sdk/channel-lifecycle";
+import { runStoppablePassiveMonitor } from "godseye/plugin-sdk/extension-shared";
 import { resolveNextcloudTalkAccount, type ResolvedNextcloudTalkAccount } from "./accounts.js";
 import {
   clearAccountEntryFields,

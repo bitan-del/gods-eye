@@ -1,11 +1,11 @@
-import { resolveMessagePrefix } from "godseye/plugin-sdk/agent-runtime";
-import {
-  formatInboundEnvelope,
-  type EnvelopeFormatOptions,
-} from "godseye/plugin-sdk/channel-inbound";
 import type { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import { getPrimaryIdentityId, getReplyContext, getSenderIdentity } from "../../identity.js";
 import type { WebInboundMsg } from "../types.js";
+import {
+  formatInboundEnvelope,
+  resolveMessagePrefix,
+  type EnvelopeFormatOptions,
+} from "./message-line.runtime.js";
 
 export function formatReplyContext(msg: WebInboundMsg) {
   const replyTo = getReplyContext(msg);

@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { coerceSecretRef, resolveSecretInputRef } from "../config/types.secrets.js";
 import { getPath } from "./path-utils.js";
 import { isExpectedResolvedSecretValue } from "./secret-value.js";
@@ -28,8 +28,8 @@ export type AnalyzeAssignmentsFromSnapshotResult = {
 };
 
 export function analyzeCommandSecretAssignmentsFromSnapshot(params: {
-  sourceConfig: GodsEyeConfig;
-  resolvedConfig: GodsEyeConfig;
+  sourceConfig: OpenClawConfig;
+  resolvedConfig: OpenClawConfig;
   targetIds: ReadonlySet<string>;
   inactiveRefPaths?: ReadonlySet<string>;
   allowedPaths?: ReadonlySet<string>;
@@ -92,8 +92,8 @@ export function analyzeCommandSecretAssignmentsFromSnapshot(params: {
 }
 
 export function collectCommandSecretAssignmentsFromSnapshot(params: {
-  sourceConfig: GodsEyeConfig;
-  resolvedConfig: GodsEyeConfig;
+  sourceConfig: OpenClawConfig;
+  resolvedConfig: OpenClawConfig;
   commandName: string;
   targetIds: ReadonlySet<string>;
   inactiveRefPaths?: ReadonlySet<string>;

@@ -5,7 +5,8 @@ import {
 } from "godseye/plugin-sdk/account-helpers";
 import { normalizeAccountId } from "godseye/plugin-sdk/account-id";
 import { resolveAccountEntry } from "godseye/plugin-sdk/routing";
-import type { DiscordAccountConfig, DiscordActionConfig, GodsEyeConfig } from "./runtime-api.js";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import type { DiscordAccountConfig, DiscordActionConfig, OpenClawConfig } from "./runtime-api.js";
 import { resolveDiscordToken } from "./token.js";
 
 export type ResolvedDiscordAccount = {
@@ -22,14 +23,14 @@ export const listDiscordAccountIds = listAccountIds;
 export const resolveDefaultDiscordAccountId = resolveDefaultAccountId;
 
 export function resolveDiscordAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): DiscordAccountConfig | undefined {
   return resolveAccountEntry(cfg.channels?.discord?.accounts, accountId);
 }
 
 export function mergeDiscordAccountConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
 ): DiscordAccountConfig {
   return resolveMergedAccountConfig<DiscordAccountConfig>({
@@ -42,10 +43,12 @@ export function mergeDiscordAccountConfig(
 }
 
 export function createDiscordActionGate(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): (key: keyof DiscordActionConfig, defaultValue?: boolean) => boolean {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultDiscordAccountId(params.cfg),
+  );
   return createAccountActionGate({
     baseActions: params.cfg.channels?.discord?.actions,
     accountActions: resolveDiscordAccountConfig(params.cfg, accountId)?.actions,
@@ -53,10 +56,12 @@ export function createDiscordActionGate(params: {
 }
 
 export function resolveDiscordAccount(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedDiscordAccount {
-  const accountId = normalizeAccountId(params.accountId);
+  const accountId = normalizeAccountId(
+    params.accountId ?? resolveDefaultDiscordAccountId(params.cfg),
+  );
   const baseEnabled = params.cfg.channels?.discord?.enabled !== false;
   const merged = mergeDiscordAccountConfig(params.cfg, accountId);
   const accountEnabled = merged.enabled !== false;
@@ -65,7 +70,7 @@ export function resolveDiscordAccount(params: {
   return {
     accountId,
     enabled,
-    name: merged.name?.trim() || undefined,
+    name: normalizeOptionalString(merged.name),
     token: tokenResolution.token,
     tokenSource: tokenResolution.source,
     config: merged,
@@ -73,7 +78,7 @@ export function resolveDiscordAccount(params: {
 }
 
 export function resolveDiscordMaxLinesPerMessage(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   discordConfig?: DiscordAccountConfig | null;
   accountId?: string | null;
 }): number | undefined {
@@ -86,7 +91,7 @@ export function resolveDiscordMaxLinesPerMessage(params: {
   }).config.maxLinesPerMessage;
 }
 
-export function listEnabledDiscordAccounts(cfg: GodsEyeConfig): ResolvedDiscordAccount[] {
+export function listEnabledDiscordAccounts(cfg: OpenClawConfig): ResolvedDiscordAccount[] {
   return listDiscordAccountIds(cfg)
     .map((accountId) => resolveDiscordAccount({ cfg, accountId }))
     .filter((account) => account.enabled);

@@ -21,7 +21,10 @@
       "godseye/extension-api": ["./src/extensionAPI.ts"],
       "godseye/plugin-sdk": ["./src/plugin-sdk/index.ts"],
       "godseye/plugin-sdk/*": ["./src/plugin-sdk/*.ts"],
-      "godseye/plugin-sdk/account-id": ["./src/plugin-sdk/account-id.ts"]
+      "godseye/plugin-sdk/account-id": ["./src/plugin-sdk/account-id.ts"],
+      "@godseye/plugin-sdk": ["./src/plugin-sdk/index.ts"],
+      "@godseye/plugin-sdk/*": ["./src/plugin-sdk/*.ts"],
+      "@godseye/*": ["./extensions/*"]
     }
   },
   "include": ["src/**/*", "ui/**/*", "extensions/**/*"],

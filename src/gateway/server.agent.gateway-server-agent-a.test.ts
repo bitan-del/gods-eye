@@ -28,7 +28,7 @@ beforeAll(async () => {
   server = started.server;
   ws = started.ws;
   await connectOk(ws);
-  sharedSessionStoreDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-gw-session-"));
+  sharedSessionStoreDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-gw-session-"));
   sharedSessionStorePath = path.join(sharedSessionStoreDir, "sessions.json");
 });
 
@@ -444,6 +444,7 @@ describe("gateway server agent", () => {
         message: "hi",
         sessionKey: "main",
         deliver: true,
+        bestEffortDeliver: false,
         idempotencyKey: "idem-agent-missing-provider",
       });
       expect(res.ok).toBe(false);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { buildCommandsMessage, buildHelpMessage, buildToolsMessage } from "./status.js";
 
 vi.mock("../plugins/commands.js", () => ({
@@ -10,11 +10,12 @@ describe("tools product copy", () => {
   it("mentions /tools in command discovery copy", () => {
     const cfg = {
       commands: { config: false, debug: false },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     expect(buildCommandsMessage(cfg)).toContain("/tools - List available runtime tools.");
     expect(buildCommandsMessage(cfg)).toContain("More: /tools for available capabilities");
     expect(buildHelpMessage(cfg)).toContain("/tools for available capabilities");
+    expect(buildHelpMessage(cfg)).toContain("/tasks");
   });
 
   it("formats built-in and plugin tools for end users", () => {
@@ -119,7 +120,7 @@ describe("tools product copy", () => {
                 label: "Cron",
                 description: "Schedule and manage cron jobs.",
                 rawDescription:
-                  "Manage Gateway cron jobs and send wake events.\n\nACTIONS:\n- status: Check cron scheduler status\nJOB SCHEMA:\n{ ... }",
+                  'Manage Gateway cron jobs and send wake events. Use this for reminders, "check back later" requests, delayed follow-ups, and recurring tasks. Do not emulate scheduling with exec sleep or process polling.\n\nACTIONS:\n- status: Check cron scheduler status\nJOB SCHEMA:\n{ ... }',
                 source: "core",
               },
             ],
@@ -129,7 +130,9 @@ describe("tools product copy", () => {
       { verbose: true },
     );
 
-    expect(text).toContain("Cron - Manage Gateway cron jobs and send wake events.");
+    expect(text).toContain(
+      'Cron - Manage Gateway cron jobs and send wake events. Use this for reminders, "check back later" requests, delayed follow-ups, and recurring tasks. Do not emulate scheduling with exec sleep or process polling.',
+    );
     expect(text).not.toContain("ACTIONS:");
     expect(text).not.toContain("JOB SCHEMA:");
   });

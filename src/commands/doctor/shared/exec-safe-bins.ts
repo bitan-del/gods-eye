@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import { resolveCommandResolutionFromArgv } from "../../../infra/exec-command-resolution.js";
 import {
   listInterpreterLikeSafeBins,
@@ -10,6 +10,7 @@ import {
   isTrustedSafeBinPath,
   normalizeTrustedSafeBinDirs,
 } from "../../../infra/exec-safe-bin-trust.js";
+import { normalizeOptionalLowercaseString } from "../../../shared/string-coerce.js";
 import { sanitizeForLog } from "../../../terminal/ansi.js";
 import { asObjectRecord } from "./object.js";
 
@@ -42,7 +43,7 @@ function normalizeConfiguredSafeBins(entries: unknown): string[] {
   return Array.from(
     new Set(
       entries
-        .map((entry) => (typeof entry === "string" ? entry.trim().toLowerCase() : ""))
+        .map((entry) => normalizeOptionalLowercaseString(entry) ?? "")
         .filter((entry) => entry.length > 0),
     ),
   ).toSorted();
@@ -57,7 +58,7 @@ function normalizeConfiguredTrustedSafeBinDirs(entries: unknown): string[] {
   );
 }
 
-function collectExecSafeBinScopes(cfg: GodsEyeConfig): ExecSafeBinScopeRef[] {
+function collectExecSafeBinScopes(cfg: OpenClawConfig): ExecSafeBinScopeRef[] {
   const scopes: ExecSafeBinScopeRef[] = [];
   const globalExec = asObjectRecord(cfg.tools?.exec);
   const globalTrustedDirs = normalizeConfiguredTrustedSafeBinDirs(globalExec?.safeBinTrustedDirs);
@@ -111,7 +112,7 @@ function collectExecSafeBinScopes(cfg: GodsEyeConfig): ExecSafeBinScopeRef[] {
   return scopes;
 }
 
-export function scanExecSafeBinCoverage(cfg: GodsEyeConfig): ExecSafeBinCoverageHit[] {
+export function scanExecSafeBinCoverage(cfg: OpenClawConfig): ExecSafeBinCoverageHit[] {
   const hits: ExecSafeBinCoverageHit[] = [];
   for (const scope of collectExecSafeBinScopes(cfg)) {
     const interpreterBins = new Set(listInterpreterLikeSafeBins(scope.safeBins));
@@ -138,7 +139,9 @@ export function scanExecSafeBinCoverage(cfg: GodsEyeConfig): ExecSafeBinCoverage
   return hits;
 }
 
-export function scanExecSafeBinTrustedDirHints(cfg: GodsEyeConfig): ExecSafeBinTrustedDirHintHit[] {
+export function scanExecSafeBinTrustedDirHints(
+  cfg: OpenClawConfig,
+): ExecSafeBinTrustedDirHintHit[] {
   const hits: ExecSafeBinTrustedDirHintHit[] = [];
   for (const scope of collectExecSafeBinScopes(cfg)) {
     for (const bin of scope.safeBins) {
@@ -240,8 +243,8 @@ export function collectExecSafeBinTrustedDirHintWarnings(
   return lines;
 }
 
-export function maybeRepairExecSafeBinProfiles(cfg: GodsEyeConfig): {
-  config: GodsEyeConfig;
+export function maybeRepairExecSafeBinProfiles(cfg: OpenClawConfig): {
+  config: OpenClawConfig;
   changes: string[];
   warnings: string[];
 } {

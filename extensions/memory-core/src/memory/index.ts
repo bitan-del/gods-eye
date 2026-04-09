@@ -3,7 +3,7 @@ export type {
   MemoryEmbeddingProbeResult,
   MemorySearchManager,
   MemorySearchResult,
-} from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+} from "godseye/plugin-sdk/memory-core-host-engine-storage";
 export {
   closeAllMemorySearchManagers,
   getMemorySearchManager,

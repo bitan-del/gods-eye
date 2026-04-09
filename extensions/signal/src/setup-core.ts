@@ -3,27 +3,27 @@ import {
   createDelegatedSetupWizardProxy,
   createDelegatedTextInputShouldPrompt,
   createPatchedAccountSetupAdapter,
-  normalizeE164,
+  createSetupInputPresenceValidator,
+  DEFAULT_ACCOUNT_ID,
+  mergeAllowFromEntries,
   parseSetupEntriesAllowingWildcard,
+  patchChannelConfigForAccount,
   promptParsedAllowFromForAccount,
   setAccountAllowFromForChannel,
-  setChannelDmPolicyWithAllowFrom,
   setSetupChannelEnabled,
-  type GodsEyeConfig,
+  type ChannelSetupAdapter,
+  type ChannelSetupWizard,
+  type ChannelSetupWizardTextInput,
+  type OpenClawConfig,
   type WizardPrompter,
-} from "godseye/plugin-sdk/setup";
-import type {
-  ChannelSetupAdapter,
-  ChannelSetupDmPolicy,
-  ChannelSetupWizard,
-  ChannelSetupWizardTextInput,
-} from "godseye/plugin-sdk/setup";
+} from "godseye/plugin-sdk/setup-runtime";
 import { formatCliCommand, formatDocsLink } from "godseye/plugin-sdk/setup-tools";
 import {
-  listSignalAccountIds,
-  resolveDefaultSignalAccountId,
-  resolveSignalAccount,
-} from "./accounts.js";
+  normalizeE164,
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "godseye/plugin-sdk/text-runtime";
+import { resolveDefaultSignalAccountId, resolveSignalAccount } from "./accounts.js";
 
 const channel = "signal" as const;
 const MIN_E164_DIGITS = 5;
@@ -33,7 +33,7 @@ const INVALID_SIGNAL_ACCOUNT_ERROR =
   "Invalid E.164 phone number (must start with + and country code, e.g. +15555550123)";
 
 export function normalizeSignalAccountInput(value: string | null | undefined): string | null {
-  const trimmed = value?.trim();
+  const trimmed = normalizeOptionalString(value);
   if (!trimmed) {
     return null;
   }
@@ -54,7 +54,7 @@ function isUuidLike(value: string): boolean {
 
 export function parseSignalAllowFromEntries(raw: string): { entries: string[]; error?: string } {
   return parseSetupEntriesAllowingWildcard(raw, (entry) => {
-    if (entry.toLowerCase().startsWith("uuid:")) {
+    if (normalizeLowercaseStringOrEmpty(entry).startsWith("uuid:")) {
       const id = entry.slice("uuid:".length).trim();
       if (!id) {
         return { error: "Invalid uuid entry" };
@@ -89,10 +89,10 @@ function buildSignalSetupPatch(input: {
 }
 
 export async function promptSignalAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   return promptParsedAllowFromForAccount({
     cfg: params.cfg,
     accountId: params.accountId,
@@ -122,23 +122,52 @@ export async function promptSignalAllowFrom(params: {
   });
 }
 
-export const signalDmPolicy: ChannelSetupDmPolicy = {
+export const signalDmPolicy = {
   label: "Signal",
   channel,
   policyKey: "channels.signal.dmPolicy",
   allowFromKey: "channels.signal.allowFrom",
-  getCurrent: (cfg: GodsEyeConfig) => cfg.channels?.signal?.dmPolicy ?? "pairing",
-  setPolicy: (cfg: GodsEyeConfig, policy) =>
-    setChannelDmPolicyWithAllowFrom({
+  resolveConfigKeys: (cfg: OpenClawConfig, accountId?: string) =>
+    (accountId ?? resolveDefaultSignalAccountId(cfg)) !== DEFAULT_ACCOUNT_ID
+      ? {
+          policyKey: `channels.signal.accounts.${accountId ?? resolveDefaultSignalAccountId(cfg)}.dmPolicy`,
+          allowFromKey: `channels.signal.accounts.${accountId ?? resolveDefaultSignalAccountId(cfg)}.allowFrom`,
+        }
+      : {
+          policyKey: "channels.signal.dmPolicy",
+          allowFromKey: "channels.signal.allowFrom",
+        },
+  getCurrent: (cfg: OpenClawConfig, accountId?: string) =>
+    resolveSignalAccount({ cfg, accountId: accountId ?? resolveDefaultSignalAccountId(cfg) }).config
+      .dmPolicy ?? "pairing",
+  setPolicy: (
+    cfg: OpenClawConfig,
+    policy: "pairing" | "allowlist" | "open" | "disabled",
+    accountId?: string,
+  ) =>
+    patchChannelConfigForAccount({
       cfg,
       channel,
-      dmPolicy: policy,
+      accountId: accountId ?? resolveDefaultSignalAccountId(cfg),
+      patch:
+        policy === "open"
+          ? {
+              dmPolicy: "open",
+              allowFrom: mergeAllowFromEntries(
+                resolveSignalAccount({
+                  cfg,
+                  accountId: accountId ?? resolveDefaultSignalAccountId(cfg),
+                }).config.allowFrom,
+                ["*"],
+              ),
+            }
+          : { dmPolicy: policy },
     }),
   promptAllowFrom: promptSignalAllowFrom,
 };
 
 function resolveSignalCliPath(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   credentialValues: Record<string, unknown>;
 }) {
@@ -182,27 +211,29 @@ export const signalNumberTextInput: ChannelSetupWizardTextInput = {
 export const signalCompletionNote = {
   title: "Signal next steps",
   lines: [
-    'Link device with: signal-cli link -n "Gods Eye"',
+    'Link device with: signal-cli link -n "OpenClaw"',
     "Scan QR in Signal -> Linked Devices",
-    `Then run: ${formatCliCommand("godseye gateway call channels.status --params '{\"probe\":true}'")}`,
+    `Then run: ${formatCliCommand("openclaw gateway call channels.status --params '{\"probe\":true}'")}`,
     `Docs: ${formatDocsLink("/signal", "signal")}`,
   ],
 };
 
 export const signalSetupAdapter: ChannelSetupAdapter = createPatchedAccountSetupAdapter({
   channelKey: channel,
-  validateInput: ({ input }) => {
-    if (
-      !input.signalNumber &&
-      !input.httpUrl &&
-      !input.httpHost &&
-      !input.httpPort &&
-      !input.cliPath
-    ) {
-      return "Signal requires --signal-number or --http-url/--http-host/--http-port/--cli-path.";
-    }
-    return null;
-  },
+  validateInput: createSetupInputPresenceValidator({
+    validate: ({ input }) => {
+      if (
+        !input.signalNumber &&
+        !input.httpUrl &&
+        !input.httpHost &&
+        !input.httpPort &&
+        !input.cliPath
+      ) {
+        return "Signal requires --signal-number or --http-url/--http-host/--http-port/--cli-path.";
+      }
+      return null;
+    },
+  }),
   buildPatch: (input) => buildSignalSetupPatch(input),
 });
 
@@ -231,6 +262,6 @@ export function createSignalSetupWizardProxy(loadWizard: () => Promise<ChannelSe
     ],
     completionNote: signalCompletionNote,
     dmPolicy: signalDmPolicy,
-    disable: (cfg: GodsEyeConfig) => setSetupChannelEnabled(cfg, channel, false),
+    disable: (cfg: OpenClawConfig) => setSetupChannelEnabled(cfg, channel, false),
   });
 }

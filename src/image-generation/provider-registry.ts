@@ -1,8 +1,7 @@
 import { normalizeProviderId } from "../agents/model-selection.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { isBlockedObjectKey } from "../infra/prototype-keys.js";
-import { loadGodsEyePlugins } from "../plugins/loader.js";
-import { getActivePluginRegistry, getActivePluginRegistryKey } from "../plugins/runtime.js";
+import { resolvePluginCapabilityProviders } from "../plugins/capability-provider-runtime.js";
 import type { ImageGenerationProviderPlugin } from "../plugins/types.js";
 
 const BUILTIN_IMAGE_GENERATION_PROVIDERS: readonly ImageGenerationProviderPlugin[] = [];
@@ -21,17 +20,15 @@ function isSafeImageGenerationProviderId(id: string | undefined): id is string {
 }
 
 function resolvePluginImageGenerationProviders(
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
 ): ImageGenerationProviderPlugin[] {
-  const active = getActivePluginRegistry();
-  const registry =
-    (active?.imageGenerationProviders?.length ?? 0) > 0 || getActivePluginRegistryKey() || !cfg
-      ? active
-      : loadGodsEyePlugins({ config: cfg });
-  return registry?.imageGenerationProviders?.map((entry) => entry.provider) ?? [];
+  return resolvePluginCapabilityProviders({
+    key: "imageGenerationProviders",
+    cfg,
+  });
 }
 
-function buildProviderMaps(cfg?: GodsEyeConfig): {
+function buildProviderMaps(cfg?: OpenClawConfig): {
   canonical: Map<string, ImageGenerationProviderPlugin>;
   aliases: Map<string, ImageGenerationProviderPlugin>;
 } {
@@ -62,13 +59,15 @@ function buildProviderMaps(cfg?: GodsEyeConfig): {
   return { canonical, aliases };
 }
 
-export function listImageGenerationProviders(cfg?: GodsEyeConfig): ImageGenerationProviderPlugin[] {
+export function listImageGenerationProviders(
+  cfg?: OpenClawConfig,
+): ImageGenerationProviderPlugin[] {
   return [...buildProviderMaps(cfg).canonical.values()];
 }
 
 export function getImageGenerationProvider(
   providerId: string | undefined,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
 ): ImageGenerationProviderPlugin | undefined {
   const normalized = normalizeImageGenerationProviderId(providerId);
   if (!normalized) {

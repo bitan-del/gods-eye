@@ -1,7 +1,7 @@
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
-import { createProviderApiKeyAuthMethod } from "openclaw/plugin-sdk/provider-auth-api-key";
-import { buildProviderReplayFamilyHooks } from "openclaw/plugin-sdk/provider-model-shared";
-import { buildProviderStreamFamilyHooks } from "openclaw/plugin-sdk/provider-stream-family";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-entry";
+import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth-api-key";
+import { buildProviderReplayFamilyHooks } from "godseye/plugin-sdk/provider-model-shared";
+import { buildProviderStreamFamilyHooks } from "godseye/plugin-sdk/provider-stream-family";
 import {
   GOOGLE_GEMINI_DEFAULT_MODEL,
   applyGoogleGeminiModelDefault,

@@ -1,8 +1,8 @@
 import type {
   ChannelDoctorAdapter,
   ChannelDoctorConfigMutation,
-} from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+} from "godseye/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 
 export function normalizeCompatibilityConfig({
   cfg,

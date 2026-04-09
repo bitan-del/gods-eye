@@ -1,7 +1,5 @@
 import { resolveSendableOutboundReplyParts } from "godseye/plugin-sdk/reply-payload";
-import type { GodsEyeConfig } from "../../config/config.js";
-import { loadConfig } from "../../config/config.js";
-import { callGatewayLeastPrivilege, randomIdempotencyKey } from "../../gateway/call.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { PollInput } from "../../polls.js";
 import { normalizePollInput } from "../../polls.js";
 import {
@@ -21,6 +19,21 @@ import type { OutboundMirror } from "./mirror.js";
 import { normalizeReplyPayloadsForDelivery } from "./payloads.js";
 import { buildOutboundSessionContext } from "./session-context.js";
 import { resolveOutboundTarget } from "./targets.js";
+
+let messageConfigRuntimePromise: Promise<typeof import("./message.config.runtime.js")> | null =
+  null;
+let messageGatewayRuntimePromise: Promise<typeof import("./message.gateway.runtime.js")> | null =
+  null;
+
+function loadMessageConfigRuntime() {
+  messageConfigRuntimePromise ??= import("./message.config.runtime.js");
+  return messageConfigRuntimePromise;
+}
+
+function loadMessageGatewayRuntime() {
+  messageGatewayRuntimePromise ??= import("./message.gateway.runtime.js");
+  return messageGatewayRuntimePromise;
+}
 
 export type MessageGatewayOptions = {
   url?: string;
@@ -47,7 +60,7 @@ type MessageSendParams = {
   dryRun?: boolean;
   bestEffort?: boolean;
   deps?: OutboundSendDeps;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   gateway?: MessageGatewayOptions;
   idempotencyKey?: string;
   mirror?: OutboundMirror;
@@ -78,7 +91,7 @@ type MessagePollParams = {
   silent?: boolean;
   isAnonymous?: boolean;
   dryRun?: boolean;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   gateway?: MessageGatewayOptions;
   idempotencyKey?: string;
 };
@@ -129,7 +142,7 @@ function buildMessagePollResult(params: {
 }
 
 async function resolveRequiredChannel(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel?: string;
 }): Promise<string> {
   return (
@@ -140,7 +153,7 @@ async function resolveRequiredChannel(params: {
   ).channel;
 }
 
-function resolveRequiredPlugin(channel: string, cfg: GodsEyeConfig) {
+function resolveRequiredPlugin(channel: string, cfg: OpenClawConfig) {
   const plugin = resolveOutboundChannelPlugin({ channel, cfg });
   if (!plugin) {
     throw new Error(`Unknown channel: ${channel}`);
@@ -174,6 +187,7 @@ async function callMessageGateway<T>(params: {
   method: string;
   params: Record<string, unknown>;
 }): Promise<T> {
+  const { callGatewayLeastPrivilege } = await loadMessageGatewayRuntime();
   const gateway = resolveGatewayOptions(params.gateway);
   return await callGatewayLeastPrivilege<T>({
     url: gateway.url,
@@ -187,8 +201,24 @@ async function callMessageGateway<T>(params: {
   });
 }
 
+async function resolveMessageConfig(cfg?: OpenClawConfig): Promise<OpenClawConfig> {
+  if (cfg) {
+    return cfg;
+  }
+  const { loadConfig } = await loadMessageConfigRuntime();
+  return loadConfig();
+}
+
+async function resolveGatewayIdempotencyKey(idempotencyKey?: string): Promise<string> {
+  if (idempotencyKey) {
+    return idempotencyKey;
+  }
+  const { randomIdempotencyKey } = await loadMessageGatewayRuntime();
+  return randomIdempotencyKey();
+}
+
 export async function sendMessage(params: MessageSendParams): Promise<MessageSendResult> {
-  const cfg = params.cfg ?? loadConfig();
+  const cfg = await resolveMessageConfig(params.cfg);
   const channel = await resolveRequiredChannel({ cfg, channel: params.channel });
   const plugin = resolveRequiredPlugin(channel, cfg);
   const deliveryMode = plugin.outbound?.deliveryMode ?? "direct";
@@ -285,7 +315,7 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
       agentId: params.agentId,
       channel,
       sessionKey: params.mirror?.sessionKey,
-      idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
+      idempotencyKey: await resolveGatewayIdempotencyKey(params.idempotencyKey),
     },
   });
 
@@ -300,7 +330,7 @@ export async function sendMessage(params: MessageSendParams): Promise<MessageSen
 }
 
 export async function sendPoll(params: MessagePollParams): Promise<MessagePollResult> {
-  const cfg = params.cfg ?? loadConfig();
+  const cfg = await resolveMessageConfig(params.cfg);
   const channel = await resolveRequiredChannel({ cfg, channel: params.channel });
 
   const pollInput: PollInput = {
@@ -349,7 +379,7 @@ export async function sendPoll(params: MessagePollParams): Promise<MessagePollRe
       isAnonymous: params.isAnonymous,
       channel,
       accountId: params.accountId,
-      idempotencyKey: params.idempotencyKey ?? randomIdempotencyKey(),
+      idempotencyKey: await resolveGatewayIdempotencyKey(params.idempotencyKey),
     },
   });
 

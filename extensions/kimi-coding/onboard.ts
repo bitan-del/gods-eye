@@ -1,6 +1,6 @@
 import {
   createDefaultModelPresetAppliers,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 import {
   buildKimiCodingProvider,
@@ -17,7 +17,7 @@ function resolveKimiCodingDefaultModel() {
 
 const kimiCodingPresetAppliers = createDefaultModelPresetAppliers({
   primaryModelRef: KIMI_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => {
+  resolveParams: (_cfg: OpenClawConfig) => {
     const defaultModel = resolveKimiCodingDefaultModel();
     if (!defaultModel) {
       return null;
@@ -33,10 +33,10 @@ const kimiCodingPresetAppliers = createDefaultModelPresetAppliers({
   },
 });
 
-export function applyKimiCodeProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyKimiCodeProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return kimiCodingPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyKimiCodeConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyKimiCodeConfig(cfg: OpenClawConfig): OpenClawConfig {
   return kimiCodingPresetAppliers.applyConfig(cfg);
 }

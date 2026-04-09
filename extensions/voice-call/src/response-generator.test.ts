@@ -14,18 +14,18 @@ function createAgentRuntime(payloads: Array<Record<string, unknown>>) {
       provider: "together",
       model: "Qwen/Qwen2.5-7B-Instruct-Turbo",
     },
-    resolveAgentDir: () => "/tmp/godseye/agents/main",
-    resolveAgentWorkspaceDir: () => "/tmp/godseye/workspace/main",
+    resolveAgentDir: () => "/tmp/openclaw/agents/main",
+    resolveAgentWorkspaceDir: () => "/tmp/openclaw/workspace/main",
     resolveAgentIdentity: () => ({ name: "tester" }),
     resolveThinkingDefault: () => "off",
     resolveAgentTimeoutMs: () => 30_000,
     ensureAgentWorkspace: async () => {},
     runEmbeddedPiAgent,
     session: {
-      resolveStorePath: () => "/tmp/godseye/sessions.json",
+      resolveStorePath: () => "/tmp/openclaw/sessions.json",
       loadSessionStore: () => ({}),
       saveSessionStore: async () => {},
-      resolveSessionFilePath: () => "/tmp/godseye/sessions/session.jsonl",
+      resolveSessionFilePath: () => "/tmp/openclaw/sessions/session.jsonl",
     },
   } as unknown as CoreAgentDeps;
 
@@ -38,7 +38,13 @@ function requireEmbeddedAgentArgs(runEmbeddedPiAgent: ReturnType<typeof vi.fn>) 
   if (!firstCall) {
     throw new Error("voice response generator did not invoke the embedded agent");
   }
-  const args = firstCall[0] as { extraSystemPrompt?: string } | undefined;
+  const args = firstCall[0] as
+    | {
+        extraSystemPrompt?: string;
+        provider?: string;
+        model?: string;
+      }
+    | undefined;
   if (!args?.extraSystemPrompt) {
     throw new Error("voice response generator did not pass the spoken-output contract prompt");
   }
@@ -83,6 +89,8 @@ describe("generateVoiceResponse", () => {
     expect(runEmbeddedPiAgent).toHaveBeenCalledTimes(1);
     const args = requireEmbeddedAgentArgs(runEmbeddedPiAgent);
     expect(args.extraSystemPrompt).toContain('{"spoken":"..."}');
+    expect(args.provider).toBe("together");
+    expect(args.model).toBe("Qwen/Qwen2.5-7B-Instruct-Turbo");
   });
 
   it("extracts spoken text from fenced JSON", async () => {

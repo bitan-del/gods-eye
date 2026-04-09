@@ -1,14 +1,14 @@
 import { describe, expect, it, test } from "vitest";
 import {
-  applyGodsEyeManifestInstallCommonFields,
+  applyOpenClawManifestInstallCommonFields,
   getFrontmatterString,
   normalizeStringList,
   parseFrontmatterBool,
-  parseGodsEyeManifestInstallBase,
-  resolveGodsEyeManifestBlock,
-  resolveGodsEyeManifestInstall,
-  resolveGodsEyeManifestOs,
-  resolveGodsEyeManifestRequires,
+  parseOpenClawManifestInstallBase,
+  resolveOpenClawManifestBlock,
+  resolveOpenClawManifestInstall,
+  resolveOpenClawManifestOs,
+  resolveOpenClawManifestRequires,
 } from "./frontmatter.js";
 
 describe("shared/frontmatter", () => {
@@ -30,60 +30,62 @@ describe("shared/frontmatter", () => {
     expect(parseFrontmatterBool("maybe", false)).toBe(false);
   });
 
-  test("resolveGodsEyeManifestBlock reads current manifest keys and custom metadata fields", () => {
+  test("resolveOpenClawManifestBlock reads current manifest keys and custom metadata fields", () => {
     expect(
-      resolveGodsEyeManifestBlock({
+      resolveOpenClawManifestBlock({
         frontmatter: {
-          metadata: "{ godseye: { foo: 1, bar: 'baz' } }",
+          metadata: "{ openclaw: { foo: 1, bar: 'baz' } }",
         },
       }),
     ).toEqual({ foo: 1, bar: "baz" });
 
     expect(
-      resolveGodsEyeManifestBlock({
+      resolveOpenClawManifestBlock({
         frontmatter: {
-          pluginMeta: "{ godseye: { foo: 2 } }",
+          pluginMeta: "{ openclaw: { foo: 2 } }",
         },
         key: "pluginMeta",
       }),
     ).toEqual({ foo: 2 });
   });
 
-  test("resolveGodsEyeManifestBlock returns undefined for invalid input", () => {
-    expect(resolveGodsEyeManifestBlock({ frontmatter: {} })).toBeUndefined();
-    expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "not-json5" } })).toBeUndefined();
-    expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "123" } })).toBeUndefined();
-    expect(resolveGodsEyeManifestBlock({ frontmatter: { metadata: "[]" } })).toBeUndefined();
+  test("resolveOpenClawManifestBlock returns undefined for invalid input", () => {
+    expect(resolveOpenClawManifestBlock({ frontmatter: {} })).toBeUndefined();
     expect(
-      resolveGodsEyeManifestBlock({ frontmatter: { metadata: "{ nope: { a: 1 } }" } }),
+      resolveOpenClawManifestBlock({ frontmatter: { metadata: "not-json5" } }),
+    ).toBeUndefined();
+    expect(resolveOpenClawManifestBlock({ frontmatter: { metadata: "123" } })).toBeUndefined();
+    expect(resolveOpenClawManifestBlock({ frontmatter: { metadata: "[]" } })).toBeUndefined();
+    expect(
+      resolveOpenClawManifestBlock({ frontmatter: { metadata: "{ nope: { a: 1 } }" } }),
     ).toBeUndefined();
   });
 
   it("normalizes manifest requirement and os lists", () => {
     expect(
-      resolveGodsEyeManifestRequires({
+      resolveOpenClawManifestRequires({
         requires: {
           bins: "bun, node",
           anyBins: [" ffmpeg ", ""],
-          env: ["GODSEYE_TOKEN", " GODSEYE_URL "],
+          env: ["OPENCLAW_TOKEN", " OPENCLAW_URL "],
           config: null,
         },
       }),
     ).toEqual({
       bins: ["bun", "node"],
       anyBins: ["ffmpeg"],
-      env: ["GODSEYE_TOKEN", "GODSEYE_URL"],
+      env: ["OPENCLAW_TOKEN", "OPENCLAW_URL"],
       config: [],
     });
-    expect(resolveGodsEyeManifestRequires({})).toBeUndefined();
-    expect(resolveGodsEyeManifestOs({ os: [" darwin ", "linux", ""] })).toEqual([
+    expect(resolveOpenClawManifestRequires({})).toBeUndefined();
+    expect(resolveOpenClawManifestOs({ os: [" darwin ", "linux", ""] })).toEqual([
       "darwin",
       "linux",
     ]);
   });
 
   it("parses and applies install common fields", () => {
-    const parsed = parseGodsEyeManifestInstallBase(
+    const parsed = parseOpenClawManifestInstallBase(
       {
         type: " Brew ",
         id: "brew.git",
@@ -105,9 +107,9 @@ describe("shared/frontmatter", () => {
       label: "Git",
       bins: ["git", "git"],
     });
-    expect(parseGodsEyeManifestInstallBase({ kind: "bad" }, ["brew"])).toBeUndefined();
+    expect(parseOpenClawManifestInstallBase({ kind: "bad" }, ["brew"])).toBeUndefined();
     expect(
-      applyGodsEyeManifestInstallCommonFields<{
+      applyOpenClawManifestInstallCommonFields<{
         extra: boolean;
         id?: string;
         label?: string;
@@ -122,7 +124,7 @@ describe("shared/frontmatter", () => {
   });
 
   it("prefers explicit kind, ignores invalid common fields, and leaves missing ones untouched", () => {
-    const parsed = parseGodsEyeManifestInstallBase(
+    const parsed = parseOpenClawManifestInstallBase(
       {
         kind: " npm ",
         type: "brew",
@@ -144,7 +146,7 @@ describe("shared/frontmatter", () => {
       kind: "npm",
     });
     expect(
-      applyGodsEyeManifestInstallCommonFields(
+      applyOpenClawManifestInstallCommonFields(
         { id: "keep", label: "Keep", bins: ["bun"] },
         parsed!,
       ),
@@ -157,7 +159,7 @@ describe("shared/frontmatter", () => {
 
   it("maps install entries through the parser and filters rejected specs", () => {
     expect(
-      resolveGodsEyeManifestInstall(
+      resolveOpenClawManifestInstall(
         {
           install: [{ id: "keep" }, { id: "drop" }, "bad"],
         },

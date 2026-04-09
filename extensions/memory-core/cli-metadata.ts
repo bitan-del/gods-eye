@@ -1,4 +1,4 @@
-import { definePluginEntry } from "openclaw/plugin-sdk/core";
+import { definePluginEntry } from "godseye/plugin-sdk/core";
 
 export default definePluginEntry({
   id: "memory-core",

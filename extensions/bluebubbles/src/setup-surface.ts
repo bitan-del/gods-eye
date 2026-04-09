@@ -6,13 +6,10 @@ import {
   formatDocsLink,
   type ChannelSetupDmPolicy,
   type ChannelSetupWizard,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/setup";
-import {
-  listBlueBubblesAccountIds,
-  resolveBlueBubblesAccount,
-  resolveDefaultBlueBubblesAccountId,
-} from "./accounts.js";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import { resolveBlueBubblesAccount, resolveDefaultBlueBubblesAccountId } from "./accounts.js";
 import { applyBlueBubblesConnectionConfig } from "./config-apply.js";
 import { hasConfiguredSecretInput, normalizeSecretInputString } from "./secret-input.js";
 import {
@@ -43,7 +40,7 @@ function validateBlueBubblesAllowFromEntry(value: string): string | null {
     if (parsed.kind === "handle" && !parsed.handle) {
       return null;
     }
-    return value.trim() || null;
+    return normalizeOptionalString(value) ?? null;
   } catch {
     return null;
   }
@@ -80,7 +77,7 @@ const promptBlueBubblesAllowFrom = createPromptParsedAllowFromForAccount({
 });
 
 function validateBlueBubblesServerUrlInput(value: unknown): string | undefined {
-  const trimmed = String(value ?? "").trim();
+  const trimmed = normalizeOptionalString(value) ?? "";
   if (!trimmed) {
     return "Required";
   }
@@ -94,14 +91,14 @@ function validateBlueBubblesServerUrlInput(value: unknown): string | undefined {
 }
 
 function applyBlueBubblesSetupPatch(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   accountId: string,
   patch: {
     serverUrl?: string;
     password?: unknown;
     webhookPath?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   return applyBlueBubblesConnectionConfig({
     cfg,
     accountId,
@@ -109,14 +106,6 @@ function applyBlueBubblesSetupPatch(
     onlyDefinedFields: true,
     accountEnabled: "preserve-or-true",
   });
-}
-
-function resolveBlueBubblesServerUrl(cfg: GodsEyeConfig, accountId: string): string | undefined {
-  return resolveBlueBubblesAccount({ cfg, accountId }).config.serverUrl?.trim() || undefined;
-}
-
-function resolveBlueBubblesWebhookPath(cfg: GodsEyeConfig, accountId: string): string | undefined {
-  return resolveBlueBubblesAccount({ cfg, accountId }).config.webhookPath?.trim() || undefined;
 }
 
 function validateBlueBubblesWebhookPath(value: string): string | undefined {
@@ -135,8 +124,23 @@ const dmPolicy: ChannelSetupDmPolicy = {
   channel,
   policyKey: "channels.bluebubbles.dmPolicy",
   allowFromKey: "channels.bluebubbles.allowFrom",
-  getCurrent: (cfg) => cfg.channels?.bluebubbles?.dmPolicy ?? "pairing",
-  setPolicy: (cfg, policy) => setBlueBubblesDmPolicy(cfg, policy),
+  resolveConfigKeys: (cfg, accountId) =>
+    (accountId ?? resolveDefaultBlueBubblesAccountId(cfg)) !== DEFAULT_ACCOUNT_ID
+      ? {
+          policyKey: `channels.bluebubbles.accounts.${accountId ?? resolveDefaultBlueBubblesAccountId(cfg)}.dmPolicy`,
+          allowFromKey: `channels.bluebubbles.accounts.${accountId ?? resolveDefaultBlueBubblesAccountId(cfg)}.allowFrom`,
+        }
+      : {
+          policyKey: "channels.bluebubbles.dmPolicy",
+          allowFromKey: "channels.bluebubbles.allowFrom",
+        },
+  getCurrent: (cfg, accountId) =>
+    resolveBlueBubblesAccount({
+      cfg,
+      accountId: accountId ?? resolveDefaultBlueBubblesAccountId(cfg),
+    }).config.dmPolicy ?? "pairing",
+  setPolicy: (cfg, policy, accountId) =>
+    setBlueBubblesDmPolicy(cfg, accountId ?? resolveDefaultBlueBubblesAccountId(cfg), policy),
   promptAllowFrom: promptBlueBubblesAllowFrom,
 };
 
@@ -153,17 +157,16 @@ export const blueBubblesSetupWizard: ChannelSetupWizard = {
       configuredScore: 1,
       unconfiguredScore: 0,
       includeStatusLine: true,
-      resolveConfigured: ({ cfg }) =>
-        listBlueBubblesAccountIds(cfg).some((accountId) => {
-          const account = resolveBlueBubblesAccount({ cfg, accountId });
-          return account.configured;
-        }),
+      resolveConfigured: ({ cfg, accountId }) =>
+        resolveBlueBubblesAccount({ cfg, accountId }).configured,
     }),
     resolveSelectionHint: ({ configured }) =>
       configured ? "configured" : "iMessage via BlueBubbles app",
   },
   prepare: async ({ cfg, accountId, prompter, credentialValues }) => {
-    const existingWebhookPath = resolveBlueBubblesWebhookPath(cfg, accountId);
+    const existingWebhookPath = normalizeOptionalString(
+      resolveBlueBubblesAccount({ cfg, accountId }).config.webhookPath,
+    );
     const wantsCustomWebhook = await prompter.confirm({
       message: `Configure a custom webhook path? (default: ${DEFAULT_WEBHOOK_PATH})`,
       initialValue: Boolean(existingWebhookPath && existingWebhookPath !== DEFAULT_WEBHOOK_PATH),
@@ -216,7 +219,8 @@ export const blueBubblesSetupWizard: ChannelSetupWizard = {
         "Find this in the BlueBubbles Server app under Connection.",
         `Docs: ${formatDocsLink("/channels/bluebubbles", "bluebubbles")}`,
       ],
-      currentValue: ({ cfg, accountId }) => resolveBlueBubblesServerUrl(cfg, accountId),
+      currentValue: ({ cfg, accountId }) =>
+        normalizeOptionalString(resolveBlueBubblesAccount({ cfg, accountId }).config.serverUrl),
       validate: ({ value }) => validateBlueBubblesServerUrlInput(value),
       normalizeValue: ({ value }) => String(value).trim(),
       applySet: async ({ cfg, accountId, value }) =>
@@ -229,7 +233,9 @@ export const blueBubblesSetupWizard: ChannelSetupWizard = {
       message: "Webhook path",
       placeholder: DEFAULT_WEBHOOK_PATH,
       currentValue: ({ cfg, accountId }) => {
-        const value = resolveBlueBubblesWebhookPath(cfg, accountId);
+        const value = normalizeOptionalString(
+          resolveBlueBubblesAccount({ cfg, accountId }).config.webhookPath,
+        );
         return value && value !== DEFAULT_WEBHOOK_PATH ? value : undefined;
       },
       shouldPrompt: ({ credentialValues }) =>
@@ -247,7 +253,7 @@ export const blueBubblesSetupWizard: ChannelSetupWizard = {
     lines: [
       "Configure the webhook URL in BlueBubbles Server:",
       "1. Open BlueBubbles Server -> Settings -> Webhooks",
-      "2. Add your GodsEye gateway URL + webhook path",
+      "2. Add your OpenClaw gateway URL + webhook path",
       `   Example: https://your-gateway-host:3000${DEFAULT_WEBHOOK_PATH}`,
       "3. Enable the webhook and save",
       "",

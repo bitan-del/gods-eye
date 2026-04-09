@@ -3,10 +3,10 @@ import {
   resolveChannelGroupToolsPolicy,
   type GroupToolPolicyConfig,
 } from "godseye/plugin-sdk/channel-policy";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 
 type WhatsAppGroupContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
   senderId?: string | null;

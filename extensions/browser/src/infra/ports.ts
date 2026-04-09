@@ -1,1 +1,1 @@
-export { ensurePortAvailable } from "openclaw/plugin-sdk/browser-security-runtime";
+export { ensurePortAvailable } from "godseye/plugin-sdk/browser-security-runtime";

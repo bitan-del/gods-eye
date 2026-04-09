@@ -1,18 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
+import { sandboxExplainCommand } from "./sandbox-explain.js";
 
 const SANDBOX_EXPLAIN_TEST_TIMEOUT_MS = process.platform === "win32" ? 45_000 : 30_000;
 
 let mockCfg: unknown = {};
 
-vi.mock("../config/config.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../config/config.js")>();
+vi.mock("../config/config.js", async () => {
+  const actual = await vi.importActual<typeof import("../config/config.js")>("../config/config.js");
   return {
     ...actual,
     loadConfig: vi.fn().mockImplementation(() => mockCfg),
   };
 });
-
-const { sandboxExplainCommand } = await import("./sandbox-explain.js");
 
 describe("sandbox explain command", () => {
   it("prints JSON shape + fix-it keys", { timeout: SANDBOX_EXPLAIN_TEST_TIMEOUT_MS }, async () => {
@@ -26,7 +25,7 @@ describe("sandbox explain command", () => {
         sandbox: { tools: { deny: ["browser"] } },
         elevated: { enabled: true, allowFrom: { whatsapp: ["*"] } },
       },
-      session: { store: "/tmp/godseye-test-sessions-{agentId}.json" },
+      session: { store: "/tmp/openclaw-test-sessions-{agentId}.json" },
     };
 
     const logs: string[] = [];
@@ -38,7 +37,7 @@ describe("sandbox explain command", () => {
 
     const out = logs.join("");
     const parsed = JSON.parse(out);
-    expect(parsed).toHaveProperty("docsUrl", "https://docs.gods-eye.org/sandbox");
+    expect(parsed).toHaveProperty("docsUrl", "https://docs.openclaw.ai/sandbox");
     expect(parsed).toHaveProperty("sandbox.mode", "all");
     expect(parsed).toHaveProperty("sandbox.tools.sources.allow.source");
     expect(Array.isArray(parsed.fixIt)).toBe(true);
@@ -73,7 +72,7 @@ describe("sandbox explain command", () => {
           },
         },
       },
-      session: { store: "/tmp/godseye-test-sessions-{agentId}.json" },
+      session: { store: "/tmp/openclaw-test-sessions-{agentId}.json" },
     };
 
     const logs: string[] = [];

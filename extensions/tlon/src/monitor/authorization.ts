@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../api.js";
+import type { OpenClawConfig } from "../../api.js";
 import type { TlonSettingsStore } from "../settings.js";
 
 type ChannelAuthorization = {
@@ -7,7 +7,7 @@ type ChannelAuthorization = {
 };
 
 export function resolveChannelAuthorization(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   channelNest: string,
   settings?: TlonSettingsStore,
 ): { mode: "restricted" | "open"; allowedShips: string[] } {

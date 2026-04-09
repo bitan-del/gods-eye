@@ -2,10 +2,12 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { resolveBoundaryPath } from "../../infra/boundary-path.js";
 import { parseSshTarget } from "../../infra/ssh-tunnel.js";
-import { resolvePreferredGodsEyeTmpDir } from "../../infra/tmp-godseye-dir.js";
+import { resolvePreferredOpenClawTmpDir } from "../../infra/tmp-openclaw-dir.js";
 import { resolveUserPath } from "../../utils.js";
 import type { SandboxBackendCommandResult } from "./backend.js";
+import { sanitizeEnvVars } from "./sanitize-env-vars.js";
 
 export type SshSandboxSettings = {
   command: string;
@@ -119,7 +121,7 @@ export async function createSshSandboxSessionFromConfigText(params: {
   if (!host) {
     throw new Error("Failed to parse SSH config output.");
   }
-  const configDir = await fs.mkdtemp(path.join(resolveSshTmpRoot(), "godseye-sandbox-ssh-"));
+  const configDir = await fs.mkdtemp(path.join(resolveSshTmpRoot(), "openclaw-sandbox-ssh-"));
   const configPath = path.join(configDir, "config");
   await fs.writeFile(configPath, params.configText, { encoding: "utf8", mode: 0o600 });
   await fs.chmod(configPath, 0o600);
@@ -138,7 +140,7 @@ export async function createSshSandboxSessionFromSettings(
     throw new Error(`Invalid sandbox SSH target: ${settings.target}`);
   }
 
-  const configDir = await fs.mkdtemp(path.join(resolveSshTmpRoot(), "godseye-sandbox-ssh-"));
+  const configDir = await fs.mkdtemp(path.join(resolveSshTmpRoot(), "openclaw-sandbox-ssh-"));
   try {
     const materializedIdentity = settings.identityData
       ? await writeSecretMaterial(configDir, "identity", settings.identityData)
@@ -154,7 +156,7 @@ export async function createSshSandboxSessionFromSettings(
       materializedCertificate ?? resolveOptionalLocalPath(settings.certificateFile);
     const knownHostsFile =
       materializedKnownHosts ?? resolveOptionalLocalPath(settings.knownHostsFile);
-    const hostAlias = "godseye-sandbox";
+    const hostAlias = "openclaw-sandbox";
     const configPath = path.join(configDir, "config");
     const lines = [
       `Host ${hostAlias}`,
@@ -212,10 +214,11 @@ export async function runSshSandboxCommand(
     remoteCommand: params.remoteCommand,
     tty: params.tty,
   });
+  const sshEnv = sanitizeEnvVars(process.env).allowed;
   return await new Promise<SandboxBackendCommandResult>((resolve, reject) => {
     const child = spawn(argv[0], argv.slice(1), {
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+      env: sshEnv,
       signal: params.signal,
     });
     const stdoutChunks: Buffer[] = [];
@@ -255,17 +258,19 @@ export async function uploadDirectoryToSshTarget(params: {
   remoteDir: string;
   signal?: AbortSignal;
 }): Promise<void> {
+  await assertSafeUploadSymlinks(params.localDir);
   const remoteCommand = buildRemoteCommand([
     "/bin/sh",
     "-c",
     'mkdir -p -- "$1" && tar -xf - -C "$1"',
-    "godseye-sandbox-upload",
+    "openclaw-sandbox-upload",
     params.remoteDir,
   ]);
   const sshArgv = buildSshSandboxArgv({
     session: params.session,
     remoteCommand,
   });
+  const sshEnv = sanitizeEnvVars(process.env).allowed;
   await new Promise<void>((resolve, reject) => {
     const tar = spawn("tar", ["-C", params.localDir, "-cf", "-", "."], {
       stdio: ["ignore", "pipe", "pipe"],
@@ -273,7 +278,7 @@ export async function uploadDirectoryToSshTarget(params: {
     });
     const ssh = spawn(sshArgv[0], sshArgv.slice(1), {
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env,
+      env: sshEnv,
       signal: params.signal,
     });
     const tarStderr: Buffer[] = [];
@@ -334,13 +339,44 @@ export async function uploadDirectoryToSshTarget(params: {
   });
 }
 
+async function assertSafeUploadSymlinks(localDir: string): Promise<void> {
+  const rootDir = path.resolve(localDir);
+  await walkDirectory(rootDir);
+
+  async function walkDirectory(currentDir: string): Promise<void> {
+    const entries = await fs.readdir(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isSymbolicLink()) {
+        try {
+          await resolveBoundaryPath({
+            absolutePath: entryPath,
+            rootPath: rootDir,
+            boundaryLabel: "SSH sandbox upload tree",
+          });
+        } catch (error) {
+          const relativePath = path.relative(rootDir, entryPath).split(path.sep).join("/");
+          throw new Error(
+            `SSH sandbox upload refuses symlink escaping the workspace: ${relativePath}`,
+            { cause: error },
+          );
+        }
+        continue;
+      }
+      if (entry.isDirectory()) {
+        await walkDirectory(entryPath);
+      }
+    }
+  }
+}
+
 function parseSshConfigHost(configText: string): string | null {
   const hostMatch = configText.match(/^\s*Host\s+(\S+)/m);
   return hostMatch?.[1]?.trim() || null;
 }
 
 function resolveSshTmpRoot(): string {
-  return path.resolve(resolvePreferredGodsEyeTmpDir() ?? os.tmpdir());
+  return path.resolve(resolvePreferredOpenClawTmpDir() ?? os.tmpdir());
 }
 
 function resolveOptionalLocalPath(value: string | undefined): string | undefined {

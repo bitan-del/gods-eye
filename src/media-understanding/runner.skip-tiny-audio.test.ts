@@ -1,17 +1,33 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { MsgContext } from "../auto-reply/templating.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { MIN_AUDIO_FILE_BYTES } from "./defaults.js";
-import {
-  buildProviderRegistry,
-  createMediaAttachmentCache,
-  normalizeMediaAttachments,
-  runCapability,
-} from "./runner.js";
+import { createMediaAttachmentCache, normalizeMediaAttachments } from "./runner.attachments.js";
+import { buildProviderRegistry, runCapability } from "./runner.js";
 import type { AudioTranscriptionRequest } from "./types.js";
+
+const modelAuthMocks = vi.hoisted(() => ({
+  hasAvailableAuthForProvider: vi.fn(() => true),
+  resolveApiKeyForProvider: vi.fn(async () => ({
+    apiKey: "test-key",
+    source: "test",
+    mode: "api-key",
+  })),
+  requireApiKey: vi.fn((auth: { apiKey?: string }) => auth.apiKey ?? "test-key"),
+}));
+
+vi.mock("../agents/model-auth.js", () => ({
+  hasAvailableAuthForProvider: modelAuthMocks.hasAvailableAuthForProvider,
+  resolveApiKeyForProvider: modelAuthMocks.resolveApiKeyForProvider,
+  requireApiKey: modelAuthMocks.requireApiKey,
+}));
+
+vi.mock("../plugins/capability-provider-runtime.js", () => ({
+  resolvePluginCapabilityProviders: () => [],
+}));
 
 async function withAudioFixture(params: {
   filePrefix: string;
@@ -37,6 +53,7 @@ async function withAudioFixture(params: {
   const media = normalizeMediaAttachments(ctx);
   const cache = createMediaAttachmentCache(media, {
     localPathRoots: [path.dirname(tmpPath)],
+    includeDefaultLocalPathRoots: false,
   });
 
   try {
@@ -57,7 +74,7 @@ const AUDIO_CAPABILITY_CFG = {
       },
     },
   },
-} as unknown as GodsEyeConfig;
+} as unknown as OpenClawConfig;
 
 async function runAudioCapabilityWithTranscriber(params: {
   ctx: MsgContext;
@@ -86,7 +103,7 @@ async function runAudioCapabilityWithTranscriber(params: {
 describe("runCapability skips tiny audio files", () => {
   it("skips audio transcription when file is smaller than MIN_AUDIO_FILE_BYTES", async () => {
     await withAudioFixture({
-      filePrefix: "godseye-tiny-audio",
+      filePrefix: "openclaw-tiny-audio",
       extension: "wav",
       mediaType: "audio/wav",
       fileContents: Buffer.alloc(100), // 100 bytes, way below 1024
@@ -118,7 +135,7 @@ describe("runCapability skips tiny audio files", () => {
 
   it("skips audio transcription for empty (0-byte) files", async () => {
     await withAudioFixture({
-      filePrefix: "godseye-empty-audio",
+      filePrefix: "openclaw-empty-audio",
       extension: "ogg",
       mediaType: "audio/ogg",
       fileContents: Buffer.alloc(0),
@@ -142,7 +159,7 @@ describe("runCapability skips tiny audio files", () => {
 
   it("proceeds with transcription when file meets minimum size", async () => {
     await withAudioFixture({
-      filePrefix: "godseye-ok-audio",
+      filePrefix: "openclaw-ok-audio",
       extension: "wav",
       mediaType: "audio/wav",
       fileContents: Buffer.alloc(MIN_AUDIO_FILE_BYTES + 100),

@@ -19,7 +19,7 @@ vi.mock("./node-require.js", () => ({
 }));
 
 let originalTestFileLog: string | undefined;
-let originalGodsEyeLogLevel: string | undefined;
+let originalOpenClawLogLevel: string | undefined;
 let logging: typeof import("../logging.js");
 
 beforeAll(async () => {
@@ -27,10 +27,10 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  originalTestFileLog = process.env.GODSEYE_TEST_FILE_LOG;
-  originalGodsEyeLogLevel = process.env.GODSEYE_LOG_LEVEL;
-  delete process.env.GODSEYE_TEST_FILE_LOG;
-  delete process.env.GODSEYE_LOG_LEVEL;
+  originalTestFileLog = process.env.OPENCLAW_TEST_FILE_LOG;
+  originalOpenClawLogLevel = process.env.OPENCLAW_LOG_LEVEL;
+  delete process.env.OPENCLAW_TEST_FILE_LOG;
+  delete process.env.OPENCLAW_LOG_LEVEL;
   readLoggingConfigMock.mockClear();
   shouldSkipMutatingLoggingConfigReadMock.mockReset();
   shouldSkipMutatingLoggingConfigReadMock.mockReturnValue(false);
@@ -41,14 +41,14 @@ beforeEach(() => {
 
 afterEach(() => {
   if (originalTestFileLog === undefined) {
-    delete process.env.GODSEYE_TEST_FILE_LOG;
+    delete process.env.OPENCLAW_TEST_FILE_LOG;
   } else {
-    process.env.GODSEYE_TEST_FILE_LOG = originalTestFileLog;
+    process.env.OPENCLAW_TEST_FILE_LOG = originalTestFileLog;
   }
-  if (originalGodsEyeLogLevel === undefined) {
-    delete process.env.GODSEYE_LOG_LEVEL;
+  if (originalOpenClawLogLevel === undefined) {
+    delete process.env.OPENCLAW_LOG_LEVEL;
   } else {
-    process.env.GODSEYE_LOG_LEVEL = originalGodsEyeLogLevel;
+    process.env.OPENCLAW_LOG_LEVEL = originalOpenClawLogLevel;
   }
   logging.resetLogger();
   logging.setLoggerOverride(null);
@@ -64,13 +64,13 @@ describe("getResolvedLoggerSettings", () => {
   });
 
   it("reads logging config when test file logging is explicitly enabled", () => {
-    process.env.GODSEYE_TEST_FILE_LOG = "1";
+    process.env.OPENCLAW_TEST_FILE_LOG = "1";
     const settings = logging.getResolvedLoggerSettings();
     expect(settings.level).toBe("info");
   });
 
   it("skips fallback config loads for config schema", () => {
-    process.env.GODSEYE_TEST_FILE_LOG = "1";
+    process.env.OPENCLAW_TEST_FILE_LOG = "1";
     shouldSkipMutatingLoggingConfigReadMock.mockReturnValue(true);
 
     const settings = logging.getResolvedLoggerSettings();

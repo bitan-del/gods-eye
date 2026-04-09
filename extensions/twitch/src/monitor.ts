@@ -5,7 +5,10 @@
  * resolves agent routes, and handles replies.
  */
 
-import type { ReplyPayload, GodsEyeConfig } from "../api.js";
+import type { MarkdownTableMode, OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import type { ReplyPayload } from "../api.js";
 import { createChannelReplyPipeline } from "../api.js";
 import { checkTwitchAccessControl } from "./access-control.js";
 import { getOrCreateClientManager } from "./client-manager-registry.js";
@@ -21,7 +24,7 @@ export type TwitchRuntimeEnv = {
 export type TwitchMonitorOptions = {
   account: TwitchAccountConfig;
   accountId: string;
-  config: unknown; // GodsEyeConfig
+  config: unknown; // OpenClawConfig
   runtime: TwitchRuntimeEnv;
   abortSignal: AbortSignal;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
@@ -46,7 +49,7 @@ async function processTwitchMessage(params: {
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
 }): Promise<void> {
   const { message, account, accountId, config, runtime, core, statusSink } = params;
-  const cfg = config as GodsEyeConfig;
+  const cfg = config as OpenClawConfig;
 
   const route = core.channel.routing.resolveAgentRoute({
     cfg,
@@ -145,7 +148,7 @@ async function deliverTwitchReply(params: {
   account: TwitchAccountConfig;
   accountId: string;
   config: unknown;
-  tableMode: "off" | "plain" | "markdown" | "bullets" | "code";
+  tableMode: MarkdownTableMode;
   runtime: TwitchRuntimeEnv;
   statusSink?: (patch: { lastInboundAt?: number; lastOutboundAt?: number }) => void;
 }): Promise<void> {
@@ -220,7 +223,7 @@ export async function monitorTwitchProvider(
       accountId,
     );
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = formatErrorMessage(error);
     runtime.error?.(`Failed to connect: ${errorMsg}`);
     throw error;
   }
@@ -231,8 +234,8 @@ export async function monitorTwitchProvider(
     }
 
     // Access control check
-    const botUsername = account.username.toLowerCase();
-    if (message.username.toLowerCase() === botUsername) {
+    const botUsername = normalizeLowercaseStringOrEmpty(account.username);
+    if (normalizeLowercaseStringOrEmpty(message.username) === botUsername) {
       return; // Ignore own messages
     }
 

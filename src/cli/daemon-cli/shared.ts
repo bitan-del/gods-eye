@@ -10,7 +10,6 @@ import {
   buildPlatformRuntimeLogHints,
   buildPlatformServiceStartHints,
 } from "../../daemon/runtime-hints.js";
-import { getResolvedLoggerSettings } from "../../logging.js";
 import { colorize, isRich, theme } from "../../terminal/theme.js";
 import { formatCliCommand } from "../command-format.js";
 import { parsePort } from "../shared/parse-port.js";
@@ -107,11 +106,11 @@ export function pickProbeHostForBind(
 }
 
 const SAFE_DAEMON_ENV_KEYS = [
-  "GODSEYE_PROFILE",
-  "GODSEYE_STATE_DIR",
-  "GODSEYE_CONFIG_PATH",
-  "GODSEYE_GATEWAY_PORT",
-  "GODSEYE_NIX_MODE",
+  "OPENCLAW_PROFILE",
+  "OPENCLAW_STATE_DIR",
+  "OPENCLAW_CONFIG_PATH",
+  "OPENCLAW_GATEWAY_PORT",
+  "OPENCLAW_NIX_MODE",
 ];
 
 export function filterDaemonEnv(env: Record<string, string> | undefined): Record<string, string> {
@@ -147,20 +146,15 @@ export function normalizeListenerAddress(raw: string): string {
 export function renderRuntimeHints(
   runtime: { missingUnit?: boolean; status?: string } | undefined,
   env: NodeJS.ProcessEnv = process.env,
+  logFile?: string | null,
 ): string[] {
   if (!runtime) {
     return [];
   }
   const hints: string[] = [];
-  const fileLog = (() => {
-    try {
-      return getResolvedLoggerSettings().file;
-    } catch {
-      return null;
-    }
-  })();
+  const fileLog = logFile ?? null;
   if (runtime.missingUnit) {
-    hints.push(`Service not installed. Run: ${formatCliCommand("godseye gateway install", env)}`);
+    hints.push(`Service not installed. Run: ${formatCliCommand("openclaw gateway install", env)}`);
     if (fileLog) {
       hints.push(`File logs: ${fileLog}`);
     }
@@ -173,8 +167,8 @@ export function renderRuntimeHints(
     hints.push(
       ...buildPlatformRuntimeLogHints({
         env,
-        systemdServiceName: resolveGatewaySystemdServiceName(env.GODSEYE_PROFILE),
-        windowsTaskName: resolveGatewayWindowsTaskName(env.GODSEYE_PROFILE),
+        systemdServiceName: resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE),
+        windowsTaskName: resolveGatewayWindowsTaskName(env.OPENCLAW_PROFILE),
       }),
     );
   }
@@ -182,11 +176,11 @@ export function renderRuntimeHints(
 }
 
 export function renderGatewayServiceStartHints(env: NodeJS.ProcessEnv = process.env): string[] {
-  const profile = env.GODSEYE_PROFILE;
+  const profile = env.OPENCLAW_PROFILE;
   const container = resolveDaemonContainerContext(env);
   const hints = buildPlatformServiceStartHints({
-    installCommand: formatCliCommand("godseye gateway install", env),
-    startCommand: formatCliCommand("godseye gateway", env),
+    installCommand: formatCliCommand("openclaw gateway install", env),
+    startCommand: formatCliCommand("openclaw gateway", env),
     launchAgentPlistPath: `~/Library/LaunchAgents/${resolveGatewayLaunchAgentLabel(profile)}.plist`,
     systemdServiceName: resolveGatewaySystemdServiceName(profile),
     windowsTaskName: resolveGatewayWindowsTaskName(profile),

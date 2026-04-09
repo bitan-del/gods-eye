@@ -2,6 +2,8 @@ import fs from "node:fs";
 import { deriveSessionTotalTokens, hasNonzeroUsage, normalizeUsage } from "../agents/usage.js";
 import { jsonUtf8Bytes } from "../infra/json-utf8-bytes.js";
 import { hasInterSessionUserProvenance } from "../sessions/input-provenance.js";
+import { extractAssistantVisibleText } from "../shared/chat-message-content.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { stripInlineDirectiveTagsForDisplay } from "../utils/directive-tags.js";
 import { extractToolCallNames, hasToolCall } from "../utils/transcript-tools.js";
 import { stripEnvelope } from "./chat-sanitize.js";
@@ -67,7 +69,7 @@ function setCachedSessionTitleFields(cacheKey: string, stat: fs.Stats, value: Se
   }
 }
 
-export function attachGodsEyeTranscriptMeta(
+export function attachOpenClawTranscriptMeta(
   message: unknown,
   meta: Record<string, unknown>,
 ): unknown {
@@ -76,12 +78,12 @@ export function attachGodsEyeTranscriptMeta(
   }
   const record = message as Record<string, unknown>;
   const existing =
-    record.__godseye && typeof record.__godseye === "object" && !Array.isArray(record.__godseye)
-      ? (record.__godseye as Record<string, unknown>)
+    record.__openclaw && typeof record.__openclaw === "object" && !Array.isArray(record.__openclaw)
+      ? (record.__openclaw as Record<string, unknown>)
       : {};
   return {
     ...record,
-    __godseye: {
+    __openclaw: {
       ...existing,
       ...meta,
     },
@@ -112,7 +114,7 @@ export function readSessionMessages(
       if (parsed?.message) {
         messageSeq += 1;
         messages.push(
-          attachGodsEyeTranscriptMeta(parsed.message, {
+          attachOpenClawTranscriptMeta(parsed.message, {
             ...(typeof parsed.id === "string" ? { id: parsed.id } : {}),
             seq: messageSeq,
           }),
@@ -130,7 +132,7 @@ export function readSessionMessages(
           role: "system",
           content: [{ type: "text", text: "Compaction" }],
           timestamp,
-          __godseye: {
+          __openclaw: {
             kind: "compaction",
             id: typeof parsed.id === "string" ? parsed.id : undefined,
             seq: messageSeq,
@@ -491,7 +493,7 @@ function extractLatestUsageFromTranscriptChunk(
           : typeof parsed.model === "string"
             ? parsed.model.trim()
             : undefined;
-      const isDeliveryMirror = modelProvider === "godseye" && model === "delivery-mirror";
+      const isDeliveryMirror = modelProvider === "openclaw" && model === "delivery-mirror";
       const hasMeaningfulUsage =
         hasNonzeroUsage(usage) ||
         typeof totalTokens === "number" ||
@@ -605,7 +607,7 @@ function normalizeRole(role: string | undefined, isTool: boolean): SessionPrevie
   if (isTool) {
     return "tool";
   }
-  switch ((role ?? "").toLowerCase()) {
+  switch (normalizeLowercaseStringOrEmpty(role)) {
     case "user":
       return "user";
     case "assistant":
@@ -630,6 +632,15 @@ function truncatePreviewText(text: string, maxChars: number): string {
 }
 
 function extractPreviewText(message: TranscriptPreviewMessage): string | null {
+  const role = normalizeLowercaseStringOrEmpty(message.role);
+  if (role === "assistant") {
+    const assistantText = extractAssistantVisibleText(message);
+    if (assistantText) {
+      const normalized = stripInlineDirectiveTagsForDisplay(assistantText).text.trim();
+      return normalized ? normalized : null;
+    }
+    return null;
+  }
   if (typeof message.content === "string") {
     const normalized = stripInlineDirectiveTagsForDisplay(message.content).text.trim();
     return normalized ? normalized : null;
@@ -664,7 +675,7 @@ function extractMediaSummary(message: TranscriptPreviewMessage): string | null {
     return null;
   }
   for (const entry of message.content) {
-    const raw = typeof entry?.type === "string" ? entry.type.trim().toLowerCase() : "";
+    const raw = normalizeLowercaseStringOrEmpty(entry?.type);
     if (!raw || raw === "text" || raw === "toolcall" || raw === "tool_call") {
       continue;
     }

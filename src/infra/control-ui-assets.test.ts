@@ -19,8 +19,8 @@ function setDir(p: string) {
   state.entries.set(abs(p), { kind: "dir" });
 }
 
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
+vi.mock("./control-ui-assets.fs.runtime.js", async () => {
+  const actual = await import("node:fs");
   const pathMod = await import("node:path");
   const absInMock = (p: string) => pathMod.resolve(p);
   const fixturesRoot = `${absInMock("fixtures")}${pathMod.sep}`;
@@ -31,13 +31,11 @@ vi.mock("node:fs", async (importOriginal) => {
   const readFixtureEntry = (p: string) => state.entries.get(absInMock(p));
 
   const wrapped = {
-    ...actual,
     existsSync: (p: string) =>
       isFixturePath(p) ? state.entries.has(absInMock(p)) : actual.existsSync(p),
-    readFileSync: (p: string, encoding?: unknown) => {
+    readFileSync: (p: string, encoding?: BufferEncoding) => {
       if (!isFixturePath(p)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return actual.readFileSync(p as any, encoding as any) as unknown;
+        return actual.readFileSync(p, encoding);
       }
       const entry = readFixtureEntry(p);
       if (entry?.kind === "file") {
@@ -47,8 +45,7 @@ vi.mock("node:fs", async (importOriginal) => {
     },
     statSync: (p: string) => {
       if (!isFixturePath(p)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return actual.statSync(p as any) as unknown;
+        return actual.statSync(p);
       }
       const entry = readFixtureEntry(p);
       if (entry?.kind === "file") {
@@ -64,13 +61,12 @@ vi.mock("node:fs", async (importOriginal) => {
         ? (state.realpaths.get(absInMock(p)) ?? absInMock(p))
         : actual.realpathSync(p),
   };
-
-  return { ...wrapped, default: wrapped };
+  return wrapped;
 });
 
-vi.mock("./godseye-root.js", () => ({
-  resolveGodsEyePackageRoot: vi.fn(async () => null),
-  resolveGodsEyePackageRootSync: vi.fn(() => null),
+vi.mock("./openclaw-root.js", () => ({
+  resolveOpenClawPackageRoot: vi.fn(async () => null),
+  resolveOpenClawPackageRootSync: vi.fn(() => null),
 }));
 
 let resolveControlUiRepoRoot: typeof import("./control-ui-assets.js").resolveControlUiRepoRoot;
@@ -79,7 +75,7 @@ let resolveControlUiDistIndexHealth: typeof import("./control-ui-assets.js").res
 let isPackageProvenControlUiRootSync: typeof import("./control-ui-assets.js").isPackageProvenControlUiRootSync;
 let resolveControlUiRootOverrideSync: typeof import("./control-ui-assets.js").resolveControlUiRootOverrideSync;
 let resolveControlUiRootSync: typeof import("./control-ui-assets.js").resolveControlUiRootSync;
-let godseyeRoot: typeof import("./godseye-root.js");
+let openclawRoot: typeof import("./openclaw-root.js");
 
 describe("control UI assets helpers (fs-mocked)", () => {
   beforeAll(async () => {
@@ -91,7 +87,7 @@ describe("control UI assets helpers (fs-mocked)", () => {
       resolveControlUiRootOverrideSync,
       resolveControlUiRootSync,
     } = await import("./control-ui-assets.js"));
-    godseyeRoot = await import("./godseye-root.js");
+    openclawRoot = await import("./openclaw-root.js");
   });
 
   beforeEach(() => {
@@ -126,8 +122,8 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("resolves dist control-ui index path for symlinked argv1 via realpath", async () => {
-    const pkgRoot = abs("fixtures/bun-global/godseye");
-    const wrapperArgv1 = abs("fixtures/bin/godseye");
+    const pkgRoot = abs("fixtures/bun-global/openclaw");
+    const wrapperArgv1 = abs("fixtures/bin/openclaw");
     const realEntrypoint = path.join(pkgRoot, "dist", "index.js");
 
     state.realpaths.set(wrapperArgv1, realEntrypoint);
@@ -137,29 +133,29 @@ describe("control UI assets helpers (fs-mocked)", () => {
     );
   });
 
-  it("uses resolveGodsEyePackageRoot when available", async () => {
-    const pkgRoot = abs("fixtures/godseye");
+  it("uses resolveOpenClawPackageRoot when available", async () => {
+    const pkgRoot = abs("fixtures/openclaw");
     (
-      godseyeRoot.resolveGodsEyePackageRoot as unknown as ReturnType<typeof vi.fn>
+      openclawRoot.resolveOpenClawPackageRoot as unknown as ReturnType<typeof vi.fn>
     ).mockResolvedValueOnce(pkgRoot);
 
-    await expect(resolveControlUiDistIndexPath(abs("fixtures/bin/godseye"))).resolves.toBe(
+    await expect(resolveControlUiDistIndexPath(abs("fixtures/bin/openclaw"))).resolves.toBe(
       path.join(pkgRoot, "dist", "control-ui", "index.html"),
     );
   });
 
   it("falls back to package.json name matching when root resolution fails", async () => {
     const root = abs("fixtures/fallback");
-    setFile(path.join(root, "package.json"), JSON.stringify({ name: "godseye" }));
+    setFile(path.join(root, "package.json"), JSON.stringify({ name: "openclaw" }));
     setFile(path.join(root, "dist", "control-ui", "index.html"), "<html></html>\n");
 
-    await expect(resolveControlUiDistIndexPath(path.join(root, "godseye.mjs"))).resolves.toBe(
+    await expect(resolveControlUiDistIndexPath(path.join(root, "openclaw.mjs"))).resolves.toBe(
       path.join(root, "dist", "control-ui", "index.html"),
     );
   });
 
   it("returns null when fallback package name does not match", async () => {
-    const root = abs("fixtures/not-godseye");
+    const root = abs("fixtures/not-openclaw");
     setFile(path.join(root, "package.json"), JSON.stringify({ name: "malicious-pkg" }));
     setFile(path.join(root, "dist", "control-ui", "index.html"), "<html></html>\n");
 
@@ -196,9 +192,9 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("resolves control-ui root for dist bundle argv1 and moduleUrl candidates", async () => {
-    const pkgRoot = abs("fixtures/godseye-bundle");
+    const pkgRoot = abs("fixtures/openclaw-bundle");
     (
-      godseyeRoot.resolveGodsEyePackageRootSync as unknown as ReturnType<typeof vi.fn>
+      openclawRoot.resolveOpenClawPackageRootSync as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValueOnce(pkgRoot);
 
     const uiDir = path.join(pkgRoot, "dist", "control-ui");
@@ -215,8 +211,8 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("prefers packaged app Control UI assets in Contents/Resources", () => {
-    const execPath = abs("fixtures/GodsEye.app/Contents/MacOS/GodsEye");
-    const bundledUiDir = abs("fixtures/GodsEye.app/Contents/Resources/control-ui");
+    const execPath = abs("fixtures/OpenClaw.app/Contents/MacOS/OpenClaw");
+    const bundledUiDir = abs("fixtures/OpenClaw.app/Contents/Resources/control-ui");
     setFile(path.join(bundledUiDir, "index.html"), "<html></html>\n");
 
     state.realpaths.set(execPath, execPath);
@@ -225,8 +221,8 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("resolves control-ui root for symlinked argv1 via realpath", () => {
-    const pkgRoot = abs("fixtures/bun-global/godseye");
-    const wrapperArgv1 = abs("fixtures/bin/godseye");
+    const pkgRoot = abs("fixtures/bun-global/openclaw");
+    const wrapperArgv1 = abs("fixtures/bin/openclaw");
     const realEntrypoint = path.join(pkgRoot, "dist", "index.js");
     const uiDir = path.join(pkgRoot, "dist", "control-ui");
 
@@ -237,12 +233,12 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("detects package-proven control-ui roots", () => {
-    const pkgRoot = abs("fixtures/godseye-package-root");
+    const pkgRoot = abs("fixtures/openclaw-package-root");
     const uiDir = path.join(pkgRoot, "dist", "control-ui");
     setDir(uiDir);
     setFile(path.join(uiDir, "index.html"), "<html></html>\n");
     (
-      godseyeRoot.resolveGodsEyePackageRootSync as unknown as ReturnType<typeof vi.fn>
+      openclawRoot.resolveOpenClawPackageRootSync as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValueOnce(pkgRoot);
 
     expect(
@@ -253,12 +249,12 @@ describe("control UI assets helpers (fs-mocked)", () => {
   });
 
   it("does not treat fallback roots as package-proven", () => {
-    const pkgRoot = abs("fixtures/godseye-package-root");
+    const pkgRoot = abs("fixtures/openclaw-package-root");
     const fallbackRoot = abs("fixtures/fallback-root/dist/control-ui");
     setDir(fallbackRoot);
     setFile(path.join(fallbackRoot, "index.html"), "<html></html>\n");
     (
-      godseyeRoot.resolveGodsEyePackageRootSync as unknown as ReturnType<typeof vi.fn>
+      openclawRoot.resolveOpenClawPackageRootSync as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValueOnce(pkgRoot);
 
     expect(

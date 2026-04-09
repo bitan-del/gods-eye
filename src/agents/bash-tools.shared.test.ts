@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { resolveSandboxWorkdir } from "./bash-tools.shared.js";
 
 async function withTempDir(run: (dir: string) => Promise<void>) {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "godseye-bash-workdir-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "openclaw-bash-workdir-"));
   try {
     await run(dir);
   } finally {

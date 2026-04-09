@@ -1,4 +1,4 @@
-import type { SearchConfigRecord } from "openclaw/plugin-sdk/provider-web-search";
+import type { SearchConfigRecord } from "godseye/plugin-sdk/provider-web-search";
 import {
   buildSearchCacheKey,
   DEFAULT_SEARCH_COUNT,
@@ -17,7 +17,7 @@ import {
   withTrustedWebSearchEndpoint,
   wrapWebContent,
   writeCachedSearchPayload,
-} from "openclaw/plugin-sdk/provider-web-search";
+} from "godseye/plugin-sdk/provider-web-search";
 import {
   type BraveLlmContextResponse,
   mapBraveLlmContextResults,

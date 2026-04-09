@@ -1,17 +1,18 @@
 import { parseFrontmatterBlock } from "../markdown/frontmatter.js";
 import {
-  applyGodsEyeManifestInstallCommonFields,
+  applyOpenClawManifestInstallCommonFields,
   getFrontmatterString,
   normalizeStringList,
-  parseGodsEyeManifestInstallBase,
+  parseOpenClawManifestInstallBase,
   parseFrontmatterBool,
-  resolveGodsEyeManifestBlock,
-  resolveGodsEyeManifestInstall,
-  resolveGodsEyeManifestOs,
-  resolveGodsEyeManifestRequires,
+  resolveOpenClawManifestBlock,
+  resolveOpenClawManifestInstall,
+  resolveOpenClawManifestOs,
+  resolveOpenClawManifestRequires,
 } from "../shared/frontmatter.js";
+import { readStringValue } from "../shared/string-coerce.js";
 import type {
-  GodsEyeHookMetadata,
+  OpenClawHookMetadata,
   HookEntry,
   HookInstallSpec,
   HookInvocationPolicy,
@@ -23,12 +24,12 @@ export function parseFrontmatter(content: string): ParsedHookFrontmatter {
 }
 
 function parseInstallSpec(input: unknown): HookInstallSpec | undefined {
-  const parsed = parseGodsEyeManifestInstallBase(input, ["bundled", "npm", "git"]);
+  const parsed = parseOpenClawManifestInstallBase(input, ["bundled", "npm", "git"]);
   if (!parsed) {
     return undefined;
   }
   const { raw } = parsed;
-  const spec = applyGodsEyeManifestInstallCommonFields<HookInstallSpec>(
+  const spec = applyOpenClawManifestInstallCommonFields<HookInstallSpec>(
     {
       kind: parsed.kind as HookInstallSpec["kind"],
     },
@@ -44,23 +45,23 @@ function parseInstallSpec(input: unknown): HookInstallSpec | undefined {
   return spec;
 }
 
-export function resolveGodsEyeMetadata(
+export function resolveOpenClawMetadata(
   frontmatter: ParsedHookFrontmatter,
-): GodsEyeHookMetadata | undefined {
-  const metadataObj = resolveGodsEyeManifestBlock({ frontmatter });
+): OpenClawHookMetadata | undefined {
+  const metadataObj = resolveOpenClawManifestBlock({ frontmatter });
   if (!metadataObj) {
     return undefined;
   }
-  const requires = resolveGodsEyeManifestRequires(metadataObj);
-  const install = resolveGodsEyeManifestInstall(metadataObj, parseInstallSpec);
-  const osRaw = resolveGodsEyeManifestOs(metadataObj);
+  const requires = resolveOpenClawManifestRequires(metadataObj);
+  const install = resolveOpenClawManifestInstall(metadataObj, parseInstallSpec);
+  const osRaw = resolveOpenClawManifestOs(metadataObj);
   const eventsRaw = normalizeStringList(metadataObj.events);
   return {
     always: typeof metadataObj.always === "boolean" ? metadataObj.always : undefined,
-    emoji: typeof metadataObj.emoji === "string" ? metadataObj.emoji : undefined,
-    homepage: typeof metadataObj.homepage === "string" ? metadataObj.homepage : undefined,
-    hookKey: typeof metadataObj.hookKey === "string" ? metadataObj.hookKey : undefined,
-    export: typeof metadataObj.export === "string" ? metadataObj.export : undefined,
+    emoji: readStringValue(metadataObj.emoji),
+    homepage: readStringValue(metadataObj.homepage),
+    hookKey: readStringValue(metadataObj.hookKey),
+    export: readStringValue(metadataObj.export),
     os: osRaw.length > 0 ? osRaw : undefined,
     events: eventsRaw.length > 0 ? eventsRaw : [],
     requires: requires,

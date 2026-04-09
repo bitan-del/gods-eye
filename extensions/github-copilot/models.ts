@@ -2,7 +2,8 @@ import type {
   ProviderResolveDynamicModelContext,
   ProviderRuntimeModel,
 } from "godseye/plugin-sdk/core";
-import { normalizeModelCompat } from "godseye/plugin-sdk/provider-models";
+import { normalizeModelCompat } from "godseye/plugin-sdk/provider-model-shared";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
 
 export const PROVIDER_ID = "github-copilot";
 const CODEX_GPT_54_MODEL_ID = "gpt-5.4";
@@ -10,6 +11,14 @@ const CODEX_TEMPLATE_MODEL_IDS = ["gpt-5.2-codex"] as const;
 
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 8192;
+
+export function resolveCopilotTransportApi(
+  modelId: string,
+): "anthropic-messages" | "openai-responses" {
+  return (normalizeOptionalLowercaseString(modelId) ?? "").includes("claude")
+    ? "anthropic-messages"
+    : "openai-responses";
+}
 
 export function resolveCopilotForwardCompatModel(
   ctx: ProviderResolveDynamicModelContext,
@@ -20,14 +29,15 @@ export function resolveCopilotForwardCompatModel(
   }
 
   // If the model is already in the registry, let the normal path handle it.
-  const existing = ctx.modelRegistry.find(PROVIDER_ID, trimmedModelId.toLowerCase());
+  const lowerModelId = normalizeOptionalLowercaseString(trimmedModelId) ?? "";
+  const existing = ctx.modelRegistry.find(PROVIDER_ID, lowerModelId);
   if (existing) {
     return undefined;
   }
 
   // For gpt-5.4 specifically, clone from the gpt-5.2-codex template
   // to preserve any special settings the registry has for codex models.
-  if (trimmedModelId.toLowerCase() === CODEX_GPT_54_MODEL_ID) {
+  if (lowerModelId === CODEX_GPT_54_MODEL_ID) {
     for (const templateId of CODEX_TEMPLATE_MODEL_IDS) {
       const template = ctx.modelRegistry.find(
         PROVIDER_ID,
@@ -48,15 +58,14 @@ export function resolveCopilotForwardCompatModel(
   // Catch-all: create a synthetic model definition for any unknown model ID.
   // The Copilot API is OpenAI-compatible and will return its own error if the
   // model isn't available on the user's plan. This lets new models be used
-  // by simply adding them to agents.defaults.models in godseye.json — no
+  // by simply adding them to agents.defaults.models in openclaw.json — no
   // code change required.
-  const lowerModelId = trimmedModelId.toLowerCase();
   const reasoning = /^o[13](\b|$)/.test(lowerModelId);
   return normalizeModelCompat({
     id: trimmedModelId,
     name: trimmedModelId,
     provider: PROVIDER_ID,
-    api: "openai-responses",
+    api: resolveCopilotTransportApi(trimmedModelId),
     reasoning,
     // Optimistic: most Copilot models support images, and the API rejects
     // image payloads for text-only models rather than failing silently.

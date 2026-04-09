@@ -6,7 +6,7 @@
  * that are still tracked as active in the subagent registry) and sends a
  * synthetic resume message to restart their work.
  *
- * @see https://github.com/bitan-del/gods-eye/issues/47711
+ * @see https://github.com/openclaw/openclaw/issues/47711
  */
 
 import crypto from "node:crypto";
@@ -21,13 +21,25 @@ import {
 import { callGateway } from "../gateway/call.js";
 import { readSessionMessages } from "../gateway/session-utils.fs.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
-import { replaceSubagentRunAfterSteer } from "./subagent-registry.js";
+import { replaceSubagentRunAfterSteer } from "./subagent-registry-runtime.js";
 import type { SubagentRunRecord } from "./subagent-registry.types.js";
 
 const log = createSubsystemLogger("subagent-orphan-recovery");
 
 /** Delay before attempting recovery to let the gateway finish bootstrapping. */
 const DEFAULT_RECOVERY_DELAY_MS = 5_000;
+
+function isRestartAbortedTimeoutRun(
+  runRecord: SubagentRunRecord,
+  entry: SessionEntry | undefined,
+): boolean {
+  return (
+    entry?.abortedLastRun === true &&
+    runRecord.outcome?.status === "timeout" &&
+    typeof runRecord.endedAt === "number" &&
+    runRecord.endedAt > 0
+  );
+}
 
 /**
  * Build the resume message for an orphaned subagent.
@@ -138,7 +150,7 @@ export async function recoverOrphanedSubagentSessions(params: {
 }): Promise<{ recovered: number; failed: number; skipped: number }> {
   const result = { recovered: 0, failed: 0, skipped: 0 };
   const resumedSessionKeys = params.resumedSessionKeys ?? new Set<string>();
-  const configChangePattern = /godseye\.json|godseye gateway restart|config\.patch/i;
+  const configChangePattern = /openclaw\.json|openclaw gateway restart|config\.patch/i;
 
   try {
     const activeRuns = params.getActiveRuns();
@@ -150,11 +162,6 @@ export async function recoverOrphanedSubagentSessions(params: {
     const storeCache = new Map<string, Record<string, SessionEntry>>();
 
     for (const [runId, runRecord] of activeRuns.entries()) {
-      // Only consider runs that haven't ended yet
-      if (typeof runRecord.endedAt === "number" && runRecord.endedAt > 0) {
-        continue;
-      }
-
       const childSessionKey = runRecord.childSessionKey?.trim();
       if (!childSessionKey) {
         continue;
@@ -176,6 +183,17 @@ export async function recoverOrphanedSubagentSessions(params: {
 
         const entry = store[childSessionKey];
         if (!entry) {
+          result.skipped++;
+          continue;
+        }
+
+        // Restart-aborted subagents can be marked ended with a timeout outcome
+        // before the gateway comes back up to resume them.
+        if (
+          typeof runRecord.endedAt === "number" &&
+          runRecord.endedAt > 0 &&
+          !isRestartAbortedTimeoutRun(runRecord, entry)
+        ) {
           result.skipped++;
           continue;
         }
@@ -209,7 +227,7 @@ export async function recoverOrphanedSubagentSessions(params: {
           task: runRecord.task,
           lastHumanMessage: extractMessageText(lastHumanMessage),
           configChangeHint: configChangeDetected
-            ? "\n\n[config changes from your previous run were already applied — do not re-modify godseye.json or restart the gateway]"
+            ? "\n\n[config changes from your previous run were already applied — do not re-modify openclaw.json or restart the gateway]"
             : undefined,
           originalRunId: runId,
           originalRun: runRecord,

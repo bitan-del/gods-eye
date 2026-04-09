@@ -1,0 +1,40 @@
+{
+  "id": "claw-pay",
+  "name": "claw-pay",
+  "description": "Autonomous x402 payments for OpenClaw agents — pay for AI services with USDC on Base L2. Facilitator: https://claw-pay.org · Info: https://clawpay.eu",
+  "entry": "src/pay.js",
+  "exports": {
+    "payAndFetch": "src/pay.js",
+    "createWallet": "src/wallet.js",
+    "loadWallet": "src/wallet.js",
+    "getStoredAddress": "src/wallet.js",
+    "getTokenBalance": "src/wallet.js",
+    "transfer": "src/wallet.js"
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "walletPassword": {
+        "type": "string",
+        "description": "Password to encrypt/decrypt the local USDC wallet. Store securely."
+      },
+      "facilitatorUrl": {
+        "type": "string",
+        "default": "https://claw-pay.org",
+        "description": "claw-pay facilitator URL for x402 settlement."
+      },
+      "network": {
+        "type": "string",
+        "enum": ["base-mainnet", "base-sepolia"],
+        "default": "base-mainnet",
+        "description": "Base L2 network to use."
+      },
+      "maxAmountPerRequest": {
+        "type": "number",
+        "default": 1.0,
+        "description": "Maximum USDC the agent may pay per single request."
+      }
+    },
+    "required": ["walletPassword"]
+  }
+}

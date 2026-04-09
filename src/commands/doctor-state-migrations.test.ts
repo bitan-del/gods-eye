@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   autoMigrateLegacyStateDir,
   autoMigrateLegacyState,
@@ -15,14 +15,14 @@ import {
 let tempRoot: string | null = null;
 
 async function makeTempRoot() {
-  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "godseye-doctor-"));
+  const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), "openclaw-doctor-"));
   tempRoot = root;
   return root;
 }
 
 async function makeRootWithEmptyCfg() {
   const root = await makeTempRoot();
-  const cfg: GodsEyeConfig = {};
+  const cfg: OpenClawConfig = {};
   return { root, cfg };
 }
 
@@ -41,12 +41,12 @@ function writeLegacyTelegramAllowFromStore(oauthDir: string) {
   );
 }
 
-async function runTelegramAllowFromMigration(params: { root: string; cfg: GodsEyeConfig }) {
+async function runTelegramAllowFromMigration(params: { root: string; cfg: OpenClawConfig }) {
   const oauthDir = ensureCredentialsDir(params.root);
   writeLegacyTelegramAllowFromStore(oauthDir);
   const detected = await detectLegacyStateMigrations({
     cfg: params.cfg,
-    env: { GODSEYE_STATE_DIR: params.root } as NodeJS.ProcessEnv,
+    env: { OPENCLAW_STATE_DIR: params.root } as NodeJS.ProcessEnv,
   });
   const result = await runLegacyStateMigrations({ detected, now: () => 123 });
   return { oauthDir, detected, result };
@@ -83,12 +83,12 @@ function writeLegacySessionsFixture(params: {
 
 async function detectAndRunMigrations(params: {
   root: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   now?: () => number;
 }) {
   const detected = await detectLegacyStateMigrations({
     cfg: params.cfg,
-    env: { GODSEYE_STATE_DIR: params.root } as NodeJS.ProcessEnv,
+    env: { OPENCLAW_STATE_DIR: params.root } as NodeJS.ProcessEnv,
   });
   await runLegacyStateMigrations({ detected, now: params.now });
 }
@@ -102,7 +102,7 @@ function readSessionsStore(targetDir: string) {
 
 async function runAndReadSessionsStore(params: {
   root: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   targetDir: string;
   now?: () => number;
 }) {
@@ -120,7 +120,7 @@ const DIR_LINK_TYPE = process.platform === "win32" ? "junction" : "dir";
 
 function getStateDirMigrationPaths(root: string) {
   return {
-    targetDir: path.join(root, ".godseye"),
+    targetDir: path.join(root, ".openclaw"),
     legacyDir: path.join(root, ".clawdbot"),
   };
 }
@@ -141,13 +141,13 @@ async function runStateDirMigration(root: string, env = {} as NodeJS.ProcessEnv)
 
 async function runAutoMigrateLegacyStateWithLog(params: {
   root: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   now?: () => number;
 }) {
   const log = { info: vi.fn(), warn: vi.fn() };
   const result = await autoMigrateLegacyState({
     cfg: params.cfg,
-    env: { GODSEYE_STATE_DIR: params.root } as NodeJS.ProcessEnv,
+    env: { OPENCLAW_STATE_DIR: params.root } as NodeJS.ProcessEnv,
     log,
     now: params.now,
   });
@@ -184,7 +184,7 @@ function ensureCredentialsDir(root: string) {
 describe("doctor legacy state migrations", () => {
   it("migrates legacy sessions into agents/<id>/sessions", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const legacySessionsDir = writeLegacySessionsFixture({
       root,
       sessions: {
@@ -202,7 +202,7 @@ describe("doctor legacy state migrations", () => {
 
     const detected = await detectLegacyStateMigrations({
       cfg,
-      env: { GODSEYE_STATE_DIR: root } as NodeJS.ProcessEnv,
+      env: { OPENCLAW_STATE_DIR: root } as NodeJS.ProcessEnv,
     });
     const result = await runLegacyStateMigrations({
       detected,
@@ -226,6 +226,30 @@ describe("doctor legacy state migrations", () => {
     expect(store["agent:main:slack:channel:c123"]?.sessionId).toBe("c");
     expect(store["agent:main:unknown:group:abc"]?.sessionId).toBe("d");
     expect(store["agent:main:subagent:xyz"]?.sessionId).toBe("e");
+  });
+
+  it("keeps shipped WhatsApp legacy group keys channel-qualified during migration", async () => {
+    const root = await makeTempRoot();
+    const cfg: OpenClawConfig = {};
+    const targetDir = path.join(root, "agents", "main", "sessions");
+
+    writeLegacySessionsFixture({
+      root,
+      sessions: {
+        "group:123@g.us": { sessionId: "wa", updatedAt: 10 },
+        "group:abc": { sessionId: "generic", updatedAt: 9 },
+      },
+    });
+
+    const store = await runAndReadSessionsStore({
+      root,
+      cfg,
+      targetDir,
+      now: () => 123,
+    });
+
+    expect(store["agent:main:whatsapp:group:123@g.us"]?.sessionId).toBe("wa");
+    expect(store["agent:main:unknown:group:abc"]?.sessionId).toBe("generic");
   });
 
   it("migrates legacy agent dir with conflict fallback", async () => {
@@ -304,10 +328,10 @@ describe("doctor legacy state migrations", () => {
   it("migrates legacy Telegram pairing allowFrom store to account-scoped default file", async () => {
     const { root, cfg } = await makeRootWithEmptyCfg();
     const { oauthDir, detected, result } = await runTelegramAllowFromMigration({ root, cfg });
-    expect(detected.pairingAllowFrom.hasLegacyTelegram).toBe(true);
-    expect(
-      detected.pairingAllowFrom.copyPlans.map((plan) => path.basename(plan.targetPath)),
-    ).toEqual(["telegram-default-allowFrom.json"]);
+    expect(detected.channelPlans.hasLegacy).toBe(true);
+    expect(detected.channelPlans.plans.map((plan) => path.basename(plan.targetPath))).toEqual([
+      "telegram-default-allowFrom.json",
+    ]);
     expect(result.warnings).toEqual([]);
 
     const target = path.join(oauthDir, "telegram-default-allowFrom.json");
@@ -318,11 +342,12 @@ describe("doctor legacy state migrations", () => {
     });
   });
 
-  it("fans out legacy Telegram pairing allowFrom store to configured named accounts", async () => {
+  it("does not fan out legacy Telegram pairing allowFrom store to configured named accounts", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       channels: {
         telegram: {
+          defaultAccount: "bot2",
           accounts: {
             bot1: {},
             bot2: {},
@@ -331,22 +356,55 @@ describe("doctor legacy state migrations", () => {
       },
     };
     const { oauthDir, detected, result } = await runTelegramAllowFromMigration({ root, cfg });
-    expect(detected.pairingAllowFrom.hasLegacyTelegram).toBe(true);
-    expect(
-      detected.pairingAllowFrom.copyPlans.map((plan) => path.basename(plan.targetPath)).toSorted(),
-    ).toEqual(["telegram-bot1-allowFrom.json", "telegram-bot2-allowFrom.json"]);
+    expect(detected.channelPlans.hasLegacy).toBe(true);
+    expect(detected.channelPlans.plans.map((plan) => path.basename(plan.targetPath))).toEqual([
+      "telegram-bot2-allowFrom.json",
+    ]);
     expect(result.warnings).toEqual([]);
 
     const bot1Target = path.join(oauthDir, "telegram-bot1-allowFrom.json");
     const bot2Target = path.join(oauthDir, "telegram-bot2-allowFrom.json");
-    expect(fs.existsSync(bot1Target)).toBe(true);
+    const defaultTarget = path.join(oauthDir, "telegram-default-allowFrom.json");
+    expect(fs.existsSync(bot1Target)).toBe(false);
     expect(fs.existsSync(bot2Target)).toBe(true);
-    expect(fs.existsSync(path.join(oauthDir, "telegram-default-allowFrom.json"))).toBe(false);
-    expect(JSON.parse(fs.readFileSync(bot1Target, "utf-8"))).toEqual({
+    expect(fs.existsSync(defaultTarget)).toBe(false);
+    expect(JSON.parse(fs.readFileSync(bot2Target, "utf-8"))).toEqual({
       version: 1,
       allowFrom: ["123456"],
     });
-    expect(JSON.parse(fs.readFileSync(bot2Target, "utf-8"))).toEqual({
+  });
+
+  it("migrates legacy Telegram pairing allowFrom store to the default agent bound account", async () => {
+    const root = await makeTempRoot();
+    const cfg: OpenClawConfig = {
+      agents: {
+        list: [{ id: "ops", default: true }],
+      },
+      bindings: [{ agentId: "ops", match: { channel: "telegram", accountId: "alerts" } }],
+      channels: {
+        telegram: {
+          accounts: {
+            alerts: {},
+            backup: {},
+          },
+        },
+      },
+    };
+
+    const { oauthDir, detected, result } = await runTelegramAllowFromMigration({ root, cfg });
+    expect(detected.channelPlans.hasLegacy).toBe(true);
+    expect(detected.channelPlans.plans.map((plan) => path.basename(plan.targetPath))).toEqual([
+      "telegram-alerts-allowFrom.json",
+    ]);
+    expect(result.warnings).toEqual([]);
+
+    const alertsTarget = path.join(oauthDir, "telegram-alerts-allowFrom.json");
+    const backupTarget = path.join(oauthDir, "telegram-backup-allowFrom.json");
+    const defaultTarget = path.join(oauthDir, "telegram-default-allowFrom.json");
+    expect(fs.existsSync(alertsTarget)).toBe(true);
+    expect(fs.existsSync(backupTarget)).toBe(false);
+    expect(fs.existsSync(defaultTarget)).toBe(false);
+    expect(JSON.parse(fs.readFileSync(alertsTarget, "utf-8"))).toEqual({
       version: 1,
       allowFrom: ["123456"],
     });
@@ -354,10 +412,10 @@ describe("doctor legacy state migrations", () => {
 
   it("no-ops when nothing detected", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const detected = await detectLegacyStateMigrations({
       cfg,
-      env: { GODSEYE_STATE_DIR: root } as NodeJS.ProcessEnv,
+      env: { OPENCLAW_STATE_DIR: root } as NodeJS.ProcessEnv,
     });
     const result = await runLegacyStateMigrations({ detected });
     expect(result.changes).toEqual([]);
@@ -365,7 +423,7 @@ describe("doctor legacy state migrations", () => {
 
   it("routes legacy state to the default agent entry", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       agents: { list: [{ id: "alpha", default: true }] },
     };
     writeLegacySessionsFixture({
@@ -387,7 +445,7 @@ describe("doctor legacy state migrations", () => {
 
   it("honors session.mainKey when seeding the direct-chat bucket", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = { session: { mainKey: "work" } };
+    const cfg: OpenClawConfig = { session: { mainKey: "work" } };
     writeLegacySessionsFixture({
       root,
       sessions: {
@@ -427,7 +485,7 @@ describe("doctor legacy state migrations", () => {
 
   it("prefers the newest entry when collapsing main aliases", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = { session: { mainKey: "work" } };
+    const cfg: OpenClawConfig = { session: { mainKey: "work" } };
     const targetDir = path.join(root, "agents", "main", "sessions");
     writeJson5(path.join(targetDir, "sessions.json"), {
       "agent:main:main": { sessionId: "legacy", updatedAt: 50 },
@@ -446,7 +504,7 @@ describe("doctor legacy state migrations", () => {
 
   it("lowercases agent session keys during canonicalization", async () => {
     const root = await makeTempRoot();
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const targetDir = path.join(root, "agents", "main", "sessions");
     writeJson5(path.join(targetDir, "sessions.json"), {
       "agent:main:slack:channel:C123": { sessionId: "legacy", updatedAt: 10 },
@@ -495,7 +553,7 @@ describe("doctor legacy state migrations", () => {
     fs.mkdirSync(legacyDir, { recursive: true });
 
     const result = await runStateDirMigration(root, {
-      GODSEYE_STATE_DIR: "/custom/state",
+      OPENCLAW_STATE_DIR: "/custom/state",
     } as NodeJS.ProcessEnv);
 
     expect(result.skipped).toBe(true);

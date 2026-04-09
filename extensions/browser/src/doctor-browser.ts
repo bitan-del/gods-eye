@@ -1,5 +1,5 @@
-import { note } from "openclaw/plugin-sdk/browser-setup-tools";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { note } from "godseye/plugin-sdk/browser-setup-tools";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   parseBrowserMajorVersion,
   readBrowserVersion,

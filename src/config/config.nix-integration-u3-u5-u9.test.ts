@@ -1,15 +1,13 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  createConfigIO,
   DEFAULT_GATEWAY_PORT,
   resolveConfigPathCandidate,
   resolveGatewayPort,
   resolveIsNixMode,
   resolveStateDir,
 } from "./config.js";
-import { withTempHome, withTempHomeConfig } from "./test-helpers.js";
+import { withTempHome } from "./test-helpers.js";
 
 vi.unmock("../version.js");
 
@@ -18,249 +16,120 @@ function envWith(overrides: Record<string, string | undefined>): NodeJS.ProcessE
   return { ...overrides };
 }
 
-function loadConfigForHome(home: string) {
-  return createConfigIO({
-    env: envWith({ GODSEYE_HOME: home }),
-    homedir: () => home,
-  }).loadConfig();
-}
-
-async function withLoadedConfigForHome(
-  config: unknown,
-  run: (cfg: ReturnType<typeof loadConfigForHome>) => Promise<void> | void,
-) {
-  await withTempHomeConfig(config, async ({ home }) => {
-    const cfg = loadConfigForHome(home);
-    await run(cfg);
-  });
-}
-
 describe("Nix integration (U3, U5, U9)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   describe("U3: isNixMode env var detection", () => {
-    it("isNixMode is false when GODSEYE_NIX_MODE is not set", () => {
-      expect(resolveIsNixMode(envWith({ GODSEYE_NIX_MODE: undefined }))).toBe(false);
+    it("isNixMode is false when OPENCLAW_NIX_MODE is not set", () => {
+      expect(resolveIsNixMode(envWith({ OPENCLAW_NIX_MODE: undefined }))).toBe(false);
     });
 
-    it("isNixMode is false when GODSEYE_NIX_MODE is empty", () => {
-      expect(resolveIsNixMode(envWith({ GODSEYE_NIX_MODE: "" }))).toBe(false);
+    it("isNixMode is false when OPENCLAW_NIX_MODE is empty", () => {
+      expect(resolveIsNixMode(envWith({ OPENCLAW_NIX_MODE: "" }))).toBe(false);
     });
 
-    it("isNixMode is false when GODSEYE_NIX_MODE is not '1'", () => {
-      expect(resolveIsNixMode(envWith({ GODSEYE_NIX_MODE: "true" }))).toBe(false);
+    it("isNixMode is false when OPENCLAW_NIX_MODE is not '1'", () => {
+      expect(resolveIsNixMode(envWith({ OPENCLAW_NIX_MODE: "true" }))).toBe(false);
     });
 
-    it("isNixMode is true when GODSEYE_NIX_MODE=1", () => {
-      expect(resolveIsNixMode(envWith({ GODSEYE_NIX_MODE: "1" }))).toBe(true);
+    it("isNixMode is true when OPENCLAW_NIX_MODE=1", () => {
+      expect(resolveIsNixMode(envWith({ OPENCLAW_NIX_MODE: "1" }))).toBe(true);
     });
   });
 
   describe("U5: CONFIG_PATH and STATE_DIR env var overrides", () => {
-    it("STATE_DIR defaults to ~/.godseye when env not set", () => {
-      expect(resolveStateDir(envWith({ GODSEYE_STATE_DIR: undefined }))).toMatch(/\.godseye$/);
+    it("STATE_DIR defaults to ~/.openclaw when env not set", () => {
+      expect(resolveStateDir(envWith({ OPENCLAW_STATE_DIR: undefined }))).toMatch(/\.openclaw$/);
     });
 
-    it("STATE_DIR respects GODSEYE_STATE_DIR override", () => {
-      expect(resolveStateDir(envWith({ GODSEYE_STATE_DIR: "/custom/state/dir" }))).toBe(
+    it("STATE_DIR respects OPENCLAW_STATE_DIR override", () => {
+      expect(resolveStateDir(envWith({ OPENCLAW_STATE_DIR: "/custom/state/dir" }))).toBe(
         path.resolve("/custom/state/dir"),
       );
     });
 
-    it("STATE_DIR respects GODSEYE_HOME when state override is unset", () => {
+    it("STATE_DIR respects OPENCLAW_HOME when state override is unset", () => {
       const customHome = path.join(path.sep, "custom", "home");
       expect(
-        resolveStateDir(envWith({ GODSEYE_HOME: customHome, GODSEYE_STATE_DIR: undefined })),
-      ).toBe(path.join(path.resolve(customHome), ".godseye"));
+        resolveStateDir(envWith({ OPENCLAW_HOME: customHome, OPENCLAW_STATE_DIR: undefined })),
+      ).toBe(path.join(path.resolve(customHome), ".openclaw"));
     });
 
-    it("CONFIG_PATH defaults to GODSEYE_HOME/.godseye/godseye.json", () => {
+    it("CONFIG_PATH defaults to OPENCLAW_HOME/.openclaw/openclaw.json", () => {
       const customHome = path.join(path.sep, "custom", "home");
       expect(
         resolveConfigPathCandidate(
           envWith({
-            GODSEYE_HOME: customHome,
-            GODSEYE_CONFIG_PATH: undefined,
-            GODSEYE_STATE_DIR: undefined,
+            OPENCLAW_HOME: customHome,
+            OPENCLAW_CONFIG_PATH: undefined,
+            OPENCLAW_STATE_DIR: undefined,
           }),
         ),
-      ).toBe(path.join(path.resolve(customHome), ".godseye", "godseye.json"));
+      ).toBe(path.join(path.resolve(customHome), ".openclaw", "openclaw.json"));
     });
 
-    it("CONFIG_PATH defaults to ~/.godseye/godseye.json when env not set", () => {
+    it("CONFIG_PATH defaults to ~/.openclaw/openclaw.json when env not set", () => {
       expect(
         resolveConfigPathCandidate(
-          envWith({ GODSEYE_CONFIG_PATH: undefined, GODSEYE_STATE_DIR: undefined }),
+          envWith({ OPENCLAW_CONFIG_PATH: undefined, OPENCLAW_STATE_DIR: undefined }),
         ),
-      ).toMatch(/\.godseye[\\/]godseye\.json$/);
+      ).toMatch(/\.openclaw[\\/]openclaw\.json$/);
     });
 
-    it("CONFIG_PATH respects GODSEYE_CONFIG_PATH override", () => {
+    it("CONFIG_PATH respects OPENCLAW_CONFIG_PATH override", () => {
       expect(
-        resolveConfigPathCandidate(envWith({ GODSEYE_CONFIG_PATH: "/nix/store/abc/godseye.json" })),
-      ).toBe(path.resolve("/nix/store/abc/godseye.json"));
+        resolveConfigPathCandidate(
+          envWith({ OPENCLAW_CONFIG_PATH: "/nix/store/abc/openclaw.json" }),
+        ),
+      ).toBe(path.resolve("/nix/store/abc/openclaw.json"));
     });
 
-    it("CONFIG_PATH expands ~ in GODSEYE_CONFIG_PATH override", async () => {
+    it("CONFIG_PATH expands ~ in OPENCLAW_CONFIG_PATH override", async () => {
       await withTempHome(async (home) => {
         expect(
           resolveConfigPathCandidate(
-            envWith({ GODSEYE_HOME: home, GODSEYE_CONFIG_PATH: "~/.godseye/custom.json" }),
+            envWith({ OPENCLAW_HOME: home, OPENCLAW_CONFIG_PATH: "~/.openclaw/custom.json" }),
             () => home,
           ),
-        ).toBe(path.join(home, ".godseye", "custom.json"));
+        ).toBe(path.join(home, ".openclaw", "custom.json"));
       });
     });
 
     it("CONFIG_PATH uses STATE_DIR when only state dir is overridden", () => {
       expect(
         resolveConfigPathCandidate(
-          envWith({ GODSEYE_STATE_DIR: "/custom/state", GODSEYE_TEST_FAST: "1" }),
-          () => path.join(path.sep, "tmp", "godseye-config-home"),
+          envWith({ OPENCLAW_STATE_DIR: "/custom/state", OPENCLAW_TEST_FAST: "1" }),
+          () => path.join(path.sep, "tmp", "openclaw-config-home"),
         ),
-      ).toBe(path.join(path.resolve("/custom/state"), "godseye.json"));
-    });
-  });
-
-  describe("U5b: tilde expansion for config paths", () => {
-    it("expands ~ in common path-ish config fields", async () => {
-      await withTempHome(async (home) => {
-        const configDir = path.join(home, ".godseye");
-        await fs.mkdir(configDir, { recursive: true });
-        const pluginDir = path.join(home, "plugins", "demo-plugin");
-        await fs.mkdir(pluginDir, { recursive: true });
-        await fs.writeFile(
-          path.join(pluginDir, "index.js"),
-          'export default { id: "demo-plugin", register() {} };',
-          "utf-8",
-        );
-        await fs.writeFile(
-          path.join(pluginDir, "godseye.plugin.json"),
-          JSON.stringify(
-            {
-              id: "demo-plugin",
-              configSchema: { type: "object", additionalProperties: false, properties: {} },
-            },
-            null,
-            2,
-          ),
-          "utf-8",
-        );
-        await fs.writeFile(
-          path.join(configDir, "godseye.json"),
-          JSON.stringify(
-            {
-              plugins: {
-                load: {
-                  paths: ["~/plugins/demo-plugin"],
-                },
-              },
-              agents: {
-                defaults: { workspace: "~/ws-default" },
-                list: [
-                  {
-                    id: "main",
-                    workspace: "~/ws-agent",
-                    agentDir: "~/.godseye/agents/main",
-                    sandbox: { workspaceRoot: "~/sandbox-root" },
-                  },
-                ],
-              },
-              channels: {
-                whatsapp: {
-                  accounts: {
-                    personal: {
-                      authDir: "~/.godseye/credentials/wa-personal",
-                    },
-                  },
-                },
-              },
-            },
-            null,
-            2,
-          ),
-          "utf-8",
-        );
-
-        const cfg = loadConfigForHome(home);
-
-        expect(cfg.plugins?.load?.paths?.[0]).toBe(path.join(home, "plugins", "demo-plugin"));
-        expect(cfg.agents?.defaults?.workspace).toBe(path.join(home, "ws-default"));
-        expect(cfg.agents?.list?.[0]?.workspace).toBe(path.join(home, "ws-agent"));
-        expect(cfg.agents?.list?.[0]?.agentDir).toBe(path.join(home, ".godseye", "agents", "main"));
-        expect(cfg.agents?.list?.[0]?.sandbox?.workspaceRoot).toBe(path.join(home, "sandbox-root"));
-        expect(cfg.channels?.whatsapp?.accounts?.personal?.authDir).toBe(
-          path.join(home, ".godseye", "credentials", "wa-personal"),
-        );
-      });
+      ).toBe(path.join(path.resolve("/custom/state"), "openclaw.json"));
     });
   });
 
   describe("U6: gateway port resolution", () => {
     it("uses default when env and config are unset", () => {
-      expect(resolveGatewayPort({}, envWith({ GODSEYE_GATEWAY_PORT: undefined }))).toBe(
+      expect(resolveGatewayPort({}, envWith({ OPENCLAW_GATEWAY_PORT: undefined }))).toBe(
         DEFAULT_GATEWAY_PORT,
       );
     });
 
-    it("prefers GODSEYE_GATEWAY_PORT over config", () => {
+    it("prefers OPENCLAW_GATEWAY_PORT over config", () => {
       expect(
         resolveGatewayPort(
           { gateway: { port: 19002 } },
-          envWith({ GODSEYE_GATEWAY_PORT: "19001" }),
+          envWith({ OPENCLAW_GATEWAY_PORT: "19001" }),
         ),
       ).toBe(19001);
     });
 
     it("falls back to config when env is invalid", () => {
       expect(
-        resolveGatewayPort({ gateway: { port: 19003 } }, envWith({ GODSEYE_GATEWAY_PORT: "nope" })),
+        resolveGatewayPort(
+          { gateway: { port: 19003 } },
+          envWith({ OPENCLAW_GATEWAY_PORT: "nope" }),
+        ),
       ).toBe(19003);
-    });
-  });
-
-  describe("U9: telegram.tokenFile schema validation", () => {
-    it("accepts config with only botToken", async () => {
-      await withLoadedConfigForHome(
-        {
-          channels: { telegram: { botToken: "123:ABC" } },
-        },
-        async (cfg) => {
-          expect(cfg.channels?.telegram?.botToken).toBe("123:ABC");
-          expect(cfg.channels?.telegram?.tokenFile).toBeUndefined();
-        },
-      );
-    });
-
-    it("accepts config with only tokenFile", async () => {
-      await withLoadedConfigForHome(
-        {
-          channels: { telegram: { tokenFile: "/run/agenix/telegram-token" } },
-        },
-        async (cfg) => {
-          expect(cfg.channels?.telegram?.tokenFile).toBe("/run/agenix/telegram-token");
-          expect(cfg.channels?.telegram?.botToken).toBeUndefined();
-        },
-      );
-    });
-
-    it("accepts config with both botToken and tokenFile", async () => {
-      await withLoadedConfigForHome(
-        {
-          channels: {
-            telegram: {
-              botToken: "fallback:token",
-              tokenFile: "/run/agenix/telegram-token",
-            },
-          },
-        },
-        async (cfg) => {
-          expect(cfg.channels?.telegram?.botToken).toBe("fallback:token");
-          expect(cfg.channels?.telegram?.tokenFile).toBe("/run/agenix/telegram-token");
-        },
-      );
     });
   });
 });

@@ -35,7 +35,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
 }
 
 async function makeStorePath() {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-cron-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cron-"));
   return {
     storePath: path.join(dir, "cron", "jobs.json"),
     cleanup: async () => {
@@ -150,7 +150,6 @@ describe("CronService read ops while job is running", () => {
         if (!internal.state?.running) {
           break;
         }
-        // eslint-disable-next-line no-await-in-loop
         await Promise.resolve();
       }
       expect(internal.state?.running).toBe(false);

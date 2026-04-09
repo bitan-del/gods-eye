@@ -1,4 +1,4 @@
-import type { LookupFn } from "openclaw/plugin-sdk/ssrf-runtime";
+import type { LookupFn } from "godseye/plugin-sdk/ssrf-runtime";
 import { describe, expect, it, vi } from "vitest";
 import { __testing } from "./searxng-client.js";
 

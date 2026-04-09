@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { ensureGlobalUndiciEnvProxyDispatcher } from "godseye/plugin-sdk/infra-runtime";
 import { generatePkceVerifierChallenge, toFormUrlEncoded } from "godseye/plugin-sdk/provider-auth";
+import { ensureGlobalUndiciEnvProxyDispatcher } from "godseye/plugin-sdk/runtime-env";
 
 export type MiniMaxRegion = "cn" | "global";
 

@@ -33,7 +33,7 @@ export function installConnectedControlUiServerSuite(
   });
 
   beforeEach(() => {
-    process.env.GODSEYE_GATEWAY_TOKEN = token;
+    process.env.OPENCLAW_GATEWAY_TOKEN = token;
     testState.gatewayAuth = { mode: "token", token };
   });
 

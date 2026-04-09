@@ -1,12 +1,12 @@
 import fs from "node:fs/promises";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import {
   enforceEmbeddingMaxInputTokens,
   hasNonTextEmbeddingParts,
   type EmbeddingInput,
-} from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
-import { createSubsystemLogger } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
-import { type SessionFileEntry } from "openclaw/plugin-sdk/memory-core-host-engine-qmd";
+} from "godseye/plugin-sdk/memory-core-host-engine-embeddings";
+import { createSubsystemLogger } from "godseye/plugin-sdk/memory-core-host-engine-foundation";
+import { type SessionFileEntry } from "godseye/plugin-sdk/memory-core-host-engine-qmd";
 import {
   buildMultimodalChunkForIndexing,
   chunkMarkdown,
@@ -15,7 +15,7 @@ import {
   type MemoryChunk,
   type MemoryFileEntry,
   type MemorySource,
-} from "openclaw/plugin-sdk/memory-core-host-engine-storage";
+} from "godseye/plugin-sdk/memory-core-host-engine-storage";
 import {
   MEMORY_BATCH_FAILURE_LIMIT,
   recordMemoryBatchFailure,

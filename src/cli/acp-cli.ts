@@ -1,36 +1,12 @@
 import type { Command } from "commander";
 import { runAcpClientInteractive } from "../acp/client.js";
-import { readSecretFromFile } from "../acp/secret-file.js";
 import { serveAcpGateway } from "../acp/server.js";
 import { normalizeAcpProvenanceMode } from "../acp/types.js";
 import { defaultRuntime } from "../runtime.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { inheritOptionFromParent } from "./command-options.js";
-
-function resolveSecretOption(params: {
-  direct?: string;
-  file?: string;
-  directFlag: string;
-  fileFlag: string;
-  label: string;
-}) {
-  const direct = params.direct?.trim();
-  const file = params.file?.trim();
-  if (direct && file) {
-    throw new Error(`Use either ${params.directFlag} or ${params.fileFlag} for ${params.label}.`);
-  }
-  if (file) {
-    return readSecretFromFile(file, params.label);
-  }
-  return direct || undefined;
-}
-
-function warnSecretCliFlag(flag: "--token" | "--password") {
-  defaultRuntime.error(
-    `Warning: ${flag} can be exposed via process listings. Prefer ${flag}-file or environment variables.`,
-  );
-}
+import { resolveGatewayAuthOptions } from "./gateway-secret-options.js";
 
 export function registerAcpCli(program: Command) {
   const acp = program.command("acp").description("Run an ACP bridge backed by the Gateway");
@@ -50,31 +26,11 @@ export function registerAcpCli(program: Command) {
     .option("-v, --verbose", "Verbose logging to stderr", false)
     .addHelpText(
       "after",
-      () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/acp", "docs.gods-eye.org/cli/acp")}\n`,
+      () => `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/acp", "docs.openclaw.ai/cli/acp")}\n`,
     )
     .action(async (opts) => {
       try {
-        const gatewayToken = resolveSecretOption({
-          direct: opts.token as string | undefined,
-          file: opts.tokenFile as string | undefined,
-          directFlag: "--token",
-          fileFlag: "--token-file",
-          label: "Gateway token",
-        });
-        const gatewayPassword = resolveSecretOption({
-          direct: opts.password as string | undefined,
-          file: opts.passwordFile as string | undefined,
-          directFlag: "--password",
-          fileFlag: "--password-file",
-          label: "Gateway password",
-        });
-        if (opts.token) {
-          warnSecretCliFlag("--token");
-        }
-        if (opts.password) {
-          warnSecretCliFlag("--password");
-        }
+        const { gatewayToken, gatewayPassword } = resolveGatewayAuthOptions(opts);
         const provenanceMode = normalizeAcpProvenanceMode(opts.provenance as string | undefined);
         if (opts.provenance && !provenanceMode) {
           throw new Error("Invalid --provenance value. Use off, meta, or meta+receipt.");
@@ -101,7 +57,7 @@ export function registerAcpCli(program: Command) {
     .command("client")
     .description("Run an interactive ACP client against the local ACP bridge")
     .option("--cwd <dir>", "Working directory for the ACP session")
-    .option("--server <command>", "ACP server command (default: godseye)")
+    .option("--server <command>", "ACP server command (default: openclaw)")
     .option("--server-args <args...>", "Extra arguments for the ACP server")
     .option("--server-verbose", "Enable verbose logging on the ACP server", false)
     .option("-v, --verbose", "Verbose client logging", false)

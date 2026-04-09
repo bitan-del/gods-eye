@@ -3,11 +3,11 @@ import {
   resolveAccountEntry,
   resolveMergedAccountConfig,
   type OpenClawConfig,
-} from "openclaw/plugin-sdk/account-core";
+} from "godseye/plugin-sdk/account-core";
 import {
   resolveChannelStreamingBlockEnabled,
   resolveChannelStreamingChunkMode,
-} from "openclaw/plugin-sdk/channel-streaming";
+} from "godseye/plugin-sdk/channel-streaming";
 import type { WhatsAppAccountConfig } from "./runtime-api.js";
 
 function _resolveWhatsAppAccountConfig(

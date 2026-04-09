@@ -1,6 +1,6 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { resolvePreferredGodsEyeTmpDir } from "../runtime-api.js";
+import { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/browser-security-runtime";
 
 export async function writeQrDataUrlToTempFile(
   qrDataUrl: string,
@@ -14,8 +14,8 @@ export async function writeQrDataUrlToTempFile(
   }
   const safeProfile = profile.replace(/[^a-zA-Z0-9_-]+/g, "-") || "default";
   const filePath = path.join(
-    resolvePreferredGodsEyeTmpDir(),
-    `godseye-zalouser-qr-${safeProfile}.png`,
+    resolvePreferredOpenClawTmpDir(),
+    `openclaw-zalouser-qr-${safeProfile}.png`,
   );
   await fsp.writeFile(filePath, Buffer.from(base64, "base64"));
   return filePath;

@@ -2,11 +2,12 @@ import type {
   ChannelThreadingContext,
   ChannelThreadingToolContext,
 } from "godseye/plugin-sdk/channel-contract";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { resolveSlackAccount, resolveSlackReplyToMode } from "./accounts.js";
 
 export function buildSlackThreadingToolContext(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   context: ChannelThreadingContext;
   hasRepliedRef?: { value: boolean };
@@ -24,7 +25,7 @@ export function buildSlackThreadingToolContext(params: {
   // to NativeChannelId (the raw Slack channel id, e.g. "D…").
   const currentChannelId = params.context.To?.startsWith("channel:")
     ? params.context.To.slice("channel:".length)
-    : params.context.NativeChannelId?.trim() || undefined;
+    : normalizeOptionalString(params.context.NativeChannelId);
   return {
     currentChannelId,
     currentThreadTs: threadId != null ? String(threadId) : undefined,

@@ -1,5 +1,6 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { DEFAULT_ACCOUNT_ID } from "../../routing/session-key.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import type { WizardPrompter } from "../../wizard/prompts.js";
 import { configureChannelAccessWithAllowlist } from "./setup-group-access-configure.js";
 import type { ChannelAccessPolicy } from "./setup-group-access.js";
@@ -10,6 +11,7 @@ import {
   splitSetupEntries,
 } from "./setup-wizard-helpers.js";
 import type {
+  ChannelSetupPlugin,
   ChannelSetupWizardAdapter,
   ChannelSetupConfigureContext,
   ChannelSetupDmPolicy,
@@ -17,7 +19,6 @@ import type {
   ChannelSetupStatusContext,
 } from "./setup-wizard-types.js";
 import type { ChannelSetupInput } from "./types.core.js";
-import type { ChannelPlugin } from "./types.js";
 
 export type ChannelSetupWizardStatus = {
   configuredLabel: string;
@@ -26,17 +27,23 @@ export type ChannelSetupWizardStatus = {
   unconfiguredHint?: string;
   configuredScore?: number;
   unconfiguredScore?: number;
-  resolveConfigured: (params: { cfg: GodsEyeConfig }) => boolean | Promise<boolean>;
+  resolveConfigured: (params: {
+    cfg: OpenClawConfig;
+    accountId?: string;
+  }) => boolean | Promise<boolean>;
   resolveStatusLines?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
+    accountId?: string;
     configured: boolean;
   }) => string[] | Promise<string[]>;
   resolveSelectionHint?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
+    accountId?: string;
     configured: boolean;
   }) => string | undefined | Promise<string | undefined>;
   resolveQuickstartScore?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
+    accountId?: string;
     configured: boolean;
   }) => number | undefined | Promise<number | undefined>;
 };
@@ -54,7 +61,7 @@ export type ChannelSetupWizardNote = {
   title: string;
   lines: string[];
   shouldShow?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
   }) => boolean | Promise<boolean>;
@@ -63,11 +70,11 @@ export type ChannelSetupWizardNote = {
 export type ChannelSetupWizardEnvShortcut = {
   prompt: string;
   preferredEnvVar?: string;
-  isAvailable: (params: { cfg: GodsEyeConfig; accountId: string }) => boolean;
+  isAvailable: (params: { cfg: OpenClawConfig; accountId: string }) => boolean;
   apply: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
-  }) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  }) => OpenClawConfig | Promise<OpenClawConfig>;
 };
 
 export type ChannelSetupWizardCredential = {
@@ -80,26 +87,29 @@ export type ChannelSetupWizardCredential = {
   envPrompt: string;
   keepPrompt: string;
   inputPrompt: string;
-  allowEnv?: (params: { cfg: GodsEyeConfig; accountId: string }) => boolean;
-  inspect: (params: { cfg: GodsEyeConfig; accountId: string }) => ChannelSetupWizardCredentialState;
+  allowEnv?: (params: { cfg: OpenClawConfig; accountId: string }) => boolean;
+  inspect: (params: {
+    cfg: OpenClawConfig;
+    accountId: string;
+  }) => ChannelSetupWizardCredentialState;
   shouldPrompt?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
     currentValue?: string;
     state: ChannelSetupWizardCredentialState;
   }) => boolean | Promise<boolean>;
   applyUseEnv?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
-  }) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  }) => OpenClawConfig | Promise<OpenClawConfig>;
   applySet?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
     value: unknown;
     resolvedValue: string;
-  }) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  }) => OpenClawConfig | Promise<OpenClawConfig>;
 };
 
 export type ChannelSetupWizardTextInput = {
@@ -113,17 +123,17 @@ export type ChannelSetupWizardTextInput = {
   confirmCurrentValue?: boolean;
   keepPrompt?: string | ((value: string) => string);
   currentValue?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
   }) => string | undefined | Promise<string | undefined>;
   initialValue?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
   }) => string | undefined | Promise<string | undefined>;
   shouldPrompt?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
     currentValue?: string;
@@ -131,21 +141,21 @@ export type ChannelSetupWizardTextInput = {
   applyCurrentValue?: boolean;
   validate?: (params: {
     value: string;
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
   }) => string | undefined;
   normalizeValue?: (params: {
     value: string;
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
   }) => string;
   applySet?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     value: string;
-  }) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  }) => OpenClawConfig | Promise<OpenClawConfig>;
 };
 
 export type ChannelSetupWizardAllowFromEntry = {
@@ -164,16 +174,16 @@ export type ChannelSetupWizardAllowFrom = {
   parseInputs?: (raw: string) => string[];
   parseId: (raw: string) => string | null;
   resolveEntries: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
     entries: string[];
   }) => Promise<ChannelSetupWizardAllowFromEntry[]>;
   apply: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     allowFrom: string[];
-  }) => GodsEyeConfig | Promise<GodsEyeConfig>;
+  }) => OpenClawConfig | Promise<OpenClawConfig>;
 };
 
 export type ChannelSetupWizardGroupAccess = {
@@ -182,30 +192,30 @@ export type ChannelSetupWizardGroupAccess = {
   helpTitle?: string;
   helpLines?: string[];
   skipAllowlistEntries?: boolean;
-  currentPolicy: (params: { cfg: GodsEyeConfig; accountId: string }) => ChannelAccessPolicy;
-  currentEntries: (params: { cfg: GodsEyeConfig; accountId: string }) => string[];
-  updatePrompt: (params: { cfg: GodsEyeConfig; accountId: string }) => boolean;
+  currentPolicy: (params: { cfg: OpenClawConfig; accountId: string }) => ChannelAccessPolicy;
+  currentEntries: (params: { cfg: OpenClawConfig; accountId: string }) => string[];
+  updatePrompt: (params: { cfg: OpenClawConfig; accountId: string }) => boolean;
   setPolicy: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     policy: ChannelAccessPolicy;
-  }) => GodsEyeConfig;
+  }) => OpenClawConfig;
   resolveAllowlist?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     credentialValues: ChannelSetupWizardCredentialValues;
     entries: string[];
     prompter: Pick<WizardPrompter, "note">;
   }) => Promise<unknown>;
   applyAllowlist?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId: string;
     resolved: unknown;
-  }) => GodsEyeConfig;
+  }) => OpenClawConfig;
 };
 
 export type ChannelSetupWizardPrepare = (params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   credentialValues: ChannelSetupWizardCredentialValues;
   runtime: ChannelSetupConfigureContext["runtime"];
@@ -213,17 +223,17 @@ export type ChannelSetupWizardPrepare = (params: {
   options?: ChannelSetupConfigureContext["options"];
 }) =>
   | {
-      cfg?: GodsEyeConfig;
+      cfg?: OpenClawConfig;
       credentialValues?: ChannelSetupWizardCredentialValues;
     }
   | void
   | Promise<{
-      cfg?: GodsEyeConfig;
+      cfg?: OpenClawConfig;
       credentialValues?: ChannelSetupWizardCredentialValues;
     } | void>;
 
 export type ChannelSetupWizardFinalize = (params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   credentialValues: ChannelSetupWizardCredentialValues;
   runtime: ChannelSetupConfigureContext["runtime"];
@@ -232,12 +242,12 @@ export type ChannelSetupWizardFinalize = (params: {
   forceAllowFrom: boolean;
 }) =>
   | {
-      cfg?: GodsEyeConfig;
+      cfg?: OpenClawConfig;
       credentialValues?: ChannelSetupWizardCredentialValues;
     }
   | void
   | Promise<{
-      cfg?: GodsEyeConfig;
+      cfg?: OpenClawConfig;
       credentialValues?: ChannelSetupWizardCredentialValues;
     } | void>;
 
@@ -247,7 +257,7 @@ export type ChannelSetupWizard = {
   introNote?: ChannelSetupWizardNote;
   envShortcut?: ChannelSetupWizardEnvShortcut;
   resolveAccountIdForConfigure?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     prompter: WizardPrompter;
     options?: ChannelSetupConfigureContext["options"];
     accountOverride?: string;
@@ -256,7 +266,7 @@ export type ChannelSetupWizard = {
     defaultAccountId: string;
   }) => string | Promise<string>;
   resolveShouldPromptAccountIds?: (params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     options?: ChannelSetupConfigureContext["options"];
     shouldPromptAccountIds: boolean;
   }) => boolean;
@@ -269,20 +279,22 @@ export type ChannelSetupWizard = {
   dmPolicy?: ChannelSetupDmPolicy;
   allowFrom?: ChannelSetupWizardAllowFrom;
   groupAccess?: ChannelSetupWizardGroupAccess;
-  disable?: (cfg: GodsEyeConfig) => GodsEyeConfig;
+  disable?: (cfg: OpenClawConfig) => OpenClawConfig;
   onAccountRecorded?: ChannelSetupWizardAdapter["onAccountRecorded"];
 };
 
-type ChannelSetupWizardPlugin = Pick<ChannelPlugin, "id" | "meta" | "config" | "setup">;
+type ChannelSetupWizardPlugin = ChannelSetupPlugin;
 
 async function buildStatus(
   plugin: ChannelSetupWizardPlugin,
   wizard: ChannelSetupWizard,
   ctx: ChannelSetupStatusContext,
 ): Promise<ChannelSetupStatus> {
-  const configured = await wizard.status.resolveConfigured({ cfg: ctx.cfg });
+  const accountId = ctx.accountOverrides[plugin.id];
+  const configured = await wizard.status.resolveConfigured({ cfg: ctx.cfg, accountId });
   const statusLines = (await wizard.status.resolveStatusLines?.({
     cfg: ctx.cfg,
+    accountId,
     configured,
   })) ?? [
     `${plugin.meta.label}: ${configured ? wizard.status.configuredLabel : wizard.status.unconfiguredLabel}`,
@@ -290,11 +302,13 @@ async function buildStatus(
   const selectionHint =
     (await wizard.status.resolveSelectionHint?.({
       cfg: ctx.cfg,
+      accountId,
       configured,
     })) ?? (configured ? wizard.status.configuredHint : wizard.status.unconfiguredHint);
   const quickstartScore =
     (await wizard.status.resolveQuickstartScore?.({
       cfg: ctx.cfg,
+      accountId,
       configured,
     })) ?? (configured ? wizard.status.configuredScore : wizard.status.unconfiguredScore);
   return {
@@ -308,7 +322,7 @@ async function buildStatus(
 
 function applySetupInput(params: {
   plugin: ChannelSetupWizardPlugin;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   input: ChannelSetupInput;
 }) {
@@ -348,19 +362,14 @@ function applySetupInput(params: {
   };
 }
 
-function trimResolvedValue(value?: string): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
 function collectCredentialValues(params: {
   wizard: ChannelSetupWizard;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
 }): ChannelSetupWizardCredentialValues {
   const values: ChannelSetupWizardCredentialValues = {};
   for (const credential of params.wizard.credentials) {
-    const resolvedValue = trimResolvedValue(
+    const resolvedValue = normalizeOptionalString(
       credential.inspect({
         cfg: params.cfg,
         accountId: params.accountId,
@@ -376,7 +385,7 @@ function collectCredentialValues(params: {
 async function applyWizardTextInputValue(params: {
   plugin: ChannelSetupWizardPlugin;
   input: ChannelSetupWizardTextInput;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   value: string;
 }) {
@@ -506,7 +515,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
         }
         for (const credential of wizard.credentials) {
           let credentialState = credential.inspect({ cfg: next, accountId });
-          let resolvedCredentialValue = trimResolvedValue(credentialState.resolvedValue);
+          let resolvedCredentialValue = normalizeOptionalString(credentialState.resolvedValue);
           const shouldPrompt = credential.shouldPrompt
             ? await credential.shouldPrompt({
                 cfg: next,
@@ -589,8 +598,8 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
           next = credentialResult.cfg;
           credentialState = credential.inspect({ cfg: next, accountId });
           resolvedCredentialValue =
-            trimResolvedValue(credentialResult.resolvedValue) ||
-            trimResolvedValue(credentialState.resolvedValue);
+            normalizeOptionalString(credentialResult.resolvedValue) ||
+            normalizeOptionalString(credentialState.resolvedValue);
           if (resolvedCredentialValue) {
             credentialValues[credential.inputKey] = resolvedCredentialValue;
           } else {
@@ -601,13 +610,13 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
 
       const runTextInputSteps = async () => {
         for (const textInput of wizard.textInputs ?? []) {
-          let currentValue = trimResolvedValue(
+          let currentValue = normalizeOptionalString(
             typeof credentialValues[textInput.inputKey] === "string"
               ? credentialValues[textInput.inputKey]
               : undefined,
           );
           if (!currentValue && textInput.currentValue) {
-            currentValue = trimResolvedValue(
+            currentValue = normalizeOptionalString(
               await textInput.currentValue({
                 cfg: next,
                 accountId,
@@ -671,7 +680,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
             }
           }
 
-          const initialValue = trimResolvedValue(
+          const initialValue = normalizeOptionalString(
             (await textInput.initialValue?.({
               cfg: next,
               accountId,
@@ -684,7 +693,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
               initialValue,
               placeholder: textInput.placeholder,
               validate: (value) => {
-                const trimmed = String(value ?? "").trim();
+                const trimmed = normalizeOptionalString(value) ?? "";
                 if (!trimmed && textInput.required !== false) {
                   return "Required";
                 }
@@ -711,7 +720,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
             delete credentialValues[textInput.inputKey];
             continue;
           }
-          const normalizedValue = trimResolvedValue(
+          const normalizedValue = normalizeOptionalString(
             textInput.normalizeValue?.({
               value: trimmedValue,
               cfg: next,
@@ -785,7 +794,7 @@ export function buildChannelSetupWizardAdapterFromSetupWizard(params: {
 
       if (forceAllowFrom && wizard.allowFrom) {
         const allowFrom = wizard.allowFrom;
-        const allowFromCredentialValue = trimResolvedValue(
+        const allowFromCredentialValue = normalizeOptionalString(
           credentialValues[allowFrom.credentialInputKey ?? wizard.credentials[0]?.inputKey],
         );
         if (allowFrom.helpLines && allowFrom.helpLines.length > 0) {

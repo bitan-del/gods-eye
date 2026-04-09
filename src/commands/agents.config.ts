@@ -11,8 +11,9 @@ import {
   parseIdentityMarkdown as parseIdentityMarkdownFile,
 } from "../agents/identity-file.js";
 import { listRouteBindings } from "../config/bindings.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { normalizeAgentId } from "../routing/session-key.js";
+import { normalizeOptionalString, resolvePrimaryStringValue } from "../shared/string-coerce.js";
 
 export type AgentSummary = {
   id: string;
@@ -30,7 +31,7 @@ export type AgentSummary = {
   isDefault: boolean;
 };
 
-type AgentEntry = NonNullable<NonNullable<GodsEyeConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
 export type AgentIdentity = AgentIdentityFile;
 export { listAgentEntries };
@@ -40,33 +41,15 @@ export function findAgentEntryIndex(list: AgentEntry[], agentId: string): number
   return list.findIndex((entry) => normalizeAgentId(entry.id) === id);
 }
 
-function resolveAgentName(cfg: GodsEyeConfig, agentId: string) {
+function resolveAgentModel(cfg: OpenClawConfig, agentId: string) {
   const entry = listAgentEntries(cfg).find(
     (agent) => normalizeAgentId(agent.id) === normalizeAgentId(agentId),
   );
-  return entry?.name?.trim() || undefined;
-}
-
-function resolveAgentModel(cfg: GodsEyeConfig, agentId: string) {
-  const entry = listAgentEntries(cfg).find(
-    (agent) => normalizeAgentId(agent.id) === normalizeAgentId(agentId),
-  );
-  if (entry?.model) {
-    if (typeof entry.model === "string" && entry.model.trim()) {
-      return entry.model.trim();
-    }
-    if (typeof entry.model === "object") {
-      const primary = entry.model.primary?.trim();
-      if (primary) {
-        return primary;
-      }
-    }
+  const entryPrimary = resolvePrimaryStringValue(entry?.model);
+  if (entryPrimary) {
+    return entryPrimary;
   }
-  const raw = cfg.agents?.defaults?.model;
-  if (typeof raw === "string") {
-    return raw;
-  }
-  return raw?.primary?.trim() || undefined;
+  return resolvePrimaryStringValue(cfg.agents?.defaults?.model);
 }
 
 export function parseIdentityMarkdown(content: string): AgentIdentity {
@@ -81,7 +64,7 @@ export function loadAgentIdentity(workspace: string): AgentIdentity | null {
   return identityHasValues(parsed) ? parsed : null;
 }
 
-export function buildAgentSummaries(cfg: GodsEyeConfig): AgentSummary[] {
+export function buildAgentSummaries(cfg: OpenClawConfig): AgentSummary[] {
   const defaultAgentId = normalizeAgentId(resolveDefaultAgentId(cfg));
   const configuredAgents = listAgentEntries(cfg);
   const orderedIds =
@@ -111,7 +94,9 @@ export function buildAgentSummaries(cfg: GodsEyeConfig): AgentSummary[] {
         : undefined;
     return {
       id,
-      name: resolveAgentName(cfg, id),
+      name: normalizeOptionalString(
+        configuredAgents.find((agent) => normalizeAgentId(agent.id) === id)?.name,
+      ),
       identityName,
       identityEmoji,
       identitySource,
@@ -125,7 +110,7 @@ export function buildAgentSummaries(cfg: GodsEyeConfig): AgentSummary[] {
 }
 
 export function applyAgentConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentId: string;
     name?: string;
@@ -133,7 +118,7 @@ export function applyAgentConfig(
     agentDir?: string;
     model?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const agentId = normalizeAgentId(params.agentId);
   const name = params.name?.trim();
   const list = listAgentEntries(cfg);
@@ -165,10 +150,10 @@ export function applyAgentConfig(
 }
 
 export function pruneAgentConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   agentId: string,
 ): {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   removedBindings: number;
   removedAllow: number;
 } {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { configureChannelAccessWithAllowlist } from "./setup-group-access-configure.js";
 import type { ChannelAccessPolicy } from "./setup-group-access.js";
 
@@ -13,17 +13,16 @@ function createPrompter(params: { confirm: boolean; policy?: ChannelAccessPolicy
 }
 
 async function runConfigureChannelAccess<TResolved>(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: ReturnType<typeof createPrompter>;
   label?: string;
   placeholder?: string;
-  setPolicy: (cfg: GodsEyeConfig, policy: ChannelAccessPolicy) => GodsEyeConfig;
-  resolveAllowlist: (params: { cfg: GodsEyeConfig; entries: string[] }) => Promise<TResolved>;
-  applyAllowlist: (params: { cfg: GodsEyeConfig; resolved: TResolved }) => GodsEyeConfig;
+  setPolicy: (cfg: OpenClawConfig, policy: ChannelAccessPolicy) => OpenClawConfig;
+  resolveAllowlist: (params: { cfg: OpenClawConfig; entries: string[] }) => Promise<TResolved>;
+  applyAllowlist: (params: { cfg: OpenClawConfig; resolved: TResolved }) => OpenClawConfig;
 }) {
   return await configureChannelAccessWithAllowlist({
     cfg: params.cfg,
-    // oxlint-disable-next-line typescript/no-explicit-any
     prompter: params.prompter as any,
     label: params.label ?? "Slack channels",
     currentPolicy: "allowlist",
@@ -38,11 +37,11 @@ async function runConfigureChannelAccess<TResolved>(params: {
 
 describe("configureChannelAccessWithAllowlist", () => {
   it("returns input config when user skips access configuration", async () => {
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const prompter = createPrompter({ confirm: false });
-    const setPolicy = vi.fn((next: GodsEyeConfig) => next);
+    const setPolicy = vi.fn((next: OpenClawConfig) => next);
     const resolveAllowlist = vi.fn(async () => [] as string[]);
-    const applyAllowlist = vi.fn((params: { cfg: GodsEyeConfig }) => params.cfg);
+    const applyAllowlist = vi.fn((params: { cfg: OpenClawConfig }) => params.cfg);
 
     const next = await runConfigureChannelAccess({
       cfg,
@@ -59,19 +58,19 @@ describe("configureChannelAccessWithAllowlist", () => {
   });
 
   it("applies non-allowlist policy directly", async () => {
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const prompter = createPrompter({
       confirm: true,
       policy: "open",
     });
     const setPolicy = vi.fn(
-      (next: GodsEyeConfig, policy: ChannelAccessPolicy): GodsEyeConfig => ({
+      (next: OpenClawConfig, policy: ChannelAccessPolicy): OpenClawConfig => ({
         ...next,
         channels: { discord: { groupPolicy: policy } },
       }),
     );
     const resolveAllowlist = vi.fn(async () => ["ignored"]);
-    const applyAllowlist = vi.fn((params: { cfg: GodsEyeConfig }) => params.cfg);
+    const applyAllowlist = vi.fn((params: { cfg: OpenClawConfig }) => params.cfg);
 
     const next = await runConfigureChannelAccess({
       cfg,
@@ -90,23 +89,22 @@ describe("configureChannelAccessWithAllowlist", () => {
   });
 
   it("supports allowlist policies without prompting for entries", async () => {
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const prompter = createPrompter({
       confirm: true,
       policy: "allowlist",
     });
     const setPolicy = vi.fn(
-      (next: GodsEyeConfig, policy: ChannelAccessPolicy): GodsEyeConfig => ({
+      (next: OpenClawConfig, policy: ChannelAccessPolicy): OpenClawConfig => ({
         ...next,
         channels: { twitch: { groupPolicy: policy } },
       }),
     );
     const resolveAllowlist = vi.fn(async () => ["ignored"]);
-    const applyAllowlist = vi.fn((params: { cfg: GodsEyeConfig }) => params.cfg);
+    const applyAllowlist = vi.fn((params: { cfg: OpenClawConfig }) => params.cfg);
 
     const next = await configureChannelAccessWithAllowlist({
       cfg,
-      // oxlint-disable-next-line typescript/no-explicit-any
       prompter: prompter as any,
       label: "Twitch chat",
       currentPolicy: "disabled",
@@ -125,27 +123,27 @@ describe("configureChannelAccessWithAllowlist", () => {
   });
 
   it("resolves allowlist entries and applies them after forcing allowlist policy", async () => {
-    const cfg: GodsEyeConfig = {};
+    const cfg: OpenClawConfig = {};
     const prompter = createPrompter({
       confirm: true,
       policy: "allowlist",
       text: "#general, #support",
     });
     const calls: string[] = [];
-    const setPolicy = vi.fn((next: GodsEyeConfig, policy: ChannelAccessPolicy): GodsEyeConfig => {
+    const setPolicy = vi.fn((next: OpenClawConfig, policy: ChannelAccessPolicy): OpenClawConfig => {
       calls.push("setPolicy");
       return {
         ...next,
         channels: { slack: { groupPolicy: policy } },
       };
     });
-    const resolveAllowlist = vi.fn(async (params: { cfg: GodsEyeConfig; entries: string[] }) => {
+    const resolveAllowlist = vi.fn(async (params: { cfg: OpenClawConfig; entries: string[] }) => {
       calls.push("resolve");
       expect(params.cfg).toBe(cfg);
       expect(params.entries).toEqual(["#general", "#support"]);
       return ["C1", "C2"];
     });
-    const applyAllowlist = vi.fn((params: { cfg: GodsEyeConfig; resolved: string[] }) => {
+    const applyAllowlist = vi.fn((params: { cfg: OpenClawConfig; resolved: string[] }) => {
       calls.push("apply");
       expect(params.cfg.channels?.slack?.groupPolicy).toBe("allowlist");
       return {
@@ -154,7 +152,7 @@ describe("configureChannelAccessWithAllowlist", () => {
           ...params.cfg.channels,
           slack: {
             ...params.cfg.channels?.slack,
-            channels: Object.fromEntries(params.resolved.map((id) => [id, { allow: true }])),
+            channels: Object.fromEntries(params.resolved.map((id) => [id, { enabled: true }])),
           },
         },
       };
@@ -170,8 +168,8 @@ describe("configureChannelAccessWithAllowlist", () => {
 
     expect(calls).toEqual(["resolve", "setPolicy", "apply"]);
     expect(next.channels?.slack?.channels).toEqual({
-      C1: { allow: true },
-      C2: { allow: true },
+      C1: { enabled: true },
+      C2: { enabled: true },
     });
   });
 });

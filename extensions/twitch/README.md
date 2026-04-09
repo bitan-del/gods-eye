@@ -1,17 +1,17 @@
-# @godseye/twitch
+# @openclaw/twitch
 
-Twitch channel plugin for Gods Eye.
+Twitch channel plugin for OpenClaw.
 
 ## Install (local checkout)
 
 ```bash
-godseye plugins install ./extensions/twitch
+openclaw plugins install ./path/to/local/twitch-plugin
 ```
 
 ## Install (npm)
 
 ```bash
-godseye plugins install @godseye/twitch
+openclaw plugins install @openclaw/twitch
 ```
 
 Onboarding: select Twitch and confirm the install prompt to fetch the plugin automatically.
@@ -27,11 +27,11 @@ Minimal config (simplified single-account):
   channels: {
     twitch: {
       enabled: true,
-      username: "godseye",
+      username: "openclaw",
       accessToken: "oauth:abc123...", // OAuth Access Token (add oauth: prefix)
       clientId: "xyz789...", // Client ID from Token Generator
       channel: "vevisk", // Channel to join (required)
-      allowFrom: ["123456789"], // (recommended) Your Twitch user ID only (Convert your twitch username to ID at https://www.streamweasels.com/tools/convert-twitch-username-%20to-user-id/)
+      allowFrom: ["123456789"], // (recommended) Your Twitch user ID only (Convert your twitch username to ID at https://www.streamweasels.com/tools/convert-twitch-username-to-user-id/)
     },
   },
 }
@@ -52,13 +52,13 @@ Multi-account config (advanced):
       enabled: true,
       accounts: {
         default: {
-          username: "godseye",
+          username: "openclaw",
           accessToken: "oauth:abc123...",
           clientId: "xyz789...",
           channel: "vevisk",
         },
         channel2: {
-          username: "godseye",
+          username: "openclaw",
           accessToken: "oauth:def456...",
           clientId: "uvw012...",
           channel: "secondchannel",
@@ -80,7 +80,7 @@ Multi-account config (advanced):
 
 ## Full documentation
 
-See https://docs.gods-eye.org/channels/twitch for:
+See https://docs.openclaw.ai/channels/twitch for:
 
 - Token refresh setup
 - Access control patterns

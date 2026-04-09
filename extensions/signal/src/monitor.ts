@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { SignalReactionNotificationMode } from "godseye/plugin-sdk/config-runtime";
 import { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import {
@@ -6,9 +6,8 @@ import {
   resolveDefaultGroupPolicy,
   warnMissingProviderGroupPolicyFallbackOnce,
 } from "godseye/plugin-sdk/config-runtime";
-import type { BackoffPolicy } from "godseye/plugin-sdk/infra-runtime";
 import { waitForTransportReady } from "godseye/plugin-sdk/infra-runtime";
-import { saveMediaBuffer } from "godseye/plugin-sdk/media-runtime";
+import { estimateBase64DecodedBytes, saveMediaBuffer } from "godseye/plugin-sdk/media-runtime";
 import { DEFAULT_GROUP_HISTORY_LIMIT, type HistoryEntry } from "godseye/plugin-sdk/reply-history";
 import {
   deliverTextOrMediaReply,
@@ -20,9 +19,16 @@ import {
   resolveChunkMode,
   resolveTextChunkLimit,
 } from "godseye/plugin-sdk/reply-runtime";
-import { createNonExitingRuntime, type RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
-import { normalizeStringEntries } from "godseye/plugin-sdk/text-runtime";
-import { normalizeE164 } from "godseye/plugin-sdk/text-runtime";
+import {
+  createNonExitingRuntime,
+  type BackoffPolicy,
+  type RuntimeEnv,
+} from "godseye/plugin-sdk/runtime-env";
+import {
+  normalizeE164,
+  normalizeOptionalString,
+  normalizeStringEntries,
+} from "godseye/plugin-sdk/text-runtime";
 import { resolveSignalAccount } from "./accounts.js";
 import { signalCheck, signalRpcRequest } from "./client.js";
 import { formatSignalDaemonExit, spawnSignalDaemon, type SignalDaemonHandle } from "./daemon.js";
@@ -41,7 +47,7 @@ export type MonitorSignalOpts = {
   abortSignal?: AbortSignal;
   account?: string;
   accountId?: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   baseUrl?: string;
   autoStart?: boolean;
   startupTimeoutMs?: number;
@@ -161,7 +167,10 @@ function isSignalReactionMessage(
   }
   const emoji = reaction.emoji?.trim();
   const timestamp = reaction.targetSentTimestamp;
-  const hasTarget = Boolean(reaction.targetAuthor?.trim() || reaction.targetAuthorUuid?.trim());
+  const hasTarget = Boolean(
+    normalizeOptionalString(reaction.targetAuthor) ||
+    normalizeOptionalString(reaction.targetAuthorUuid),
+  );
   return Boolean(emoji && typeof timestamp === "number" && timestamp > 0 && hasTarget);
 }
 
@@ -254,7 +263,7 @@ async function fetchAttachment(params: {
   if (!attachment?.id) {
     return null;
   }
-  if (attachment.size && attachment.size > params.maxBytes) {
+  if (typeof attachment.size === "number" && attachment.size > params.maxBytes) {
     throw new Error(
       `Signal attachment ${attachment.id} exceeds ${(params.maxBytes / (1024 * 1024)).toFixed(0)}MB limit`,
     );
@@ -278,6 +287,11 @@ async function fetchAttachment(params: {
   });
   if (!result?.data) {
     return null;
+  }
+  if (estimateBase64DecodedBytes(result.data) > params.maxBytes) {
+    throw new Error(
+      `Signal attachment ${attachment.id} exceeds ${(params.maxBytes / (1024 * 1024)).toFixed(0)}MB limit`,
+    );
   }
   const buffer = Buffer.from(result.data, "base64");
   const saved = await saveMediaBuffer(
@@ -348,8 +362,9 @@ export async function monitorSignalProvider(opts: MonitorSignalOpts = {}): Promi
   const groupHistories = new Map<string, HistoryEntry[]>();
   const textLimit = resolveTextChunkLimit(cfg, "signal", accountInfo.accountId);
   const chunkMode = resolveChunkMode(cfg, "signal", accountInfo.accountId);
-  const baseUrl = opts.baseUrl?.trim() || accountInfo.baseUrl;
-  const account = opts.account?.trim() || accountInfo.config.account?.trim();
+  const baseUrl = normalizeOptionalString(opts.baseUrl) ?? accountInfo.baseUrl;
+  const account =
+    normalizeOptionalString(opts.account) ?? normalizeOptionalString(accountInfo.config.account);
   const dmPolicy = accountInfo.config.dmPolicy ?? "pairing";
   const allowFrom = normalizeAllowList(opts.allowFrom ?? accountInfo.config.allowFrom);
   const groupAllowFrom = normalizeAllowList(

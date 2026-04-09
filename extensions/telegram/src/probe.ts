@@ -1,6 +1,7 @@
 import type { BaseProbeResult } from "godseye/plugin-sdk/channel-contract";
+import type { TelegramNetworkConfig } from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import { fetchWithTimeout } from "godseye/plugin-sdk/text-runtime";
-import type { TelegramNetworkConfig } from "../runtime-api.js";
 import { resolveTelegramApiBase, resolveTelegramFetch } from "./fetch.js";
 import { makeProxyFetch } from "./proxy.js";
 
@@ -217,7 +218,7 @@ export async function probeTelegram(
     return {
       ...result,
       status: err instanceof Response ? err.status : result.status,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatErrorMessage(err),
       elapsedMs: Date.now() - started,
     };
   }

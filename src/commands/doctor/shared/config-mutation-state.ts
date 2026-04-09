@@ -1,14 +1,14 @@
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 
 export type DoctorConfigMutationState = {
-  cfg: GodsEyeConfig;
-  candidate: GodsEyeConfig;
+  cfg: OpenClawConfig;
+  candidate: OpenClawConfig;
   pendingChanges: boolean;
   fixHints: string[];
 };
 
 export type DoctorConfigMutationResult = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   changes: string[];
 };
 

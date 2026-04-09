@@ -285,15 +285,15 @@ describe("buildServiceEnvironment", () => {
     } else {
       expect(env.PATH).toContain("/usr/bin");
     }
-    expect(env.GODSEYE_GATEWAY_PORT).toBe("18789");
-    expect(env.GODSEYE_GATEWAY_TOKEN).toBeUndefined();
-    expect(env.GODSEYE_SERVICE_MARKER).toBe("godseye");
-    expect(env.GODSEYE_SERVICE_KIND).toBe("gateway");
-    expect(typeof env.GODSEYE_SERVICE_VERSION).toBe("string");
-    expect(env.GODSEYE_SYSTEMD_UNIT).toBe("godseye-gateway.service");
-    expect(env.GODSEYE_WINDOWS_TASK_NAME).toBe("GodsEye Gateway");
+    expect(env.OPENCLAW_GATEWAY_PORT).toBe("18789");
+    expect(env.OPENCLAW_GATEWAY_TOKEN).toBeUndefined();
+    expect(env.OPENCLAW_SERVICE_MARKER).toBe("openclaw");
+    expect(env.OPENCLAW_SERVICE_KIND).toBe("gateway");
+    expect(typeof env.OPENCLAW_SERVICE_VERSION).toBe("string");
+    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("openclaw-gateway.service");
+    expect(env.OPENCLAW_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway");
     if (process.platform === "darwin") {
-      expect(env.GODSEYE_LAUNCHD_LABEL).toBe("ai.godseye.gateway");
+      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.openclaw.gateway");
     }
   });
 
@@ -315,13 +315,13 @@ describe("buildServiceEnvironment", () => {
 
   it("uses profile-specific unit and label", () => {
     const env = buildServiceEnvironment({
-      env: { HOME: "/home/user", GODSEYE_PROFILE: "work" },
+      env: { HOME: "/home/user", OPENCLAW_PROFILE: "work" },
       port: 18789,
     });
-    expect(env.GODSEYE_SYSTEMD_UNIT).toBe("godseye-gateway-work.service");
-    expect(env.GODSEYE_WINDOWS_TASK_NAME).toBe("GodsEye Gateway (work)");
+    expect(env.OPENCLAW_SYSTEMD_UNIT).toBe("openclaw-gateway-work.service");
+    expect(env.OPENCLAW_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway (work)");
     if (process.platform === "darwin") {
-      expect(env.GODSEYE_LAUNCHD_LABEL).toBe("ai.godseye.work");
+      expect(env.OPENCLAW_LAUNCHD_LABEL).toBe("ai.openclaw.work");
     }
   });
 
@@ -356,7 +356,7 @@ describe("buildServiceEnvironment", () => {
     });
 
     expect(env).not.toHaveProperty("PATH");
-    expect(env.GODSEYE_WINDOWS_TASK_NAME).toBe("GodsEye Gateway");
+    expect(env.OPENCLAW_WINDOWS_TASK_NAME).toBe("OpenClaw Gateway");
   });
 
   it("prepends extra runtime directories to the gateway service PATH", () => {
@@ -381,21 +381,21 @@ describe("buildNodeServiceEnvironment", () => {
     expect(env.HOME).toBe("/home/user");
   });
 
-  it("passes through GODSEYE_GATEWAY_TOKEN for node services", () => {
+  it("passes through OPENCLAW_GATEWAY_TOKEN for node services", () => {
     const env = buildNodeServiceEnvironment({
-      env: { HOME: "/home/user", GODSEYE_GATEWAY_TOKEN: " node-token " },
+      env: { HOME: "/home/user", OPENCLAW_GATEWAY_TOKEN: " node-token " },
     });
-    expect(env.GODSEYE_GATEWAY_TOKEN).toBe("node-token");
+    expect(env.OPENCLAW_GATEWAY_TOKEN).toBe("node-token");
   });
 
-  it("omits GODSEYE_GATEWAY_TOKEN when the env var is empty", () => {
+  it("omits OPENCLAW_GATEWAY_TOKEN when the env var is empty", () => {
     const env = buildNodeServiceEnvironment({
       env: {
         HOME: "/home/user",
-        GODSEYE_GATEWAY_TOKEN: "   ",
+        OPENCLAW_GATEWAY_TOKEN: "   ",
       },
     });
-    expect(env.GODSEYE_GATEWAY_TOKEN).toBeUndefined();
+    expect(env.OPENCLAW_GATEWAY_TOKEN).toBeUndefined();
   });
 
   it("forwards proxy environment variables for node services", () => {
@@ -457,8 +457,8 @@ describe("shared Node TLS env defaults", () => {
     expect(env.NODE_EXTRA_CA_CERTS).toBe("/etc/ssl/cert.pem");
   });
 
-  it.each(builders)("$name does not default NODE_EXTRA_CA_CERTS on non-macOS", ({ build }) => {
-    const env = build({ HOME: "/home/user" }, "linux");
+  it.each(builders)("$name does not default NODE_EXTRA_CA_CERTS on Windows", ({ build }) => {
+    const env = build({ HOME: "/home/user" }, "win32");
     expect(env.NODE_EXTRA_CA_CERTS).toBeUndefined();
   });
 
@@ -486,32 +486,32 @@ describe("shared Node TLS env defaults", () => {
 describe("resolveGatewayStateDir", () => {
   it("uses the default state dir when no overrides are set", () => {
     const env = { HOME: "/Users/test" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".godseye"));
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw"));
   });
 
   it("appends the profile suffix when set", () => {
-    const env = { HOME: "/Users/test", GODSEYE_PROFILE: "rescue" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".godseye-rescue"));
+    const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "rescue" };
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw-rescue"));
   });
 
   it("treats default profiles as the base state dir", () => {
-    const env = { HOME: "/Users/test", GODSEYE_PROFILE: "Default" };
-    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".godseye"));
+    const env = { HOME: "/Users/test", OPENCLAW_PROFILE: "Default" };
+    expect(resolveGatewayStateDir(env)).toBe(path.join("/Users/test", ".openclaw"));
   });
 
-  it("uses GODSEYE_STATE_DIR when provided", () => {
-    const env = { HOME: "/Users/test", GODSEYE_STATE_DIR: "/var/lib/godseye" };
-    expect(resolveGatewayStateDir(env)).toBe(path.resolve("/var/lib/godseye"));
+  it("uses OPENCLAW_STATE_DIR when provided", () => {
+    const env = { HOME: "/Users/test", OPENCLAW_STATE_DIR: "/var/lib/openclaw" };
+    expect(resolveGatewayStateDir(env)).toBe(path.resolve("/var/lib/openclaw"));
   });
 
-  it("expands ~ in GODSEYE_STATE_DIR", () => {
-    const env = { HOME: "/Users/test", GODSEYE_STATE_DIR: "~/godseye-state" };
-    expect(resolveGatewayStateDir(env)).toBe(path.resolve("/Users/test/godseye-state"));
+  it("expands ~ in OPENCLAW_STATE_DIR", () => {
+    const env = { HOME: "/Users/test", OPENCLAW_STATE_DIR: "~/openclaw-state" };
+    expect(resolveGatewayStateDir(env)).toBe(path.resolve("/Users/test/openclaw-state"));
   });
 
   it("preserves Windows absolute paths without HOME", () => {
-    const env = { GODSEYE_STATE_DIR: "C:\\State\\godseye" };
-    expect(resolveGatewayStateDir(env)).toBe("C:\\State\\godseye");
+    const env = { OPENCLAW_STATE_DIR: "C:\\State\\openclaw" };
+    expect(resolveGatewayStateDir(env)).toBe("C:\\State\\openclaw");
   });
 });
 

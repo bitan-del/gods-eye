@@ -1,4 +1,4 @@
-import { resolveSendableOutboundReplyParts } from "openclaw/plugin-sdk/reply-payload";
+import { resolveSendableOutboundReplyParts } from "godseye/plugin-sdk/reply-payload";
 import type { MessagingToolSend } from "../../agents/pi-embedded-runner.js";
 import type { OpenClawConfig } from "../../config/config.js";
 import { stripHeartbeatToken } from "../heartbeat.js";

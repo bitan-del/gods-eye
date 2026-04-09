@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { ChannelMessageActionAdapter, ChannelPlugin } from "./types.js";
 
 const telegramDescribeMessageToolMock = vi.fn();
@@ -121,7 +121,7 @@ describe("channel action capability matrix", () => {
     discordDescribeMessageToolMock.mockReset();
   });
 
-  function getCapabilities(plugin: Pick<ChannelPlugin, "actions">, cfg: GodsEyeConfig) {
+  function getCapabilities(plugin: Pick<ChannelPlugin, "actions">, cfg: OpenClawConfig) {
     const describeMessageTool: ChannelMessageActionAdapter["describeMessageTool"] | undefined =
       plugin.actions?.describeMessageTool;
     return [...(describeMessageTool?.({ cfg })?.capabilities ?? [])];
@@ -135,7 +135,7 @@ describe("channel action capability matrix", () => {
           appToken: "xapp-test",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const interactiveCfg = {
       channels: {
         slack: {
@@ -144,7 +144,7 @@ describe("channel action capability matrix", () => {
           capabilities: { interactiveReplies: true },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(getCapabilities(slackPlugin, baseCfg)).toEqual(["blocks"]);
     expect(getCapabilities(slackPlugin, interactiveCfg)).toEqual(["blocks", "interactive"]);
@@ -155,7 +155,7 @@ describe("channel action capability matrix", () => {
       capabilities: ["interactive", "buttons"],
     });
 
-    const result = getCapabilities(telegramPlugin, {} as GodsEyeConfig);
+    const result = getCapabilities(telegramPlugin, {} as OpenClawConfig);
 
     expect(result).toEqual(["interactive", "buttons"]);
     expect(telegramDescribeMessageToolMock).toHaveBeenCalledWith({ cfg: {} });
@@ -163,7 +163,7 @@ describe("channel action capability matrix", () => {
       capabilities: ["interactive", "components"],
     });
 
-    const discordResult = getCapabilities(discordPlugin, {} as GodsEyeConfig);
+    const discordResult = getCapabilities(discordPlugin, {} as OpenClawConfig);
 
     expect(discordResult).toEqual(["interactive", "components"]);
     expect(discordDescribeMessageToolMock).toHaveBeenCalledWith({ cfg: {} });
@@ -178,14 +178,14 @@ describe("channel action capability matrix", () => {
           baseUrl: "https://chat.example.com",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const unconfiguredCfg = {
       channels: {
         mattermost: {
           enabled: true,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const configuredFeishuCfg = {
       channels: {
         feishu: {
@@ -194,7 +194,7 @@ describe("channel action capability matrix", () => {
           appSecret: "secret",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const disabledFeishuCfg = {
       channels: {
         feishu: {
@@ -203,7 +203,7 @@ describe("channel action capability matrix", () => {
           appSecret: "secret",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const configuredMsteamsCfg = {
       channels: {
         msteams: {
@@ -213,7 +213,7 @@ describe("channel action capability matrix", () => {
           appPassword: "secret",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const disabledMsteamsCfg = {
       channels: {
         msteams: {
@@ -223,7 +223,7 @@ describe("channel action capability matrix", () => {
           appPassword: "secret",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(getCapabilities(mattermostPlugin, configuredCfg)).toEqual(["buttons"]);
     expect(getCapabilities(mattermostPlugin, unconfiguredCfg)).toEqual([]);
@@ -241,7 +241,7 @@ describe("channel action capability matrix", () => {
           botToken: "zl-token",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(getCapabilities(zaloPlugin, cfg)).toEqual([]);
   });

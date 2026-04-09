@@ -1,21 +1,35 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
-import type { ConfigFileSnapshot } from "../config/types.godseye.js";
+import { bundledPluginRootAt, repoInstallSpec } from "../../test/helpers/bundled-plugin-paths.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { ConfigFileSnapshot } from "../config/types.openclaw.js";
+import {
+  resolvePluginInstallRequestContext,
+  type PluginInstallRequestContext,
+} from "./plugin-install-config-policy.js";
+import { loadConfigForInstall } from "./plugins-install-command.js";
 
-const loadConfigMock = vi.fn<() => GodsEyeConfig>();
-const readConfigFileSnapshotMock = vi.fn<() => Promise<ConfigFileSnapshot>>();
-const cleanStaleMatrixPluginConfigMock = vi.fn();
+const hoisted = vi.hoisted(() => ({
+  loadConfigMock: vi.fn<() => OpenClawConfig>(),
+  readConfigFileSnapshotMock: vi.fn<() => Promise<ConfigFileSnapshot>>(),
+  collectChannelDoctorStaleConfigMutationsMock: vi.fn(),
+}));
+
+const loadConfigMock = hoisted.loadConfigMock;
+const readConfigFileSnapshotMock = hoisted.readConfigFileSnapshotMock;
+const collectChannelDoctorStaleConfigMutationsMock =
+  hoisted.collectChannelDoctorStaleConfigMutationsMock;
 
 vi.mock("../config/config.js", () => ({
   loadConfig: () => loadConfigMock(),
   readConfigFileSnapshot: () => readConfigFileSnapshotMock(),
 }));
 
-vi.mock("../commands/doctor/providers/matrix.js", () => ({
-  cleanStaleMatrixPluginConfig: (cfg: GodsEyeConfig) => cleanStaleMatrixPluginConfigMock(cfg),
+vi.mock("../commands/doctor/shared/channel-doctor.js", () => ({
+  collectChannelDoctorStaleConfigMutations: (cfg: OpenClawConfig) =>
+    collectChannelDoctorStaleConfigMutationsMock(cfg),
 }));
 
-const { loadConfigForInstall } = await import("./plugins-install-command.js");
+const MATRIX_REPO_INSTALL_SPEC = repoInstallSpec("matrix");
 
 function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSnapshot {
   return {
@@ -23,9 +37,11 @@ function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSn
     exists: true,
     raw: '{ "plugins": {} }',
     parsed: { plugins: {} },
-    resolved: { plugins: {} } as GodsEyeConfig,
+    sourceConfig: { plugins: {} } as ConfigFileSnapshot["sourceConfig"],
+    resolved: { plugins: {} } as OpenClawConfig,
     valid: false,
-    config: { plugins: {} } as GodsEyeConfig,
+    runtimeConfig: { plugins: {} } as ConfigFileSnapshot["runtimeConfig"],
+    config: { plugins: {} } as OpenClawConfig,
     hash: "abc",
     issues: [{ path: "plugins.installs.matrix", message: "stale path" }],
     warnings: [],
@@ -36,23 +52,27 @@ function makeSnapshot(overrides: Partial<ConfigFileSnapshot> = {}): ConfigFileSn
 
 describe("loadConfigForInstall", () => {
   const matrixNpmRequest = {
-    rawSpec: "@godseye/matrix",
-    normalizedSpec: "@godseye/matrix",
-  };
+    rawSpec: "@openclaw/matrix",
+    normalizedSpec: "@openclaw/matrix",
+    bundledPluginId: "matrix",
+    allowInvalidConfigRecovery: true,
+  } satisfies PluginInstallRequestContext;
 
   beforeEach(() => {
     loadConfigMock.mockReset();
     readConfigFileSnapshotMock.mockReset();
-    cleanStaleMatrixPluginConfigMock.mockReset();
+    collectChannelDoctorStaleConfigMutationsMock.mockReset();
 
-    cleanStaleMatrixPluginConfigMock.mockImplementation((cfg: GodsEyeConfig) => ({
-      config: cfg,
-      changes: [],
-    }));
+    collectChannelDoctorStaleConfigMutationsMock.mockImplementation(async (cfg: OpenClawConfig) => [
+      {
+        config: cfg,
+        changes: [],
+      },
+    ]);
   });
 
   it("returns the config directly when loadConfig succeeds", async () => {
-    const cfg = { plugins: { entries: { matrix: { enabled: true } } } } as GodsEyeConfig;
+    const cfg = { plugins: { entries: { matrix: { enabled: true } } } } as OpenClawConfig;
     loadConfigMock.mockReturnValue(cfg);
 
     const result = await loadConfigForInstall(matrixNpmRequest);
@@ -61,15 +81,15 @@ describe("loadConfigForInstall", () => {
   });
 
   it("does not run stale Matrix cleanup on the happy path", async () => {
-    const cfg = { plugins: {} } as GodsEyeConfig;
+    const cfg = { plugins: {} } as OpenClawConfig;
     loadConfigMock.mockReturnValue(cfg);
 
     const result = await loadConfigForInstall(matrixNpmRequest);
-    expect(cleanStaleMatrixPluginConfigMock).not.toHaveBeenCalled();
+    expect(collectChannelDoctorStaleConfigMutationsMock).not.toHaveBeenCalled();
     expect(result).toBe(cfg);
   });
 
-  it("falls back to snapshot config for explicit Matrix reinstall when issues match the known upgrade failure", async () => {
+  it("falls back to snapshot config for explicit bundled-plugin reinstall when issues match the known upgrade failure", async () => {
     const invalidConfigErr = new Error("config invalid");
     (invalidConfigErr as { code?: string }).code = "INVALID_CONFIG";
     loadConfigMock.mockImplementation(() => {
@@ -78,7 +98,7 @@ describe("loadConfigForInstall", () => {
 
     const snapshotCfg = {
       plugins: { installs: { matrix: { source: "path", installPath: "/gone" } } },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
     readConfigFileSnapshotMock.mockResolvedValue(
       makeSnapshot({
         parsed: { plugins: { installs: { matrix: {} } } },
@@ -92,18 +112,18 @@ describe("loadConfigForInstall", () => {
 
     const result = await loadConfigForInstall(matrixNpmRequest);
     expect(readConfigFileSnapshotMock).toHaveBeenCalled();
-    expect(cleanStaleMatrixPluginConfigMock).toHaveBeenCalledWith(snapshotCfg);
+    expect(collectChannelDoctorStaleConfigMutationsMock).toHaveBeenCalledWith(snapshotCfg);
     expect(result).toBe(snapshotCfg);
   });
 
-  it("allows explicit repo-checkout Matrix reinstall recovery", async () => {
+  it("allows explicit repo-checkout bundled-plugin reinstall recovery", async () => {
     const invalidConfigErr = new Error("config invalid");
     (invalidConfigErr as { code?: string }).code = "INVALID_CONFIG";
     loadConfigMock.mockImplementation(() => {
       throw invalidConfigErr;
     });
 
-    const snapshotCfg = { plugins: {} } as GodsEyeConfig;
+    const snapshotCfg = { plugins: {} } as OpenClawConfig;
     readConfigFileSnapshotMock.mockResolvedValue(
       makeSnapshot({
         config: snapshotCfg,
@@ -111,15 +131,21 @@ describe("loadConfigForInstall", () => {
       }),
     );
 
+    const repoRequest = resolvePluginInstallRequestContext({
+      rawSpec: MATRIX_REPO_INSTALL_SPEC,
+    });
+    if (!repoRequest.ok) {
+      throw new Error(repoRequest.error);
+    }
+
     const result = await loadConfigForInstall({
-      rawSpec: "./extensions/matrix",
-      normalizedSpec: "./extensions/matrix",
-      resolvedPath: "/tmp/repo/extensions/matrix",
+      ...repoRequest.request,
+      resolvedPath: bundledPluginRootAt("/tmp/repo", "matrix"),
     });
     expect(result).toBe(snapshotCfg);
   });
 
-  it("rejects unrelated invalid config even during Matrix reinstall", async () => {
+  it("rejects unrelated invalid config even during bundled-plugin reinstall recovery", async () => {
     const invalidConfigErr = new Error("config invalid");
     (invalidConfigErr as { code?: string }).code = "INVALID_CONFIG";
     loadConfigMock.mockImplementation(() => {
@@ -133,7 +159,7 @@ describe("loadConfigForInstall", () => {
     );
 
     await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
-      "Config invalid outside the Matrix upgrade recovery path",
+      "Config invalid outside the bundled recovery path for matrix",
     );
   });
 
@@ -149,7 +175,7 @@ describe("loadConfigForInstall", () => {
         rawSpec: "alpha",
         normalizedSpec: "alpha",
       }),
-    ).rejects.toThrow("Config invalid; run `godseye doctor --fix` before installing plugins.");
+    ).rejects.toThrow("Config invalid; run `openclaw doctor --fix` before installing plugins.");
     expect(readConfigFileSnapshotMock).not.toHaveBeenCalled();
   });
 
@@ -163,12 +189,12 @@ describe("loadConfigForInstall", () => {
     readConfigFileSnapshotMock.mockResolvedValue(
       makeSnapshot({
         parsed: {},
-        config: {} as GodsEyeConfig,
+        config: {} as OpenClawConfig,
       }),
     );
 
     await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
-      "Config file could not be parsed; run `godseye doctor` to repair it.",
+      "Config file could not be parsed; run `openclaw doctor` to repair it.",
     );
   });
 
@@ -182,7 +208,7 @@ describe("loadConfigForInstall", () => {
     readConfigFileSnapshotMock.mockResolvedValue(makeSnapshot({ exists: false, parsed: {} }));
 
     await expect(loadConfigForInstall(matrixNpmRequest)).rejects.toThrow(
-      "Config file could not be parsed; run `godseye doctor` to repair it.",
+      "Config file could not be parsed; run `openclaw doctor` to repair it.",
     );
   });
 

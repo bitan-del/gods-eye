@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import * as replyModule from "../auto-reply/reply.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
 import {
@@ -27,9 +26,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
       messageId: "m1",
       chatId: "155462274",
     });
-    const getReplySpy = vi
-      .spyOn(replyModule, "getReplyFromConfig")
-      .mockResolvedValue({ text: replyText });
+    const getReplySpy = vi.fn().mockResolvedValue({ text: replyText });
     return { sendTelegram, getReplySpy };
   };
 
@@ -37,8 +34,8 @@ describe("Ghost reminder bug (issue #13317)", () => {
     tmpDir: string;
     storePath: string;
     target?: "telegram" | "none";
-  }): Promise<{ cfg: GodsEyeConfig; sessionKey: string }> => {
-    const cfg: GodsEyeConfig = {
+  }): Promise<{ cfg: OpenClawConfig; sessionKey: string }> => {
+    const cfg: OpenClawConfig = {
       agents: {
         defaults: {
           workspace: params.tmpDir,
@@ -81,7 +78,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
   ): Promise<{
     result: Awaited<ReturnType<typeof runHeartbeatOnce>>;
     sendTelegram: ReturnType<typeof vi.fn>;
-    calledCtx: { Provider?: string; Body?: string } | null;
+    calledCtx: { Provider?: string; Body?: string; ForceSenderIsOwnerFalse?: boolean } | null;
   }> => {
     return runHeartbeatCase({
       tmpPrefix,
@@ -100,7 +97,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
   }): Promise<{
     result: Awaited<ReturnType<typeof runHeartbeatOnce>>;
     sendTelegram: ReturnType<typeof vi.fn>;
-    calledCtx: { Provider?: string; Body?: string } | null;
+    calledCtx: { Provider?: string; Body?: string; ForceSenderIsOwnerFalse?: boolean } | null;
     replyCallCount: number;
   }> => {
     return withTempHeartbeatSandbox(
@@ -117,6 +114,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
           agentId: "main",
           reason: params.reason,
           deps: {
+            getReplyFromConfig: getReplySpy,
             telegram: sendTelegram,
           },
         });
@@ -137,7 +135,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("does not use CRON_EVENT_PROMPT when only a HEARTBEAT_OK event is present", async () => {
     const { result, sendTelegram, calledCtx, replyCallCount } = await runHeartbeatCase({
-      tmpPrefix: "godseye-ghost-",
+      tmpPrefix: "openclaw-ghost-",
       replyText: "Heartbeat check-in",
       reason: "cron:test-job",
       enqueue: (sessionKey) => {
@@ -154,7 +152,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("uses CRON_EVENT_PROMPT when an actionable cron event exists", async () => {
     const { result, sendTelegram, calledCtx } = await runCronReminderCase(
-      "godseye-cron-",
+      "openclaw-cron-",
       (sessionKey) => {
         enqueueSystemEvent("Reminder: Check Base Scout results", { sessionKey });
       },
@@ -166,7 +164,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("uses CRON_EVENT_PROMPT when cron events are mixed with heartbeat noise", async () => {
     const { result, sendTelegram, calledCtx } = await runCronReminderCase(
-      "godseye-cron-mixed-",
+      "openclaw-cron-mixed-",
       (sessionKey) => {
         enqueueSystemEvent("HEARTBEAT_OK", { sessionKey });
         enqueueSystemEvent("Reminder: Check Base Scout results", { sessionKey });
@@ -179,7 +177,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("uses CRON_EVENT_PROMPT for tagged cron events on interval wake", async () => {
     const { result, sendTelegram, calledCtx, replyCallCount } = await runHeartbeatCase({
-      tmpPrefix: "godseye-cron-interval-",
+      tmpPrefix: "openclaw-cron-interval-",
       replyText: "Relay this cron update now",
       reason: "interval",
       enqueue: (sessionKey) => {
@@ -200,7 +198,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("uses an internal-only cron prompt when delivery target is none", async () => {
     const { result, sendTelegram, calledCtx } = await runHeartbeatCase({
-      tmpPrefix: "godseye-cron-internal-",
+      tmpPrefix: "openclaw-cron-internal-",
       replyText: "Handled internally",
       reason: "cron:reminder-job",
       target: "none",
@@ -217,7 +215,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("uses an internal-only exec prompt when delivery target is none", async () => {
     const { result, sendTelegram, calledCtx } = await runHeartbeatCase({
-      tmpPrefix: "godseye-exec-internal-",
+      tmpPrefix: "openclaw-exec-internal-",
       replyText: "Handled internally",
       reason: "exec-event",
       target: "none",
@@ -228,13 +226,14 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
     expect(result.status).toBe("ran");
     expect(calledCtx?.Provider).toBe("exec-event");
+    expect(calledCtx?.ForceSenderIsOwnerFalse).toBe(true);
     expect(calledCtx?.Body).toContain("Handle the result internally");
     expect(sendTelegram).not.toHaveBeenCalled();
   });
 
   it("routes wake-triggered heartbeat replies using queued system-event delivery context", async () => {
     await withTempHeartbeatSandbox(async ({ tmpDir, storePath, replySpy }) => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,
@@ -277,6 +276,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
         agentId: "main",
         reason: "wake",
         deps: {
+          getReplyFromConfig: replySpy,
           telegram: sendTelegram,
         },
       });
@@ -293,7 +293,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
 
   it("does not reuse stale turn-source routing for isolated wake runs", async () => {
     await withTempHeartbeatSandbox(async ({ tmpDir, storePath, replySpy }) => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             workspace: tmpDir,
@@ -339,6 +339,7 @@ describe("Ghost reminder bug (issue #13317)", () => {
         agentId: "main",
         reason: "wake",
         deps: {
+          getReplyFromConfig: replySpy,
           telegram: sendTelegram,
         },
       });

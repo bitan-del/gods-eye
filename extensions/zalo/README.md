@@ -1,17 +1,17 @@
-# @godseye/zalo
+# @openclaw/zalo
 
-Zalo channel plugin for Gods Eye (Bot API).
+Zalo channel plugin for OpenClaw (Bot API).
 
 ## Install (local checkout)
 
 ```bash
-godseye plugins install ./extensions/zalo
+openclaw plugins install ./path/to/local/zalo-plugin
 ```
 
 ## Install (npm)
 
 ```bash
-godseye plugins install @godseye/zalo
+openclaw plugins install @openclaw/zalo
 ```
 
 Onboarding: select Zalo and confirm the install prompt to fetch the plugin automatically.

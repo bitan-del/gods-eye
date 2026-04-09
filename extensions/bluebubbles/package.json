@@ -1,16 +1,14 @@
 {
   "name": "@godseye/bluebubbles",
-  "version": "2026.3.22",
-  "description": "GodsEye BlueBubbles channel plugin",
+  "version": "2026.4.10",
+  "description": "OpenClaw BlueBubbles channel plugin",
   "type": "module",
-  "dependencies": {
-    "zod": "^4.3.6"
-  },
   "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*",
     "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "godseye": ">=2026.3.22"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
     "godseye": {
@@ -41,11 +39,17 @@
     },
     "install": {
       "npmSpec": "@godseye/bluebubbles",
-      "localPath": "extensions/bluebubbles",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.3.22"
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.4.10"
+    },
+    "build": {
+      "openclawVersion": "2026.4.10"
     },
     "release": {
+      "publishToClawHub": true,
       "publishToNpm": true
     }
   }

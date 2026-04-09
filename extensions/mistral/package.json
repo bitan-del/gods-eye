@@ -1,9 +1,12 @@
 {
   "name": "@godseye/mistral-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Mistral provider plugin",
+  "description": "OpenClaw Mistral provider plugin",
   "type": "module",
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
     "extensions": [
       "./index.ts"

@@ -1,5 +1,5 @@
 import type * as Lark from "@larksuiteoapi/node-sdk";
-import type { GodsEyePluginApi } from "../runtime-api.js";
+import type { OpenClawPluginApi } from "../runtime-api.js";
 import { listEnabledFeishuAccounts } from "./accounts.js";
 import { FeishuPermSchema, type FeishuPermParams } from "./perm-schema.js";
 import { createFeishuToolClient, resolveAnyEnabledFeishuToolsConfig } from "./tool-account.js";
@@ -112,7 +112,7 @@ async function removeMember(
 
 // ============ Tool Registration ============
 
-export function registerFeishuPermTools(api: GodsEyePluginApi) {
+export function registerFeishuPermTools(api: OpenClawPluginApi) {
   if (!api.config) {
     api.logger.debug?.("feishu_perm: No config available, skipping perm tools");
     return;
@@ -160,7 +160,6 @@ export function registerFeishuPermTools(api: GodsEyePluginApi) {
                   await removeMember(client, p.token, p.type, p.member_type, p.member_id),
                 );
               default:
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exhaustive check fallback
                 return unknownToolActionResult((p as { action?: unknown }).action);
             }
           } catch (err) {

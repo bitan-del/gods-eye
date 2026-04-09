@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/webhooks",
+  "name": "@godseye/webhooks",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw webhook bridge plugin",
@@ -8,9 +8,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*"
   },
-  "openclaw": {
+  "godseye": {
     "bundle": {
       "stageRuntimeDependencies": true
     },

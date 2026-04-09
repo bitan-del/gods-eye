@@ -1,15 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveGodsEyePackageRootSync } from "../infra/godseye-root.js";
+import { resolveOpenClawPackageRootSync } from "../infra/openclaw-root.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 
 type PluginSdkAliasCandidateKind = "dist" | "src";
+export type PluginSdkResolutionPreference = "auto" | "dist" | "src";
 
 export type LoaderModuleResolveParams = {
   modulePath?: string;
   argv1?: string;
   cwd?: string;
   moduleUrl?: string;
+  pluginSdkResolution?: PluginSdkResolutionPreference;
 };
 
 type PluginSdkPackageJson = {
@@ -18,6 +21,10 @@ type PluginSdkPackageJson = {
 };
 
 const STARTUP_ARGV1 = process.argv[1];
+
+export function normalizeJitiAliasTargetPath(targetPath: string): string {
+  return process.platform === "win32" ? targetPath.replace(/\\/g, "/") : targetPath;
+}
 
 function resolveLoaderModulePath(params: LoaderModuleResolveParams = {}): string {
   return params.modulePath ?? fileURLToPath(params.moduleUrl ?? import.meta.url);
@@ -44,7 +51,7 @@ function listPluginSdkSubpathsFromPackageJson(pkg: PluginSdkPackageJson): string
     .toSorted();
 }
 
-function hasTrustedGodsEyeRootIndicator(params: {
+function hasTrustedOpenClawRootIndicator(params: {
   packageRoot: string;
   packageJson: PluginSdkPackageJson;
 }): boolean {
@@ -57,14 +64,14 @@ function hasTrustedGodsEyeRootIndicator(params: {
     return false;
   }
   const hasCliEntryExport = Object.prototype.hasOwnProperty.call(packageExports, "./cli-entry");
-  const hasGodsEyeBin =
+  const hasOpenClawBin =
     (typeof params.packageJson.bin === "string" &&
-      params.packageJson.bin.toLowerCase().includes("godseye")) ||
+      normalizeLowercaseStringOrEmpty(params.packageJson.bin).includes("openclaw")) ||
     (typeof params.packageJson.bin === "object" &&
       params.packageJson.bin !== null &&
-      typeof params.packageJson.bin.godseye === "string");
-  const hasGodsEyeEntrypoint = fs.existsSync(path.join(params.packageRoot, "godseye.mjs"));
-  return hasCliEntryExport || hasGodsEyeBin || hasGodsEyeEntrypoint;
+      typeof params.packageJson.bin.openclaw === "string");
+  const hasOpenClawEntrypoint = fs.existsSync(path.join(params.packageRoot, "openclaw.mjs"));
+  return hasCliEntryExport || hasOpenClawBin || hasOpenClawEntrypoint;
 }
 
 function readPluginSdkSubpathsFromPackageRoot(packageRoot: string): string[] | null {
@@ -72,21 +79,21 @@ function readPluginSdkSubpathsFromPackageRoot(packageRoot: string): string[] | n
   if (!pkg) {
     return null;
   }
-  if (!hasTrustedGodsEyeRootIndicator({ packageRoot, packageJson: pkg })) {
+  if (!hasTrustedOpenClawRootIndicator({ packageRoot, packageJson: pkg })) {
     return null;
   }
   const subpaths = listPluginSdkSubpathsFromPackageJson(pkg);
   return subpaths.length > 0 ? subpaths : null;
 }
 
-function resolveTrustedGodsEyeRootFromArgvHint(params: {
+function resolveTrustedOpenClawRootFromArgvHint(params: {
   argv1?: string;
   cwd: string;
 }): string | null {
   if (!params.argv1) {
     return null;
   }
-  const packageRoot = resolveGodsEyePackageRootSync({
+  const packageRoot = resolveOpenClawPackageRootSync({
     cwd: params.cwd,
     argv1: params.argv1,
   });
@@ -97,7 +104,7 @@ function resolveTrustedGodsEyeRootFromArgvHint(params: {
   if (!packageJson) {
     return null;
   }
-  return hasTrustedGodsEyeRootIndicator({ packageRoot, packageJson }) ? packageRoot : null;
+  return hasTrustedOpenClawRootIndicator({ packageRoot, packageJson }) ? packageRoot : null;
 }
 
 function findNearestPluginSdkPackageRoot(startDir: string, maxDepth = 12): string | null {
@@ -120,13 +127,13 @@ export function resolveLoaderPackageRoot(
   params: LoaderModuleResolveParams & { modulePath: string },
 ): string | null {
   const cwd = params.cwd ?? path.dirname(params.modulePath);
-  const fromModulePath = resolveGodsEyePackageRootSync({ cwd });
+  const fromModulePath = resolveOpenClawPackageRootSync({ cwd });
   if (fromModulePath) {
     return fromModulePath;
   }
   const argv1 = params.argv1 ?? process.argv[1];
   const moduleUrl = params.moduleUrl ?? (params.modulePath ? undefined : import.meta.url);
-  return resolveGodsEyePackageRootSync({
+  return resolveOpenClawPackageRootSync({
     cwd,
     ...(argv1 ? { argv1 } : {}),
     ...(moduleUrl ? { moduleUrl } : {}),
@@ -137,11 +144,11 @@ function resolveLoaderPluginSdkPackageRoot(
   params: LoaderModuleResolveParams & { modulePath: string },
 ): string | null {
   const cwd = params.cwd ?? path.dirname(params.modulePath);
-  const fromCwd = resolveGodsEyePackageRootSync({ cwd });
+  const fromCwd = resolveOpenClawPackageRootSync({ cwd });
   const fromExplicitHints =
-    resolveTrustedGodsEyeRootFromArgvHint({ cwd, argv1: params.argv1 }) ??
+    resolveTrustedOpenClawRootFromArgvHint({ cwd, argv1: params.argv1 }) ??
     (params.moduleUrl
-      ? resolveGodsEyePackageRootSync({
+      ? resolveOpenClawPackageRootSync({
           cwd,
           moduleUrl: params.moduleUrl,
         })
@@ -158,7 +165,14 @@ function resolveLoaderPluginSdkPackageRoot(
 export function resolvePluginSdkAliasCandidateOrder(params: {
   modulePath: string;
   isProduction: boolean;
+  pluginSdkResolution?: PluginSdkResolutionPreference;
 }): PluginSdkAliasCandidateKind[] {
+  if (params.pluginSdkResolution === "dist") {
+    return ["dist", "src"];
+  }
+  if (params.pluginSdkResolution === "src") {
+    return ["src", "dist"];
+  }
   const normalizedModulePath = params.modulePath.replace(/\\/g, "/");
   const isDistRuntime = normalizedModulePath.includes("/dist/");
   return isDistRuntime || params.isProduction ? ["dist", "src"] : ["src", "dist"];
@@ -171,10 +185,12 @@ export function listPluginSdkAliasCandidates(params: {
   argv1?: string;
   cwd?: string;
   moduleUrl?: string;
+  pluginSdkResolution?: PluginSdkResolutionPreference;
 }) {
   const orderedKinds = resolvePluginSdkAliasCandidateOrder({
     modulePath: params.modulePath,
     isProduction: process.env.NODE_ENV === "production",
+    pluginSdkResolution: params.pluginSdkResolution,
   });
   const packageRoot = resolveLoaderPluginSdkPackageRoot(params);
   if (packageRoot) {
@@ -210,6 +226,7 @@ export function resolvePluginSdkAliasFile(params: {
   argv1?: string;
   cwd?: string;
   moduleUrl?: string;
+  pluginSdkResolution?: PluginSdkResolutionPreference;
 }): string | null {
   try {
     const modulePath = resolveLoaderModulePath(params);
@@ -220,6 +237,7 @@ export function resolvePluginSdkAliasFile(params: {
       argv1: params.argv1,
       cwd: params.cwd,
       moduleUrl: params.moduleUrl,
+      pluginSdkResolution: params.pluginSdkResolution,
     })) {
       if (fs.existsSync(candidate)) {
         return candidate;
@@ -233,9 +251,15 @@ export function resolvePluginSdkAliasFile(params: {
 
 const cachedPluginSdkExportedSubpaths = new Map<string, string[]>();
 const cachedPluginSdkScopedAliasMaps = new Map<string, Record<string, string>>();
+const PLUGIN_SDK_PACKAGE_NAMES = ["godseye/plugin-sdk", "@openclaw/plugin-sdk"] as const;
 
 export function listPluginSdkExportedSubpaths(
-  params: { modulePath?: string; argv1?: string; moduleUrl?: string } = {},
+  params: {
+    modulePath?: string;
+    argv1?: string;
+    moduleUrl?: string;
+    pluginSdkResolution?: PluginSdkResolutionPreference;
+  } = {},
 ): string[] {
   const modulePath = params.modulePath ?? fileURLToPath(import.meta.url);
   const packageRoot = resolveLoaderPluginSdkPackageRoot({
@@ -256,7 +280,12 @@ export function listPluginSdkExportedSubpaths(
 }
 
 export function resolvePluginSdkScopedAliasMap(
-  params: { modulePath?: string; argv1?: string; moduleUrl?: string } = {},
+  params: {
+    modulePath?: string;
+    argv1?: string;
+    moduleUrl?: string;
+    pluginSdkResolution?: PluginSdkResolutionPreference;
+  } = {},
 ): Record<string, string> {
   const modulePath = params.modulePath ?? fileURLToPath(import.meta.url);
   const packageRoot = resolveLoaderPluginSdkPackageRoot({
@@ -270,6 +299,7 @@ export function resolvePluginSdkScopedAliasMap(
   const orderedKinds = resolvePluginSdkAliasCandidateOrder({
     modulePath,
     isProduction: process.env.NODE_ENV === "production",
+    pluginSdkResolution: params.pluginSdkResolution,
   });
   const cacheKey = `${packageRoot}::${orderedKinds.join(",")}`;
   const cached = cachedPluginSdkScopedAliasMaps.get(cacheKey);
@@ -281,6 +311,7 @@ export function resolvePluginSdkScopedAliasMap(
     modulePath,
     argv1: params.argv1,
     moduleUrl: params.moduleUrl,
+    pluginSdkResolution: params.pluginSdkResolution,
   })) {
     const candidateMap = {
       src: path.join(packageRoot, "src", "plugin-sdk", `${subpath}.ts`),
@@ -289,7 +320,9 @@ export function resolvePluginSdkScopedAliasMap(
     for (const kind of orderedKinds) {
       const candidate = candidateMap[kind];
       if (fs.existsSync(candidate)) {
-        aliasMap[`godseye/plugin-sdk/${subpath}`] = candidate;
+        for (const packageName of PLUGIN_SDK_PACKAGE_NAMES) {
+          aliasMap[`${packageName}/${subpath}`] = candidate;
+        }
         break;
       }
     }
@@ -309,6 +342,7 @@ export function resolveExtensionApiAlias(params: LoaderModuleResolveParams = {})
     const orderedKinds = resolvePluginSdkAliasCandidateOrder({
       modulePath,
       isProduction: process.env.NODE_ENV === "production",
+      pluginSdkResolution: params.pluginSdkResolution,
     });
     const candidateMap = {
       src: path.join(packageRoot, "src", "extensionAPI.ts"),
@@ -330,6 +364,7 @@ export function buildPluginLoaderAliasMap(
   modulePath: string,
   argv1: string | undefined = STARTUP_ARGV1,
   moduleUrl?: string,
+  pluginSdkResolution: PluginSdkResolutionPreference = "auto",
 ): Record<string, string> {
   const pluginSdkAlias = resolvePluginSdkAliasFile({
     srcFile: "root-alias.cjs",
@@ -337,12 +372,26 @@ export function buildPluginLoaderAliasMap(
     modulePath,
     argv1,
     moduleUrl,
+    pluginSdkResolution,
   });
-  const extensionApiAlias = resolveExtensionApiAlias({ modulePath });
+  const extensionApiAlias = resolveExtensionApiAlias({ modulePath, pluginSdkResolution });
   return {
-    ...(extensionApiAlias ? { "godseye/extension-api": extensionApiAlias } : {}),
-    ...(pluginSdkAlias ? { "godseye/plugin-sdk": pluginSdkAlias } : {}),
-    ...resolvePluginSdkScopedAliasMap({ modulePath, argv1, moduleUrl }),
+    ...(extensionApiAlias
+      ? { "openclaw/extension-api": normalizeJitiAliasTargetPath(extensionApiAlias) }
+      : {}),
+    ...(pluginSdkAlias
+      ? Object.fromEntries(
+          PLUGIN_SDK_PACKAGE_NAMES.map((packageName) => [
+            packageName,
+            normalizeJitiAliasTargetPath(pluginSdkAlias),
+          ]),
+        )
+      : {}),
+    ...Object.fromEntries(
+      Object.entries(
+        resolvePluginSdkScopedAliasMap({ modulePath, argv1, moduleUrl, pluginSdkResolution }),
+      ).map(([key, value]) => [key, normalizeJitiAliasTargetPath(value)]),
+    ),
   };
 }
 
@@ -354,6 +403,7 @@ export function resolvePluginRuntimeModulePath(
     const orderedKinds = resolvePluginSdkAliasCandidateOrder({
       modulePath,
       isProduction: process.env.NODE_ENV === "production",
+      pluginSdkResolution: params.pluginSdkResolution,
     });
     const packageRoot = resolveLoaderPackageRoot({ ...params, modulePath });
     const candidates = packageRoot
@@ -392,8 +442,16 @@ export function buildPluginLoaderJitiOptions(aliasMap: Record<string, string>) {
   };
 }
 
+function supportsNativeJitiRuntime(): boolean {
+  const versions = process.versions as { bun?: string };
+  return typeof versions.bun !== "string" && process.platform !== "win32";
+}
+
 export function shouldPreferNativeJiti(modulePath: string): boolean {
-  switch (path.extname(modulePath).toLowerCase()) {
+  if (!supportsNativeJitiRuntime()) {
+    return false;
+  }
+  switch (normalizeLowercaseStringOrEmpty(path.extname(modulePath))) {
     case ".js":
     case ".mjs":
     case ".cjs":
@@ -402,4 +460,73 @@ export function shouldPreferNativeJiti(modulePath: string): boolean {
     default:
       return false;
   }
+}
+
+export function resolvePluginLoaderJitiTryNative(
+  modulePath: string,
+  options?: {
+    preferBuiltDist?: boolean;
+  },
+): boolean {
+  return (
+    shouldPreferNativeJiti(modulePath) ||
+    (supportsNativeJitiRuntime() &&
+      options?.preferBuiltDist === true &&
+      modulePath.includes(`${path.sep}dist${path.sep}`))
+  );
+}
+
+export function createPluginLoaderJitiCacheKey(params: {
+  tryNative: boolean;
+  aliasMap: Record<string, string>;
+}): string {
+  return JSON.stringify({
+    tryNative: params.tryNative,
+    aliasMap: Object.entries(params.aliasMap).toSorted(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  });
+}
+
+export function resolvePluginLoaderJitiConfig(params: {
+  modulePath: string;
+  argv1?: string;
+  moduleUrl: string;
+  preferBuiltDist?: boolean;
+}): {
+  tryNative: boolean;
+  aliasMap: Record<string, string>;
+  cacheKey: string;
+} {
+  const tryNative = resolvePluginLoaderJitiTryNative(
+    params.modulePath,
+    params.preferBuiltDist ? { preferBuiltDist: true } : {},
+  );
+  const aliasMap = buildPluginLoaderAliasMap(params.modulePath, params.argv1, params.moduleUrl);
+  return {
+    tryNative,
+    aliasMap,
+    cacheKey: createPluginLoaderJitiCacheKey({
+      tryNative,
+      aliasMap,
+    }),
+  };
+}
+
+export function isBundledPluginExtensionPath(params: {
+  modulePath: string;
+  openClawPackageRoot: string;
+  bundledPluginsDir?: string;
+}): boolean {
+  const normalizedModulePath = path.resolve(params.modulePath);
+  const roots = [
+    params.bundledPluginsDir ? path.resolve(params.bundledPluginsDir) : null,
+    path.join(params.openClawPackageRoot, "extensions"),
+    path.join(params.openClawPackageRoot, "dist", "extensions"),
+    path.join(params.openClawPackageRoot, "dist-runtime", "extensions"),
+  ].filter((root): root is string => typeof root === "string");
+  return roots.some(
+    (root) =>
+      normalizedModulePath === root || normalizedModulePath.startsWith(`${root}${path.sep}`),
+  );
 }

@@ -5,14 +5,14 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import {
   formatMemoryDreamingDay,
   resolveSessionTranscriptsDirForAgent,
-} from "openclaw/plugin-sdk/memory-core";
-import { buildAgentSessionKey } from "openclaw/plugin-sdk/routing";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/memory-core";
+import { buildAgentSessionKey } from "godseye/plugin-sdk/routing";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import type { QaBusState } from "./bus-state.js";
 import { waitForCronRunCompletion } from "./cron-run-wait.js";
 import {

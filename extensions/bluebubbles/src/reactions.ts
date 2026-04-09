@@ -1,6 +1,7 @@
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { resolveBlueBubblesServerAccount } from "./account-resolve.js";
 import { getCachedBlueBubblesPrivateApiStatus } from "./probe.js";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 import { blueBubblesFetchWithTimeout, buildBlueBubblesApiUrl } from "./types.js";
 
 export type BlueBubblesReactionOpts = {
@@ -8,7 +9,7 @@ export type BlueBubblesReactionOpts = {
   password?: string;
   accountId?: string;
   timeoutMs?: number;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 };
 
 const REACTION_TYPES = new Set(["love", "like", "dislike", "laugh", "emphasize", "question"]);
@@ -120,7 +121,7 @@ export function normalizeBlueBubblesReactionInput(emoji: string, remove?: boolea
   if (!trimmed) {
     throw new Error("BlueBubbles reaction requires an emoji or name.");
   }
-  let raw = trimmed.toLowerCase();
+  let raw = normalizeLowercaseStringOrEmpty(trimmed);
   if (raw.startsWith("-")) {
     raw = raw.slice(1);
   }

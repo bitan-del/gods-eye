@@ -6,6 +6,7 @@ import {
   resolveGatewayService,
   startGatewayService,
 } from "./service.js";
+import { createMockGatewayService } from "./service.test-helpers.js";
 
 const originalPlatformDescriptor = Object.getOwnPropertyDescriptor(process, "platform");
 
@@ -28,20 +29,7 @@ afterEach(() => {
 });
 
 function createService(overrides: Partial<GatewayService> = {}): GatewayService {
-  return {
-    label: "LaunchAgent",
-    loadedText: "loaded",
-    notLoadedText: "not loaded",
-    stage: vi.fn(async () => {}),
-    install: vi.fn(async () => {}),
-    uninstall: vi.fn(async () => {}),
-    stop: vi.fn(async () => {}),
-    restart: vi.fn(async () => ({ outcome: "completed" as const })),
-    isLoaded: vi.fn(async () => false),
-    readCommand: vi.fn(async () => null),
-    readRuntime: vi.fn(async () => ({ status: "stopped" as const })),
-    ...overrides,
-  };
+  return createMockGatewayService(overrides);
 }
 
 describe("resolveGatewayService", () => {
@@ -76,20 +64,20 @@ describe("readGatewayServiceState", () => {
     const service = createService({
       isLoaded: vi.fn(async () => true),
       readCommand: vi.fn(async () => ({
-        programArguments: ["godseye", "gateway", "run"],
-        environment: { GODSEYE_GATEWAY_PORT: "18789" },
+        programArguments: ["openclaw", "gateway", "run"],
+        environment: { OPENCLAW_GATEWAY_PORT: "18789" },
       })),
       readRuntime: vi.fn(async () => ({ status: "running" })),
     });
 
     const state = await readGatewayServiceState(service, {
-      env: { GODSEYE_GATEWAY_PORT: "1" },
+      env: { OPENCLAW_GATEWAY_PORT: "1" },
     });
 
     expect(state.installed).toBe(true);
     expect(state.loaded).toBe(true);
     expect(state.running).toBe(true);
-    expect(state.env.GODSEYE_GATEWAY_PORT).toBe("18789");
+    expect(state.env.OPENCLAW_GATEWAY_PORT).toBe("18789");
   });
 });
 
@@ -108,8 +96,8 @@ describe("startGatewayService", () => {
 
   it("restarts stopped installed services and returns post-start state", async () => {
     const readCommand = vi.fn(async () => ({
-      programArguments: ["godseye", "gateway", "run"],
-      environment: { GODSEYE_GATEWAY_PORT: "18789" },
+      programArguments: ["openclaw", "gateway", "run"],
+      environment: { OPENCLAW_GATEWAY_PORT: "18789" },
     }));
     const isLoaded = vi
       .fn<GatewayService["isLoaded"]>()
@@ -141,7 +129,7 @@ describe("startGatewayService", () => {
     const readCommand = vi
       .fn<GatewayService["readCommand"]>()
       .mockResolvedValueOnce({
-        programArguments: ["godseye", "gateway", "run"],
+        programArguments: ["openclaw", "gateway", "run"],
       })
       .mockResolvedValueOnce(null);
     const service = createService({

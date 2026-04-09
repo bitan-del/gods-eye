@@ -1,6 +1,6 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 
-export function makeModelFallbackCfg(overrides: Partial<GodsEyeConfig> = {}): GodsEyeConfig {
+export function makeModelFallbackCfg(overrides: Partial<OpenClawConfig> = {}): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -11,5 +11,5 @@ export function makeModelFallbackCfg(overrides: Partial<GodsEyeConfig> = {}): Go
       },
     },
     ...overrides,
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }

@@ -1,14 +1,14 @@
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/provider-auth";
-import { upsertAuthProfileWithLock } from "openclaw/plugin-sdk/provider-auth";
-import { applyAgentDefaultModelPrimary } from "openclaw/plugin-sdk/provider-onboard";
-import type { RuntimeEnv } from "openclaw/plugin-sdk/runtime";
-import { WizardCancelledError, type WizardPrompter } from "openclaw/plugin-sdk/setup";
-import { fetchWithSsrFGuard } from "openclaw/plugin-sdk/ssrf-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/provider-auth";
+import { upsertAuthProfileWithLock } from "godseye/plugin-sdk/provider-auth";
+import { applyAgentDefaultModelPrimary } from "godseye/plugin-sdk/provider-onboard";
+import type { RuntimeEnv } from "godseye/plugin-sdk/runtime";
+import { WizardCancelledError, type WizardPrompter } from "godseye/plugin-sdk/setup";
+import { fetchWithSsrFGuard } from "godseye/plugin-sdk/ssrf-runtime";
 import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalLowercaseString,
-} from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/text-runtime";
 import { OLLAMA_DEFAULT_BASE_URL, OLLAMA_DEFAULT_MODEL } from "./defaults.js";
 import {
   buildOllamaBaseUrlSsrFPolicy,

@@ -1,4 +1,4 @@
-import { resolveFetch } from "godseye/plugin-sdk/infra-runtime";
+import { resolveFetch } from "godseye/plugin-sdk/fetch-runtime";
 
 const PLURALKIT_API_BASE = "https://api.pluralkit.me/v2";
 

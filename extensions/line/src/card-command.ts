@@ -1,4 +1,6 @@
-import type { LineChannelData, GodsEyePluginApi, ReplyPayload } from "../api.js";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/core";
+import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   createActionCard,
   createImageCard,
@@ -7,7 +9,8 @@ import {
   createReceiptCard,
   type CardAction,
   type ListItem,
-} from "../api.js";
+} from "./flex-templates.js";
+import type { LineChannelData } from "./types.js";
 
 const CARD_USAGE = `Usage: /card <type> "title" "body" [options]
 
@@ -134,7 +137,7 @@ function parseCardArgs(argsStr: string): {
   // Extract type (first word)
   const typeMatch = argsStr.match(/^(\w+)/);
   if (typeMatch) {
-    result.type = typeMatch[1].toLowerCase();
+    result.type = normalizeLowercaseStringOrEmpty(typeMatch[1]);
     argsStr = argsStr.slice(typeMatch[0].length).trim();
   }
 
@@ -154,7 +157,7 @@ function parseCardArgs(argsStr: string): {
   return result;
 }
 
-export function registerLineCardCommand(api: GodsEyePluginApi): void {
+export function registerLineCardCommand(api: OpenClawPluginApi): void {
   api.registerCommand({
     name: "card",
     description: "Send a rich card message (LINE).",

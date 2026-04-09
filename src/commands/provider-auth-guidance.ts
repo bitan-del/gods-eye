@@ -1,6 +1,6 @@
 import { normalizeProviderId } from "../agents/model-selection.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolvePluginProviders } from "../plugins/providers.runtime.js";
 
 function matchesProviderId(
@@ -19,7 +19,7 @@ function matchesProviderId(
 
 export function resolveProviderAuthLoginCommand(params: {
   provider: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
 }): string | undefined {
@@ -27,18 +27,17 @@ export function resolveProviderAuthLoginCommand(params: {
     config: params.config,
     workspaceDir: params.workspaceDir,
     env: params.env,
-    bundledProviderAllowlistCompat: true,
-    bundledProviderVitestCompat: true,
+    mode: "setup",
   }).find((candidate) => matchesProviderId(candidate, params.provider));
   if (!provider || provider.auth.length === 0) {
     return undefined;
   }
-  return formatCliCommand(`godseye models auth login --provider ${provider.id}`);
+  return formatCliCommand(`openclaw models auth login --provider ${provider.id}`);
 }
 
 export function buildProviderAuthRecoveryHint(params: {
   provider: string;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   workspaceDir?: string;
   env?: NodeJS.ProcessEnv;
   includeConfigure?: boolean;
@@ -50,13 +49,13 @@ export function buildProviderAuthRecoveryHint(params: {
     parts.push(`Run \`${loginCommand}\``);
   }
   if (params.includeConfigure !== false) {
-    parts.push(`\`${formatCliCommand("godseye configure")}\``);
+    parts.push(`\`${formatCliCommand("openclaw configure")}\``);
   }
   if (params.includeEnvVar) {
     parts.push("set an API key env var");
   }
   if (parts.length === 0) {
-    return `Run \`${formatCliCommand("godseye configure")}\`.`;
+    return `Run \`${formatCliCommand("openclaw configure")}\`.`;
   }
   if (parts.length === 1) {
     return `${parts[0]}.`;

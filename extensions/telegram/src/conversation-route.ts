@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   resolveConfiguredBindingRoute,
   type ConfiguredBindingRouteResult,
@@ -17,6 +17,7 @@ import {
   sanitizeAgentId,
 } from "godseye/plugin-sdk/routing";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import {
   buildTelegramGroupPeerId,
   buildTelegramParentPeer,
@@ -24,7 +25,7 @@ import {
 } from "./bot/helpers.js";
 
 export function resolveTelegramConversationRoute(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   chatId: number | string;
   isGroup: boolean;
@@ -64,32 +65,29 @@ export function resolveTelegramConversationRoute(params: {
     // Preserve the configured topic agent ID so topic-bound sessions stay stable
     // even when that agent is not present in the current config snapshot.
     const topicAgentId = sanitizeAgentId(rawTopicAgentId);
-    route = {
-      ...route,
-      agentId: topicAgentId,
-      sessionKey: buildAgentSessionKey({
+    const sessionKey = normalizeLowercaseStringOrEmpty(
+      buildAgentSessionKey({
         agentId: topicAgentId,
         channel: "telegram",
         accountId: params.accountId,
         peer: { kind: params.isGroup ? "group" : "direct", id: peerId },
         dmScope: params.cfg.session?.dmScope,
         identityLinks: params.cfg.session?.identityLinks,
-      }).toLowerCase(),
-      mainSessionKey: buildAgentMainSessionKey({
+      }),
+    );
+    const mainSessionKey = normalizeLowercaseStringOrEmpty(
+      buildAgentMainSessionKey({
         agentId: topicAgentId,
-      }).toLowerCase(),
+      }),
+    );
+    route = {
+      ...route,
+      agentId: topicAgentId,
+      sessionKey,
+      mainSessionKey,
       lastRoutePolicy: deriveLastRoutePolicy({
-        sessionKey: buildAgentSessionKey({
-          agentId: topicAgentId,
-          channel: "telegram",
-          accountId: params.accountId,
-          peer: { kind: params.isGroup ? "group" : "direct", id: peerId },
-          dmScope: params.cfg.session?.dmScope,
-          identityLinks: params.cfg.session?.identityLinks,
-        }).toLowerCase(),
-        mainSessionKey: buildAgentMainSessionKey({
-          agentId: topicAgentId,
-        }).toLowerCase(),
+        sessionKey,
+        mainSessionKey,
       }),
     };
     logVerbose(
@@ -156,7 +154,7 @@ export function resolveTelegramConversationRoute(params: {
 }
 
 export function resolveTelegramConversationBaseSessionKey(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   route: Pick<
     ReturnType<typeof resolveTelegramConversationRoute>["route"],
     "agentId" | "accountId" | "matchedBy" | "sessionKey"
@@ -170,18 +168,20 @@ export function resolveTelegramConversationBaseSessionKey(params: {
   if (!isNamedAccountFallback || params.isGroup) {
     return params.route.sessionKey;
   }
-  return buildAgentSessionKey({
-    agentId: params.route.agentId,
-    channel: "telegram",
-    accountId: params.route.accountId,
-    peer: {
-      kind: "direct",
-      id: resolveTelegramDirectPeerId({
-        chatId: params.chatId,
-        senderId: params.senderId,
-      }),
-    },
-    dmScope: "per-account-channel-peer",
-    identityLinks: params.cfg.session?.identityLinks,
-  }).toLowerCase();
+  return normalizeLowercaseStringOrEmpty(
+    buildAgentSessionKey({
+      agentId: params.route.agentId,
+      channel: "telegram",
+      accountId: params.route.accountId,
+      peer: {
+        kind: "direct",
+        id: resolveTelegramDirectPeerId({
+          chatId: params.chatId,
+          senderId: params.senderId,
+        }),
+      },
+      dmScope: "per-account-channel-peer",
+      identityLinks: params.cfg.session?.identityLinks,
+    }),
+  );
 }

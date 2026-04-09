@@ -1,8 +1,8 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import { buildSlackThreadingToolContext } from "./threading-tool-context.js";
 
-const emptyCfg = {} as GodsEyeConfig;
+const emptyCfg = {} as OpenClawConfig;
 
 function resolveReplyToModeWithConfig(params: {
   slackConfig: Record<string, unknown>;
@@ -12,7 +12,7 @@ function resolveReplyToModeWithConfig(params: {
     channels: {
       slack: params.slackConfig,
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
   const result = buildSlackThreadingToolContext({
     cfg,
     accountId: null,
@@ -27,7 +27,7 @@ describe("buildSlackThreadingToolContext", () => {
       channels: {
         slack: { replyToMode: "first" },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = buildSlackThreadingToolContext({
       cfg,
       accountId: null,
@@ -67,7 +67,7 @@ describe("buildSlackThreadingToolContext", () => {
           replyToMode: "first",
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = buildSlackThreadingToolContext({
       cfg,
       accountId: null,
@@ -127,7 +127,7 @@ describe("buildSlackThreadingToolContext", () => {
           replyToModeByChatType: { channel: "first" },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = buildSlackThreadingToolContext({
       cfg,
       accountId: null,

@@ -1,13 +1,16 @@
-import { createActionGate } from "godseye/plugin-sdk/agent-runtime";
+import { createActionGate } from "godseye/plugin-sdk/channel-actions";
 import type { ChannelMessageActionName } from "godseye/plugin-sdk/channel-contract";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import type { ChannelToolSend } from "godseye/plugin-sdk/tool-send";
-import { listEnabledSlackAccounts } from "./accounts.js";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { extractToolSend, type ChannelToolSend } from "godseye/plugin-sdk/tool-send";
+import { listEnabledSlackAccounts, resolveSlackAccount } from "./accounts.js";
 
-export function listSlackMessageActions(cfg: GodsEyeConfig): ChannelMessageActionName[] {
-  const accounts = listEnabledSlackAccounts(cfg).filter(
-    (account) => account.botTokenSource !== "none",
-  );
+export function listSlackMessageActions(
+  cfg: OpenClawConfig,
+  accountId?: string | null,
+): ChannelMessageActionName[] {
+  const accounts = (
+    accountId ? [resolveSlackAccount({ cfg, accountId })] : listEnabledSlackAccounts(cfg)
+  ).filter((account) => account.enabled && account.botTokenSource !== "none");
   if (accounts.length === 0) {
     return [];
   }
@@ -51,14 +54,5 @@ export function listSlackMessageActions(cfg: GodsEyeConfig): ChannelMessageActio
 }
 
 export function extractSlackToolSend(args: Record<string, unknown>): ChannelToolSend | null {
-  const action = typeof args.action === "string" ? args.action.trim() : "";
-  if (action !== "sendMessage") {
-    return null;
-  }
-  const to = typeof args.to === "string" ? args.to : undefined;
-  if (!to) {
-    return null;
-  }
-  const accountId = typeof args.accountId === "string" ? args.accountId.trim() : undefined;
-  return { to, accountId };
+  return extractToolSend(args, "sendMessage");
 }

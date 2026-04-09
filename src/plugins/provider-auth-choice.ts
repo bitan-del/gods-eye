@@ -1,4 +1,4 @@
-import { resolveGodsEyeAgentDir } from "../agents/agent-paths.js";
+import { resolveOpenClawAgentDir } from "../agents/agent-paths.js";
 import {
   resolveDefaultAgentId,
   resolveAgentDir,
@@ -6,13 +6,13 @@ import {
 } from "../agents/agent-scope.js";
 import { upsertAuthProfile } from "../agents/auth-profiles.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { enablePluginInConfig } from "./enable.js";
 import {
+  applyProviderAuthConfigPatch,
   applyDefaultModel,
-  mergeConfigPatch,
   pickAuthMethod,
   resolveProviderMatch,
 } from "./provider-auth-choice-helpers.js";
@@ -23,7 +23,8 @@ import type { ProviderAuthMethod, ProviderAuthOptionBag } from "./types.js";
 
 export type ApplyProviderAuthChoiceParams = {
   authChoice: string;
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
+  env?: NodeJS.ProcessEnv;
   prompter: WizardPrompter;
   runtime: RuntimeEnv;
   agentDir?: string;
@@ -33,7 +34,7 @@ export type ApplyProviderAuthChoiceParams = {
 };
 
 export type ApplyProviderAuthChoiceResult = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   agentModelOverride?: string;
 };
 
@@ -46,9 +47,9 @@ export type PluginProviderAuthChoiceOptions = {
 };
 
 function restoreConfiguredPrimaryModel(
-  nextConfig: GodsEyeConfig,
-  originalConfig: GodsEyeConfig,
-): GodsEyeConfig {
+  nextConfig: OpenClawConfig,
+  originalConfig: OpenClawConfig,
+): OpenClawConfig {
   const originalModel = originalConfig.agents?.defaults?.model;
   const nextAgents = nextConfig.agents;
   const nextDefaults = nextAgents?.defaults;
@@ -82,7 +83,8 @@ async function loadPluginProviderRuntime() {
 }
 
 export async function runProviderPluginAuthMethod(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
+  env?: NodeJS.ProcessEnv;
   runtime: RuntimeEnv;
   prompter: WizardPrompter;
   method: ProviderAuthMethod;
@@ -93,13 +95,13 @@ export async function runProviderPluginAuthMethod(params: {
   secretInputMode?: ProviderAuthOptionBag["secretInputMode"];
   allowSecretRefPrompt?: boolean;
   opts?: Partial<ProviderAuthOptionBag>;
-}): Promise<{ config: GodsEyeConfig; defaultModel?: string }> {
+}): Promise<{ config: OpenClawConfig; defaultModel?: string }> {
   const agentId = params.agentId ?? resolveDefaultAgentId(params.config);
   const defaultAgentId = resolveDefaultAgentId(params.config);
   const agentDir =
     params.agentDir ??
     (agentId === defaultAgentId
-      ? resolveGodsEyeAgentDir()
+      ? resolveOpenClawAgentDir()
       : resolveAgentDir(params.config, agentId));
   const workspaceDir =
     params.workspaceDir ??
@@ -108,6 +110,7 @@ export async function runProviderPluginAuthMethod(params: {
 
   const result = await params.method.run({
     config: params.config,
+    env: params.env,
     agentDir,
     workspaceDir,
     prompter: params.prompter,
@@ -126,7 +129,7 @@ export async function runProviderPluginAuthMethod(params: {
 
   let nextConfig = params.config;
   if (result.configPatch) {
-    nextConfig = mergeConfigPatch(nextConfig, result.configPatch);
+    nextConfig = applyProviderAuthConfigPatch(nextConfig, result.configPatch);
   }
 
   for (const profile of result.profiles) {
@@ -170,8 +173,8 @@ export async function applyAuthChoiceLoadedPluginProvider(
   const providers = resolvePluginProviders({
     config: params.config,
     workspaceDir,
-    bundledProviderAllowlistCompat: true,
-    bundledProviderVitestCompat: true,
+    env: params.env,
+    mode: "setup",
   });
   const resolved = resolveProviderPluginChoice({
     providers,
@@ -183,6 +186,7 @@ export async function applyAuthChoiceLoadedPluginProvider(
 
   const applied = await runProviderPluginAuthMethod({
     config: params.config,
+    env: params.env,
     runtime: params.runtime,
     prompter: params.prompter,
     method: resolved.method,
@@ -241,7 +245,7 @@ export async function applyAuthChoicePluginProvider(
   const defaultAgentId = resolveDefaultAgentId(nextConfig);
   const agentDir =
     params.agentDir ??
-    (agentId === defaultAgentId ? resolveGodsEyeAgentDir() : resolveAgentDir(nextConfig, agentId));
+    (agentId === defaultAgentId ? resolveOpenClawAgentDir() : resolveAgentDir(nextConfig, agentId));
   const workspaceDir =
     resolveAgentWorkspaceDir(nextConfig, agentId) ?? resolveDefaultAgentWorkspaceDir();
 
@@ -250,8 +254,8 @@ export async function applyAuthChoicePluginProvider(
   const providers = resolvePluginProviders({
     config: nextConfig,
     workspaceDir,
-    bundledProviderAllowlistCompat: true,
-    bundledProviderVitestCompat: true,
+    env: params.env,
+    mode: "setup",
   });
   const provider = resolveProviderMatch(providers, options.providerId);
   if (!provider) {
@@ -270,6 +274,7 @@ export async function applyAuthChoicePluginProvider(
 
   const applied = await runProviderPluginAuthMethod({
     config: nextConfig,
+    env: params.env,
     runtime: params.runtime,
     prompter: params.prompter,
     method,

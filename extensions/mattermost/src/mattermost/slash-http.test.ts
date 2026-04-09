@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig, RuntimeEnv } from "../../runtime-api.js";
+import type { OpenClawConfig, RuntimeEnv } from "../../runtime-api.js";
 import type { ResolvedMattermostAccount } from "./accounts.js";
 import { createSlashCommandHttpHandler } from "./slash-http.js";
 
@@ -12,7 +12,7 @@ function createRequest(params: {
   autoEnd?: boolean;
 }): IncomingMessage {
   const req = new PassThrough();
-  const incoming = req as unknown as IncomingMessage;
+  const incoming = req as PassThrough & IncomingMessage;
   incoming.method = params.method ?? "POST";
   incoming.headers = {
     "content-type": params.contentType ?? "application/x-www-form-urlencoded",
@@ -43,7 +43,7 @@ function createResponse(): {
     end(chunk?: string | Buffer) {
       body = chunk ? String(chunk) : "";
     },
-  } as unknown as ServerResponse;
+  } as ServerResponse;
   return {
     res,
     getBody: () => body,
@@ -68,7 +68,7 @@ async function runSlashRequest(params: {
 }) {
   const handler = createSlashCommandHttpHandler({
     account: accountFixture,
-    cfg: {} as GodsEyeConfig,
+    cfg: {} as OpenClawConfig,
     runtime: {} as RuntimeEnv,
     commandTokens: params.commandTokens,
   });
@@ -82,7 +82,7 @@ describe("slash-http", () => {
   it("rejects non-POST methods", async () => {
     const handler = createSlashCommandHttpHandler({
       account: accountFixture,
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       runtime: {} as RuntimeEnv,
       commandTokens: new Set(["valid-token"]),
     });
@@ -99,7 +99,7 @@ describe("slash-http", () => {
   it("rejects malformed payloads", async () => {
     const handler = createSlashCommandHttpHandler({
       account: accountFixture,
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       runtime: {} as RuntimeEnv,
       commandTokens: new Set(["valid-token"]),
     });
@@ -137,7 +137,7 @@ describe("slash-http", () => {
     try {
       const handler = createSlashCommandHttpHandler({
         account: accountFixture,
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         runtime: {} as RuntimeEnv,
         commandTokens: new Set(["valid-token"]),
       });

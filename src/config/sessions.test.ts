@@ -28,7 +28,7 @@ describe("sessions", () => {
   };
 
   beforeAll(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-sessions-suite-"));
+    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-sessions-suite-"));
   });
 
   afterAll(async () => {
@@ -36,7 +36,7 @@ describe("sessions", () => {
   });
 
   const withStateDir = <T>(stateDir: string, fn: () => T): T =>
-    withEnv({ GODSEYE_STATE_DIR: stateDir }, fn);
+    withEnv({ OPENCLAW_STATE_DIR: stateDir }, fn);
 
   async function createSessionStoreFixture(params: {
     prefix: string;
@@ -125,7 +125,7 @@ describe("sessions", () => {
     {
       name: "keeps group chats distinct",
       scope: "per-sender" as const,
-      ctx: { From: "12345-678@g.us" },
+      ctx: { From: "12345-678@g.us", ChatType: "group", Provider: "whatsapp" },
       expected: "whatsapp:group:12345-678@g.us",
     },
     {
@@ -147,11 +147,11 @@ describe("sessions", () => {
       buildGroupDisplayName({
         provider: "discord",
         groupChannel: "#general",
-        space: "friends-of-godseye",
+        space: "friends-of-openclaw",
         id: "123",
         key: "discord:group:123",
       }),
-    ).toBe("discord:friends-of-godseye#general");
+    ).toBe("discord:friends-of-openclaw#general");
   });
 
   const resolveSessionKeyCases = [
@@ -200,7 +200,7 @@ describe("sessions", () => {
     {
       name: "leaves groups untouched even with main key",
       scope: "per-sender" as const,
-      ctx: { From: "12345-678@g.us" },
+      ctx: { From: "12345-678@g.us", ChatType: "group", Provider: "whatsapp" },
       mainKey: "main",
       expected: "agent:main:whatsapp:group:12345-678@g.us",
     },
@@ -539,9 +539,9 @@ describe("sessions", () => {
     expect(entry.lastProvider).toBeUndefined();
   });
 
-  it("derives session transcripts dir from GODSEYE_STATE_DIR", () => {
+  it("derives session transcripts dir from OPENCLAW_STATE_DIR", () => {
     const dir = resolveSessionTranscriptsDir(
-      { GODSEYE_STATE_DIR: "/custom/state" } as NodeJS.ProcessEnv,
+      { OPENCLAW_STATE_DIR: "/custom/state" } as NodeJS.ProcessEnv,
       () => "/home/ignored",
     );
     expect(dir).toBe(path.join(path.resolve("/custom/state"), "agents", "main", "sessions"));
@@ -584,7 +584,7 @@ describe("sessions", () => {
     );
   });
 
-  it("resolves cross-agent paths when GODSEYE_STATE_DIR differs from stored paths", () => {
+  it("resolves cross-agent paths when OPENCLAW_STATE_DIR differs from stored paths", () => {
     withStateDir(path.resolve("/different/state"), () => {
       const originalBase = path.resolve("/original/state");
       const bot2Session = path.join(originalBase, "agents", "bot2", "sessions", "sess-1.jsonl");
@@ -632,7 +632,7 @@ describe("sessions", () => {
   });
 
   it("resolveSessionFilePathOptions keeps explicit agentId alongside absolute store path", () => {
-    const storePath = "/tmp/godseye/agents/main/sessions/sessions.json";
+    const storePath = "/tmp/openclaw/agents/main/sessions/sessions.json";
     const resolved = resolveSessionFilePathOptions({
       agentId: "bot2",
       storePath,
@@ -699,7 +699,7 @@ describe("sessions", () => {
       update: async () => {
         firstStarted.resolve();
         await releaseFirst.promise;
-        return { modelOverride: "anthropic/claude-opus-4-5" };
+        return { modelOverride: "anthropic/claude-opus-4-6" };
       },
     });
     const p2 = updateSessionStoreEntry({
@@ -716,7 +716,7 @@ describe("sessions", () => {
     await Promise.all([p1, p2]);
 
     const store = loadSessionStore(storePath);
-    expect(store[mainSessionKey]?.modelOverride).toBe("anthropic/claude-opus-4-5");
+    expect(store[mainSessionKey]?.modelOverride).toBe("anthropic/claude-opus-4-6");
     expect(store[mainSessionKey]?.thinkingLevel).toBe("high");
     await expect(fs.stat(`${storePath}.lock`)).rejects.toThrow();
   });

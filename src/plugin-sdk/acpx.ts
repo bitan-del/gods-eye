@@ -16,10 +16,10 @@ export type {
   AcpSessionUpdateTag,
 } from "../acp/runtime/types.js";
 export type {
-  GodsEyePluginApi,
-  GodsEyePluginConfigSchema,
-  GodsEyePluginService,
-  GodsEyePluginServiceContext,
+  OpenClawPluginApi,
+  OpenClawPluginConfigSchema,
+  OpenClawPluginService,
+  OpenClawPluginServiceContext,
   PluginLogger,
 } from "../plugins/types.js";
 export type {

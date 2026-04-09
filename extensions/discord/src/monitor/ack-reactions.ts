@@ -3,9 +3,9 @@ import {
   createStatusReactionController,
   logAckFailure,
   type StatusReactionAdapter,
-} from "openclaw/plugin-sdk/channel-feedback";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { logVerbose } from "openclaw/plugin-sdk/runtime-env";
+} from "godseye/plugin-sdk/channel-feedback";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { createDiscordRuntimeAccountContext } from "../client.js";
 import { reactMessageDiscord, removeReactionDiscord } from "../send.js";
 import type { DiscordReactionRuntimeContext } from "../send.types.js";

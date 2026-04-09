@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { resolveGatewayInstallToken } from "./gateway-install-token.js";
 
 const readConfigFileSnapshotMock = vi.hoisted(() => vi.fn());
-const writeConfigFileMock = vi.hoisted(() => vi.fn());
+const replaceConfigFileMock = vi.hoisted(() => vi.fn());
 const resolveSecretInputRefMock = vi.hoisted(() =>
   vi.fn((): { ref: unknown } => ({ ref: undefined })),
 );
@@ -24,12 +25,12 @@ const resolveGatewayAuthMock = vi.hoisted(() =>
 );
 const shouldRequireGatewayTokenForInstallMock = vi.hoisted(() => vi.fn(() => true));
 const resolveSecretRefValuesMock = vi.hoisted(() => vi.fn());
-const secretRefKeyMock = vi.hoisted(() => vi.fn(() => "env:default:GODSEYE_GATEWAY_TOKEN"));
+const secretRefKeyMock = vi.hoisted(() => vi.fn(() => "env:default:OPENCLAW_GATEWAY_TOKEN"));
 const randomTokenMock = vi.hoisted(() => vi.fn(() => "generated-token"));
 
 vi.mock("../config/config.js", () => ({
   readConfigFileSnapshot: readConfigFileSnapshotMock,
-  writeConfigFile: writeConfigFileMock,
+  replaceConfigFile: replaceConfigFileMock,
 }));
 
 vi.mock("../config/types.secrets.js", () => ({
@@ -57,8 +58,6 @@ vi.mock("./onboard-helpers.js", () => ({
   randomToken: randomTokenMock,
 }));
 
-const { resolveGatewayInstallToken } = await import("./gateway-install-token.js");
-
 describe("resolveGatewayInstallToken", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -85,7 +84,7 @@ describe("resolveGatewayInstallToken", () => {
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { token: "config-token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
     });
 
@@ -98,17 +97,17 @@ describe("resolveGatewayInstallToken", () => {
   });
 
   it("validates SecretRef token but does not persist resolved plaintext", async () => {
-    const tokenRef = { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" };
+    const tokenRef = { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" };
     resolveSecretInputRefMock.mockReturnValue({ ref: tokenRef });
     resolveSecretRefValuesMock.mockResolvedValue(
-      new Map([["env:default:GODSEYE_GATEWAY_TOKEN", "resolved-token"]]),
+      new Map([["env:default:OPENCLAW_GATEWAY_TOKEN", "resolved-token"]]),
     );
 
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { mode: "token", token: tokenRef } },
-      } as GodsEyeConfig,
-      env: { GODSEYE_GATEWAY_TOKEN: "resolved-token" } as NodeJS.ProcessEnv,
+      } as OpenClawConfig,
+      env: { OPENCLAW_GATEWAY_TOKEN: "resolved-token" } as NodeJS.ProcessEnv,
     });
 
     expect(result.token).toBeUndefined();
@@ -126,7 +125,7 @@ describe("resolveGatewayInstallToken", () => {
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { mode: "token", token: "${MISSING_GATEWAY_TOKEN}" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
     });
 
@@ -143,7 +142,7 @@ describe("resolveGatewayInstallToken", () => {
             password: "password-value", // pragma: allowlist secret
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
       autoGenerateWhenMissing: true,
       persistGeneratedToken: true,
@@ -151,9 +150,9 @@ describe("resolveGatewayInstallToken", () => {
 
     expect(result.token).toBeUndefined();
     expect(result.unavailableReason).toContain("gateway.auth.mode is unset");
-    expect(result.unavailableReason).toContain("godseye config set gateway.auth.mode token");
-    expect(result.unavailableReason).toContain("godseye config set gateway.auth.mode password");
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(result.unavailableReason).toContain("openclaw config set gateway.auth.mode token");
+    expect(result.unavailableReason).toContain("openclaw config set gateway.auth.mode password");
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
     expect(resolveSecretRefValuesMock).not.toHaveBeenCalled();
   });
 
@@ -161,7 +160,7 @@ describe("resolveGatewayInstallToken", () => {
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { mode: "token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
       autoGenerateWhenMissing: true,
     });
@@ -171,22 +170,23 @@ describe("resolveGatewayInstallToken", () => {
     expect(
       result.warnings.some((message) => message.includes("without saving to config")),
     ).toBeTruthy();
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
   });
 
   it("persists auto-generated token when requested", async () => {
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { mode: "token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
       autoGenerateWhenMissing: true,
       persistGeneratedToken: true,
     });
 
     expect(result.warnings.some((message) => message.includes("saving to config"))).toBeTruthy();
-    expect(writeConfigFileMock).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(replaceConfigFileMock).toHaveBeenCalledWith({
+      baseHash: undefined,
+      nextConfig: expect.objectContaining({
         gateway: {
           auth: {
             mode: "token",
@@ -194,7 +194,7 @@ describe("resolveGatewayInstallToken", () => {
           },
         },
       }),
-    );
+    });
   });
 
   it("drops generated plaintext when config changes to SecretRef before persist", async () => {
@@ -204,20 +204,20 @@ describe("resolveGatewayInstallToken", () => {
       config: {
         gateway: {
           auth: {
-            token: "${GODSEYE_GATEWAY_TOKEN}",
+            token: "${OPENCLAW_GATEWAY_TOKEN}",
           },
         },
       },
       issues: [],
     });
     resolveSecretInputRefMock.mockReturnValueOnce({ ref: undefined }).mockReturnValueOnce({
-      ref: { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" },
+      ref: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
     });
 
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: { mode: "token" } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
       autoGenerateWhenMissing: true,
       persistGeneratedToken: true,
@@ -227,7 +227,7 @@ describe("resolveGatewayInstallToken", () => {
     expect(
       result.warnings.some((message) => message.includes("skipping plaintext token persistence")),
     ).toBeTruthy();
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
   });
 
   it("does not auto-generate when inferred mode has password SecretRef configured", async () => {
@@ -245,7 +245,7 @@ describe("resolveGatewayInstallToken", () => {
             default: { source: "env" },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
       autoGenerateWhenMissing: true,
       persistGeneratedToken: true,
@@ -254,12 +254,12 @@ describe("resolveGatewayInstallToken", () => {
     expect(result.token).toBeUndefined();
     expect(result.unavailableReason).toBeUndefined();
     expect(result.warnings.some((message) => message.includes("Auto-generated"))).toBe(false);
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
   });
 
   it("passes the install env through to gateway auth resolution", async () => {
     const env = {
-      GODSEYE_GATEWAY_PASSWORD: "dotenv-password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_PASSWORD: "dotenv-password", // pragma: allowlist secret
     } as NodeJS.ProcessEnv;
     shouldRequireGatewayTokenForInstallMock.mockReturnValue(false);
     resolveGatewayAuthMock.mockReturnValue({
@@ -272,7 +272,7 @@ describe("resolveGatewayInstallToken", () => {
     const result = await resolveGatewayInstallToken({
       config: {
         gateway: { auth: {} },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env,
       autoGenerateWhenMissing: true,
       persistGeneratedToken: true,
@@ -286,11 +286,11 @@ describe("resolveGatewayInstallToken", () => {
     expect(result.token).toBeUndefined();
     expect(result.unavailableReason).toBeUndefined();
     expect(result.warnings.some((message) => message.includes("Auto-generated"))).toBe(false);
-    expect(writeConfigFileMock).not.toHaveBeenCalled();
+    expect(replaceConfigFileMock).not.toHaveBeenCalled();
   });
 
   it("skips token SecretRef resolution when token auth is not required", async () => {
-    const tokenRef = { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" };
+    const tokenRef = { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" };
     resolveSecretInputRefMock.mockReturnValue({ ref: tokenRef });
     shouldRequireGatewayTokenForInstallMock.mockReturnValue(false);
 
@@ -302,7 +302,7 @@ describe("resolveGatewayInstallToken", () => {
             token: tokenRef,
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {} as NodeJS.ProcessEnv,
     });
 

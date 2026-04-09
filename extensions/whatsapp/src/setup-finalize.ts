@@ -7,9 +7,9 @@ import {
   splitSetupEntries,
   type DmPolicy,
   type OpenClawConfig,
-} from "openclaw/plugin-sdk/setup";
-import type { ChannelSetupWizard } from "openclaw/plugin-sdk/setup";
-import { formatCliCommand, formatDocsLink } from "openclaw/plugin-sdk/setup-tools";
+} from "godseye/plugin-sdk/setup";
+import type { ChannelSetupWizard } from "godseye/plugin-sdk/setup";
+import { formatCliCommand, formatDocsLink } from "godseye/plugin-sdk/setup-tools";
 import {
   resolveDefaultWhatsAppAccountId,
   resolveWhatsAppAccount,

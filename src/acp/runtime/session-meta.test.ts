@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../../config/config.js";
 
 const hoisted = vi.hoisted(() => {
   const resolveAllAgentSessionStoreTargetsMock = vi.fn();
@@ -10,24 +10,22 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../config/sessions.js", async () => {
-  const actual = await vi.importActual<typeof import("../../config/sessions.js")>(
-    "../../config/sessions.js",
-  );
-  return {
-    ...actual,
-    resolveAllAgentSessionStoreTargets: (cfg: GodsEyeConfig, opts: unknown) =>
-      hoisted.resolveAllAgentSessionStoreTargetsMock(cfg, opts),
-    loadSessionStore: (storePath: string) => hoisted.loadSessionStoreMock(storePath),
-  };
-});
+vi.mock("../../config/sessions/store-load.js", () => ({
+  loadSessionStore: (storePath: string) => hoisted.loadSessionStoreMock(storePath),
+}));
 
+vi.mock("../../config/sessions/targets.js", () => ({
+  resolveAllAgentSessionStoreTargets: (cfg: OpenClawConfig, opts: unknown) =>
+    hoisted.resolveAllAgentSessionStoreTargetsMock(cfg, opts),
+}));
 let listAcpSessionEntries: typeof import("./session-meta.js").listAcpSessionEntries;
 
 describe("listAcpSessionEntries", () => {
-  beforeEach(async () => {
-    vi.resetModules();
+  beforeAll(async () => {
     ({ listAcpSessionEntries } = await import("./session-meta.js"));
+  });
+
+  beforeEach(() => {
     vi.clearAllMocks();
   });
 
@@ -36,7 +34,7 @@ describe("listAcpSessionEntries", () => {
       session: {
         store: "/custom/sessions/{agentId}.json",
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     hoisted.resolveAllAgentSessionStoreTargetsMock.mockResolvedValue([
       {
         agentId: "ops",

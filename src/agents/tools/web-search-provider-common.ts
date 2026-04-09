@@ -1,5 +1,6 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { normalizeResolvedSecretInputString } from "../../config/types.secrets.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 import { withTrustedWebToolsEndpoint } from "./web-guarded-fetch.js";
 import {
@@ -14,7 +15,7 @@ import {
   writeCache,
 } from "./web-shared.js";
 
-export type SearchConfigRecord = (NonNullable<GodsEyeConfig["tools"]>["web"] extends infer Web
+export type SearchConfigRecord = (NonNullable<OpenClawConfig["tools"]>["web"] extends infer Web
   ? Web extends { search?: infer Search }
     ? Search
     : never
@@ -30,21 +31,7 @@ type UnsupportedWebSearchFilterName =
 
 export const DEFAULT_SEARCH_COUNT = 5;
 export const MAX_SEARCH_COUNT = 10;
-
-const SEARCH_CACHE_KEY = Symbol.for("godseye.web-search.cache");
-
-function getSharedSearchCache(): Map<string, CacheEntry<Record<string, unknown>>> {
-  const root = globalThis as Record<PropertyKey, unknown>;
-  const existing = root[SEARCH_CACHE_KEY];
-  if (existing instanceof Map) {
-    return existing as Map<string, CacheEntry<Record<string, unknown>>>;
-  }
-  const next = new Map<string, CacheEntry<Record<string, unknown>>>();
-  root[SEARCH_CACHE_KEY] = next;
-  return next;
-}
-
-export const SEARCH_CACHE = getSharedSearchCache();
+export const SEARCH_CACHE = new Map<string, CacheEntry<Record<string, unknown>>>();
 
 export function resolveSearchTimeoutSeconds(searchConfig?: SearchConfigRecord): number {
   return resolveTimeoutSeconds(searchConfig?.timeoutSeconds, DEFAULT_TIMEOUT_SECONDS);
@@ -100,6 +87,7 @@ export async function postTrustedWebToolsJson<T>(
     body: Record<string, unknown>;
     errorLabel: string;
     maxErrorBytes?: number;
+    extraHeaders?: Record<string, string>;
   },
   parseResponse: (response: Response) => Promise<T>,
 ): Promise<T> {
@@ -110,6 +98,7 @@ export async function postTrustedWebToolsJson<T>(
       init: {
         method: "POST",
         headers: {
+          ...params.extraHeaders,
           Accept: "application/json",
           Authorization: `Bearer ${params.apiKey}`,
           "Content-Type": "application/json",
@@ -220,7 +209,7 @@ export function parseIsoDateRange(params: {
       message: string;
       docs: string;
     } {
-  const docs = params.docs ?? "https://docs.gods-eye.org/tools/web";
+  const docs = params.docs ?? "https://docs.openclaw.ai/tools/web";
   const dateAfter = params.rawDateAfter ? normalizeToIsoDate(params.rawDateAfter) : undefined;
   if (params.rawDateAfter && !dateAfter) {
     return {
@@ -262,7 +251,7 @@ export function normalizeFreshness(
     return undefined;
   }
 
-  const lower = trimmed.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(trimmed);
   if (BRAVE_FRESHNESS_SHORTCUTS.has(lower)) {
     return provider === "brave" ? lower : FRESHNESS_TO_RECENCY[lower];
   }
@@ -331,7 +320,7 @@ function describeUnsupportedSearchFilter(name: UnsupportedWebSearchFilterName): 
 export function buildUnsupportedSearchFilterResponse(
   params: Record<string, unknown>,
   provider: string,
-  docs = "https://docs.gods-eye.org/tools/web",
+  docs = "https://docs.openclaw.ai/tools/web",
 ):
   | {
       error: string;

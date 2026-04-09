@@ -1,5 +1,4 @@
-import { DEFAULT_ACCOUNT_ID, type GodsEyeConfig } from "godseye/plugin-sdk/account-resolution";
-import { waitUntilAbort } from "godseye/plugin-sdk/channel-lifecycle";
+import { DEFAULT_ACCOUNT_ID, type OpenClawConfig } from "godseye/plugin-sdk/account-resolution";
 import { registerPluginHttpRoute } from "godseye/plugin-sdk/webhook-ingress";
 import { listAccountIds, resolveAccount } from "./accounts.js";
 import { dispatchSynologyChatInboundTurn } from "./inbound-turn.js";
@@ -59,15 +58,17 @@ function createUnknownArgsLogAdapter(
   if (!log) {
     return undefined;
   }
+  const formatArg = (value: unknown): string =>
+    typeof value === "string" ? value : value instanceof Error ? value.message : "";
   return {
-    info: (...args) => log.info?.(String(args[0] ?? "")),
-    warn: (...args) => log.warn?.(String(args[0] ?? "")),
-    error: (...args) => log.error?.(String(args[0] ?? "")),
+    info: (...args) => log.info?.(formatArg(args[0])),
+    warn: (...args) => log.warn?.(formatArg(args[0])),
+    error: (...args) => log.error?.(formatArg(args[0])),
   };
 }
 
 export function collectSynologyGatewayStartupIssues(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedSynologyChatAccount;
   accountId: string;
 }): SynologyGatewayStartupIssue[] {
@@ -133,7 +134,7 @@ export function collectSynologyGatewayStartupIssues(params: {
 }
 
 export function collectSynologyGatewayRoutingWarnings(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedSynologyChatAccount;
 }): string[] {
   return collectSynologyGatewayStartupIssues({
@@ -149,7 +150,7 @@ export function collectSynologyGatewayRoutingWarnings(params: {
 }
 
 export function validateSynologyGatewayAccountStartup(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   account: ResolvedSynologyChatAccount;
   accountId: string;
   log?: SynologyGatewayLog;

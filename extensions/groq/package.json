@@ -1,9 +1,12 @@
 {
   "name": "@godseye/groq-provider",
-  "version": "2026.3.14",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Groq media-understanding provider",
+  "description": "OpenClaw Groq media-understanding provider",
   "type": "module",
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
     "extensions": [
       "./index.ts"

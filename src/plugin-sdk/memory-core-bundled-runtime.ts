@@ -1,6 +1,6 @@
 // Manual facade. Keep loader boundary explicit.
-type ApiFacadeModule = typeof import("@openclaw/memory-core/api.js");
-type RuntimeFacadeModule = typeof import("@openclaw/memory-core/runtime-api.js");
+type ApiFacadeModule = typeof import("@godseye/memory-core/api.js");
+type RuntimeFacadeModule = typeof import("@godseye/memory-core/runtime-api.js");
 import { loadBundledPluginPublicSurfaceModuleSync } from "./facade-loader.js";
 
 function loadApiFacadeModule(): ApiFacadeModule {

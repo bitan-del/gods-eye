@@ -1,3 +1,4 @@
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   GROUP_POLICY_BLOCKED_LABEL,
   createChannelPairingController,
@@ -5,12 +6,12 @@ import {
   dispatchInboundReplyWithBase,
   logInboundDrop,
   readStoreAllowFromForDmPolicy,
-  resolveDmGroupAccessWithCommandGate,
   resolveAllowlistProviderRuntimeGroupPolicy,
   resolveDefaultGroupPolicy,
+  resolveDmGroupAccessWithCommandGate,
   warnMissingProviderGroupPolicyFallbackOnce,
+  type OpenClawConfig,
   type OutboundReplyPayload,
-  type GodsEyeConfig,
   type RuntimeEnv,
 } from "../runtime-api.js";
 import type { ResolvedNextcloudTalkAccount } from "./accounts.js";
@@ -25,7 +26,7 @@ import {
 import { resolveNextcloudTalkRoomKind } from "./room-info.js";
 import { getNextcloudTalkRuntime } from "./runtime.js";
 import { sendMessageNextcloudTalk } from "./send.js";
-import type { CoreConfig, GroupPolicy, NextcloudTalkInboundMessage } from "./types.js";
+import type { CoreConfig, NextcloudTalkInboundMessage } from "./types.js";
 
 const CHANNEL_ID = "nextcloud-talk" as const;
 
@@ -82,13 +83,13 @@ export async function handleNextcloudTalkInbound(params: {
   statusSink?.({ lastInboundAt: message.timestamp });
 
   const dmPolicy = account.config.dmPolicy ?? "pairing";
-  const defaultGroupPolicy = resolveDefaultGroupPolicy(config as GodsEyeConfig);
+  const defaultGroupPolicy = resolveDefaultGroupPolicy(config as OpenClawConfig);
   const { groupPolicy, providerMissingFallbackApplied } =
     resolveAllowlistProviderRuntimeGroupPolicy({
       providerConfigPresent:
         ((config.channels as Record<string, unknown> | undefined)?.["nextcloud-talk"] ??
           undefined) !== undefined,
-      groupPolicy: account.config.groupPolicy as GroupPolicy | undefined,
+      groupPolicy: account.config.groupPolicy,
       defaultGroupPolicy,
     });
   warnMissingProviderGroupPolicyFallbackOnce({
@@ -126,12 +127,12 @@ export async function handleNextcloudTalkInbound(params: {
   const roomAllowFrom = normalizeNextcloudTalkAllowlist(roomConfig?.allowFrom);
 
   const allowTextCommands = core.channel.commands.shouldHandleTextCommands({
-    cfg: config as GodsEyeConfig,
+    cfg: config as OpenClawConfig,
     surface: CHANNEL_ID,
   });
   const useAccessGroups =
     (config.commands as Record<string, unknown> | undefined)?.useAccessGroups !== false;
-  const hasControlCommand = core.channel.text.hasControlCommand(rawBody, config as GodsEyeConfig);
+  const hasControlCommand = core.channel.text.hasControlCommand(rawBody, config as OpenClawConfig);
   const access = resolveDmGroupAccessWithCommandGate({
     isGroup,
     dmPolicy,
@@ -199,7 +200,7 @@ export async function handleNextcloudTalkInbound(params: {
     return;
   }
 
-  const mentionRegexes = core.channel.mentions.buildMentionRegexes(config as GodsEyeConfig);
+  const mentionRegexes = core.channel.mentions.buildMentionRegexes(config as OpenClawConfig);
   const wasMentioned = mentionRegexes.length
     ? core.channel.mentions.matchesMentionPatterns(rawBody, mentionRegexes)
     : false;
@@ -223,7 +224,7 @@ export async function handleNextcloudTalkInbound(params: {
   }
 
   const route = core.channel.routing.resolveAgentRoute({
-    cfg: config as GodsEyeConfig,
+    cfg: config as OpenClawConfig,
     channel: CHANNEL_ID,
     accountId: account.accountId,
     peer: {
@@ -239,7 +240,7 @@ export async function handleNextcloudTalkInbound(params: {
       agentId: route.agentId,
     },
   );
-  const envelopeOptions = core.channel.reply.resolveEnvelopeFormatOptions(config as GodsEyeConfig);
+  const envelopeOptions = core.channel.reply.resolveEnvelopeFormatOptions(config as OpenClawConfig);
   const previousTimestamp = core.channel.session.readSessionUpdatedAt({
     storePath,
     sessionKey: route.sessionKey,
@@ -253,7 +254,7 @@ export async function handleNextcloudTalkInbound(params: {
     body: rawBody,
   });
 
-  const groupSystemPrompt = roomConfig?.systemPrompt?.trim() || undefined;
+  const groupSystemPrompt = normalizeOptionalString(roomConfig?.systemPrompt);
 
   const ctxPayload = core.channel.reply.finalizeInboundContext({
     Body: body,
@@ -281,7 +282,7 @@ export async function handleNextcloudTalkInbound(params: {
   });
 
   await dispatchInboundReplyWithBase({
-    cfg: config as GodsEyeConfig,
+    cfg: config as OpenClawConfig,
     channel: CHANNEL_ID,
     accountId: account.accountId,
     route,

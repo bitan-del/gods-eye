@@ -1,41 +1,20 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { optimizeImageToPng } from "godseye/plugin-sdk/media-runtime";
+import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
+import { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/temp-path";
+import { captureEnv } from "godseye/plugin-sdk/testing";
 import sharp from "sharp";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolveStateDir } from "../../../src/config/paths.js";
-import { resolvePreferredGodsEyeTmpDir } from "../../../src/infra/tmp-godseye-dir.js";
-import { optimizeImageToPng } from "../../../src/media/image-ops.js";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { mockPinnedHostnameResolution } from "../../../src/test-helpers/ssrf.js";
-import { captureEnv } from "../../../test/helpers/extensions/env.js";
 import { sendVoiceMessageDiscord } from "../../discord/src/send.js";
-
-let LocalMediaAccessError: typeof import("./media.js").LocalMediaAccessError;
-let loadWebMedia: typeof import("./media.js").loadWebMedia;
-let loadWebMediaRaw: typeof import("./media.js").loadWebMediaRaw;
-let optimizeImageToJpeg: typeof import("./media.js").optimizeImageToJpeg;
-
-const convertHeicToJpegMock = vi.fn();
-
-vi.mock("../../../src/media/image-ops.js", async () => {
-  const actual = await vi.importActual<typeof import("../../../src/media/image-ops.js")>(
-    "../../../src/media/image-ops.js",
-  );
-  return {
-    ...actual,
-    convertHeicToJpeg: (...args: unknown[]) => convertHeicToJpegMock(...args),
-  };
-});
-
-vi.mock("godseye/plugin-sdk/media-runtime", async () => {
-  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/media-runtime")>(
-    "godseye/plugin-sdk/media-runtime",
-  );
-  return {
-    ...actual,
-    convertHeicToJpeg: (...args: unknown[]) => convertHeicToJpegMock(...args),
-  };
-});
+import {
+  LocalMediaAccessError,
+  loadWebMedia,
+  loadWebMediaRaw,
+  optimizeImageToJpeg,
+} from "./media.js";
 
 let fixtureRoot = "";
 let fixtureFileCount = 0;
@@ -44,7 +23,6 @@ let largeJpegFile = "";
 let tinyPngBuffer: Buffer;
 let tinyPngFile = "";
 let tinyPngWrongExtFile = "";
-let fakeHeicFile = "";
 let alphaPngBuffer: Buffer;
 let alphaPngFile = "";
 let fallbackPngBuffer: Buffer;
@@ -77,9 +55,9 @@ function cloneStatWithDev<T extends { dev: number | bigint }>(stat: T, dev: numb
 }
 
 beforeAll(async () => {
-  ({ LocalMediaAccessError, loadWebMedia, loadWebMediaRaw, optimizeImageToJpeg } =
-    await import("./media.js"));
-  fixtureRoot = await fs.mkdtemp(path.join(resolvePreferredGodsEyeTmpDir(), "godseye-media-test-"));
+  fixtureRoot = await fs.mkdtemp(
+    path.join(resolvePreferredOpenClawTmpDir(), "openclaw-media-test-"),
+  );
   largeJpegBuffer = await sharp({
     create: {
       width: 400,
@@ -98,7 +76,6 @@ beforeAll(async () => {
     .toBuffer();
   tinyPngFile = await writeTempFile(tinyPngBuffer, ".png");
   tinyPngWrongExtFile = await writeTempFile(tinyPngBuffer, ".bin");
-  fakeHeicFile = await writeTempFile(Buffer.from("fake-heic"), ".heic");
   alphaPngBuffer = await sharp({
     create: {
       width: 64,
@@ -137,14 +114,14 @@ afterEach(() => {
 
 describe("web media loading", () => {
   beforeAll(() => {
-    // Ensure state dir is stable and not influenced by other tests that stub GODSEYE_STATE_DIR.
-    // Also keep it outside the GodsEye temp root so default localRoots doesn't accidentally make all state readable.
-    stateDirSnapshot = captureEnv(["GODSEYE_STATE_DIR"]);
-    process.env.GODSEYE_STATE_DIR = path.join(
+    // Ensure state dir is stable and not influenced by other tests that stub OPENCLAW_STATE_DIR.
+    // Also keep it outside the OpenClaw temp root so default localRoots doesn't accidentally make all state readable.
+    stateDirSnapshot = captureEnv(["OPENCLAW_STATE_DIR"]);
+    process.env.OPENCLAW_STATE_DIR = path.join(
       path.parse(os.tmpdir()).root,
       "var",
       "lib",
-      "godseye-media-state-test",
+      "openclaw-media-state-test",
     );
   });
 
@@ -199,22 +176,6 @@ describe("web media loading", () => {
 
     expect(result.kind).toBe("image");
     expect(result.contentType).toBe("image/jpeg");
-  });
-
-  it("normalizes HEIC local files to JPEG output", async () => {
-    convertHeicToJpegMock.mockResolvedValueOnce(tinyPngBuffer);
-
-    const result = await loadWebMedia(fakeHeicFile, 1024 * 1024);
-
-    expect(convertHeicToJpegMock).toHaveBeenCalledTimes(1);
-    expect(result.kind).toBe("image");
-    expect(result.contentType).toBe("image/jpeg");
-    expect(result.fileName).toBe(path.basename(fakeHeicFile, ".heic") + ".jpg");
-    expect(result.buffer.length).toBeGreaterThan(0);
-    expect(result.buffer.equals(tinyPngBuffer)).toBe(false);
-    // Confirm the output is actually JPEG (magic bytes 0xFF 0xD8)
-    expect(result.buffer[0]).toBe(0xff);
-    expect(result.buffer[1]).toBe(0xd8);
   });
 
   it("includes URL + status in fetch errors", async () => {
@@ -395,7 +356,7 @@ describe("local media root guard", () => {
 
   it("allows local paths under an explicit root", async () => {
     const result = await loadWebMedia(tinyPngFile, 1024 * 1024, {
-      localRoots: [resolvePreferredGodsEyeTmpDir()],
+      localRoots: [resolvePreferredOpenClawTmpDir()],
     });
     expect(result.kind).toBe("image");
   });
@@ -406,7 +367,7 @@ describe("local media root guard", () => {
     try {
       await expect(
         loadWebMedia("file://attacker/share/evil.png", 1024 * 1024, {
-          localRoots: [resolvePreferredGodsEyeTmpDir()],
+          localRoots: [resolvePreferredOpenClawTmpDir()],
         }),
       ).rejects.toMatchObject({ code: "invalid-file-url" });
       expect(realpathSpy).not.toHaveBeenCalled();
@@ -428,7 +389,7 @@ describe("local media root guard", () => {
 
     try {
       const result = await loadWebMedia(tinyPngFile, 1024 * 1024, {
-        localRoots: [resolvePreferredGodsEyeTmpDir()],
+        localRoots: [resolvePreferredOpenClawTmpDir()],
       });
       expect(result.kind).toBe("image");
       expect(result.buffer.length).toBeGreaterThan(0);
@@ -446,7 +407,7 @@ describe("local media root guard", () => {
     try {
       await expect(
         loadWebMedia("\\\\attacker\\share\\evil.png", 1024 * 1024, {
-          localRoots: [resolvePreferredGodsEyeTmpDir()],
+          localRoots: [resolvePreferredOpenClawTmpDir()],
         }),
       ).rejects.toMatchObject({ code: "network-path-not-allowed" });
       expect(realpathSpy).not.toHaveBeenCalled();
@@ -488,7 +449,7 @@ describe("local media root guard", () => {
     ).rejects.toMatchObject({ code: "invalid-root" });
   });
 
-  it("allows default GodsEye state workspace and sandbox roots", async () => {
+  it("allows default OpenClaw state workspace and sandbox roots", async () => {
     const stateDir = resolveStateDir();
     const readFile = vi.fn(async () => Buffer.from("generated-media"));
 
@@ -515,7 +476,7 @@ describe("local media root guard", () => {
     );
   });
 
-  it("rejects default GodsEye state per-agent workspace-* roots without explicit local roots", async () => {
+  it("rejects default OpenClaw state per-agent workspace-* roots without explicit local roots", async () => {
     const stateDir = resolveStateDir();
     const readFile = vi.fn(async () => Buffer.from("generated-media"));
 

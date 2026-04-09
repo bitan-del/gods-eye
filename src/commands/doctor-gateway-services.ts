@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { writeConfigFile, type GodsEyeConfig } from "../config/config.js";
+import { writeConfigFile, type OpenClawConfig } from "../config/config.js";
 import { resolveGatewayPort, resolveIsNixMode } from "../config/paths.js";
 import { resolveSecretInputRef } from "../config/types.secrets.js";
 import {
@@ -21,6 +21,10 @@ import {
 import { resolveGatewayService } from "../daemon/service.js";
 import { uninstallLegacySystemdUnits } from "../daemon/systemd.js";
 import type { RuntimeEnv } from "../runtime.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { note } from "../terminal/note.js";
 import { buildGatewayInstallPlan } from "./daemon-install-helpers.js";
 import { DEFAULT_GATEWAY_DAEMON_RUNTIME, type GatewayDaemonRuntime } from "./daemon-runtime.js";
@@ -33,7 +37,7 @@ const execFileAsync = promisify(execFile);
 function detectGatewayRuntime(programArguments: string[] | undefined): GatewayDaemonRuntime {
   const first = programArguments?.[0];
   if (first) {
-    const base = path.basename(first).toLowerCase();
+    const base = normalizeLowercaseStringOrEmpty(path.basename(first));
     if (base === "bun" || base === "bun.exe") {
       return "bun";
     }
@@ -192,7 +196,7 @@ async function cleanupLegacyLinuxUserServices(
 }
 
 export async function maybeRepairGatewayServiceConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   mode: "local" | "remote",
   runtime: RuntimeEnv,
   prompter: DoctorPrompter,
@@ -242,7 +246,7 @@ export async function maybeRepairGatewayServiceConfig(
     audit.issues.push({
       code: SERVICE_AUDIT_CODES.gatewayTokenMismatch,
       message:
-        "Gateway service GODSEYE_GATEWAY_TOKEN should be unset when gateway.auth.token is SecretRef-managed",
+        "Gateway service OPENCLAW_GATEWAY_TOKEN should be unset when gateway.auth.token is SecretRef-managed",
       detail: "service token is stale",
       level: "recommended",
     });
@@ -334,7 +338,7 @@ export async function maybeRepairGatewayServiceConfig(
   const gatewayTokenForRepair = expectedGatewayToken ?? serviceEmbeddedToken;
   const configuredGatewayToken =
     typeof cfg.gateway?.auth?.token === "string"
-      ? cfg.gateway.auth.token.trim() || undefined
+      ? normalizeOptionalString(cfg.gateway.auth.token)
       : undefined;
   let cfgForServiceInstall = cfg;
   if (
@@ -343,7 +347,7 @@ export async function maybeRepairGatewayServiceConfig(
     !configuredGatewayToken &&
     gatewayTokenForRepair
   ) {
-    const nextCfg: GodsEyeConfig = {
+    const nextCfg: OpenClawConfig = {
       ...cfg,
       gateway: {
         ...cfg.gateway,
@@ -411,7 +415,7 @@ export async function maybeScanExtraGatewayServices(
   const legacyServices = extraServices.filter((svc) => svc.legacy === true);
   if (legacyServices.length > 0) {
     const shouldRemove = await prompter.confirmRuntimeRepair({
-      message: "Remove legacy gateway services (clawdbot/moltbot) now?",
+      message: "Remove legacy gateway services now?",
       initialValue: true,
     });
     if (shouldRemove) {
@@ -438,7 +442,7 @@ export async function maybeScanExtraGatewayServices(
         note(failed.map((line) => `- ${line}`).join("\n"), "Legacy gateway cleanup skipped");
       }
       if (removed.length > 0) {
-        runtime.log("Legacy gateway services removed. Installing GodsEye gateway next.");
+        runtime.log("Legacy gateway services removed. Installing OpenClaw gateway next.");
       }
     }
   }

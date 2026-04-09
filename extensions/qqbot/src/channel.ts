@@ -1,5 +1,5 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import type { ChannelPlugin } from "openclaw/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ChannelPlugin } from "godseye/plugin-sdk/core";
 import { initApiConfig } from "./api.js";
 import { qqbotConfigAdapter, qqbotMeta, qqbotSetupAdapterShared } from "./channel-config-shared.js";
 import { qqbotChannelConfigSchema } from "./config-schema.js";

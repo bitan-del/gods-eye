@@ -1,10 +1,13 @@
 {
   "name": "@godseye/acpx",
-  "version": "2026.3.22",
-  "description": "GodsEye ACP runtime backend via acpx",
+  "version": "2026.4.10",
+  "description": "OpenClaw ACP runtime backend",
   "type": "module",
   "dependencies": {
-    "acpx": "0.3.1"
+    "acpx": "0.5.2"
+  },
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
   },
   "godseye": {
     "extensions": [

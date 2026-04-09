@@ -1,15 +1,13 @@
 import {
+  applyAgentDefaultModelPrimary,
+  applyProviderConfigWithDefaultModel,
+  type OpenClawConfig,
+} from "godseye/plugin-sdk/provider-onboard";
+import {
   buildCloudflareAiGatewayModelDefinition,
   CLOUDFLARE_AI_GATEWAY_DEFAULT_MODEL_REF,
   resolveCloudflareAiGatewayBaseUrl,
-} from "godseye/plugin-sdk/provider-models";
-import {
-  applyAgentDefaultModelPrimary,
-  applyProviderConfigWithDefaultModel,
-  type GodsEyeConfig,
-} from "godseye/plugin-sdk/provider-onboard";
-
-export { CLOUDFLARE_AI_GATEWAY_DEFAULT_MODEL_REF };
+} from "./models.js";
 
 export function buildCloudflareAiGatewayConfigPatch(params: {
   accountId: string;
@@ -39,9 +37,9 @@ export function buildCloudflareAiGatewayConfigPatch(params: {
 }
 
 export function applyCloudflareAiGatewayProviderConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { accountId?: string; gatewayId?: string },
-): GodsEyeConfig {
+): OpenClawConfig {
   const models = { ...cfg.agents?.defaults?.models };
   models[CLOUDFLARE_AI_GATEWAY_DEFAULT_MODEL_REF] = {
     ...models[CLOUDFLARE_AI_GATEWAY_DEFAULT_MODEL_REF],
@@ -83,9 +81,9 @@ export function applyCloudflareAiGatewayProviderConfig(
 }
 
 export function applyCloudflareAiGatewayConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { accountId?: string; gatewayId?: string },
-): GodsEyeConfig {
+): OpenClawConfig {
   return applyAgentDefaultModelPrimary(
     applyCloudflareAiGatewayProviderConfig(cfg, params),
     CLOUDFLARE_AI_GATEWAY_DEFAULT_MODEL_REF,

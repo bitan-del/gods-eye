@@ -9,7 +9,7 @@ export {
 } from "./windows-spawn.js";
 export type {
   AnyAgentTool,
-  GodsEyePluginApi,
-  GodsEyePluginToolContext,
-  GodsEyePluginToolFactory,
+  OpenClawPluginApi,
+  OpenClawPluginToolContext,
+  OpenClawPluginToolFactory,
 } from "../plugins/types.js";

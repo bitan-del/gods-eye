@@ -1,6 +1,6 @@
 import {
   createDefaultModelPresetAppliers,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 import {
   buildMistralModelDefinition,
@@ -12,7 +12,7 @@ export const MISTRAL_DEFAULT_MODEL_REF = `mistral/${MISTRAL_DEFAULT_MODEL_ID}`;
 
 const mistralPresetAppliers = createDefaultModelPresetAppliers({
   primaryModelRef: MISTRAL_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig) => ({
+  resolveParams: (_cfg: OpenClawConfig) => ({
     providerId: "mistral",
     api: "openai-completions",
     baseUrl: MISTRAL_BASE_URL,
@@ -22,10 +22,10 @@ const mistralPresetAppliers = createDefaultModelPresetAppliers({
   }),
 });
 
-export function applyMistralProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyMistralProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return mistralPresetAppliers.applyProviderConfig(cfg);
 }
 
-export function applyMistralConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyMistralConfig(cfg: OpenClawConfig): OpenClawConfig {
   return mistralPresetAppliers.applyConfig(cfg);
 }

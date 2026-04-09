@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { buildCommandContext } from "./commands-context.js";
 import { buildTestCtx } from "./test-ctx.js";
 
@@ -18,7 +18,7 @@ describe("buildCommandContext", () => {
 
     const result = buildCommandContext({
       ctx,
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       isGroup: false,
       triggerBodyNormalized: "/id",
       commandAuthorized: true,

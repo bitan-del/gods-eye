@@ -1,17 +1,19 @@
 import { getAcpSessionManager } from "../acp/control-plane/manager.js";
 import { ACP_SESSION_IDENTITY_RENDERER_VERSION } from "../acp/runtime/session-identifiers.js";
-import { resolveGodsEyeAgentDir } from "../agents/agent-paths.js";
+import { resolveOpenClawAgentDir } from "../agents/agent-paths.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { loadModelCatalog } from "../agents/model-catalog.js";
 import {
   getModelRefStatus,
+  isCliProvider,
   resolveConfiguredModelRef,
   resolveHooksGmailModel,
 } from "../agents/model-selection.js";
-import { ensureGodsEyeModelsJson } from "../agents/models-config.js";
-import { resolveModelAsync } from "../agents/pi-embedded-runner/model.js";
+import { ensureOpenClawModelsJson } from "../agents/models-config.js";
+import { resolveModel } from "../agents/pi-embedded-runner/model.js";
 import { resolveAgentSessionDirs } from "../agents/session-dirs.js";
 import { cleanStaleLockFiles } from "../agents/session-write-lock.js";
+import { scheduleSubagentOrphanRecovery } from "../agents/subagent-registry.js";
 import type { CliDeps } from "../cli/deps.js";
 import type { loadConfig } from "../config/config.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
@@ -24,9 +26,8 @@ import {
 } from "../hooks/internal-hooks.js";
 import { loadInternalHooks } from "../hooks/loader.js";
 import { isTruthyEnvValue } from "../infra/env.js";
-import type { loadGodsEyePlugins } from "../plugins/loader.js";
+import type { loadOpenClawPlugins } from "../plugins/loader.js";
 import { type PluginServicesHandle, startPluginServices } from "../plugins/services.js";
-import { startBrowserControlServerIfEnabled } from "./server-browser.js";
 import {
   scheduleRestartSentinelWake,
   shouldWakeFromRestartSentinel,
@@ -48,14 +49,20 @@ async function prewarmConfiguredPrimaryModel(params: {
     defaultProvider: DEFAULT_PROVIDER,
     defaultModel: DEFAULT_MODEL,
   });
-  const agentDir = resolveGodsEyeAgentDir();
+  if (isCliProvider(provider, params.cfg)) {
+    return;
+  }
+  const agentDir = resolveOpenClawAgentDir();
   try {
-    await ensureGodsEyeModelsJson(params.cfg, agentDir);
-    const resolved = await resolveModelAsync(provider, model, agentDir, params.cfg, {
-      retryTransientProviderRuntimeMiss: true,
+    await ensureOpenClawModelsJson(params.cfg, agentDir);
+    const resolved = resolveModel(provider, model, agentDir, params.cfg, {
+      skipProviderRuntimeHooks: true,
     });
     if (!resolved.model) {
-      throw new Error(resolved.error ?? `Unknown model: ${provider}/${model}`);
+      throw new Error(
+        resolved.error ??
+          `Unknown model: ${provider}/${model} (startup warmup only checks static model resolution)`,
+      );
     }
   } catch (err) {
     params.log.warn(`startup model warmup failed for ${provider}/${model}: ${String(err)}`);
@@ -64,7 +71,7 @@ async function prewarmConfiguredPrimaryModel(params: {
 
 export async function startGatewaySidecars(params: {
   cfg: ReturnType<typeof loadConfig>;
-  pluginRegistry: ReturnType<typeof loadGodsEyePlugins>;
+  pluginRegistry: ReturnType<typeof loadOpenClawPlugins>;
   defaultWorkspaceDir: string;
   deps: CliDeps;
   startChannels: () => Promise<void>;
@@ -75,7 +82,6 @@ export async function startGatewaySidecars(params: {
     error: (msg: string) => void;
   };
   logChannels: { info: (msg: string) => void; error: (msg: string) => void };
-  logBrowser: { error: (msg: string) => void };
 }) {
   try {
     const stateDir = resolveStateDir(process.env);
@@ -90,14 +96,6 @@ export async function startGatewaySidecars(params: {
     }
   } catch (err) {
     params.log.warn(`session lock cleanup failed on startup: ${String(err)}`);
-  }
-
-  // Start GodsEye browser control server (unless disabled via config).
-  let browserControl: Awaited<ReturnType<typeof startBrowserControlServerIfEnabled>> = null;
-  try {
-    browserControl = await startBrowserControlServerIfEnabled();
-  } catch (err) {
-    params.logBrowser.error(`server failed to start: ${String(err)}`);
   }
 
   // Start Gmail watcher if configured (hooks.gmail.account).
@@ -154,10 +152,10 @@ export async function startGatewaySidecars(params: {
   }
 
   // Launch configured channels so gateway replies via the surface the message came from.
-  // Tests can opt out via GODSEYE_SKIP_CHANNELS (or legacy GODSEYE_SKIP_PROVIDERS).
+  // Tests can opt out via OPENCLAW_SKIP_CHANNELS (or legacy OPENCLAW_SKIP_PROVIDERS).
   const skipChannels =
-    isTruthyEnvValue(process.env.GODSEYE_SKIP_CHANNELS) ||
-    isTruthyEnvValue(process.env.GODSEYE_SKIP_PROVIDERS);
+    isTruthyEnvValue(process.env.OPENCLAW_SKIP_CHANNELS) ||
+    isTruthyEnvValue(process.env.OPENCLAW_SKIP_PROVIDERS);
   if (!skipChannels) {
     try {
       await prewarmConfiguredPrimaryModel({
@@ -170,11 +168,11 @@ export async function startGatewaySidecars(params: {
     }
   } else {
     params.logChannels.info(
-      "skipping channel start (GODSEYE_SKIP_CHANNELS=1 or GODSEYE_SKIP_PROVIDERS=1)",
+      "skipping channel start (OPENCLAW_SKIP_CHANNELS=1 or OPENCLAW_SKIP_PROVIDERS=1)",
     );
   }
 
-  if (params.cfg.hooks?.internal?.enabled) {
+  if (params.cfg.hooks?.internal?.enabled !== false) {
     setTimeout(() => {
       const hookEvent = createInternalHookEvent("gateway", "startup", "gateway:startup", {
         cfg: params.cfg,
@@ -222,7 +220,11 @@ export async function startGatewaySidecars(params: {
     }, 750);
   }
 
-  return { browserControl, pluginServices };
+  // Same-process SIGUSR1 restarts keep subagent registry memory alive, so
+  // schedule recovery on every startup cycle instead of only cold restore.
+  scheduleSubagentOrphanRecovery();
+
+  return { pluginServices };
 }
 
 export const __testing = {

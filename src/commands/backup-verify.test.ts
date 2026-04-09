@@ -2,13 +2,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import * as tar from "tar";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTempHomeEnv, type TempHomeEnv } from "../test-utils/temp-home.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildBackupArchiveRoot } from "./backup-shared.js";
 import { backupVerifyCommand } from "./backup-verify.js";
-import { backupCreateCommand } from "./backup.js";
 
-const TEST_ARCHIVE_ROOT = "2026-03-09T00-00-00.000Z-godseye-backup";
+const TEST_ARCHIVE_ROOT = "2026-03-09T00-00-00.000Z-openclaw-backup";
 
 const createBackupVerifyRuntime = () => ({
   log: vi.fn(),
@@ -16,18 +14,18 @@ const createBackupVerifyRuntime = () => ({
   exit: vi.fn(),
 });
 
-function createBackupManifest(assetArchivePath: string) {
+function createBackupManifest(assetArchivePath: string, archiveRoot = TEST_ARCHIVE_ROOT) {
   return {
     schemaVersion: 1,
     createdAt: "2026-03-09T00:00:00.000Z",
-    archiveRoot: TEST_ARCHIVE_ROOT,
+    archiveRoot,
     runtimeVersion: "test",
     platform: process.platform,
     nodeVersion: process.version,
     assets: [
       {
         kind: "state",
-        sourcePath: "/tmp/.godseye",
+        sourcePath: "/tmp/.openclaw",
         archivePath: assetArchivePath,
       },
     ],
@@ -95,44 +93,48 @@ async function withBrokenArchiveFixture(
 }
 
 describe("backupVerifyCommand", () => {
-  let tempHome: TempHomeEnv;
-
-  async function resetTempHome() {
-    await fs.rm(tempHome.home, { recursive: true, force: true });
-    await fs.mkdir(path.join(tempHome.home, ".godseye"), { recursive: true });
-    delete process.env.GODSEYE_CONFIG_PATH;
-  }
-
-  beforeAll(async () => {
-    tempHome = await createTempHomeEnv("godseye-backup-verify-test-");
-  });
-
-  beforeEach(async () => {
-    await resetTempHome();
-  });
-
   afterEach(async () => {
     vi.restoreAllMocks();
   });
 
-  afterAll(async () => {
-    await tempHome.restore();
-  });
-
-  it("verifies an archive created by backup create", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-verify-out-"));
+  it("verifies a valid backup archive", async () => {
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-verify-out-"));
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
-      await fs.writeFile(path.join(stateDir, "state.txt"), "hello\n", "utf8");
-
       const runtime = createBackupVerifyRuntime();
       const nowMs = Date.UTC(2026, 2, 9, 0, 0, 0);
-      const created = await backupCreateCommand(runtime, { output: archiveDir, nowMs });
-      const verified = await backupVerifyCommand(runtime, { archive: created.archivePath });
+      const archiveRoot = buildBackupArchiveRoot(nowMs);
+      const archivePath = path.join(archiveDir, "backup.tar.gz");
+      const manifestPath = path.join(archiveDir, "manifest.json");
+      const payloadPath = path.join(archiveDir, "state.txt");
+      const payloadArchivePath = `${archiveRoot}/payload/posix/tmp/.openclaw/state.txt`;
+      await fs.writeFile(
+        manifestPath,
+        `${JSON.stringify(createBackupManifest(payloadArchivePath, archiveRoot), null, 2)}\n`,
+        "utf8",
+      );
+      await fs.writeFile(payloadPath, "hello\n", "utf8");
+      await tar.c(
+        {
+          file: archivePath,
+          gzip: true,
+          portable: true,
+          preservePaths: true,
+          onWriteEntry: (entry) => {
+            if (entry.path === manifestPath) {
+              entry.path = `${archiveRoot}/manifest.json`;
+              return;
+            }
+            if (entry.path === payloadPath) {
+              entry.path = payloadArchivePath;
+            }
+          },
+        },
+        [manifestPath, payloadPath],
+      );
+      const verified = await backupVerifyCommand(runtime, { archive: archivePath });
 
       expect(verified.ok).toBe(true);
-      expect(verified.archiveRoot).toBe(buildBackupArchiveRoot(nowMs));
+      expect(verified.archiveRoot).toBe(archiveRoot);
       expect(verified.assetCount).toBeGreaterThan(0);
     } finally {
       await fs.rm(archiveDir, { recursive: true, force: true });
@@ -140,7 +142,7 @@ describe("backupVerifyCommand", () => {
   });
 
   it("fails when the archive does not contain a manifest", async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-no-manifest-"));
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-no-manifest-"));
     const archivePath = path.join(tempDir, "broken.tar.gz");
     try {
       const root = path.join(tempDir, "root");
@@ -158,10 +160,10 @@ describe("backupVerifyCommand", () => {
   });
 
   it("fails when the manifest references a missing asset payload", async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-missing-asset-"));
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-missing-asset-"));
     const archivePath = path.join(tempDir, "broken.tar.gz");
     try {
-      const rootName = "2026-03-09T00-00-00.000Z-godseye-backup";
+      const rootName = "2026-03-09T00-00-00.000Z-openclaw-backup";
       const root = path.join(tempDir, rootName);
       await fs.mkdir(root, { recursive: true });
       const manifest = {
@@ -174,8 +176,8 @@ describe("backupVerifyCommand", () => {
         assets: [
           {
             kind: "state",
-            sourcePath: "/tmp/.godseye",
-            archivePath: `${rootName}/payload/posix/tmp/.godseye`,
+            sourcePath: "/tmp/.openclaw",
+            archivePath: `${rootName}/payload/posix/tmp/.openclaw`,
           },
         ],
       };
@@ -198,7 +200,7 @@ describe("backupVerifyCommand", () => {
     const traversalPath = `${TEST_ARCHIVE_ROOT}/payload/../escaped.txt`;
     await withBrokenArchiveFixture(
       {
-        tempPrefix: "godseye-backup-traversal-",
+        tempPrefix: "openclaw-backup-traversal-",
         manifestAssetArchivePath: traversalPath,
         payloads: [{ fileName: "payload.txt", contents: "payload\n", archivePath: traversalPath }],
       },
@@ -215,7 +217,7 @@ describe("backupVerifyCommand", () => {
     const invalidPath = `${TEST_ARCHIVE_ROOT}/payload\\..\\escaped.txt`;
     await withBrokenArchiveFixture(
       {
-        tempPrefix: "godseye-backup-backslash-",
+        tempPrefix: "openclaw-backup-backslash-",
         manifestAssetArchivePath: invalidPath,
         payloads: [{ fileName: "payload.txt", contents: "payload\n", archivePath: invalidPath }],
       },
@@ -229,53 +231,82 @@ describe("backupVerifyCommand", () => {
   });
 
   it("ignores payload manifest.json files when locating the backup manifest", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const externalWorkspace = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-workspace-"));
-    const configPath = path.join(tempHome.home, "custom-config.json");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-verify-out-"));
+    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-verify-out-"));
     try {
-      process.env.GODSEYE_CONFIG_PATH = configPath;
+      const runtime = createBackupVerifyRuntime();
+      const nowMs = Date.UTC(2026, 2, 9, 2, 0, 0);
+      const archiveRoot = buildBackupArchiveRoot(nowMs);
+      const archivePath = path.join(archiveDir, "backup.tar.gz");
+      const manifestPath = path.join(archiveDir, "manifest.json");
+      const statePayloadPath = path.join(archiveDir, "state.txt");
+      const workspaceManifestPayloadPath = path.join(archiveDir, "workspace-manifest.json");
+      const stateArchivePath = `${archiveRoot}/payload/posix/tmp/.openclaw/state.txt`;
+      const workspaceArchivePath = `${archiveRoot}/payload/posix/tmp/workspace/manifest.json`;
       await fs.writeFile(
-        configPath,
-        JSON.stringify({
-          agents: {
-            defaults: {
-              workspace: externalWorkspace,
-            },
+        manifestPath,
+        `${JSON.stringify(
+          {
+            ...createBackupManifest(stateArchivePath, archiveRoot),
+            assets: [
+              {
+                kind: "state",
+                sourcePath: "/tmp/.openclaw",
+                archivePath: stateArchivePath,
+              },
+              {
+                kind: "workspace",
+                sourcePath: "/tmp/workspace",
+                archivePath: workspaceArchivePath,
+              },
+            ],
           },
-        }),
+          null,
+          2,
+        )}\n`,
         "utf8",
       );
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
-      await fs.writeFile(path.join(stateDir, "state.txt"), "hello\n", "utf8");
+      await fs.writeFile(statePayloadPath, "hello\n", "utf8");
       await fs.writeFile(
-        path.join(externalWorkspace, "manifest.json"),
+        workspaceManifestPayloadPath,
         JSON.stringify({ name: "workspace-payload" }),
         "utf8",
       );
-
-      const runtime = createBackupVerifyRuntime();
-      const created = await backupCreateCommand(runtime, {
-        output: archiveDir,
-        includeWorkspace: true,
-        nowMs: Date.UTC(2026, 2, 9, 2, 0, 0),
-      });
-      const verified = await backupVerifyCommand(runtime, { archive: created.archivePath });
+      await tar.c(
+        {
+          file: archivePath,
+          gzip: true,
+          portable: true,
+          preservePaths: true,
+          onWriteEntry: (entry) => {
+            if (entry.path === manifestPath) {
+              entry.path = `${archiveRoot}/manifest.json`;
+              return;
+            }
+            if (entry.path === statePayloadPath) {
+              entry.path = stateArchivePath;
+              return;
+            }
+            if (entry.path === workspaceManifestPayloadPath) {
+              entry.path = workspaceArchivePath;
+            }
+          },
+        },
+        [manifestPath, statePayloadPath, workspaceManifestPayloadPath],
+      );
+      const verified = await backupVerifyCommand(runtime, { archive: archivePath });
 
       expect(verified.ok).toBe(true);
       expect(verified.assetCount).toBeGreaterThanOrEqual(2);
     } finally {
-      delete process.env.GODSEYE_CONFIG_PATH;
-      await fs.rm(externalWorkspace, { recursive: true, force: true });
       await fs.rm(archiveDir, { recursive: true, force: true });
     }
   });
 
   it("fails when the archive contains duplicate root manifest entries", async () => {
-    const payloadArchivePath = `${TEST_ARCHIVE_ROOT}/payload/posix/tmp/.godseye/payload.txt`;
+    const payloadArchivePath = `${TEST_ARCHIVE_ROOT}/payload/posix/tmp/.openclaw/payload.txt`;
     await withBrokenArchiveFixture(
       {
-        tempPrefix: "godseye-backup-duplicate-manifest-",
+        tempPrefix: "openclaw-backup-duplicate-manifest-",
         manifestAssetArchivePath: payloadArchivePath,
         payloads: [{ fileName: "payload.txt", contents: "payload\n" }],
         buildTarEntries: ({ manifestPath, payloadPaths }) => [
@@ -294,10 +325,10 @@ describe("backupVerifyCommand", () => {
   });
 
   it("fails when the archive contains duplicate payload entries", async () => {
-    const payloadArchivePath = `${TEST_ARCHIVE_ROOT}/payload/posix/tmp/.godseye/payload.txt`;
+    const payloadArchivePath = `${TEST_ARCHIVE_ROOT}/payload/posix/tmp/.openclaw/payload.txt`;
     await withBrokenArchiveFixture(
       {
-        tempPrefix: "godseye-backup-duplicate-payload-",
+        tempPrefix: "openclaw-backup-duplicate-payload-",
         manifestAssetArchivePath: payloadArchivePath,
         payloads: [
           { fileName: "payload-a.txt", contents: "payload-a\n", archivePath: payloadArchivePath },

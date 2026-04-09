@@ -1,15 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { hasControlCommand } from "../../../src/auto-reply/command-detection.js";
+import { hasControlCommand } from "godseye/plugin-sdk/command-auth";
 import {
   createInboundDebouncer,
   resolveInboundDebounceMs,
-} from "../../../src/auto-reply/inbound-debounce.js";
-import { createPluginRuntimeMock } from "../../../test/helpers/extensions/plugin-runtime-mock.js";
-import {
-  createNonExitingTypedRuntimeEnv,
-  createRuntimeEnv,
-} from "../../../test/helpers/extensions/runtime-env.js";
-import type { ClawdbotConfig, RuntimeEnv } from "../runtime-api.js";
+} from "godseye/plugin-sdk/reply-runtime";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createNonExitingTypedRuntimeEnv } from "../../../test/helpers/plugins/runtime-env.js";
+import type { ClawdbotConfig, PluginRuntime, RuntimeEnv } from "../runtime-api.js";
 import { parseFeishuMessageEvent, type FeishuMessageEvent } from "./bot.js";
 import * as dedup from "./dedup.js";
 import { monitorSingleAccount } from "./monitor.account.js";
@@ -230,6 +226,24 @@ function createMention(params: { openId: string; name: string; key?: string }): 
   };
 }
 
+function createFeishuMonitorRuntime(params?: {
+  createInboundDebouncer?: PluginRuntime["channel"]["debounce"]["createInboundDebouncer"];
+  resolveInboundDebounceMs?: PluginRuntime["channel"]["debounce"]["resolveInboundDebounceMs"];
+  hasControlCommand?: PluginRuntime["channel"]["text"]["hasControlCommand"];
+}): PluginRuntime {
+  return {
+    channel: {
+      debounce: {
+        createInboundDebouncer: params?.createInboundDebouncer ?? createInboundDebouncer,
+        resolveInboundDebounceMs: params?.resolveInboundDebounceMs ?? resolveInboundDebounceMs,
+      },
+      text: {
+        hasControlCommand: params?.hasControlCommand ?? hasControlCommand,
+      },
+    },
+  } as unknown as PluginRuntime;
+}
+
 async function enqueueDebouncedMessage(
   onMessage: (data: unknown) => Promise<void>,
   event: FeishuMessageEvent,
@@ -435,19 +449,7 @@ describe("monitorSingleAccount lifecycle", () => {
   });
 
   it("stops the Feishu thread binding manager when the monitor exits", async () => {
-    setFeishuRuntime(
-      createPluginRuntimeMock({
-        channel: {
-          debounce: {
-            resolveInboundDebounceMs,
-            createInboundDebouncer,
-          },
-          text: {
-            hasControlCommand,
-          },
-        },
-      }),
-    );
+    setFeishuRuntime(createFeishuMonitorRuntime());
 
     await monitorSingleAccount({
       cfg: buildDebounceConfig(),
@@ -466,19 +468,7 @@ describe("monitorSingleAccount lifecycle", () => {
   });
 
   it("stops the Feishu thread binding manager when setup fails before transport starts", async () => {
-    setFeishuRuntime(
-      createPluginRuntimeMock({
-        channel: {
-          debounce: {
-            resolveInboundDebounceMs,
-            createInboundDebouncer,
-          },
-          text: {
-            hasControlCommand,
-          },
-        },
-      }),
-    );
+    setFeishuRuntime(createFeishuMonitorRuntime());
     createEventDispatcherMock.mockReturnValue({
       get register() {
         throw new Error("register failed");
@@ -509,19 +499,7 @@ describe("Feishu inbound debounce regressions", () => {
     vi.useFakeTimers();
     handlers = {};
     handleFeishuMessageMock.mockClear();
-    setFeishuRuntime(
-      createPluginRuntimeMock({
-        channel: {
-          debounce: {
-            createInboundDebouncer,
-            resolveInboundDebounceMs,
-          },
-          text: {
-            hasControlCommand,
-          },
-        },
-      }),
-    );
+    setFeishuRuntime(createFeishuMonitorRuntime());
   });
 
   afterEach(() => {
@@ -561,7 +539,7 @@ describe("Feishu inbound debounce regressions", () => {
     vi.spyOn(dedup, "tryBeginFeishuMessageProcessing").mockReturnValue(true);
     vi.spyOn(dedup, "recordProcessedFeishuMessage").mockResolvedValue(true);
     vi.spyOn(dedup, "hasProcessedFeishuMessage").mockResolvedValue(false);
-    const onMessage = await setupDebounceMonitor({ botName: "GodsEye Bot" });
+    const onMessage = await setupDebounceMonitor({ botName: "OpenClaw Bot" });
 
     await onMessage(
       createTextEvent({
@@ -571,7 +549,7 @@ describe("Feishu inbound debounce regressions", () => {
           {
             key: "@_user_1",
             id: { open_id: "ou_bot" },
-            name: "GodsEye Bot",
+            name: "OpenClaw Bot",
           },
         ],
       }),
@@ -584,7 +562,7 @@ describe("Feishu inbound debounce regressions", () => {
     const firstParams = handleFeishuMessageMock.mock.calls[0]?.[0] as
       | { botName?: string }
       | undefined;
-    expect(firstParams?.botName).toBe("GodsEye Bot");
+    expect(firstParams?.botName).toBe("OpenClaw Bot");
   });
 
   it("does not synthesize mention-forward intent across separate messages", async () => {
@@ -693,24 +671,14 @@ describe("Feishu inbound debounce regressions", () => {
     setDedupPassThroughMocks();
     const enqueueMock = vi.fn();
     setFeishuRuntime(
-      createPluginRuntimeMock({
-        channel: {
-          debounce: {
-            createInboundDebouncer: <T>(params: {
-              onError?: (err: unknown, items: T[]) => void;
-            }) => ({
-              enqueue: async (item: T) => {
-                enqueueMock(item);
-                params.onError?.(new Error("dispatch failed"), [item]);
-              },
-              flushKey: async () => {},
-            }),
-            resolveInboundDebounceMs,
+      createFeishuMonitorRuntime({
+        createInboundDebouncer: <T>(params: { onError?: (err: unknown, items: T[]) => void }) => ({
+          enqueue: async (item: T) => {
+            enqueueMock(item);
+            params.onError?.(new Error("dispatch failed"), [item]);
           },
-          text: {
-            hasControlCommand,
-          },
-        },
+          flushKey: async () => {},
+        }),
       }),
     );
     const onMessage = await setupDebounceMonitor();

@@ -1,3 +1,15 @@
+import {
+  CRON_TOOL_DISPLAY_SUMMARY,
+  EXEC_TOOL_DISPLAY_SUMMARY,
+  PROCESS_TOOL_DISPLAY_SUMMARY,
+  SESSIONS_HISTORY_TOOL_DISPLAY_SUMMARY,
+  SESSIONS_LIST_TOOL_DISPLAY_SUMMARY,
+  SESSIONS_SEND_TOOL_DISPLAY_SUMMARY,
+  SESSIONS_SPAWN_TOOL_DISPLAY_SUMMARY,
+  SESSION_STATUS_TOOL_DISPLAY_SUMMARY,
+  UPDATE_PLAN_TOOL_DISPLAY_SUMMARY,
+} from "./tool-description-presets.js";
+
 export type ToolProfileId = "minimal" | "coding" | "messaging" | "full";
 
 type ToolProfilePolicy = {
@@ -21,7 +33,7 @@ type CoreToolDefinition = {
   description: string;
   sectionId: string;
   profiles: ToolProfileId[];
-  includeInGodsEyeGroup?: boolean;
+  includeInOpenClawGroup?: boolean;
 };
 
 const CORE_TOOL_SECTION_ORDER: Array<{ id: string; label: string }> = [
@@ -63,23 +75,31 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
   {
     id: "apply_patch",
     label: "apply_patch",
-    description: "Patch files (OpenAI)",
+    description: "Patch files",
     sectionId: "fs",
     profiles: ["coding"],
   },
   {
     id: "exec",
     label: "exec",
-    description: "Run shell commands",
+    description: EXEC_TOOL_DISPLAY_SUMMARY,
     sectionId: "runtime",
     profiles: ["coding"],
   },
   {
     id: "process",
     label: "process",
-    description: "Manage background processes",
+    description: PROCESS_TOOL_DISPLAY_SUMMARY,
     sectionId: "runtime",
     profiles: ["coding"],
+  },
+  {
+    id: "code_execution",
+    label: "code_execution",
+    description: "Run sandboxed remote analysis",
+    sectionId: "runtime",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
   },
   {
     id: "web_search",
@@ -87,7 +107,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Search the web",
     sectionId: "web",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "web_fetch",
@@ -95,7 +115,15 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Fetch web content",
     sectionId: "web",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "x_search",
+    label: "x_search",
+    description: "Search X posts",
+    sectionId: "web",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
   },
   {
     id: "memory_search",
@@ -103,7 +131,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Semantic search",
     sectionId: "memory",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "memory_get",
@@ -111,39 +139,39 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Read memory files",
     sectionId: "memory",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "sessions_list",
     label: "sessions_list",
-    description: "List sessions",
+    description: SESSIONS_LIST_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["coding", "messaging"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "sessions_history",
     label: "sessions_history",
-    description: "Session history",
+    description: SESSIONS_HISTORY_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["coding", "messaging"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "sessions_send",
     label: "sessions_send",
-    description: "Send to session",
+    description: SESSIONS_SEND_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["coding", "messaging"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "sessions_spawn",
     label: "sessions_spawn",
-    description: "Spawn sub-agent",
+    description: SESSIONS_SPAWN_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "sessions_yield",
@@ -151,7 +179,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "End turn to receive sub-agent results",
     sectionId: "sessions",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "subagents",
@@ -159,15 +187,15 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Manage sub-agents",
     sectionId: "sessions",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "session_status",
     label: "session_status",
-    description: "Session status",
+    description: SESSION_STATUS_TOOL_DISPLAY_SUMMARY,
     sectionId: "sessions",
     profiles: ["minimal", "coding", "messaging"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "browser",
@@ -175,7 +203,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Control web browser",
     sectionId: "ui",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "canvas",
@@ -183,7 +211,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Control canvases",
     sectionId: "ui",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "message",
@@ -191,15 +219,15 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Send messages",
     sectionId: "messaging",
     profiles: ["messaging"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "cron",
     label: "cron",
-    description: "Schedule tasks",
+    description: CRON_TOOL_DISPLAY_SUMMARY,
     sectionId: "automation",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "gateway",
@@ -207,7 +235,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Gateway control",
     sectionId: "automation",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "nodes",
@@ -215,7 +243,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Nodes + devices",
     sectionId: "nodes",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "agents_list",
@@ -223,7 +251,15 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "List agents",
     sectionId: "agents",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "update_plan",
+    label: "update_plan",
+    description: UPDATE_PLAN_TOOL_DISPLAY_SUMMARY,
+    sectionId: "agents",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
   },
   {
     id: "image",
@@ -231,7 +267,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Image understanding",
     sectionId: "media",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
   {
     id: "image_generate",
@@ -239,7 +275,23 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Image generation",
     sectionId: "media",
     profiles: ["coding"],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "music_generate",
+    label: "music_generate",
+    description: "Music generation",
+    sectionId: "media",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
+  },
+  {
+    id: "video_generate",
+    label: "video_generate",
+    description: "Video generation",
+    sectionId: "media",
+    profiles: ["coding"],
+    includeInOpenClawGroup: true,
   },
   {
     id: "tts",
@@ -247,7 +299,7 @@ const CORE_TOOL_DEFINITIONS: CoreToolDefinition[] = [
     description: "Text-to-speech conversion",
     sectionId: "media",
     profiles: [],
-    includeInGodsEyeGroup: true,
+    includeInOpenClawGroup: true,
   },
 ];
 
@@ -282,11 +334,11 @@ function buildCoreToolGroupMap() {
     list.push(tool.id);
     sectionToolMap.set(groupId, list);
   }
-  const godseyeTools = CORE_TOOL_DEFINITIONS.filter((tool) => tool.includeInGodsEyeGroup).map(
+  const openclawTools = CORE_TOOL_DEFINITIONS.filter((tool) => tool.includeInOpenClawGroup).map(
     (tool) => tool.id,
   );
   return {
-    "group:godseye": godseyeTools,
+    "group:openclaw": openclawTools,
     ...Object.fromEntries(sectionToolMap.entries()),
   };
 }

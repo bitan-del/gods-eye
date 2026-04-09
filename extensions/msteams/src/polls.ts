@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { isRecord, readNestedString } from "./attachments/shared.js";
 import { resolveMSTeamsStorePath } from "./storage.js";
 import { readJsonFile, withFileLock, writeJsonFile } from "./store-fs.js";
 
@@ -46,9 +47,6 @@ type PollStoreData = {
 const STORE_FILENAME = "msteams-polls.json";
 const MAX_POLLS = 1000;
 const POLL_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 function normalizeChoiceValue(value: unknown): string | null {
   if (typeof value === "string") {
@@ -89,11 +87,6 @@ function readNestedValue(value: unknown, keys: Array<string | number>): unknown 
   return current;
 }
 
-function readNestedString(value: unknown, keys: Array<string | number>): string | undefined {
-  const found = readNestedValue(value, keys);
-  return typeof found === "string" && found.trim() ? found.trim() : undefined;
-}
-
 export function extractMSTeamsPollVote(
   activity: { value?: unknown } | undefined,
 ): MSTeamsPollVote | null {
@@ -102,13 +95,13 @@ export function extractMSTeamsPollVote(
     return null;
   }
   const pollId =
-    readNestedString(value, ["godseyePollId"]) ??
+    readNestedString(value, ["openclawPollId"]) ??
     readNestedString(value, ["pollId"]) ??
-    readNestedString(value, ["godseye", "pollId"]) ??
-    readNestedString(value, ["godseye", "poll", "id"]) ??
-    readNestedString(value, ["data", "godseyePollId"]) ??
+    readNestedString(value, ["openclaw", "pollId"]) ??
+    readNestedString(value, ["openclaw", "poll", "id"]) ??
+    readNestedString(value, ["data", "openclawPollId"]) ??
     readNestedString(value, ["data", "pollId"]) ??
-    readNestedString(value, ["data", "godseye", "pollId"]);
+    readNestedString(value, ["data", "openclaw", "pollId"]);
   if (!pollId) {
     return null;
   }
@@ -185,14 +178,14 @@ export function buildMSTeamsPollCard(params: {
         type: "Action.Submit",
         title: "Vote",
         data: {
-          godseyePollId: pollId,
+          openclawPollId: pollId,
           pollId,
         },
         msteams: {
           type: "messageBack",
-          text: "godseye poll vote",
+          text: "openclaw poll vote",
           displayText: "Vote recorded",
-          value: { godseyePollId: pollId, pollId },
+          value: { openclawPollId: pollId, pollId },
         },
       },
     ],
@@ -273,7 +266,7 @@ export function createMSTeamsPollStoreFs(params?: MSTeamsPollStoreFsOptions): MS
   const empty: PollStoreData = { version: 1, polls: {} };
 
   const readStore = async (): Promise<PollStoreData> => {
-    const { value } = await readJsonFile<PollStoreData>(filePath, empty);
+    const { value } = await readJsonFile(filePath, empty);
     const pruned = pruneToLimit(pruneExpired(value.polls ?? {}));
     return { version: 1, polls: pruned };
   };

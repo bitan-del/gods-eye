@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../../config/config.js";
+import { resolveSessionKeyForRequest } from "./session.js";
 
 const mocks = vi.hoisted(() => ({
   loadSessionStore: vi.fn(),
@@ -21,8 +22,6 @@ vi.mock("../../config/sessions.js", async () => {
 vi.mock("../../agents/agent-scope.js", () => ({
   listAgentIds: mocks.listAgentIds,
 }));
-
-let resolveSessionKeyForRequest: typeof import("./session.js").resolveSessionKeyForRequest;
 
 describe("resolveSessionKeyForRequest", () => {
   const MAIN_STORE_PATH = "/tmp/main-store.json";
@@ -46,17 +45,12 @@ describe("resolveSessionKeyForRequest", () => {
     mocks.loadSessionStore.mockImplementation((storePath: string) => stores[storePath] ?? {});
   };
 
-  beforeAll(async () => {
-    vi.resetModules();
-    ({ resolveSessionKeyForRequest } = await import("./session.js"));
-  });
-
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.listAgentIds.mockReturnValue(["main"]);
   });
 
-  const baseCfg: GodsEyeConfig = {};
+  const baseCfg: OpenClawConfig = {};
 
   it("returns sessionKey when --to resolves a session key via context", async () => {
     mocks.resolveStorePath.mockReturnValue(MAIN_STORE_PATH);
@@ -116,7 +110,7 @@ describe("resolveSessionKeyForRequest", () => {
     expect(result.sessionStore["agent:mybot:main"]?.sessionId).toBe("target-session-id");
   });
 
-  it("returns undefined sessionKey when sessionId not found in any store", async () => {
+  it("returns a deterministic explicit sessionKey when sessionId not found in any store", async () => {
     setupMainAndMybotStorePaths();
     mocks.loadSessionStore.mockReturnValue({});
 
@@ -124,7 +118,7 @@ describe("resolveSessionKeyForRequest", () => {
       cfg: baseCfg,
       sessionId: "nonexistent-id",
     });
-    expect(result.sessionKey).toBeUndefined();
+    expect(result.sessionKey).toBe("agent:main:explicit:nonexistent-id");
   });
 
   it("does not search other stores when explicitSessionKey is set", async () => {

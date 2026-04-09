@@ -1,59 +1,51 @@
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { withTempDir } from "../test-helpers/temp-dir.js";
 import * as archive from "./archive.js";
 import { resolveExistingInstallPath, withExtractedArchiveRoot } from "./install-flow.js";
 import * as installSource from "./install-source-utils.js";
 
 async function runExtractedArchiveFailureCase(configureArchive: () => void) {
   vi.spyOn(installSource, "withTempDir").mockImplementation(
-    async (_prefix, fn) => await fn("/tmp/godseye-install-flow"),
+    async (_prefix, fn) => await fn("/tmp/openclaw-install-flow"),
   );
   configureArchive();
   return await withExtractedArchiveRoot({
     archivePath: "/tmp/plugin.tgz",
-    tempDirPrefix: "godseye-plugin-",
+    tempDirPrefix: "openclaw-plugin-",
     timeoutMs: 1000,
     onExtracted: async () => ({ ok: true as const }),
   });
 }
 
 describe("resolveExistingInstallPath", () => {
-  let fixtureRoot = "";
-
-  beforeEach(async () => {
-    fixtureRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-install-flow-"));
-  });
-
-  afterEach(async () => {
-    if (fixtureRoot) {
-      await fs.rm(fixtureRoot, { recursive: true, force: true });
-    }
-  });
-
   it("returns resolved path and stat for existing files", async () => {
-    const filePath = path.join(fixtureRoot, "plugin.tgz");
-    await fs.writeFile(filePath, "archive");
+    await withTempDir({ prefix: "openclaw-install-flow-" }, async (fixtureRoot) => {
+      const filePath = path.join(fixtureRoot, "plugin.tgz");
+      await fs.writeFile(filePath, "archive");
 
-    const result = await resolveExistingInstallPath(filePath);
+      const result = await resolveExistingInstallPath(filePath);
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    expect(result.resolvedPath).toBe(filePath);
-    expect(result.stat.isFile()).toBe(true);
+      expect(result.ok).toBe(true);
+      if (!result.ok) {
+        return;
+      }
+      expect(result.resolvedPath).toBe(filePath);
+      expect(result.stat.isFile()).toBe(true);
+    });
   });
 
   it("returns a path-not-found error for missing paths", async () => {
-    const missing = path.join(fixtureRoot, "missing.tgz");
+    await withTempDir({ prefix: "openclaw-install-flow-" }, async (fixtureRoot) => {
+      const missing = path.join(fixtureRoot, "missing.tgz");
 
-    const result = await resolveExistingInstallPath(missing);
+      const result = await resolveExistingInstallPath(missing);
 
-    expect(result).toEqual({
-      ok: false,
-      error: `path not found: ${missing}`,
+      expect(result).toEqual({
+        ok: false,
+        error: `path not found: ${missing}`,
+      });
     });
   });
 });
@@ -64,7 +56,7 @@ describe("withExtractedArchiveRoot", () => {
   });
 
   it("extracts archive and passes root directory to callback", async () => {
-    const tmpRoot = path.join(path.sep, "tmp", "godseye-install-flow");
+    const tmpRoot = path.join(path.sep, "tmp", "openclaw-install-flow");
     const archivePath = path.join(path.sep, "tmp", "plugin.tgz");
     const extractDir = path.join(tmpRoot, "extract");
     const packageRoot = path.join(extractDir, "package");
@@ -77,13 +69,13 @@ describe("withExtractedArchiveRoot", () => {
     const onExtracted = vi.fn(async (rootDir: string) => ({ ok: true as const, rootDir }));
     const result = await withExtractedArchiveRoot({
       archivePath,
-      tempDirPrefix: "godseye-plugin-",
+      tempDirPrefix: "openclaw-plugin-",
       timeoutMs: 1000,
       rootMarkers: ["package.json"],
       onExtracted,
     });
 
-    expect(withTempDirSpy).toHaveBeenCalledWith("godseye-plugin-", expect.any(Function));
+    expect(withTempDirSpy).toHaveBeenCalledWith("openclaw-plugin-", expect.any(Function));
     expect(extractSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         archivePath,

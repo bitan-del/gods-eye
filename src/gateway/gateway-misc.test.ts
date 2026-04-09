@@ -72,7 +72,7 @@ describe("GatewayClient", () => {
     params: { faviconSvg?: string; indexHtml?: string },
     run: (tmp: string) => Promise<void>,
   ) {
-    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-ui-"));
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-ui-"));
     try {
       await fs.writeFile(path.join(tmp, "index.html"), params.indexHtml ?? "<html></html>\n");
       if (typeof params.faviconSvg === "string") {
@@ -203,16 +203,19 @@ describe("gateway broadcaster", () => {
         socket: approvalsSocket as unknown as GatewayWsClient["socket"],
         connect: { role: "operator", scopes: ["operator.approvals"] } as GatewayWsClient["connect"],
         connId: "c-approvals",
+        usesSharedGatewayAuth: false,
       },
       {
         socket: pairingSocket as unknown as GatewayWsClient["socket"],
         connect: { role: "operator", scopes: ["operator.pairing"] } as GatewayWsClient["connect"],
         connId: "c-pairing",
+        usesSharedGatewayAuth: false,
       },
       {
         socket: readSocket as unknown as GatewayWsClient["socket"],
         connect: { role: "operator", scopes: ["operator.read"] } as GatewayWsClient["connect"],
         connId: "c-read",
+        usesSharedGatewayAuth: false,
       },
     ]);
 
@@ -369,8 +372,12 @@ describe("resolveNodeCommandAllowlist", () => {
     expect(allow.has("device.permissions")).toBe(true);
     expect(allow.has("device.health")).toBe(true);
     expect(allow.has("callLog.search")).toBe(true);
-    expect(allow.has("sms.search")).toBe(true);
     expect(allow.has("system.notify")).toBe(true);
+    expect(allow.has("sms.search")).toBe(false);
+  });
+
+  it("treats sms.search as dangerous by default", () => {
+    expect(DEFAULT_DANGEROUS_NODE_COMMANDS).toContain("sms.search");
   });
 
   it("can explicitly allow dangerous commands via allowCommands", () => {

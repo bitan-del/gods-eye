@@ -4,7 +4,12 @@ import { assertSupportedRuntime } from "../infra/runtime-guard.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { resolveUserPath } from "../utils.js";
-import { isDeprecatedAuthChoice, normalizeLegacyOnboardAuthChoice } from "./auth-choice-legacy.js";
+import {
+  formatDeprecatedNonInteractiveAuthChoiceError,
+  isDeprecatedAuthChoice,
+  normalizeLegacyOnboardAuthChoice,
+  resolveDeprecatedAuthChoiceReplacement,
+} from "./auth-choice-legacy.js";
 import { DEFAULT_WORKSPACE, handleReset } from "./onboard-helpers.js";
 import { runInteractiveSetup } from "./onboard-interactive.js";
 import { runNonInteractiveSetup } from "./onboard-non-interactive.js";
@@ -18,22 +23,22 @@ export async function setupWizardCommand(
 ) {
   assertSupportedRuntime(runtime);
   const originalAuthChoice = opts.authChoice;
-  const normalizedAuthChoice = normalizeLegacyOnboardAuthChoice(originalAuthChoice);
-  if (opts.nonInteractive && isDeprecatedAuthChoice(originalAuthChoice)) {
+  const normalizedAuthChoice = normalizeLegacyOnboardAuthChoice(originalAuthChoice, {
+    env: process.env,
+  });
+  if (opts.nonInteractive && isDeprecatedAuthChoice(originalAuthChoice, { env: process.env })) {
     runtime.error(
-      [
-        `Auth choice "${String(originalAuthChoice)}" is deprecated.`,
-        'Use "--auth-choice token" (Anthropic setup-token) or "--auth-choice openai-codex".',
-      ].join("\n"),
+      formatDeprecatedNonInteractiveAuthChoiceError(originalAuthChoice, {
+        env: process.env,
+      })!,
     );
     runtime.exit(1);
     return;
   }
-  if (originalAuthChoice === "claude-cli") {
-    runtime.log('Auth choice "claude-cli" is deprecated; using setup-token flow instead.');
-  }
-  if (originalAuthChoice === "codex-cli") {
-    runtime.log('Auth choice "codex-cli" is deprecated; using OpenAI Codex OAuth instead.');
+  if (isDeprecatedAuthChoice(originalAuthChoice, { env: process.env })) {
+    runtime.log(
+      resolveDeprecatedAuthChoiceReplacement(originalAuthChoice, { env: process.env })!.message,
+    );
   }
   const flow = opts.flow === "manual" ? ("advanced" as const) : opts.flow;
   const normalizedOpts =
@@ -60,8 +65,8 @@ export async function setupWizardCommand(
     runtime.error(
       [
         "Non-interactive setup requires explicit risk acknowledgement.",
-        "Read: https://docs.gods-eye.org/security",
-        `Re-run with: ${formatCliCommand("godseye onboard --non-interactive --accept-risk ...")}`,
+        "Read: https://docs.openclaw.ai/security",
+        `Re-run with: ${formatCliCommand("openclaw onboard --non-interactive --accept-risk ...")}`,
       ].join("\n"),
     );
     runtime.exit(1);
@@ -70,7 +75,7 @@ export async function setupWizardCommand(
 
   if (normalizedOpts.reset) {
     const snapshot = await readConfigFileSnapshot();
-    const baseConfig = snapshot.valid ? snapshot.config : {};
+    const baseConfig = snapshot.valid ? (snapshot.sourceConfig ?? snapshot.config) : {};
     const workspaceDefault =
       normalizedOpts.workspace ?? baseConfig.agents?.defaults?.workspace ?? DEFAULT_WORKSPACE;
     const resetScope: ResetScope = normalizedOpts.resetScope ?? "config+creds+sessions";
@@ -80,10 +85,10 @@ export async function setupWizardCommand(
   if (process.platform === "win32") {
     runtime.log(
       [
-        "Windows detected - GodsEye runs great on WSL2!",
+        "Windows detected - OpenClaw runs great on WSL2!",
         "Native Windows might be trickier.",
         "Quick setup: wsl --install (one command, one reboot)",
-        "Guide: https://docs.gods-eye.org/windows",
+        "Guide: https://docs.openclaw.ai/windows",
       ].join("\n"),
     );
   }

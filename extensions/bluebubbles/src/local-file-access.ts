@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath, URL } from "node:url";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 function isLocalFileUrlHost(hostname: string): boolean {
   const normalized = normalizeLowercaseStringOrEmpty(hostname);

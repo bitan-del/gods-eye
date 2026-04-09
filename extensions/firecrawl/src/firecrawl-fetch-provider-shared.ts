@@ -1,4 +1,4 @@
-import type { WebFetchProviderPlugin } from "openclaw/plugin-sdk/provider-web-fetch-contract";
+import type { WebFetchProviderPlugin } from "godseye/plugin-sdk/provider-web-fetch-contract";
 
 type FirecrawlWebFetchProviderSharedFields = Omit<
   WebFetchProviderPlugin,

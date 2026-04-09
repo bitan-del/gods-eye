@@ -7,9 +7,9 @@ describe("SUPERVISOR_HINT_ENV_VARS", () => {
       expect.arrayContaining([
         "LAUNCH_JOB_LABEL",
         "INVOCATION_ID",
-        "GODSEYE_WINDOWS_TASK_NAME",
-        "GODSEYE_SERVICE_MARKER",
-        "GODSEYE_SERVICE_KIND",
+        "OPENCLAW_WINDOWS_TASK_NAME",
+        "OPENCLAW_SERVICE_MARKER",
+        "OPENCLAW_SERVICE_KIND",
       ]),
     );
   });
@@ -17,7 +17,7 @@ describe("SUPERVISOR_HINT_ENV_VARS", () => {
 
 describe("detectRespawnSupervisor", () => {
   it("detects launchd and systemd only from non-blank platform-specific hints", () => {
-    expect(detectRespawnSupervisor({ LAUNCH_JOB_LABEL: " ai.godseye.gateway " }, "darwin")).toBe(
+    expect(detectRespawnSupervisor({ LAUNCH_JOB_LABEL: " ai.openclaw.gateway " }, "darwin")).toBe(
       "launchd",
     );
     expect(detectRespawnSupervisor({ LAUNCH_JOB_LABEL: "   " }, "darwin")).toBeNull();
@@ -27,14 +27,14 @@ describe("detectRespawnSupervisor", () => {
   });
 
   it("detects scheduled-task supervision on Windows from either hint family", () => {
-    expect(detectRespawnSupervisor({ GODSEYE_WINDOWS_TASK_NAME: "GodsEye Gateway" }, "win32")).toBe(
-      "schtasks",
-    );
+    expect(
+      detectRespawnSupervisor({ OPENCLAW_WINDOWS_TASK_NAME: "OpenClaw Gateway" }, "win32"),
+    ).toBe("schtasks");
     expect(
       detectRespawnSupervisor(
         {
-          GODSEYE_SERVICE_MARKER: "godseye",
-          GODSEYE_SERVICE_KIND: "gateway",
+          OPENCLAW_SERVICE_MARKER: "openclaw",
+          OPENCLAW_SERVICE_KIND: "gateway",
         },
         "win32",
       ),
@@ -42,8 +42,8 @@ describe("detectRespawnSupervisor", () => {
     expect(
       detectRespawnSupervisor(
         {
-          GODSEYE_SERVICE_MARKER: "godseye",
-          GODSEYE_SERVICE_KIND: "worker",
+          OPENCLAW_SERVICE_MARKER: "openclaw",
+          OPENCLAW_SERVICE_KIND: "worker",
         },
         "win32",
       ),
@@ -54,14 +54,14 @@ describe("detectRespawnSupervisor", () => {
     expect(
       detectRespawnSupervisor(
         {
-          GODSEYE_SERVICE_MARKER: "godseye",
-          GODSEYE_SERVICE_KIND: "gateway",
+          OPENCLAW_SERVICE_MARKER: "openclaw",
+          OPENCLAW_SERVICE_KIND: "gateway",
         },
         "linux",
       ),
     ).toBeNull();
     expect(
-      detectRespawnSupervisor({ LAUNCH_JOB_LABEL: "ai.godseye.gateway" }, "freebsd"),
+      detectRespawnSupervisor({ LAUNCH_JOB_LABEL: "ai.openclaw.gateway" }, "freebsd"),
     ).toBeNull();
   });
 });

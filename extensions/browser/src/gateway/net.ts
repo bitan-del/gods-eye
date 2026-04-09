@@ -1,1 +1,1 @@
-export { isLoopbackHost } from "openclaw/plugin-sdk/browser-config-support";
+export { isLoopbackHost } from "godseye/plugin-sdk/browser-config-support";

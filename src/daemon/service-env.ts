@@ -5,6 +5,7 @@ import {
   resolveLinuxSystemCaBundle,
 } from "../bootstrap/node-extra-ca-certs.js";
 import { resolveNodeStartupTlsEnvironment } from "../bootstrap/node-startup-env.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { VERSION } from "../version.js";
 import {
   GATEWAY_SERVICE_KIND,
@@ -265,20 +266,20 @@ export function buildServiceEnvironment(params: {
     extraPathDirs,
     params.execPath,
   );
-  const profile = env.GODSEYE_PROFILE;
+  const profile = env.OPENCLAW_PROFILE;
   const resolvedLaunchdLabel =
     launchdLabel || (platform === "darwin" ? resolveGatewayLaunchAgentLabel(profile) : undefined);
   const systemdUnit = `${resolveGatewaySystemdServiceName(profile)}.service`;
   return {
     ...buildCommonServiceEnvironment(env, sharedEnv),
-    GODSEYE_PROFILE: profile,
-    GODSEYE_GATEWAY_PORT: String(port),
-    GODSEYE_LAUNCHD_LABEL: resolvedLaunchdLabel,
-    GODSEYE_SYSTEMD_UNIT: systemdUnit,
-    GODSEYE_WINDOWS_TASK_NAME: resolveGatewayWindowsTaskName(profile),
-    GODSEYE_SERVICE_MARKER: GATEWAY_SERVICE_MARKER,
-    GODSEYE_SERVICE_KIND: GATEWAY_SERVICE_KIND,
-    GODSEYE_SERVICE_VERSION: VERSION,
+    OPENCLAW_PROFILE: profile,
+    OPENCLAW_GATEWAY_PORT: String(port),
+    OPENCLAW_LAUNCHD_LABEL: resolvedLaunchdLabel,
+    OPENCLAW_SYSTEMD_UNIT: systemdUnit,
+    OPENCLAW_WINDOWS_TASK_NAME: resolveGatewayWindowsTaskName(profile),
+    OPENCLAW_SERVICE_MARKER: GATEWAY_SERVICE_MARKER,
+    OPENCLAW_SERVICE_KIND: GATEWAY_SERVICE_KIND,
+    OPENCLAW_SERVICE_VERSION: VERSION,
   };
 }
 
@@ -296,18 +297,18 @@ export function buildNodeServiceEnvironment(params: {
     extraPathDirs,
     params.execPath,
   );
-  const gatewayToken = env.GODSEYE_GATEWAY_TOKEN?.trim() || undefined;
+  const gatewayToken = normalizeOptionalString(env.OPENCLAW_GATEWAY_TOKEN);
   return {
     ...buildCommonServiceEnvironment(env, sharedEnv),
-    GODSEYE_GATEWAY_TOKEN: gatewayToken,
-    GODSEYE_LAUNCHD_LABEL: resolveNodeLaunchAgentLabel(),
-    GODSEYE_SYSTEMD_UNIT: resolveNodeSystemdServiceName(),
-    GODSEYE_WINDOWS_TASK_NAME: resolveNodeWindowsTaskName(),
-    GODSEYE_TASK_SCRIPT_NAME: NODE_WINDOWS_TASK_SCRIPT_NAME,
-    GODSEYE_LOG_PREFIX: "node",
-    GODSEYE_SERVICE_MARKER: NODE_SERVICE_MARKER,
-    GODSEYE_SERVICE_KIND: NODE_SERVICE_KIND,
-    GODSEYE_SERVICE_VERSION: VERSION,
+    OPENCLAW_GATEWAY_TOKEN: gatewayToken,
+    OPENCLAW_LAUNCHD_LABEL: resolveNodeLaunchAgentLabel(),
+    OPENCLAW_SYSTEMD_UNIT: resolveNodeSystemdServiceName(),
+    OPENCLAW_WINDOWS_TASK_NAME: resolveNodeWindowsTaskName(),
+    OPENCLAW_TASK_SCRIPT_NAME: NODE_WINDOWS_TASK_SCRIPT_NAME,
+    OPENCLAW_LOG_PREFIX: "node",
+    OPENCLAW_SERVICE_MARKER: NODE_SERVICE_MARKER,
+    OPENCLAW_SERVICE_KIND: NODE_SERVICE_KIND,
+    OPENCLAW_SERVICE_VERSION: VERSION,
   };
 }
 
@@ -321,8 +322,8 @@ function buildCommonServiceEnvironment(
     ...sharedEnv.proxyEnv,
     NODE_EXTRA_CA_CERTS: sharedEnv.nodeCaCerts,
     NODE_USE_SYSTEM_CA: sharedEnv.nodeUseSystemCa,
-    GODSEYE_STATE_DIR: sharedEnv.stateDir,
-    GODSEYE_CONFIG_PATH: sharedEnv.configPath,
+    OPENCLAW_STATE_DIR: sharedEnv.stateDir,
+    OPENCLAW_CONFIG_PATH: sharedEnv.configPath,
   };
   if (sharedEnv.minimalPath) {
     serviceEnv.PATH = sharedEnv.minimalPath;
@@ -336,8 +337,8 @@ function resolveSharedServiceEnvironmentFields(
   extraPathDirs: string[] | undefined,
   execPath?: string,
 ): SharedServiceEnvironmentFields {
-  const stateDir = env.GODSEYE_STATE_DIR;
-  const configPath = env.GODSEYE_CONFIG_PATH;
+  const stateDir = env.OPENCLAW_STATE_DIR;
+  const configPath = env.OPENCLAW_CONFIG_PATH;
   // Keep a usable temp directory for supervised services even when the host env omits TMPDIR.
   const tmpDir = env.TMPDIR?.trim() || os.tmpdir();
   const proxyEnv = readServiceProxyEnvironment(env);

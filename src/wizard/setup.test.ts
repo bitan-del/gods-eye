@@ -9,10 +9,21 @@ import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter, WizardSelectParams } from "./prompts.js";
 import { runSetupWizard } from "./setup.js";
 
+type ResolveProviderPluginChoice =
+  typeof import("../plugins/provider-auth-choice.runtime.js").resolveProviderPluginChoice;
+type ResolvePluginProvidersRuntime =
+  typeof import("../plugins/provider-auth-choice.runtime.js").resolvePluginProviders;
+
 const ensureAuthProfileStore = vi.hoisted(() => vi.fn(() => ({ profiles: {} })));
 const promptAuthChoiceGrouped = vi.hoisted(() => vi.fn(async () => "skip"));
 const applyAuthChoice = vi.hoisted(() => vi.fn(async (args) => ({ config: args.config })));
-const resolvePreferredProviderForAuthChoice = vi.hoisted(() => vi.fn(async () => "openai"));
+const resolvePreferredProviderForAuthChoice = vi.hoisted(() => vi.fn(async () => "demo-provider"));
+const resolveProviderPluginChoice = vi.hoisted(() =>
+  vi.fn<ResolveProviderPluginChoice>(() => null),
+);
+const resolvePluginProvidersRuntime = vi.hoisted(() =>
+  vi.fn<ResolvePluginProvidersRuntime>(() => []),
+);
 const warnIfModelConfigLooksOff = vi.hoisted(() => vi.fn(async () => {}));
 const applyPrimaryModel = vi.hoisted(() => vi.fn((cfg) => cfg));
 const promptDefaultModel = vi.hoisted(() => vi.fn(async () => ({ config: null, model: null })));
@@ -69,9 +80,16 @@ const setupSkills = vi.hoisted(() => vi.fn(async (cfg) => cfg));
 const healthCommand = vi.hoisted(() => vi.fn(async () => {}));
 const ensureWorkspaceAndSessions = vi.hoisted(() => vi.fn(async () => {}));
 const writeConfigFile = vi.hoisted(() => vi.fn(async () => {}));
+const resolveGatewayPort = vi.hoisted(() =>
+  vi.fn((_cfg?: unknown, env?: NodeJS.ProcessEnv) => {
+    const raw = env?.OPENCLAW_GATEWAY_PORT ?? process.env.OPENCLAW_GATEWAY_PORT;
+    const port = raw ? Number.parseInt(String(raw), 10) : Number.NaN;
+    return Number.isFinite(port) && port > 0 ? port : 18789;
+  }),
+);
 const readConfigFileSnapshot = vi.hoisted(() =>
   vi.fn(async () => ({
-    path: "/tmp/.godseye/godseye.json",
+    path: "/tmp/.openclaw/openclaw.json",
     exists: false,
     raw: null as string | null,
     parsed: {},
@@ -96,6 +114,10 @@ const formatPluginCompatibilityNotice = vi.hoisted(() =>
   vi.fn((notice: PluginCompatibilityNotice) => `${notice.pluginId} ${notice.message}`),
 );
 
+function getWizardNoteCalls(note: WizardPrompter["note"]) {
+  return (note as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+}
+
 vi.mock("../commands/onboard-channels.js", () => ({
   setupChannels,
 }));
@@ -118,6 +140,11 @@ vi.mock("../commands/auth-choice.js", () => ({
   warnIfModelConfigLooksOff,
 }));
 
+vi.mock("../plugins/provider-auth-choice.runtime.js", () => ({
+  resolveProviderPluginChoice,
+  resolvePluginProviders: resolvePluginProvidersRuntime,
+}));
+
 vi.mock("../commands/model-picker.js", () => ({
   applyPrimaryModel,
   promptDefaultModel,
@@ -137,13 +164,13 @@ vi.mock("../commands/onboard-hooks.js", () => ({
 
 vi.mock("../config/config.js", () => ({
   DEFAULT_GATEWAY_PORT: 18789,
-  resolveGatewayPort: () => 18789,
+  resolveGatewayPort,
   readConfigFileSnapshot,
   writeConfigFile,
 }));
 
 vi.mock("../commands/onboard-helpers.js", () => ({
-  DEFAULT_WORKSPACE: "/tmp/godseye-workspace",
+  DEFAULT_WORKSPACE: "/tmp/openclaw-workspace",
   applyWizardMetadata: (cfg: unknown) => cfg,
   summarizeExistingConfig: () => "summary",
   handleReset: async () => {},
@@ -231,7 +258,7 @@ describe("runSetupWizard", () => {
   let suiteCase = 0;
 
   beforeAll(async () => {
-    suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-onboard-suite-"));
+    suiteRoot = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-onboard-suite-"));
   });
 
   afterAll(async () => {
@@ -248,7 +275,7 @@ describe("runSetupWizard", () => {
 
   it("exits when config is invalid", async () => {
     readConfigFileSnapshot.mockResolvedValueOnce({
-      path: "/tmp/.godseye/godseye.json",
+      path: "/tmp/.openclaw/openclaw.json",
       exists: true,
       raw: "{}",
       parsed: {},
@@ -398,7 +425,7 @@ describe("runSetupWizard", () => {
         prompter,
       );
 
-      const calls = (note as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+      const calls = getWizardNoteCalls(note);
       expect(calls.length).toBeGreaterThan(0);
       expect(calls.some((call) => call?.[1] === "Web search")).toBe(true);
     } finally {
@@ -412,6 +439,33 @@ describe("runSetupWizard", () => {
 
   it("prompts for a model during explicit interactive Ollama setup", async () => {
     promptDefaultModel.mockClear();
+    resolveProviderPluginChoice.mockReturnValue({
+      provider: {
+        id: "ollama",
+        label: "Ollama",
+        auth: [],
+        wizard: {
+          setup: {
+            modelSelection: {
+              promptWhenAuthChoiceProvided: true,
+              allowKeepCurrent: false,
+            },
+          },
+        },
+      },
+      method: {
+        id: "local",
+        label: "Ollama",
+        kind: "custom",
+        run: vi.fn(async () => ({ profiles: [] })),
+      },
+      wizard: {
+        modelSelection: {
+          promptWhenAuthChoiceProvided: true,
+          allowKeepCurrent: false,
+        },
+      },
+    });
     const prompter = buildWizardPrompter({});
     const runtime = createRuntime();
 
@@ -448,7 +502,7 @@ describe("runSetupWizard", () => {
       },
     ]);
     readConfigFileSnapshot.mockResolvedValueOnce({
-      path: "/tmp/.godseye/godseye.json",
+      path: "/tmp/.openclaw/openclaw.json",
       exists: true,
       raw: "{}",
       parsed: {},
@@ -488,7 +542,7 @@ describe("runSetupWizard", () => {
       prompter,
     );
 
-    const calls = (note as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const calls = getWizardNoteCalls(note);
     expect(calls.some((call) => call?.[1] === "Plugin compatibility")).toBe(true);
     expect(
       calls.some((call) => {
@@ -499,11 +553,11 @@ describe("runSetupWizard", () => {
   });
 
   it("resolves gateway.auth.password SecretRef for local setup probe", async () => {
-    const previous = process.env.GODSEYE_GATEWAY_PASSWORD;
-    process.env.GODSEYE_GATEWAY_PASSWORD = "gateway-ref-password"; // pragma: allowlist secret
+    const previous = process.env.OPENCLAW_GATEWAY_PASSWORD;
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "gateway-ref-password"; // pragma: allowlist secret
     probeGatewayReachable.mockClear();
     readConfigFileSnapshot.mockResolvedValueOnce({
-      path: "/tmp/.godseye/godseye.json",
+      path: "/tmp/.openclaw/openclaw.json",
       exists: true,
       raw: "{}",
       parsed: {},
@@ -516,7 +570,7 @@ describe("runSetupWizard", () => {
             password: {
               source: "env",
               provider: "default",
-              id: "GODSEYE_GATEWAY_PASSWORD",
+              id: "OPENCLAW_GATEWAY_PASSWORD",
             },
           },
         },
@@ -553,9 +607,9 @@ describe("runSetupWizard", () => {
       );
     } finally {
       if (previous === undefined) {
-        delete process.env.GODSEYE_GATEWAY_PASSWORD;
+        delete process.env.OPENCLAW_GATEWAY_PASSWORD;
       } else {
-        process.env.GODSEYE_GATEWAY_PASSWORD = previous;
+        process.env.OPENCLAW_GATEWAY_PASSWORD = previous;
       }
     }
 
@@ -595,5 +649,47 @@ describe("runSetupWizard", () => {
         secretInputMode: "ref", // pragma: allowlist secret
       }),
     );
+  });
+
+  it("shows the resolved gateway port in quickstart for fresh envs", async () => {
+    const previousPort = process.env.OPENCLAW_GATEWAY_PORT;
+    process.env.OPENCLAW_GATEWAY_PORT = "18791";
+    const note: WizardPrompter["note"] = vi.fn(async () => {});
+    const prompter = buildWizardPrompter({ note });
+    const runtime = createRuntime();
+
+    try {
+      await runSetupWizard(
+        {
+          acceptRisk: true,
+          flow: "quickstart",
+          authChoice: "skip",
+          installDaemon: false,
+          skipProviders: true,
+          skipSkills: true,
+          skipSearch: true,
+          skipHealth: true,
+          skipUi: true,
+        },
+        runtime,
+        prompter,
+      );
+    } finally {
+      if (previousPort === undefined) {
+        delete process.env.OPENCLAW_GATEWAY_PORT;
+      } else {
+        process.env.OPENCLAW_GATEWAY_PORT = previousPort;
+      }
+    }
+
+    const calls = (note as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    expect(
+      calls.some(
+        (call) =>
+          call?.[1] === "QuickStart" &&
+          typeof call?.[0] === "string" &&
+          call[0].includes("Gateway port: 18791"),
+      ),
+    ).toBe(true);
   });
 });

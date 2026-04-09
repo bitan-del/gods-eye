@@ -1,8 +1,8 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/provider-onboard";
+import type { OpenClawConfig } from "godseye/plugin-sdk/provider-onboard";
 
 export const FAL_DEFAULT_IMAGE_MODEL_REF = "fal/fal-ai/flux/dev";
 
-export function applyFalConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyFalConfig(cfg: OpenClawConfig): OpenClawConfig {
   if (cfg.agents?.defaults?.imageGenerationModel) {
     return cfg;
   }

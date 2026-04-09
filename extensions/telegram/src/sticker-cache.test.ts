@@ -11,16 +11,20 @@ vi.mock("godseye/plugin-sdk/agent-runtime", () => ({
 }));
 
 vi.mock("godseye/plugin-sdk/media-runtime", () => ({
-  AUTO_IMAGE_KEY_PROVIDERS: ["openai"],
-  DEFAULT_IMAGE_MODELS: { openai: "gpt-4.1-mini" },
   resolveAutoImageModel: vi.fn(async () => null),
+  resolveAutoMediaKeyProviders: vi.fn(() => ["openai"]),
+  resolveDefaultMediaModel: vi.fn(() => "gpt-4.1-mini"),
 }));
 
-vi.mock("godseye/plugin-sdk/media-understanding-runtime", () => ({
-  describeImageFileWithModel: vi.fn(),
+vi.mock("./runtime.js", () => ({
+  getTelegramRuntime: () => ({
+    mediaUnderstanding: {
+      describeImageFileWithModel: vi.fn(),
+    },
+  }),
 }));
 
-const TEST_CACHE_DIR = "/tmp/godseye-test-sticker-cache/telegram";
+const TEST_CACHE_DIR = "/tmp/openclaw-test-sticker-cache/telegram";
 const TEST_CACHE_FILE = path.join(TEST_CACHE_DIR, "sticker-cache.json");
 
 type StickerCacheModule = typeof import("./sticker-cache.js");
@@ -29,16 +33,16 @@ let stickerCache: StickerCacheModule;
 
 describe("sticker-cache", () => {
   beforeEach(async () => {
-    process.env.GODSEYE_STATE_DIR = "/tmp/godseye-test-sticker-cache";
-    fs.rmSync("/tmp/godseye-test-sticker-cache", { recursive: true, force: true });
+    process.env.OPENCLAW_STATE_DIR = "/tmp/openclaw-test-sticker-cache";
+    fs.rmSync("/tmp/openclaw-test-sticker-cache", { recursive: true, force: true });
     fs.mkdirSync(TEST_CACHE_DIR, { recursive: true });
     vi.resetModules();
     stickerCache = await import("./sticker-cache.js");
   });
 
   afterEach(() => {
-    fs.rmSync("/tmp/godseye-test-sticker-cache", { recursive: true, force: true });
-    delete process.env.GODSEYE_STATE_DIR;
+    fs.rmSync("/tmp/openclaw-test-sticker-cache", { recursive: true, force: true });
+    delete process.env.OPENCLAW_STATE_DIR;
   });
 
   describe("getCachedSticker", () => {

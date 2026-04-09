@@ -3,8 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { hasConfiguredSecretInput } from "../config/types.secrets.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { note } from "../terminal/note.js";
 import { shortenHomePath } from "../utils.js";
 
@@ -19,7 +20,7 @@ export async function noteMacLaunchAgentOverrides() {
     return;
   }
   const home = resolveHomeDir();
-  const markerCandidates = [path.join(home, ".godseye", "disable-launchagent")];
+  const markerCandidates = [path.join(home, ".openclaw", "disable-launchagent")];
   const markerPath = markerCandidates.find((candidate) => fs.existsSync(candidate));
   if (!markerPath) {
     return;
@@ -37,14 +38,14 @@ export async function noteMacLaunchAgentOverrides() {
 async function launchctlGetenv(name: string): Promise<string | undefined> {
   try {
     const result = await execFileAsync("/bin/launchctl", ["getenv", name], { encoding: "utf8" });
-    const value = String(result.stdout ?? "").trim();
+    const value = normalizeOptionalString(String(result.stdout ?? "")) ?? "";
     return value.length > 0 ? value : undefined;
   } catch {
     return undefined;
   }
 }
 
-function hasConfigGatewayCreds(cfg: GodsEyeConfig): boolean {
+function hasConfigGatewayCreds(cfg: OpenClawConfig): boolean {
   const localPassword = cfg.gateway?.auth?.password;
   const remoteToken = cfg.gateway?.remote?.token;
   const remotePassword = cfg.gateway?.remote?.password;
@@ -57,7 +58,7 @@ function hasConfigGatewayCreds(cfg: GodsEyeConfig): boolean {
 }
 
 export async function noteMacLaunchctlGatewayEnvOverrides(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   deps?: {
     platform?: NodeJS.Platform;
     getenv?: (name: string) => Promise<string | undefined>;
@@ -73,14 +74,16 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
   }
 
   const getenv = deps?.getenv ?? launchctlGetenv;
-  const tokenEntries = [["GODSEYE_GATEWAY_TOKEN", await getenv("GODSEYE_GATEWAY_TOKEN")]] as const;
-  const passwordEntries = [
-    ["GODSEYE_GATEWAY_PASSWORD", await getenv("GODSEYE_GATEWAY_PASSWORD")],
+  const tokenEntries = [
+    ["OPENCLAW_GATEWAY_TOKEN", await getenv("OPENCLAW_GATEWAY_TOKEN")],
   ] as const;
-  const tokenEntry = tokenEntries.find(([, value]) => value?.trim());
-  const passwordEntry = passwordEntries.find(([, value]) => value?.trim());
-  const envToken = tokenEntry?.[1]?.trim() ?? "";
-  const envPassword = passwordEntry?.[1]?.trim() ?? "";
+  const passwordEntries = [
+    ["OPENCLAW_GATEWAY_PASSWORD", await getenv("OPENCLAW_GATEWAY_PASSWORD")],
+  ] as const;
+  const tokenEntry = tokenEntries.find(([, value]) => normalizeOptionalString(value));
+  const passwordEntry = passwordEntries.find(([, value]) => normalizeOptionalString(value));
+  const envToken = normalizeOptionalString(tokenEntry?.[1]) ?? "";
+  const envPassword = normalizeOptionalString(passwordEntry?.[1]) ?? "";
   const envTokenKey = tokenEntry?.[0];
   const envPasswordKey = passwordEntry?.[0];
   if (!envToken && !envPassword) {
@@ -93,7 +96,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
       ? `- \`${envTokenKey}\` is set; it overrides config tokens.`
       : undefined,
     envPassword
-      ? `- \`${envPasswordKey ?? "GODSEYE_GATEWAY_PASSWORD"}\` is set; it overrides config passwords.`
+      ? `- \`${envPasswordKey ?? "OPENCLAW_GATEWAY_PASSWORD"}\` is set; it overrides config passwords.`
       : undefined,
     "- Clear overrides and restart the app/gateway:",
     envTokenKey ? `  launchctl unsetenv ${envTokenKey}` : undefined,
@@ -104,7 +107,7 @@ export async function noteMacLaunchctlGatewayEnvOverrides(
 }
 
 function isTruthyEnvValue(value: string | undefined): boolean {
-  return typeof value === "string" && value.trim().length > 0;
+  return Boolean(normalizeOptionalString(value));
 }
 
 function isTmpCompileCachePath(cachePath: string): boolean {
@@ -141,9 +144,9 @@ export function noteStartupOptimizationHints(
   }
 
   const noteFn = deps?.noteFn ?? note;
-  const compileCache = env.NODE_COMPILE_CACHE?.trim() ?? "";
-  const disableCompileCache = env.NODE_DISABLE_COMPILE_CACHE?.trim() ?? "";
-  const noRespawn = env.GODSEYE_NO_RESPAWN?.trim() ?? "";
+  const compileCache = normalizeOptionalString(env.NODE_COMPILE_CACHE) ?? "";
+  const disableCompileCache = normalizeOptionalString(env.NODE_DISABLE_COMPILE_CACHE) ?? "";
+  const noRespawn = normalizeOptionalString(env.OPENCLAW_NO_RESPAWN) ?? "";
   const lines: string[] = [];
 
   if (!compileCache) {
@@ -162,7 +165,7 @@ export function noteStartupOptimizationHints(
 
   if (noRespawn !== "1") {
     lines.push(
-      "- GODSEYE_NO_RESPAWN is not set to 1; set it to avoid extra startup overhead from self-respawn.",
+      "- OPENCLAW_NO_RESPAWN is not set to 1; set it to avoid extra startup overhead from self-respawn.",
     );
   }
 
@@ -172,9 +175,9 @@ export function noteStartupOptimizationHints(
 
   const suggestions = [
     "- Suggested env for low-power hosts:",
-    "  export NODE_COMPILE_CACHE=/var/tmp/godseye-compile-cache",
-    "  mkdir -p /var/tmp/godseye-compile-cache",
-    "  export GODSEYE_NO_RESPAWN=1",
+    "  export NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache",
+    "  mkdir -p /var/tmp/openclaw-compile-cache",
+    "  export OPENCLAW_NO_RESPAWN=1",
     isTruthyEnvValue(disableCompileCache) ? "  unset NODE_DISABLE_COMPILE_CACHE" : undefined,
   ].filter((line): line is string => Boolean(line));
 

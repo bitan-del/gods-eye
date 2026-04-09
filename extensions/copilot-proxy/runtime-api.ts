@@ -1,6 +1,6 @@
 export { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 export type {
-  GodsEyePluginApi,
+  OpenClawPluginApi,
   ProviderAuthContext,
   ProviderAuthResult,
 } from "godseye/plugin-sdk/core";

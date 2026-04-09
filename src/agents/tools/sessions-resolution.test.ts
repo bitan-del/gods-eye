@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../../config/config.js";
 const callGatewayMock = vi.fn();
 vi.mock("../../gateway/call.js", () => ({
   callGateway: (opts: unknown) => callGatewayMock(opts),
@@ -14,11 +14,7 @@ let resolveSessionReference: typeof import("./sessions-resolution.js").resolveSe
 let shouldVerifyRequesterSpawnedSessionVisibility: typeof import("./sessions-resolution.js").shouldVerifyRequesterSpawnedSessionVisibility;
 let shouldResolveSessionIdInput: typeof import("./sessions-resolution.js").shouldResolveSessionIdInput;
 
-async function loadFreshSessionsResolutionModuleForTest() {
-  vi.resetModules();
-  vi.doMock("../../gateway/call.js", () => ({
-    callGateway: (opts: unknown) => callGatewayMock(opts),
-  }));
+beforeAll(async () => {
   ({
     isResolvedSessionVisibleToRequester,
     looksLikeSessionId,
@@ -30,18 +26,17 @@ async function loadFreshSessionsResolutionModuleForTest() {
     shouldVerifyRequesterSpawnedSessionVisibility,
     shouldResolveSessionIdInput,
   } = await import("./sessions-resolution.js"));
-}
+});
 
-beforeEach(async () => {
+beforeEach(() => {
   callGatewayMock.mockReset();
-  await loadFreshSessionsResolutionModuleForTest();
 });
 
 describe("resolveMainSessionAlias", () => {
   it("uses normalized main key and global alias for global scope", () => {
     const cfg = {
       session: { mainKey: " Primary ", scope: "global" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveMainSessionAlias(cfg)).toEqual({
       mainKey: "primary",
@@ -51,7 +46,7 @@ describe("resolveMainSessionAlias", () => {
   });
 
   it("falls back to per-sender defaults", () => {
-    expect(resolveMainSessionAlias({} as GodsEyeConfig)).toEqual({
+    expect(resolveMainSessionAlias({} as OpenClawConfig)).toEqual({
       mainKey: "main",
       alias: "main",
       scope: "per-sender",
@@ -62,7 +57,7 @@ describe("resolveMainSessionAlias", () => {
     const cfg = {
       session: { mainKey: "  work ", scope: "per-sender" },
       routing: { sessions: { mainKey: "legacy-main" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveMainSessionAlias(cfg)).toEqual({
       mainKey: "work",

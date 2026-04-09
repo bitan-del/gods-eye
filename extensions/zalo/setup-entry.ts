@@ -1,4 +1,13 @@
-import { defineSetupPluginEntry } from "godseye/plugin-sdk/core";
-import { zaloPlugin } from "./src/channel.js";
+import { defineBundledChannelSetupEntry } from "godseye/plugin-sdk/channel-entry-contract";
 
-export default defineSetupPluginEntry(zaloPlugin);
+export default defineBundledChannelSetupEntry({
+  importMetaUrl: import.meta.url,
+  plugin: {
+    specifier: "./api.js",
+    exportName: "zaloPlugin",
+  },
+  secrets: {
+    specifier: "./secret-contract-api.js",
+    exportName: "channelSecrets",
+  },
+});

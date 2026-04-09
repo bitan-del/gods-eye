@@ -1,11 +1,12 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { HookInstallRecord } from "../config/types.hooks.js";
 import type { PluginInstallRecord } from "../config/types.plugins.js";
 import { parseRegistryNpmSpec } from "../infra/npm-registry-spec.js";
 import { CLAWHUB_INSTALL_ERROR_CODE } from "../plugins/clawhub.js";
 import { applyExclusiveSlotSelection } from "../plugins/slots.js";
-import { buildPluginStatusReport } from "../plugins/status.js";
+import { buildPluginDiagnosticsReport } from "../plugins/status.js";
 import { defaultRuntime } from "../runtime.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import { theme } from "../terminal/theme.js";
 
 type HookInternalEntryLike = Record<string, unknown> & { enabled?: boolean };
@@ -14,7 +15,7 @@ export function resolveFileNpmSpecToLocalPath(
   raw: string,
 ): { ok: true; path: string } | { ok: false; error: string } | null {
   const trimmed = raw.trim();
-  if (!trimmed.toLowerCase().startsWith("file:")) {
+  if (!normalizeLowercaseStringOrEmpty(trimmed).startsWith("file:")) {
     return null;
   }
   const rest = trimmed.slice("file:".length);
@@ -37,10 +38,10 @@ export function resolveFileNpmSpecToLocalPath(
 }
 
 export function applySlotSelectionForPlugin(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
   pluginId: string,
-): { config: GodsEyeConfig; warnings: string[] } {
-  const report = buildPluginStatusReport({ config });
+): { config: OpenClawConfig; warnings: string[] } {
+  const report = buildPluginDiagnosticsReport({ config });
   const plugin = report.plugins.find((entry) => entry.id === pluginId);
   if (!plugin) {
     return { config, warnings: [] };
@@ -75,9 +76,9 @@ export function createHookPackInstallLogger(): {
 }
 
 export function enableInternalHookEntries(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
   hookNames: string[],
-): GodsEyeConfig {
+): OpenClawConfig {
   const entries = { ...config.hooks?.internal?.entries } as Record<string, HookInternalEntryLike>;
 
   for (const hookName of hookNames) {

@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type {
   SessionAcpIdentity,
   AcpSessionRuntimeOptions,
@@ -6,7 +6,7 @@ import type {
   SessionEntry,
 } from "../../config/sessions/types.js";
 import type { AcpRuntimeError } from "../runtime/errors.js";
-import { requireAcpRuntimeBackend } from "../runtime/registry.js";
+import { getAcpRuntimeBackend, requireAcpRuntimeBackend } from "../runtime/registry.js";
 import {
   listAcpSessionEntries,
   readAcpSessionEntry,
@@ -39,7 +39,7 @@ export type AcpSessionResolution =
     };
 
 export type AcpInitializeSessionInput = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
   agent: string;
   mode: AcpRuntimeSessionMode;
@@ -54,7 +54,7 @@ export type AcpTurnAttachment = {
 };
 
 export type AcpRunTurnInput = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
   text: string;
   attachments?: AcpTurnAttachment[];
@@ -65,9 +65,10 @@ export type AcpRunTurnInput = {
 };
 
 export type AcpCloseSessionInput = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
   reason: string;
+  discardPersistentState?: boolean;
   clearMeta?: boolean;
   allowBackendUnavailable?: boolean;
   requireAcpSession?: boolean;
@@ -135,6 +136,7 @@ export type AcpSessionManagerDeps = {
   listAcpSessions: typeof listAcpSessionEntries;
   readSessionEntry: typeof readAcpSessionEntry;
   upsertSessionMeta: typeof upsertAcpSessionMeta;
+  getRuntimeBackend: typeof getAcpRuntimeBackend;
   requireRuntimeBackend: typeof requireAcpRuntimeBackend;
 };
 
@@ -142,6 +144,7 @@ export const DEFAULT_DEPS: AcpSessionManagerDeps = {
   listAcpSessions: listAcpSessionEntries,
   readSessionEntry: readAcpSessionEntry,
   upsertSessionMeta: upsertAcpSessionMeta,
+  getRuntimeBackend: getAcpRuntimeBackend,
   requireRuntimeBackend: requireAcpRuntimeBackend,
 };
 

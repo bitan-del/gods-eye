@@ -1,11 +1,11 @@
 import {
   resolveProviderHttpRequestConfig,
   type ProviderRequestTransportOverrides,
-} from "openclaw/plugin-sdk/provider-http";
+} from "godseye/plugin-sdk/provider-http";
 import {
   applyAgentDefaultModelPrimary,
   type OpenClawConfig,
-} from "openclaw/plugin-sdk/provider-onboard";
+} from "godseye/plugin-sdk/provider-onboard";
 import { parseGoogleOauthApiKey } from "./oauth-token-shared.js";
 import { DEFAULT_GOOGLE_API_BASE_URL, normalizeGoogleApiBaseUrl } from "./provider-policy.js";
 export { normalizeAntigravityModelId, normalizeGoogleModelId } from "./model-id.js";

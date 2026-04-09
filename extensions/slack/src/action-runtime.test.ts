@@ -1,5 +1,5 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import { handleSlackAction, slackActionRuntime } from "./action-runtime.js";
 import { parseSlackBlocksInput } from "./blocks-input.js";
 
@@ -21,7 +21,7 @@ const sendSlackMessage = vi.fn(async (..._args: unknown[]) => ({ channelId: "C12
 const unpinSlackMessage = vi.fn(async (..._args: unknown[]) => ({}));
 
 describe("handleSlackAction", () => {
-  function slackConfig(overrides?: Record<string, unknown>): GodsEyeConfig {
+  function slackConfig(overrides?: Record<string, unknown>): OpenClawConfig {
     return {
       channels: {
         slack: {
@@ -29,7 +29,7 @@ describe("handleSlackAction", () => {
           ...overrides,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   function createReplyToFirstContext(hasRepliedRef: { value: boolean }) {
@@ -42,7 +42,7 @@ describe("handleSlackAction", () => {
   }
 
   function createReplyToFirstScenario() {
-    const cfg = { channels: { slack: { botToken: "tok" } } } as GodsEyeConfig;
+    const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
     sendSlackMessage.mockClear();
     const hasRepliedRef = { value: false };
     const context = createReplyToFirstContext(hasRepliedRef);
@@ -58,7 +58,7 @@ describe("handleSlackAction", () => {
   }
 
   async function sendSecondMessageAndExpectNoThread(params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     context: ReturnType<typeof createReplyToFirstContext>;
   }) {
     await handleSlackAction(
@@ -69,7 +69,7 @@ describe("handleSlackAction", () => {
     expectLastSlackSend("Second");
   }
 
-  async function resolveReadToken(cfg: GodsEyeConfig): Promise<string | undefined> {
+  async function resolveReadToken(cfg: OpenClawConfig): Promise<string | undefined> {
     readSlackMessages.mockClear();
     readSlackMessages.mockResolvedValueOnce({ messages: [], hasMore: false });
     await handleSlackAction({ action: "readMessages", channelId: "C1" }, cfg);
@@ -77,7 +77,7 @@ describe("handleSlackAction", () => {
     return opts?.token;
   }
 
-  async function resolveSendToken(cfg: GodsEyeConfig): Promise<string | undefined> {
+  async function resolveSendToken(cfg: OpenClawConfig): Promise<string | undefined> {
     sendSlackMessage.mockClear();
     await handleSlackAction({ action: "sendMessage", to: "channel:C1", content: "Hello" }, cfg);
     const opts = sendSlackMessage.mock.calls[0]?.[2] as { token?: string } | undefined;
@@ -240,6 +240,30 @@ describe("handleSlackAction", () => {
         details: expect.objectContaining({ ok: false }),
       }),
     );
+  });
+
+  it("forwards resolved botToken to action functions instead of relying on config re-read", async () => {
+    downloadSlackFile.mockResolvedValueOnce(null);
+    await handleSlackAction({ action: "downloadFile", fileId: "F123" }, slackConfig());
+    const opts = downloadSlackFile.mock.calls[0]?.[1] as { token?: string } | undefined;
+    expect(opts?.token).toBe("tok");
+  });
+
+  it("keeps resolved userToken for downloadFile reads when configured", async () => {
+    downloadSlackFile.mockResolvedValueOnce(null);
+    await handleSlackAction(
+      { action: "downloadFile", fileId: "F123" },
+      slackConfig({
+        accounts: {
+          default: {
+            botToken: "xoxb-bot",
+            userToken: "xoxp-user",
+          },
+        },
+      }),
+    );
+    const opts = downloadSlackFile.mock.calls[0]?.[1] as { token?: string } | undefined;
+    expect(opts?.token).toBe("xoxp-user");
   });
 
   it.each([
@@ -626,7 +650,7 @@ describe("handleSlackAction", () => {
           },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
     expect(token).toBe("xoxp-user");
   });
 

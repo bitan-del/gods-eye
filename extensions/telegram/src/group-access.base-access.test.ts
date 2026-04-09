@@ -1,6 +1,6 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { TelegramAccountConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
-import type { TelegramAccountConfig } from "../../../src/config/types.js";
 import { normalizeAllowFrom, type NormalizedAllowFrom } from "./bot-access.js";
 import {
   evaluateTelegramGroupBaseAccess,
@@ -76,7 +76,7 @@ describe("evaluateTelegramGroupBaseAccess", () => {
  */
 const baseCfg = {
   channels: { telegram: {} },
-} as unknown as GodsEyeConfig;
+} as unknown as OpenClawConfig;
 
 const baseTelegramCfg: TelegramAccountConfig = {
   groupPolicy: "allowlist",

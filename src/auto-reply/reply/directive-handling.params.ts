@@ -1,12 +1,12 @@
 import type { ModelAliasIndex } from "../../agents/model-selection.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SessionEntry } from "../../config/sessions.js";
 import type { MsgContext } from "../templating.js";
 import type { InlineDirectives } from "./directive-handling.parse.js";
 import type { ElevatedLevel, ReasoningLevel, ThinkLevel, VerboseLevel } from "./directives.js";
 
 export type HandleDirectiveOnlyCoreParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   directives: InlineDirectives;
   sessionEntry: SessionEntry;
   sessionStore: Record<string, SessionEntry>;
@@ -31,6 +31,7 @@ export type HandleDirectiveOnlyCoreParams = {
 };
 
 export type HandleDirectiveOnlyParams = HandleDirectiveOnlyCoreParams & {
+  messageProvider?: string;
   currentThinkLevel?: ThinkLevel;
   currentFastMode?: boolean;
   currentVerboseLevel?: VerboseLevel;
@@ -45,7 +46,7 @@ export type ApplyInlineDirectivesFastLaneParams = HandleDirectiveOnlyCoreParams 
   ctx: MsgContext;
   agentId?: string;
   isGroup: boolean;
-  agentCfg?: NonNullable<GodsEyeConfig["agents"]>["defaults"];
+  agentCfg?: NonNullable<OpenClawConfig["agents"]>["defaults"];
   modelState: {
     resolveDefaultThinkingLevel: () => Promise<ThinkLevel | undefined>;
     allowedModelKeys: Set<string>;

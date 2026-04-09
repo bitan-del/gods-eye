@@ -11,4 +11,4 @@ export {
   withFetchPreconnect,
   isLiveTestEnabled,
   type OpenClawConfig,
-} from "openclaw/plugin-sdk/testing";
+} from "godseye/plugin-sdk/testing";

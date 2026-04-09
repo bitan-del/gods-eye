@@ -3,7 +3,7 @@ import {
   createRateLimitRetryRunner,
   type RetryConfig,
   type RetryRunner,
-} from "godseye/plugin-sdk/infra-runtime";
+} from "godseye/plugin-sdk/retry-runtime";
 
 export const DISCORD_RETRY_DEFAULTS = {
   attempts: 3,

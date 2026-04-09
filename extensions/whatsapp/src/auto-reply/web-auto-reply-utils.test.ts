@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { saveSessionStore } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it, vi } from "vitest";
-import { saveSessionStore } from "../../../../src/config/sessions.js";
-import { withTempDir } from "../../../../test/helpers/extensions/temp-dir.js";
+import { withTempDir } from "../../../../test/helpers/plugins/temp-dir.js";
 import {
   debugMention,
   isBotMentionedFromTargets,
@@ -30,7 +30,7 @@ const makeMsg = (overrides: Partial<WebInboundMsg>): WebInboundMsg =>
   }) as WebInboundMsg;
 
 describe("isBotMentionedFromTargets", () => {
-  const mentionCfg = { mentionRegexes: [/\bgodseye\b/i] };
+  const mentionCfg = { mentionRegexes: [/\bopenclaw\b/i] };
 
   function expectMentioned(
     msg: WebInboundMsg,
@@ -43,7 +43,7 @@ describe("isBotMentionedFromTargets", () => {
 
   it("ignores regex matches when other mentions are present", () => {
     const msg = makeMsg({
-      body: "@GodsEye please help",
+      body: "@OpenClaw please help",
       mentionedJids: ["19998887777@s.whatsapp.net"],
       selfE164: "+15551234567",
       selfJid: "15551234567@s.whatsapp.net",
@@ -63,7 +63,7 @@ describe("isBotMentionedFromTargets", () => {
 
   it("falls back to regex when no mentions are present", () => {
     const msg = makeMsg({
-      body: "godseye can you help?",
+      body: "openclaw can you help?",
       selfE164: "+15551234567",
       selfJid: "15551234567@s.whatsapp.net",
     });
@@ -71,7 +71,7 @@ describe("isBotMentionedFromTargets", () => {
   });
 
   it("ignores JID mentions in self-chat mode", () => {
-    const cfg = { mentionRegexes: [/\bgodseye\b/i], allowFrom: ["+999"] };
+    const cfg = { mentionRegexes: [/\bopenclaw\b/i], allowFrom: ["+999"] };
     const msg = makeMsg({
       body: "@owner ping",
       mentionedJids: ["999@s.whatsapp.net"],
@@ -81,7 +81,7 @@ describe("isBotMentionedFromTargets", () => {
     expectMentioned(msg, cfg, false);
 
     const msgTextMention = makeMsg({
-      body: "godseye ping",
+      body: "openclaw ping",
       selfE164: "+999",
       selfJid: "999@s.whatsapp.net",
     });
@@ -100,7 +100,7 @@ describe("isBotMentionedFromTargets", () => {
 
 describe("resolveMentionTargets with @lid mapping", () => {
   it("uses @lid reverse mapping for mentions and self identity", async () => {
-    await withTempDir("godseye-lid-mapping-", async (authDir) => {
+    await withTempDir("openclaw-lid-mapping-", async (authDir) => {
       await fs.writeFile(
         path.join(authDir, "lid-mapping-777_reverse.json"),
         JSON.stringify("+1777"),
@@ -141,7 +141,7 @@ describe("getSessionSnapshot", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 0, 18, 5, 0, 0));
     try {
-      await withTempDir("godseye-snapshot-", async (root) => {
+      await withTempDir("openclaw-snapshot-", async (root) => {
         const storePath = path.join(root, "sessions.json");
         const sessionKey = "agent:main:whatsapp:dm:s1";
 
@@ -183,13 +183,13 @@ describe("web auto-reply util", () => {
     it("returns normalized debug fields and mention outcome", () => {
       const msg = makeMsg({
         from: "777@lid",
-        body: "godseye ping",
+        body: "openclaw ping",
         selfE164: "+15551234567",
         selfJid: "15551234567@s.whatsapp.net",
       });
-      const result = debugMention(msg, { mentionRegexes: [/\bgodseye\b/i] });
+      const result = debugMention(msg, { mentionRegexes: [/\bopenclaw\b/i] });
       expect(result.wasMentioned).toBe(true);
-      expect(result.details.bodyClean).toBe("godseye ping");
+      expect(result.details.bodyClean).toBe("openclaw ping");
       expect(result.details.normalizedMentionedJids).toBeNull();
     });
 

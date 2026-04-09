@@ -4,16 +4,15 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSandboxPath } from "../../agents/sandbox-paths.js";
 import { ensureSandboxWorkspaceForSession } from "../../agents/sandbox.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { logVerbose } from "../../globals.js";
 import { copyFileWithinRoot, SafeOpenError } from "../../infra/fs-safe.js";
 import { normalizeScpRemoteHost, normalizeScpRemotePath } from "../../infra/scp-host.js";
-import { resolvePreferredGodsEyeTmpDir } from "../../infra/tmp-godseye-dir.js";
-import {
-  isInboundPathAllowed,
-  resolveIMessageRemoteAttachmentRoots,
-} from "../../media/inbound-path-policy.js";
+import { resolvePreferredOpenClawTmpDir } from "../../infra/tmp-openclaw-dir.js";
+import { resolveChannelRemoteInboundAttachmentRoots } from "../../media/channel-inbound-roots.js";
+import { isInboundPathAllowed } from "../../media/inbound-path-policy.js";
 import { getMediaDir, MEDIA_MAX_BYTES } from "../../media/store.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { CONFIG_DIR } from "../../utils.js";
 import type { MsgContext, TemplateContext } from "../templating.js";
 
@@ -22,7 +21,7 @@ const STAGED_MEDIA_MAX_BYTES = MEDIA_MAX_BYTES;
 export async function stageSandboxMedia(params: {
   ctx: MsgContext;
   sessionCtx: TemplateContext;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey?: string;
   workspaceDir: string;
 }) {
@@ -39,7 +38,7 @@ export async function stageSandboxMedia(params: {
     workspaceDir,
   });
 
-  // For remote attachments without sandbox, use ~/.godseye/media (not agent workspace for privacy)
+  // For remote attachments without sandbox, use ~/.openclaw/media (not agent workspace for privacy)
   const remoteMediaCacheDir = ctx.MediaRemoteHost
     ? path.join(CONFIG_DIR, "media", "remote-cache", sessionKey)
     : null;
@@ -49,10 +48,7 @@ export async function stageSandboxMedia(params: {
   }
 
   await fs.mkdir(effectiveWorkspaceDir, { recursive: true });
-  const remoteAttachmentRoots = resolveIMessageRemoteAttachmentRoots({
-    cfg,
-    accountId: ctx.AccountId,
-  });
+  const remoteAttachmentRoots = resolveChannelRemoteInboundAttachmentRoots({ cfg, ctx }) ?? [];
 
   const usedNames = new Set<string>();
   const staged = new Map<string, string>(); // absolute source -> relative sandbox path
@@ -140,7 +136,7 @@ async function stageRemoteFileIntoRoot(params: {
   relativeDestPath: string;
   maxBytes?: number;
 }): Promise<void> {
-  const tmpRoot = resolvePreferredGodsEyeTmpDir();
+  const tmpRoot = resolvePreferredOpenClawTmpDir();
   await fs.mkdir(tmpRoot, { recursive: true });
   const tmpDir = await fs.mkdtemp(path.join(tmpRoot, "stage-sandbox-media-"));
   const tmpPath = path.join(tmpDir, "download");
@@ -161,8 +157,8 @@ function resolveRawPaths(ctx: MsgContext): string[] {
   const pathsFromArray = Array.isArray(ctx.MediaPaths) ? ctx.MediaPaths : undefined;
   return pathsFromArray && pathsFromArray.length > 0
     ? pathsFromArray
-    : ctx.MediaPath?.trim()
-      ? [ctx.MediaPath.trim()]
+    : normalizeOptionalString(ctx.MediaPath)
+      ? [normalizeOptionalString(ctx.MediaPath)!]
       : [];
 }
 
@@ -187,7 +183,7 @@ function resolveAbsolutePath(value: string): string | null {
 async function isAllowedSourcePath(params: {
   source: string;
   mediaRemoteHost?: string;
-  remoteAttachmentRoots: string[];
+  remoteAttachmentRoots: readonly string[];
 }): Promise<boolean> {
   if (params.mediaRemoteHost) {
     if (
@@ -248,7 +244,7 @@ function rewriteStagedMediaPaths(params: {
   hasPathsArray: boolean;
 }): void {
   const rewriteIfStaged = (value: string | undefined): string | undefined => {
-    const raw = value?.trim();
+    const raw = normalizeOptionalString(value);
     if (!raw) {
       return value;
     }

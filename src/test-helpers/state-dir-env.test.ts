@@ -9,17 +9,17 @@ import {
 } from "./state-dir-env.js";
 
 type EnvSnapshot = {
-  godseye?: string;
+  openclaw?: string;
 };
 
 function snapshotCurrentStateDirVars(): EnvSnapshot {
   return {
-    godseye: process.env.GODSEYE_STATE_DIR,
+    openclaw: process.env.OPENCLAW_STATE_DIR,
   };
 }
 
 function expectStateDirVars(snapshot: EnvSnapshot) {
-  expect(process.env.GODSEYE_STATE_DIR).toBe(snapshot.godseye);
+  expect(process.env.OPENCLAW_STATE_DIR).toBe(snapshot.openclaw);
 }
 
 async function expectPathMissing(filePath: string) {
@@ -37,12 +37,12 @@ async function expectStateDirEnvRestored(params: {
 }
 
 describe("state-dir-env helpers", () => {
-  it("set/snapshot/restore round-trips GODSEYE_STATE_DIR", () => {
+  it("set/snapshot/restore round-trips OPENCLAW_STATE_DIR", () => {
     const prev = snapshotCurrentStateDirVars();
     const snapshot = snapshotStateDirEnv();
 
-    setStateDirEnv("/tmp/godseye-state-dir-test");
-    expect(process.env.GODSEYE_STATE_DIR).toBe("/tmp/godseye-state-dir-test");
+    setStateDirEnv("/tmp/openclaw-state-dir-test");
+    expect(process.env.OPENCLAW_STATE_DIR).toBe("/tmp/openclaw-state-dir-test");
 
     restoreStateDirEnv(snapshot);
     expectStateDirVars(prev);
@@ -53,10 +53,10 @@ describe("state-dir-env helpers", () => {
 
     let capturedTempRoot = "";
     let capturedStateDir = "";
-    await withStateDirEnv("godseye-state-dir-env-", async ({ tempRoot, stateDir }) => {
+    await withStateDirEnv("openclaw-state-dir-env-", async ({ tempRoot, stateDir }) => {
       capturedTempRoot = tempRoot;
       capturedStateDir = stateDir;
-      expect(process.env.GODSEYE_STATE_DIR).toBe(stateDir);
+      expect(process.env.OPENCLAW_STATE_DIR).toBe(stateDir);
       await fs.writeFile(path.join(stateDir, "probe.txt"), "ok", "utf8");
     });
 
@@ -69,7 +69,7 @@ describe("state-dir-env helpers", () => {
     let capturedTempRoot = "";
     let capturedStateDir = "";
     await expect(
-      withStateDirEnv("godseye-state-dir-env-", async ({ tempRoot, stateDir }) => {
+      withStateDirEnv("openclaw-state-dir-env-", async ({ tempRoot, stateDir }) => {
         capturedTempRoot = tempRoot;
         capturedStateDir = stateDir;
         throw new Error("boom");

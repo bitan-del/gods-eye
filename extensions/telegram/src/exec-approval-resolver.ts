@@ -1,6 +1,6 @@
-import { resolveApprovalOverGateway } from "openclaw/plugin-sdk/approval-gateway-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import type { ExecApprovalReplyDecision } from "openclaw/plugin-sdk/infra-runtime";
+import { resolveApprovalOverGateway } from "godseye/plugin-sdk/approval-gateway-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ExecApprovalReplyDecision } from "godseye/plugin-sdk/infra-runtime";
 
 export type ResolveTelegramExecApprovalParams = {
   cfg: OpenClawConfig;

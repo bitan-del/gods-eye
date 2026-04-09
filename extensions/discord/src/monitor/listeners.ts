@@ -8,12 +8,15 @@ import {
   ThreadUpdateListener,
   type User,
 } from "@buape/carbon";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { formatDurationSeconds } from "godseye/plugin-sdk/infra-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { enqueueSystemEvent } from "godseye/plugin-sdk/infra-runtime";
 import { resolveAgentRoute } from "godseye/plugin-sdk/routing";
-import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
-import { createSubsystemLogger } from "godseye/plugin-sdk/runtime-env";
+import {
+  createSubsystemLogger,
+  danger,
+  formatDurationSeconds,
+  logVerbose,
+} from "godseye/plugin-sdk/runtime-env";
 import {
   readStoreAllowFromForDmPolicy,
   resolveDmGroupAccessWithLists,
@@ -729,7 +732,7 @@ type ThreadUpdateEvent = Parameters<ThreadUpdateListener["handle"]>[0];
 
 export class DiscordThreadUpdateListener extends ThreadUpdateListener {
   constructor(
-    private cfg: GodsEyeConfig,
+    private cfg: OpenClawConfig,
     private accountId: string,
     private logger?: Logger,
   ) {

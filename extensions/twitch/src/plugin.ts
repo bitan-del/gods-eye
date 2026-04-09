@@ -1,23 +1,23 @@
 /**
- * Twitch channel plugin for GodsEye.
+ * Twitch channel plugin for OpenClaw.
  *
  * Main plugin export combining all adapters (outbound, actions, status, gateway).
  * This is the primary entry point for the Twitch channel integration.
  */
 
 import { describeAccountSnapshot } from "godseye/plugin-sdk/account-helpers";
+import { buildChannelConfigSchema } from "godseye/plugin-sdk/channel-config-schema";
+import { createChatChannelPlugin } from "godseye/plugin-sdk/channel-core";
 import {
   createLoggedPairingApprovalNotifier,
   createPairingPrefixStripper,
 } from "godseye/plugin-sdk/channel-pairing";
-import { createChatChannelPlugin } from "godseye/plugin-sdk/core";
 import { buildPassiveProbedChannelStatusSummary } from "godseye/plugin-sdk/extension-shared";
 import {
   createComputedAccountStatusAdapter,
   createDefaultChannelRuntimeState,
 } from "godseye/plugin-sdk/status-helpers";
-import type { GodsEyeConfig } from "../api.js";
-import { buildChannelConfigSchema } from "../api.js";
+import type { OpenClawConfig } from "../api.js";
 import { twitchMessageActions } from "./actions.js";
 import { removeClientManager } from "./client-manager-registry.js";
 import { TwitchConfigSchema } from "./config-schema.js";
@@ -25,6 +25,7 @@ import {
   DEFAULT_ACCOUNT_ID,
   getAccountConfig,
   listAccountIds,
+  resolveDefaultTwitchAccountId,
   resolveTwitchAccountContext,
   resolveTwitchSnapshotAccountId,
 } from "./config.js";
@@ -48,7 +49,7 @@ type ResolvedTwitchAccount = TwitchAccountConfig & { accountId?: string | null }
  * Twitch channel plugin.
  *
  * Implements the ChannelPlugin interface to provide Twitch chat integration
- * for GodsEye. Supports message sending, receiving, access control, and
+ * for OpenClaw. Supports message sending, receiving, access control, and
  * status monitoring.
  */
 export const twitchPlugin: ChannelPlugin<ResolvedTwitchAccount> =
@@ -79,9 +80,9 @@ export const twitchPlugin: ChannelPlugin<ResolvedTwitchAccount> =
       },
       configSchema: buildChannelConfigSchema(TwitchConfigSchema),
       config: {
-        listAccountIds: (cfg: GodsEyeConfig): string[] => listAccountIds(cfg),
-        resolveAccount: (cfg: GodsEyeConfig, accountId?: string | null): ResolvedTwitchAccount => {
-          const resolvedAccountId = accountId ?? DEFAULT_ACCOUNT_ID;
+        listAccountIds: (cfg: OpenClawConfig): string[] => listAccountIds(cfg),
+        resolveAccount: (cfg: OpenClawConfig, accountId?: string | null): ResolvedTwitchAccount => {
+          const resolvedAccountId = accountId ?? resolveDefaultTwitchAccountId(cfg);
           const account = getAccountConfig(cfg, resolvedAccountId);
           if (!account) {
             return {
@@ -98,9 +99,9 @@ export const twitchPlugin: ChannelPlugin<ResolvedTwitchAccount> =
             ...account,
           };
         },
-        defaultAccountId: (): string => DEFAULT_ACCOUNT_ID,
-        isConfigured: (_account: unknown, cfg: GodsEyeConfig): boolean =>
-          resolveTwitchAccountContext(cfg, DEFAULT_ACCOUNT_ID).configured,
+        defaultAccountId: (cfg: OpenClawConfig): string => resolveDefaultTwitchAccountId(cfg),
+        isConfigured: (_account: unknown, cfg: OpenClawConfig): boolean =>
+          resolveTwitchAccountContext(cfg).configured,
         isEnabled: (account: ResolvedTwitchAccount | undefined): boolean =>
           account?.enabled !== false,
         describeAccount: (account: TwitchAccountConfig | undefined) =>
@@ -124,13 +125,13 @@ export const twitchPlugin: ChannelPlugin<ResolvedTwitchAccount> =
           kind,
           runtime,
         }: {
-          cfg: GodsEyeConfig;
+          cfg: OpenClawConfig;
           accountId?: string | null;
           inputs: string[];
           kind: ChannelResolveKind;
           runtime: import("godseye/plugin-sdk/runtime-env").RuntimeEnv;
         }): Promise<ChannelResolveResult[]> => {
-          const account = getAccountConfig(cfg, accountId ?? DEFAULT_ACCOUNT_ID);
+          const account = getAccountConfig(cfg, accountId ?? resolveDefaultTwitchAccountId(cfg));
           if (!account) {
             return inputs.map((input) => ({
               input,

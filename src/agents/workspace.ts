@@ -6,6 +6,7 @@ import { openBoundaryFile } from "../infra/boundary-file-read.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
 import { runCommandWithTimeout } from "../process/exec.js";
 import { isCronSessionKey, isSubagentSessionKey } from "../routing/session-key.js";
+import { normalizeOptionalLowercaseString, readStringValue } from "../shared/string-coerce.js";
 import { resolveUserPath } from "../utils.js";
 import { resolveWorkspaceTemplateDir } from "./workspace-templates.js";
 
@@ -14,11 +15,11 @@ export function resolveDefaultAgentWorkspaceDir(
   homedir: () => string = os.homedir,
 ): string {
   const home = resolveRequiredHomeDir(env, homedir);
-  const profile = env.GODSEYE_PROFILE?.trim();
-  if (profile && profile.toLowerCase() !== "default") {
-    return path.join(home, ".godseye", `workspace-${profile}`);
+  const profile = env.OPENCLAW_PROFILE?.trim();
+  if (profile && normalizeOptionalLowercaseString(profile) !== "default") {
+    return path.join(home, ".openclaw", `workspace-${profile}`);
   }
-  return path.join(home, ".godseye", "workspace");
+  return path.join(home, ".openclaw", "workspace");
 }
 
 export const DEFAULT_AGENT_WORKSPACE_DIR = resolveDefaultAgentWorkspaceDir();
@@ -31,7 +32,7 @@ export const DEFAULT_HEARTBEAT_FILENAME = "HEARTBEAT.md";
 export const DEFAULT_BOOTSTRAP_FILENAME = "BOOTSTRAP.md";
 export const DEFAULT_MEMORY_FILENAME = "MEMORY.md";
 export const DEFAULT_MEMORY_ALT_FILENAME = "memory.md";
-const WORKSPACE_STATE_DIRNAME = ".godseye";
+const WORKSPACE_STATE_DIRNAME = ".openclaw";
 const WORKSPACE_STATE_FILENAME = "workspace-state.json";
 const WORKSPACE_STATE_VERSION = 1;
 
@@ -217,14 +218,11 @@ function parseWorkspaceSetupState(raw: string): WorkspaceSetupState | null {
     if (!parsed || typeof parsed !== "object") {
       return null;
     }
-    const legacyCompletedAt =
-      typeof parsed.onboardingCompletedAt === "string" ? parsed.onboardingCompletedAt : undefined;
+    const legacyCompletedAt = readStringValue(parsed.onboardingCompletedAt);
     return {
       version: WORKSPACE_STATE_VERSION,
-      bootstrapSeededAt:
-        typeof parsed.bootstrapSeededAt === "string" ? parsed.bootstrapSeededAt : undefined,
-      setupCompletedAt:
-        typeof parsed.setupCompletedAt === "string" ? parsed.setupCompletedAt : legacyCompletedAt,
+      bootstrapSeededAt: readStringValue(parsed.bootstrapSeededAt),
+      setupCompletedAt: readStringValue(parsed.setupCompletedAt) ?? legacyCompletedAt,
     };
   } catch {
     return null;

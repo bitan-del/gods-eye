@@ -5,7 +5,7 @@
  * Supports text and media (URL) sending with markdown stripping and chunking.
  */
 
-import { DEFAULT_ACCOUNT_ID, resolveTwitchAccountContext } from "./config.js";
+import { resolveTwitchAccountContext } from "./config.js";
 import { sendMessageTwitchInternal } from "./send.js";
 import type {
   ChannelOutboundAdapter,
@@ -99,7 +99,7 @@ export const twitchOutbound: ChannelOutboundAdapter = {
    *
    * @example
    * const result = await twitchOutbound.sendText({
-   *   cfg: godseyeConfig,
+   *   cfg: openclawConfig,
    *   to: "#mychannel",
    *   text: "Hello Twitch!",
    *   accountId: "default",
@@ -113,7 +113,7 @@ export const twitchOutbound: ChannelOutboundAdapter = {
       throw new Error("Outbound delivery aborted");
     }
 
-    const resolvedAccountId = accountId ?? DEFAULT_ACCOUNT_ID;
+    const resolvedAccountId = accountId ?? resolveTwitchAccountContext(cfg).accountId;
     const { account, availableAccountIds } = resolveTwitchAccountContext(cfg, resolvedAccountId);
     if (!account) {
       throw new Error(
@@ -158,7 +158,7 @@ export const twitchOutbound: ChannelOutboundAdapter = {
    *
    * @example
    * const result = await twitchOutbound.sendMedia({
-   *   cfg: godseyeConfig,
+   *   cfg: openclawConfig,
    *   to: "#mychannel",
    *   text: "Check this out!",
    *   mediaUrl: "https://example.com/image.png",

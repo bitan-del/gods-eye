@@ -5,7 +5,13 @@ import {
   SELF_HOSTED_DEFAULT_COST,
   SELF_HOSTED_DEFAULT_MAX_TOKENS,
 } from "../agents/self-hosted-provider-defaults.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { ModelDefinitionConfig } from "../config/types.models.js";
+import { createSubsystemLogger } from "../logging/subsystem.js";
+import {
+  normalizeOptionalString,
+  normalizeStringifiedOptionalString,
+} from "../shared/string-coerce.js";
 import { normalizeOptionalSecretInput } from "../utils/normalize-secret-input.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { applyAuthProfileConfig } from "./provider-auth-helpers.js";
@@ -22,7 +28,73 @@ export {
   SELF_HOSTED_DEFAULT_MAX_TOKENS,
 } from "../agents/self-hosted-provider-defaults.js";
 
-export function applyProviderDefaultModel(cfg: GodsEyeConfig, modelRef: string): GodsEyeConfig {
+const log = createSubsystemLogger("plugins/self-hosted-provider-setup");
+
+type OpenAICompatModelsResponse = {
+  data?: Array<{
+    id?: string;
+  }>;
+};
+
+function isReasoningModelHeuristic(modelId: string): boolean {
+  return /r1|reasoning|think|reason/i.test(modelId);
+}
+
+export async function discoverOpenAICompatibleLocalModels(params: {
+  baseUrl: string;
+  apiKey?: string;
+  label: string;
+  contextWindow?: number;
+  maxTokens?: number;
+  env?: NodeJS.ProcessEnv;
+}): Promise<ModelDefinitionConfig[]> {
+  const env = params.env ?? process.env;
+  if (env.VITEST || env.NODE_ENV === "test") {
+    return [];
+  }
+
+  const trimmedBaseUrl = params.baseUrl.trim().replace(/\/+$/, "");
+  const url = `${trimmedBaseUrl}/models`;
+
+  try {
+    const trimmedApiKey = normalizeOptionalString(params.apiKey);
+    const response = await fetch(url, {
+      headers: trimmedApiKey ? { Authorization: `Bearer ${trimmedApiKey}` } : undefined,
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      log.warn(`Failed to discover ${params.label} models: ${response.status}`);
+      return [];
+    }
+    const data = (await response.json()) as OpenAICompatModelsResponse;
+    const models = data.data ?? [];
+    if (models.length === 0) {
+      log.warn(`No ${params.label} models found on local instance`);
+      return [];
+    }
+
+    return models
+      .map((model) => ({ id: normalizeOptionalString(model.id) ?? "" }))
+      .filter((model) => Boolean(model.id))
+      .map((model) => {
+        const modelId = model.id;
+        return {
+          id: modelId,
+          name: modelId,
+          reasoning: isReasoningModelHeuristic(modelId),
+          input: ["text"],
+          cost: SELF_HOSTED_DEFAULT_COST,
+          contextWindow: params.contextWindow ?? SELF_HOSTED_DEFAULT_CONTEXT_WINDOW,
+          maxTokens: params.maxTokens ?? SELF_HOSTED_DEFAULT_MAX_TOKENS,
+        } satisfies ModelDefinitionConfig;
+      });
+  } catch (error) {
+    log.warn(`Failed to discover ${params.label} models: ${String(error)}`);
+    return [];
+  }
+}
+
+export function applyProviderDefaultModel(cfg: OpenClawConfig, modelRef: string): OpenClawConfig {
   const existingModel = cfg.agents?.defaults?.model;
   const fallbacks =
     existingModel && typeof existingModel === "object" && "fallbacks" in existingModel
@@ -45,7 +117,7 @@ export function applyProviderDefaultModel(cfg: GodsEyeConfig, modelRef: string):
 }
 
 function buildOpenAICompatibleSelfHostedProviderConfig(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   providerId: string;
   baseUrl: string;
   providerApiKey: string;
@@ -54,7 +126,7 @@ function buildOpenAICompatibleSelfHostedProviderConfig(params: {
   reasoning?: boolean;
   contextWindow?: number;
   maxTokens?: number;
-}): { config: GodsEyeConfig; modelId: string; modelRef: string; profileId: string } {
+}): { config: OpenClawConfig; modelId: string; modelRef: string; profileId: string } {
   const modelRef = `${params.providerId}/${params.modelId}`;
   const profileId = `${params.providerId}:default`;
   return {
@@ -91,7 +163,7 @@ function buildOpenAICompatibleSelfHostedProviderConfig(params: {
 }
 
 type OpenAICompatibleSelfHostedProviderSetupParams = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   providerId: string;
   providerLabel: string;
@@ -105,7 +177,7 @@ type OpenAICompatibleSelfHostedProviderSetupParams = {
 };
 
 type OpenAICompatibleSelfHostedProviderPromptResult = {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   credential: AuthProfileCredential;
   modelId: string;
   modelRef: string;
@@ -150,8 +222,8 @@ export async function promptAndConfigureOpenAICompatibleSelfHostedProvider(
   const baseUrl = String(baseUrlRaw ?? "")
     .trim()
     .replace(/\/+$/, "");
-  const apiKey = String(apiKeyRaw ?? "").trim();
-  const modelId = String(modelIdRaw ?? "").trim();
+  const apiKey = normalizeStringifiedOptionalString(apiKeyRaw) ?? "";
+  const modelId = normalizeStringifiedOptionalString(modelIdRaw) ?? "";
   const credential: AuthProfileCredential = {
     type: "api_key",
     provider: params.providerId,
@@ -240,7 +312,7 @@ export async function configureOpenAICompatibleSelfHostedProviderNonInteractive(
   reasoning?: boolean;
   contextWindow?: number;
   maxTokens?: number;
-}): Promise<GodsEyeConfig | null> {
+}): Promise<OpenClawConfig | null> {
   const baseUrl = (
     normalizeOptionalSecretInput(params.ctx.opts.customBaseUrl) ?? params.defaultBaseUrl
   ).replace(/\/+$/, "");

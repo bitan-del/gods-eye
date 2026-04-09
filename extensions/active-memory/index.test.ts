@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-entry";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import plugin from "./index.js";
 
@@ -26,9 +26,9 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-vi.mock("openclaw/plugin-sdk/config-runtime", async () => {
-  const actual = await vi.importActual<typeof import("openclaw/plugin-sdk/config-runtime")>(
-    "openclaw/plugin-sdk/config-runtime",
+vi.mock("godseye/plugin-sdk/config-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/config-runtime")>(
+    "godseye/plugin-sdk/config-runtime",
   );
   return {
     ...actual,

@@ -1,4 +1,4 @@
-import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "openclaw/plugin-sdk/channel-policy";
+import { createDangerousNameMatchingMutableAllowlistWarningCollector } from "godseye/plugin-sdk/channel-policy";
 
 function asObjectRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)

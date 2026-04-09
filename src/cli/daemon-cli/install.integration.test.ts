@@ -30,7 +30,7 @@ vi.mock("../../runtime.js", () => ({
 }));
 
 const { runDaemonInstall } = await import("./install.js");
-const { clearConfigCache } = await import("../../config/config.js");
+const { clearConfigCache, clearRuntimeConfigSnapshot } = await import("../../config/config.js");
 
 async function readJson(filePath: string): Promise<Record<string, unknown>> {
   return JSON.parse(await fs.readFile(filePath, "utf8")) as Record<string, unknown>;
@@ -44,16 +44,16 @@ describe("runDaemonInstall integration", () => {
   beforeAll(async () => {
     envSnapshot = captureEnv([
       "HOME",
-      "GODSEYE_STATE_DIR",
-      "GODSEYE_CONFIG_PATH",
-      "GODSEYE_GATEWAY_TOKEN",
-      "GODSEYE_GATEWAY_PASSWORD",
+      "OPENCLAW_STATE_DIR",
+      "OPENCLAW_CONFIG_PATH",
+      "OPENCLAW_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
     ]);
-    tempHome = await makeTempWorkspace("godseye-daemon-install-int-");
-    configPath = path.join(tempHome, "godseye.json");
+    tempHome = await makeTempWorkspace("openclaw-daemon-install-int-");
+    configPath = path.join(tempHome, "openclaw.json");
     process.env.HOME = tempHome;
-    process.env.GODSEYE_STATE_DIR = tempHome;
-    process.env.GODSEYE_CONFIG_PATH = configPath;
+    process.env.OPENCLAW_STATE_DIR = tempHome;
+    process.env.OPENCLAW_CONFIG_PATH = configPath;
   });
 
   afterAll(async () => {
@@ -64,9 +64,10 @@ describe("runDaemonInstall integration", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     resetRuntimeCapture();
+    clearRuntimeConfigSnapshot();
     // Keep these defined-but-empty so dotenv won't repopulate from local .env.
-    process.env.GODSEYE_GATEWAY_TOKEN = "";
-    process.env.GODSEYE_GATEWAY_PASSWORD = "";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "";
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "";
     serviceMock.isLoaded.mockResolvedValue(false);
     await fs.writeFile(configPath, JSON.stringify({}, null, 2));
     clearConfigCache();
@@ -133,6 +134,6 @@ describe("runDaemonInstall integration", () => {
     expect((persistedToken ?? "").length).toBeGreaterThan(0);
 
     const installEnv = serviceMock.install.mock.calls[0]?.[0]?.environment;
-    expect(installEnv?.GODSEYE_GATEWAY_TOKEN).toBeUndefined();
+    expect(installEnv?.OPENCLAW_GATEWAY_TOKEN).toBeUndefined();
   });
 });

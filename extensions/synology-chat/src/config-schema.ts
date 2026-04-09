@@ -1,5 +1,5 @@
 import { buildChannelConfigSchema } from "godseye/plugin-sdk/channel-config-schema";
-import { z } from "zod";
+import { z } from "godseye/plugin-sdk/zod";
 
 export const SynologyChatChannelConfigSchema = buildChannelConfigSchema(
   z

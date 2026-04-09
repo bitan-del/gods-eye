@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createDirectoryTestRuntime,
   expectDirectorySurface,
-} from "../../../test/helpers/extensions/directory.js";
-import type { GodsEyeConfig, RuntimeEnv } from "../runtime-api.js";
+} from "../../../test/helpers/plugins/directory.js";
+import type { OpenClawConfig, RuntimeEnv } from "../runtime-api.js";
 import { zaloPlugin } from "./channel.js";
 
 describe("zalo directory", () => {
@@ -17,7 +17,7 @@ describe("zalo directory", () => {
           allowFrom,
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     await expect(
       directory.listPeers({

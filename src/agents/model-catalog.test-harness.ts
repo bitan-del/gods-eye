@@ -5,11 +5,15 @@ import { __setModelCatalogImportForTest, resetModelCatalogCacheForTest } from ".
 export type PiSdkModule = typeof import("./pi-model-discovery.js");
 
 vi.mock("./models-config.js", () => ({
-  ensureGodsEyeModelsJson: vi.fn().mockResolvedValue({ agentDir: "/tmp", wrote: false }),
+  ensureOpenClawModelsJson: vi.fn().mockResolvedValue({ agentDir: "/tmp", wrote: false }),
 }));
 
 vi.mock("./agent-paths.js", () => ({
-  resolveGodsEyeAgentDir: () => "/tmp/godseye",
+  resolveOpenClawAgentDir: () => "/tmp/openclaw",
+}));
+
+vi.mock("../plugins/provider-runtime.runtime.js", () => ({
+  augmentModelCatalogWithProviderPlugins: vi.fn().mockResolvedValue([]),
 }));
 
 export function installModelCatalogTestHooks() {

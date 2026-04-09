@@ -7,7 +7,9 @@ import {
   listCombinedAccountIds,
   resolveListedDefaultAccountId,
 } from "godseye/plugin-sdk/account-resolution";
-import type { GodsEyeConfig } from "../api.js";
+import { normalizeSecretInputString, type SecretInput } from "godseye/plugin-sdk/secret-input";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
+import type { OpenClawConfig } from "../api.js";
 import type { NostrProfile } from "./config-schema.js";
 import { DEFAULT_RELAYS } from "./default-relays.js";
 import { getPublicKeyFromPrivate } from "./nostr-bus.js";
@@ -16,7 +18,7 @@ export interface NostrAccountConfig {
   enabled?: boolean;
   name?: string;
   defaultAccount?: string;
-  privateKey?: string;
+  privateKey?: SecretInput;
   relays?: string[];
   dmPolicy?: "pairing" | "allowlist" | "open" | "disabled";
   allowFrom?: Array<string | number>;
@@ -35,7 +37,7 @@ export interface ResolvedNostrAccount {
   config: NostrAccountConfig;
 }
 
-function resolveConfiguredDefaultNostrAccountId(cfg: GodsEyeConfig): string | undefined {
+function resolveConfiguredDefaultNostrAccountId(cfg: OpenClawConfig): string | undefined {
   const nostrCfg = (cfg.channels as Record<string, unknown> | undefined)?.nostr as
     | NostrAccountConfig
     | undefined;
@@ -45,13 +47,14 @@ function resolveConfiguredDefaultNostrAccountId(cfg: GodsEyeConfig): string | un
 /**
  * List all configured Nostr account IDs
  */
-export function listNostrAccountIds(cfg: GodsEyeConfig): string[] {
+export function listNostrAccountIds(cfg: OpenClawConfig): string[] {
   const nostrCfg = (cfg.channels as Record<string, unknown> | undefined)?.nostr as
     | NostrAccountConfig
     | undefined;
+  const privateKey = normalizeSecretInputString(nostrCfg?.privateKey);
   return listCombinedAccountIds({
     configuredAccountIds: [],
-    implicitAccountId: nostrCfg?.privateKey
+    implicitAccountId: privateKey
       ? (resolveConfiguredDefaultNostrAccountId(cfg) ?? DEFAULT_ACCOUNT_ID)
       : undefined,
   });
@@ -60,7 +63,7 @@ export function listNostrAccountIds(cfg: GodsEyeConfig): string[] {
 /**
  * Get the default account ID
  */
-export function resolveDefaultNostrAccountId(cfg: GodsEyeConfig): string {
+export function resolveDefaultNostrAccountId(cfg: OpenClawConfig): string {
   return resolveListedDefaultAccountId({
     accountIds: listNostrAccountIds(cfg),
     configuredDefaultAccountId: resolveConfiguredDefaultNostrAccountId(cfg),
@@ -71,7 +74,7 @@ export function resolveDefaultNostrAccountId(cfg: GodsEyeConfig): string {
  * Resolve a Nostr account from config
  */
 export function resolveNostrAccount(opts: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
 }): ResolvedNostrAccount {
   const accountId = normalizeAccountId(opts.accountId ?? resolveDefaultNostrAccountId(opts.cfg));
@@ -80,11 +83,11 @@ export function resolveNostrAccount(opts: {
     | undefined;
 
   const baseEnabled = nostrCfg?.enabled !== false;
-  const privateKey = nostrCfg?.privateKey ?? "";
-  const configured = Boolean(privateKey.trim());
+  const privateKey = normalizeSecretInputString(nostrCfg?.privateKey) ?? "";
+  const configured = Boolean(privateKey);
 
   let publicKey = "";
-  if (configured) {
+  if (privateKey) {
     try {
       publicKey = getPublicKeyFromPrivate(privateKey);
     } catch {
@@ -94,7 +97,7 @@ export function resolveNostrAccount(opts: {
 
   return {
     accountId,
-    name: nostrCfg?.name?.trim() || undefined,
+    name: normalizeOptionalString(nostrCfg?.name),
     enabled: baseEnabled,
     configured,
     privateKey,

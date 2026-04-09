@@ -1,7 +1,7 @@
 import {
   createWebSearchProviderContractFields,
   type WebSearchProviderPlugin,
-} from "openclaw/plugin-sdk/provider-web-search-config-contract";
+} from "godseye/plugin-sdk/provider-web-search-config-contract";
 
 export function createBraveWebSearchProvider(): WebSearchProviderPlugin {
   const credentialPath = "plugins.entries.brave.config.webSearch.apiKey";

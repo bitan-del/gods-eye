@@ -1,5 +1,5 @@
-import { createPairingPrefixStripper } from "openclaw/plugin-sdk/channel-pairing";
-import { PAIRING_APPROVED_MESSAGE } from "openclaw/plugin-sdk/channel-status";
+import { createPairingPrefixStripper } from "godseye/plugin-sdk/channel-pairing";
+import { PAIRING_APPROVED_MESSAGE } from "godseye/plugin-sdk/channel-status";
 import type { OpenClawConfig } from "./runtime-api.js";
 import { normalizeBlueBubblesHandle } from "./targets.js";
 

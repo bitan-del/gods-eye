@@ -13,7 +13,8 @@ type FindCommandByNativeName =
 type ListNativeCommandSpecsForConfig =
   typeof import("godseye/plugin-sdk/command-auth").listNativeCommandSpecsForConfig;
 type ParseCommandArgs = typeof import("godseye/plugin-sdk/command-auth").parseCommandArgs;
-type ResolveCommandArgMenu = typeof import("godseye/plugin-sdk/command-auth").resolveCommandArgMenu;
+type ResolveCommandArgMenu =
+  typeof import("godseye/plugin-sdk/command-auth").resolveCommandArgMenu;
 
 export function buildCommandTextFromArgs(
   ...args: Parameters<BuildCommandTextFromArgs>

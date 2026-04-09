@@ -26,9 +26,9 @@ type HeldLock = {
   lockPath: string;
 };
 
-const HELD_LOCKS_KEY = Symbol.for("godseye.fileLockHeldLocks");
+const HELD_LOCKS_KEY = Symbol.for("openclaw.fileLockHeldLocks");
 const HELD_LOCKS = resolveProcessScopedMap<HeldLock>(HELD_LOCKS_KEY);
-const CLEANUP_REGISTERED_KEY = Symbol.for("godseye.fileLockCleanupRegistered");
+const CLEANUP_REGISTERED_KEY = Symbol.for("openclaw.fileLockCleanupRegistered");
 
 function releaseAllLocksSync(): void {
   for (const [normalizedFile, held] of HELD_LOCKS) {

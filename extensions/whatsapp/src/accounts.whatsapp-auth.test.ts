@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { captureEnv } from "godseye/plugin-sdk/testing";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { captureEnv } from "../../../test/helpers/extensions/env.js";
 import { hasAnyWhatsAppAuth, listWhatsAppAuthDirs } from "./accounts.js";
 
 describe("hasAnyWhatsAppAuth", () => {
@@ -15,9 +15,9 @@ describe("hasAnyWhatsAppAuth", () => {
   };
 
   beforeEach(() => {
-    envSnapshot = captureEnv(["GODSEYE_OAUTH_DIR"]);
-    tempOauthDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-oauth-"));
-    process.env.GODSEYE_OAUTH_DIR = tempOauthDir;
+    envSnapshot = captureEnv(["OPENCLAW_OAUTH_DIR"]);
+    tempOauthDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-oauth-"));
+    process.env.OPENCLAW_OAUTH_DIR = tempOauthDir;
   });
 
   afterEach(() => {
@@ -43,7 +43,7 @@ describe("hasAnyWhatsAppAuth", () => {
   });
 
   it("includes authDir overrides", () => {
-    const customDir = fs.mkdtempSync(path.join(os.tmpdir(), "godseye-wa-auth-"));
+    const customDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-wa-auth-"));
     try {
       writeCreds(customDir);
       const cfg = {

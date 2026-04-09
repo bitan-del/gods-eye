@@ -1,9 +1,12 @@
 {
   "name": "@godseye/cloudflare-ai-gateway-provider",
-  "version": "2026.3.22",
+  "version": "2026.4.10",
   "private": true,
-  "description": "GodsEye Cloudflare AI Gateway provider plugin",
+  "description": "OpenClaw Cloudflare AI Gateway provider plugin",
   "type": "module",
+  "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*"
+  },
   "godseye": {
     "extensions": [
       "./index.ts"

@@ -6,33 +6,17 @@ import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/routing";
 import { info, success } from "godseye/plugin-sdk/runtime-env";
 import { getChildLogger } from "godseye/plugin-sdk/runtime-env";
 import { defaultRuntime, type RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
-import { resolveOAuthDir } from "godseye/plugin-sdk/state-paths";
-import type { WebChannel } from "godseye/plugin-sdk/text-runtime";
-import { resolveUserPath } from "godseye/plugin-sdk/text-runtime";
+import { resolveOAuthDir } from "./auth-store.runtime.js";
+import { hasWebCredsSync, resolveWebCredsBackupPath, resolveWebCredsPath } from "./creds-files.js";
 import { resolveComparableIdentity, type WhatsAppSelfIdentity } from "./identity.js";
+import { resolveUserPath, type WebChannel } from "./text-runtime.js";
+export { hasWebCredsSync, resolveWebCredsBackupPath, resolveWebCredsPath };
 
 export function resolveDefaultWebAuthDir(): string {
   return path.join(resolveOAuthDir(), "whatsapp", DEFAULT_ACCOUNT_ID);
 }
 
 export const WA_WEB_AUTH_DIR = resolveDefaultWebAuthDir();
-
-export function resolveWebCredsPath(authDir: string): string {
-  return path.join(authDir, "creds.json");
-}
-
-export function resolveWebCredsBackupPath(authDir: string): string {
-  return path.join(authDir, "creds.json.bak");
-}
-
-export function hasWebCredsSync(authDir: string): boolean {
-  try {
-    const stats = fsSync.statSync(resolveWebCredsPath(authDir));
-    return stats.isFile() && stats.size > 1;
-  } catch {
-    return false;
-  }
-}
 
 export function readCredsJsonRaw(filePath: string): string | null {
   try {
@@ -242,7 +226,7 @@ export async function pickWebChannel(
   const hasWeb = await webAuthExists(authDir);
   if (!hasWeb) {
     throw new Error(
-      `No WhatsApp Web session found. Run \`${formatCliCommand("godseye channels login --channel whatsapp --verbose")}\` to link.`,
+      `No WhatsApp Web session found. Run \`${formatCliCommand("openclaw channels login --channel whatsapp --verbose")}\` to link.`,
     );
   }
   return choice;

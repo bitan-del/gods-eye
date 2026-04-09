@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { writeJsonFileAtomically as writeJsonFileAtomicallyImpl } from "openclaw/plugin-sdk/json-store";
-import { resolveStateDir } from "openclaw/plugin-sdk/state-paths";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { writeJsonFileAtomically as writeJsonFileAtomicallyImpl } from "godseye/plugin-sdk/json-store";
+import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
 import { resolveConfiguredMatrixAccountIds } from "./account-selection.js";
 import { isMatrixLegacyCryptoInspectorAvailable } from "./legacy-crypto-inspector-availability.js";
 import { formatMatrixErrorMessage } from "./matrix/errors.js";

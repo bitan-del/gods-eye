@@ -1,28 +1,32 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type { ChannelGroupPolicy } from "godseye/plugin-sdk/config-runtime";
 import type { TelegramAccountConfig } from "godseye/plugin-sdk/config-runtime";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
 import type { MockFn } from "godseye/plugin-sdk/testing";
 import { vi } from "vitest";
-import {
-  createNativeCommandTestParams,
-  type NativeCommandTestParams,
-} from "./bot-native-commands.fixture-test-support.js";
+import { createNativeCommandTestParams } from "./bot-native-commands.fixture-test-support.js";
 import type { RegisterTelegramNativeCommandsParams } from "./bot-native-commands.js";
 import { registerTelegramNativeCommands } from "./bot-native-commands.js";
 
 type GetPluginCommandSpecsFn =
-  typeof import("godseye/plugin-sdk/plugin-runtime").getPluginCommandSpecs;
-type MatchPluginCommandFn = typeof import("godseye/plugin-sdk/plugin-runtime").matchPluginCommand;
+  typeof import("./bot-native-commands.runtime.js").getPluginCommandSpecs;
+type MatchPluginCommandFn = typeof import("./bot-native-commands.runtime.js").matchPluginCommand;
 type ExecutePluginCommandFn =
-  typeof import("godseye/plugin-sdk/plugin-runtime").executePluginCommand;
+  typeof import("./bot-native-commands.runtime.js").executePluginCommand;
 type DispatchReplyWithBufferedBlockDispatcherFn =
-  typeof import("godseye/plugin-sdk/reply-runtime").dispatchReplyWithBufferedBlockDispatcher;
+  typeof import("godseye/plugin-sdk/reply-dispatch-runtime").dispatchReplyWithBufferedBlockDispatcher;
 type DispatchReplyWithBufferedBlockDispatcherResult = Awaited<
   ReturnType<DispatchReplyWithBufferedBlockDispatcherFn>
 >;
 type RecordInboundSessionMetaSafeFn =
-  typeof import("godseye/plugin-sdk/conversation-runtime").recordInboundSessionMetaSafe;
+  typeof import("./bot-native-commands.runtime.js").recordInboundSessionMetaSafe;
+type ResolveChunkModeFn = typeof import("./bot-native-commands.runtime.js").resolveChunkMode;
+type EnsureConfiguredBindingRouteReadyFn =
+  typeof import("./bot-native-commands.runtime.js").ensureConfiguredBindingRouteReady;
+type GetAgentScopedMediaLocalRootsFn =
+  typeof import("./bot-native-commands.runtime.js").getAgentScopedMediaLocalRoots;
+type CreateChannelReplyPipelineFn =
+  typeof import("./bot-native-commands.delivery.runtime.js").createChannelReplyPipeline;
 type AnyMock = MockFn<(...args: unknown[]) => unknown>;
 type AnyAsyncMock = MockFn<(...args: unknown[]) => Promise<unknown>>;
 type NativeCommandHarness = {
@@ -55,51 +59,67 @@ const replyPipelineMocks = vi.hoisted(() => {
   };
   return {
     finalizeInboundContext: vi.fn((ctx: unknown) => ctx),
-    dispatchReplyWithBufferedBlockDispatcher: vi.fn<DispatchReplyWithBufferedBlockDispatcherFn>(
-      async () => dispatchReplyResult,
+    dispatchReplyWithBufferedBlockDispatcher: vi.fn(
+      (async () => dispatchReplyResult) as DispatchReplyWithBufferedBlockDispatcherFn,
     ),
-    createChannelReplyPipeline: vi.fn(() => ({ onModelSelected: () => {} })),
+    createChannelReplyPipeline: vi.fn((() => ({
+      onModelSelected: () => {},
+      responsePrefixContextProvider: () => undefined,
+    })) as unknown as CreateChannelReplyPipelineFn),
     recordInboundSessionMetaSafe: vi.fn<RecordInboundSessionMetaSafeFn>(async () => undefined),
+    resolveChunkMode: vi.fn((() => "length") as unknown as ResolveChunkModeFn),
+    ensureConfiguredBindingRouteReady: vi.fn((async () => ({
+      ok: true,
+    })) as unknown as EnsureConfiguredBindingRouteReadyFn),
+    getAgentScopedMediaLocalRoots: vi.fn<GetAgentScopedMediaLocalRootsFn>(() => []),
   };
 });
 export const dispatchReplyWithBufferedBlockDispatcher =
   replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher;
 
-vi.mock("godseye/plugin-sdk/reply-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/reply-runtime")>();
-  return {
-    ...actual,
-    finalizeInboundContext: replyPipelineMocks.finalizeInboundContext,
-    dispatchReplyWithBufferedBlockDispatcher:
-      replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher,
-  };
-});
-vi.mock("godseye/plugin-sdk/conversation-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/conversation-runtime")>();
-  return {
-    ...actual,
-    recordInboundSessionMetaSafe: replyPipelineMocks.recordInboundSessionMetaSafe,
-    readChannelAllowFromStore: vi.fn(async () => []),
-  };
-});
-vi.mock("godseye/plugin-sdk/channel-reply-pipeline", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/channel-reply-pipeline")>();
-  return {
-    ...actual,
-    createChannelReplyPipeline: replyPipelineMocks.createChannelReplyPipeline,
-  };
-});
-
 const deliveryMocks = vi.hoisted(() => ({
   deliverReplies: vi.fn(async () => {}),
 }));
 export const deliverReplies = deliveryMocks.deliverReplies;
+
+vi.mock("./bot-native-commands.runtime.js", () => ({
+  getPluginCommandSpecs: pluginCommandMocks.getPluginCommandSpecs,
+  matchPluginCommand: pluginCommandMocks.matchPluginCommand,
+  executePluginCommand: pluginCommandMocks.executePluginCommand,
+  finalizeInboundContext: replyPipelineMocks.finalizeInboundContext,
+  recordInboundSessionMetaSafe: replyPipelineMocks.recordInboundSessionMetaSafe,
+  resolveChunkMode: replyPipelineMocks.resolveChunkMode,
+  ensureConfiguredBindingRouteReady: replyPipelineMocks.ensureConfiguredBindingRouteReady,
+  getAgentScopedMediaLocalRoots: replyPipelineMocks.getAgentScopedMediaLocalRoots,
+}));
+vi.mock("./bot-native-commands.delivery.runtime.js", () => ({
+  createChannelReplyPipeline: replyPipelineMocks.createChannelReplyPipeline,
+  deliverReplies: deliveryMocks.deliverReplies,
+  emitTelegramMessageSentHooks: vi.fn(),
+}));
+vi.mock("godseye/plugin-sdk/reply-dispatch-runtime", () => ({
+  dispatchReplyWithBufferedBlockDispatcher:
+    replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher,
+}));
+vi.mock("godseye/plugin-sdk/conversation-runtime", () => ({
+  readChannelAllowFromStore: vi.fn(async () => []),
+  resolveConfiguredBindingRoute: vi.fn(({ route }: { route: unknown }) => ({
+    route,
+    bindingResolution: null,
+    boundSessionKey: "",
+  })),
+  getSessionBindingService: vi.fn(() => ({
+    resolveByConversation: vi.fn(() => null),
+    touch: vi.fn(),
+  })),
+  isPluginOwnedSessionBindingRecord: vi.fn(() => false),
+}));
 vi.mock("./bot/delivery.js", () => ({ deliverReplies: deliveryMocks.deliverReplies }));
 vi.mock("./bot/delivery.replies.js", () => ({ deliverReplies: deliveryMocks.deliverReplies }));
 export { createNativeCommandTestParams };
 
 export function createNativeCommandsHarness(params?: {
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   runtime?: RuntimeEnv;
   telegramCfg?: TelegramAccountConfig;
   allowFrom?: string[];
@@ -114,20 +134,13 @@ export function createNativeCommandsHarness(params?: {
   const setMyCommands: AnyAsyncMock = vi.fn(async () => undefined);
   const log: AnyMock = vi.fn();
   const telegramDeps = {
-    loadConfig: vi.fn(() => params?.cfg ?? ({} as GodsEyeConfig)),
-    resolveStorePath: vi.fn((storePath?: string) => storePath ?? "/tmp/sessions.json"),
+    loadConfig: vi.fn(() => params?.cfg ?? ({} as OpenClawConfig)),
     readChannelAllowFromStore: vi.fn(async () => []),
-    upsertChannelPairingRequest: vi.fn(async () => ({ code: "PAIRCODE", created: true })),
-    enqueueSystemEvent: vi.fn(),
     dispatchReplyWithBufferedBlockDispatcher:
       replyPipelineMocks.dispatchReplyWithBufferedBlockDispatcher,
-    buildModelsProviderData: vi.fn(async () => ({
-      byProvider: new Map<string, Set<string>>(),
-      providers: [],
-      resolvedDefault: { provider: "openai", model: "gpt-4.1" },
-    })),
+    getPluginCommandSpecs: pluginCommandMocks.getPluginCommandSpecs,
     listSkillCommandsForAgents: vi.fn(() => []),
-    wasSentByBot: vi.fn(() => false),
+    syncTelegramMenuCommands: vi.fn(),
   };
   const bot = {
     api: {
@@ -141,7 +154,7 @@ export function createNativeCommandsHarness(params?: {
 
   registerTelegramNativeCommands({
     bot,
-    cfg: params?.cfg ?? ({} as GodsEyeConfig),
+    cfg: params?.cfg ?? ({} as OpenClawConfig),
     runtime: params?.runtime ?? ({ log } as unknown as RuntimeEnv),
     accountId: "default",
     telegramCfg: params?.telegramCfg ?? ({} as TelegramAccountConfig),

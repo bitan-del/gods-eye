@@ -7,15 +7,26 @@ const parseProcCmdlineMock = vi.hoisted(() => vi.fn());
 const isGatewayArgvMock = vi.hoisted(() => vi.fn());
 const findGatewayPidsOnPortSyncMock = vi.hoisted(() => vi.fn());
 
-vi.mock("node:child_process", () => ({
-  spawnSync: (...args: unknown[]) => spawnSyncMock(...args),
-}));
+vi.mock("node:child_process", async () => {
+  const { mockNodeBuiltinModule } = await import("../../test/helpers/node-builtin-mocks.js");
+  return mockNodeBuiltinModule(
+    () => vi.importActual<typeof import("node:child_process")>("node:child_process"),
+    {
+      spawnSync: (...args: unknown[]) => spawnSyncMock(...args),
+    },
+  );
+});
 
-vi.mock("node:fs", () => ({
-  default: {
-    readFileSync: (...args: unknown[]) => readFileSyncMock(...args),
-  },
-}));
+vi.mock("node:fs", async () => {
+  const { mockNodeBuiltinModule } = await import("../../test/helpers/node-builtin-mocks.js");
+  return mockNodeBuiltinModule(
+    () => vi.importActual<typeof import("node:fs")>("node:fs"),
+    {
+      readFileSync: (...args: unknown[]) => readFileSyncMock(...args),
+    },
+    { mirrorToDefault: true },
+  );
+});
 
 vi.mock("../daemon/cmd-argv.js", () => ({
   parseCmdScriptCommandLine: (...args: unknown[]) => parseCmdScriptCommandLineMock(...args),
@@ -28,6 +39,26 @@ vi.mock("./gateway-process-argv.js", () => ({
 
 vi.mock("./restart-stale-pids.js", () => ({
   findGatewayPidsOnPortSync: (...args: unknown[]) => findGatewayPidsOnPortSyncMock(...args),
+}));
+
+vi.mock("../logging/subsystem.js", () => ({
+  createSubsystemLogger: vi.fn(() => ({
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    raw: vi.fn(),
+    child: vi.fn(),
+    isEnabled: vi.fn(() => false),
+    subsystem: "test",
+  })),
+}));
+
+vi.mock("../channels/chat-meta.js", () => ({
+  listChatChannels: vi.fn(() => []),
+  getChatChannelMeta: vi.fn(() => null),
 }));
 
 const {
@@ -133,10 +164,10 @@ describe("gateway-processes", () => {
   it("dedupes and filters verified gateway listener pids on unix and windows", () => {
     setPlatform("linux");
     findGatewayPidsOnPortSyncMock.mockReturnValue([process.pid, 200, 200, 300, -1]);
-    readFileSyncMock.mockReturnValueOnce("godseye-gateway\0gateway\0");
+    readFileSyncMock.mockReturnValueOnce("openclaw-gateway\0gateway\0");
     readFileSyncMock.mockReturnValueOnce("python\0-m\0http.server\0");
     parseProcCmdlineMock
-      .mockReturnValueOnce(["godseye-gateway", "gateway"])
+      .mockReturnValueOnce(["openclaw-gateway", "gateway"])
       .mockReturnValueOnce(["python", "-m", "http.server"]);
     isGatewayArgvMock.mockReturnValueOnce(true).mockReturnValueOnce(false);
 

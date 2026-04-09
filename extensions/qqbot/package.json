@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/qqbot",
+  "name": "@godseye/qqbot",
   "version": "2026.4.10",
   "private": false,
   "description": "OpenClaw QQ Bot channel plugin",
@@ -10,19 +10,19 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*",
+    "@godseye/plugin-sdk": "workspace:*",
     "@types/ws": "^8.18.1",
-    "openclaw": "workspace:*"
+    "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.4.10"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
-    "openclaw": {
+    "godseye": {
       "optional": true
     }
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ],
@@ -38,7 +38,7 @@
       "systemImage": "bubble.left.and.bubble.right"
     },
     "install": {
-      "npmSpec": "@openclaw/qqbot",
+      "npmSpec": "@godseye/qqbot",
       "localPath": "extensions/qqbot",
       "defaultChoice": "npm",
       "minHostVersion": ">=2026.4.10"

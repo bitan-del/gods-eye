@@ -1,6 +1,8 @@
 export type { AcpRuntimeErrorCode } from "godseye/plugin-sdk/acp-runtime";
 export {
   AcpRuntimeError,
+  getAcpRuntimeBackend,
+  tryDispatchAcpReplyHook,
   registerAcpRuntimeBackend,
   unregisterAcpRuntimeBackend,
 } from "godseye/plugin-sdk/acp-runtime";
@@ -12,15 +14,21 @@ export type {
   AcpRuntimeEvent,
   AcpRuntimeHandle,
   AcpRuntimeStatus,
+  AcpRuntimeTurnAttachment,
   AcpRuntimeTurnInput,
   AcpSessionUpdateTag,
 } from "godseye/plugin-sdk/acp-runtime";
 export type {
-  GodsEyePluginApi,
-  GodsEyePluginConfigSchema,
-  GodsEyePluginService,
-  GodsEyePluginServiceContext,
+  OpenClawPluginApi,
+  OpenClawPluginConfigSchema,
+  OpenClawPluginService,
+  OpenClawPluginServiceContext,
   PluginLogger,
+} from "godseye/plugin-sdk/core";
+export type {
+  PluginHookReplyDispatchContext,
+  PluginHookReplyDispatchEvent,
+  PluginHookReplyDispatchResult,
 } from "godseye/plugin-sdk/core";
 export type {
   WindowsSpawnProgram,

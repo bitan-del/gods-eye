@@ -1,7 +1,7 @@
 export { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 export type {
-  GodsEyePluginApi,
-  GodsEyePluginCommandDefinition,
+  OpenClawPluginApi,
+  OpenClawPluginCommandDefinition,
   PluginCommandContext,
-  GodsEyePluginService,
+  OpenClawPluginService,
 } from "godseye/plugin-sdk/plugin-entry";

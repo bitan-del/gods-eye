@@ -6,7 +6,7 @@
 
 import * as fs from "node:fs";
 import path from "node:path";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { asRecord, readString } from "./config-record-shared.js";
 import { sanitizeFileName } from "./utils/platform.js";
 

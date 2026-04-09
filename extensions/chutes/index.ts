@@ -1,12 +1,13 @@
 import { definePluginEntry } from "godseye/plugin-sdk/plugin-entry";
 import {
-  createProviderApiKeyAuthMethod,
   resolveOAuthApiKeyMarker,
   type ProviderAuthContext,
   type ProviderAuthResult,
 } from "godseye/plugin-sdk/provider-auth";
 import { buildOauthProviderAuthResult } from "godseye/plugin-sdk/provider-auth";
+import { createProviderApiKeyAuthMethod } from "godseye/plugin-sdk/provider-auth-api-key";
 import { loginChutes } from "godseye/plugin-sdk/provider-auth-login";
+import { normalizeOptionalString, readStringValue } from "godseye/plugin-sdk/text-runtime";
 import {
   CHUTES_DEFAULT_MODEL_REF,
   applyChutesApiKeyConfig,
@@ -30,7 +31,7 @@ async function runChutesOAuth(ctx: ProviderAuthContext): Promise<ProviderAuthRes
         validate: (value: string) => (value?.trim() ? undefined : "Required"),
       }),
     ).trim();
-  const clientSecret = process.env.CHUTES_CLIENT_SECRET?.trim() || undefined;
+  const clientSecret = normalizeOptionalString(process.env.CHUTES_CLIENT_SECRET);
 
   await ctx.prompter.note(
     isRemote
@@ -82,7 +83,7 @@ async function runChutesOAuth(ctx: ProviderAuthContext): Promise<ProviderAuthRes
       access: creds.access,
       refresh: creds.refresh,
       expires: creds.expires,
-      email: typeof creds.email === "string" ? creds.email : undefined,
+      email: readStringValue(creds.email),
       credentialExtra: {
         clientId,
         ...("accountId" in creds && typeof creds.accountId === "string"

@@ -1,6 +1,7 @@
 import type { ModelRegistry } from "@mariozechner/pi-coding-agent";
 import { parseModelRef } from "../../agents/model-selection.js";
 import type { RuntimeEnv } from "../../runtime.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { resolveConfiguredEntries } from "./list.configured.js";
 import { formatErrorWithStack } from "./list.errors.js";
 import {
@@ -25,8 +26,7 @@ export async function modelsListCommand(
   runtime: RuntimeEnv,
 ) {
   ensureFlagCompatibility(opts);
-  const { ensureAuthProfileStore } = await import("../../agents/auth-profiles.runtime.js");
-  const { ensureGodsEyeModelsJson } = await import("../../agents/models-config.js");
+  const { ensureAuthProfileStore, ensureOpenClawModelsJson } = await import("./list.runtime.js");
   const { sourceConfig, resolvedConfig: cfg } = await loadModelsConfigWithSource({
     commandName: "models list",
     runtime,
@@ -38,7 +38,7 @@ export async function modelsListCommand(
       return undefined;
     }
     const parsed = parseModelRef(`${raw}/_`, DEFAULT_PROVIDER);
-    return parsed?.provider ?? raw.toLowerCase();
+    return parsed?.provider ?? normalizeLowercaseStringOrEmpty(raw);
   })();
 
   let modelRegistry: ModelRegistry | undefined;
@@ -48,7 +48,7 @@ export async function modelsListCommand(
   try {
     // Keep command behavior explicit: sync models.json from the source config
     // before building the read-only model registry view.
-    await ensureGodsEyeModelsJson(sourceConfig ?? cfg);
+    await ensureOpenClawModelsJson(sourceConfig ?? cfg);
     const loaded = await loadListModelRegistry(cfg, { sourceConfig });
     modelRegistry = loaded.registry;
     discoveredKeys = loaded.discoveredKeys;

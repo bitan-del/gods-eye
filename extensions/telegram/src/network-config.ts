@@ -1,12 +1,12 @@
 import process from "node:process";
 import type { TelegramNetworkConfig } from "godseye/plugin-sdk/config-runtime";
-import { isTruthyEnvValue } from "godseye/plugin-sdk/infra-runtime";
-import { isWSL2Sync } from "godseye/plugin-sdk/infra-runtime";
+import { isTruthyEnvValue, isWSL2Sync } from "godseye/plugin-sdk/runtime-env";
+import { normalizeOptionalLowercaseString } from "godseye/plugin-sdk/text-runtime";
 
 export const TELEGRAM_DISABLE_AUTO_SELECT_FAMILY_ENV =
-  "GODSEYE_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY";
-export const TELEGRAM_ENABLE_AUTO_SELECT_FAMILY_ENV = "GODSEYE_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY";
-export const TELEGRAM_DNS_RESULT_ORDER_ENV = "GODSEYE_TELEGRAM_DNS_RESULT_ORDER";
+  "OPENCLAW_TELEGRAM_DISABLE_AUTO_SELECT_FAMILY";
+export const TELEGRAM_ENABLE_AUTO_SELECT_FAMILY_ENV = "OPENCLAW_TELEGRAM_ENABLE_AUTO_SELECT_FAMILY";
+export const TELEGRAM_DNS_RESULT_ORDER_ENV = "OPENCLAW_TELEGRAM_DNS_RESULT_ORDER";
 
 export type TelegramAutoSelectFamilyDecision = {
   value: boolean | null;
@@ -64,7 +64,7 @@ export function resolveTelegramAutoSelectFamilyDecision(params?: {
  * Setting "ipv4first" prioritizes IPv4 addresses in DNS resolution.
  *
  * Priority:
- * 1. Environment variable GODSEYE_TELEGRAM_DNS_RESULT_ORDER
+ * 1. Environment variable OPENCLAW_TELEGRAM_DNS_RESULT_ORDER
  * 2. Config: channels.telegram.network.dnsResultOrder
  * 3. Default: "ipv4first" on Node 22+ (to work around common IPv6 issues)
  */
@@ -80,15 +80,15 @@ export function resolveTelegramDnsResultOrderDecision(params?: {
       : Number(process.versions.node.split(".")[0]);
 
   // Check environment variable
-  const envValue = env[TELEGRAM_DNS_RESULT_ORDER_ENV]?.trim().toLowerCase();
+  const envValue = normalizeOptionalLowercaseString(env[TELEGRAM_DNS_RESULT_ORDER_ENV]);
   if (envValue === "ipv4first" || envValue === "verbatim") {
     return { value: envValue, source: `env:${TELEGRAM_DNS_RESULT_ORDER_ENV}` };
   }
 
   // Check config
-  const configValue = (params?.network as { dnsResultOrder?: string } | undefined)?.dnsResultOrder
-    ?.trim()
-    .toLowerCase();
+  const configValue = normalizeOptionalLowercaseString(
+    (params?.network as { dnsResultOrder?: string } | undefined)?.dnsResultOrder,
+  );
   if (configValue === "ipv4first" || configValue === "verbatim") {
     return { value: configValue, source: "config" };
   }

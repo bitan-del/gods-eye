@@ -22,9 +22,15 @@ let stageSandboxMedia: typeof import("./reply/stage-sandbox-media.js").stageSand
 async function loadFreshStageSandboxMediaModuleForTest() {
   vi.resetModules();
   vi.doMock(sandboxModuleId, () => sandboxMocks);
-  vi.doMock("node:child_process", () => childProcessMocks);
-  vi.doMock(fsSafeModuleId, async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../infra/fs-safe.js")>();
+  vi.doMock("node:child_process", async () => {
+    const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+    return {
+      ...actual,
+      spawn: childProcessMocks.spawn,
+    };
+  });
+  vi.doMock(fsSafeModuleId, async () => {
+    const actual = await vi.importActual<typeof import("../infra/fs-safe.js")>(fsSafeModuleId);
     return {
       ...actual,
       copyFileWithinRoot: vi.fn(async ({ sourcePath, rootDir, relativePath, maxBytes }) => {
@@ -103,7 +109,7 @@ async function setupSandboxWorkspace(home: string): Promise<{
   sandboxDir: string;
 }> {
   const cfg = createSandboxMediaStageConfig(home);
-  const workspaceDir = join(home, "godseye");
+  const workspaceDir = join(home, "openclaw");
   const sandboxDir = join(home, "sandboxes", "session");
   await fs.mkdir(sandboxDir, { recursive: true });
   sandboxMocks.ensureSandboxWorkspaceForSession.mockResolvedValue({
@@ -118,7 +124,7 @@ async function writeInboundMedia(
   fileName: string,
   payload: string | Buffer,
 ): Promise<string> {
-  const inboundDir = join(home, ".godseye", "media", "inbound");
+  const inboundDir = join(home, ".openclaw", "media", "inbound");
   await fs.mkdir(inboundDir, { recursive: true });
   const mediaPath = join(inboundDir, fileName);
   await fs.writeFile(mediaPath, payload);
@@ -127,7 +133,7 @@ async function writeInboundMedia(
 
 describe("stageSandboxMedia", () => {
   it("stages allowed media and blocks unsafe paths", async () => {
-    await withSandboxMediaTempHome("godseye-triggers-", async (home) => {
+    await withSandboxMediaTempHome("openclaw-triggers-", async (home) => {
       await loadStageSandboxMediaInTempHome();
       const { cfg, workspaceDir, sandboxDir } = await setupSandboxWorkspace(home);
 
@@ -195,7 +201,7 @@ describe("stageSandboxMedia", () => {
   });
 
   it("blocks destination symlink escapes when staging into sandbox workspace", async () => {
-    await withSandboxMediaTempHome("godseye-triggers-", async (home) => {
+    await withSandboxMediaTempHome("openclaw-triggers-", async (home) => {
       await loadStageSandboxMediaInTempHome();
       const { cfg, workspaceDir, sandboxDir } = await setupSandboxWorkspace(home);
 
@@ -227,7 +233,7 @@ describe("stageSandboxMedia", () => {
   });
 
   it("skips oversized media staging and keeps original media paths", async () => {
-    await withSandboxMediaTempHome("godseye-triggers-", async (home) => {
+    await withSandboxMediaTempHome("openclaw-triggers-", async (home) => {
       await loadStageSandboxMediaInTempHome();
       const { cfg, workspaceDir, sandboxDir } = await setupSandboxWorkspace(home);
 

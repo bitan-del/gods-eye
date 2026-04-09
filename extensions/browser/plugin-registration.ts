@@ -3,7 +3,7 @@ import type {
   OpenClawPluginNodeHostCommand,
   OpenClawPluginToolContext,
   OpenClawPluginToolFactory,
-} from "openclaw/plugin-sdk/plugin-entry";
+} from "godseye/plugin-sdk/plugin-entry";
 import {
   collectBrowserSecurityAuditFindings,
   createBrowserPluginService,

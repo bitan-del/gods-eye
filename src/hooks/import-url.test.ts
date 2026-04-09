@@ -19,13 +19,13 @@ describe("buildImportUrl", () => {
   });
 
   it("returns bare URL for bundled hooks (no query string)", () => {
-    const url = buildImportUrl(tmpFile, "godseye-bundled");
+    const url = buildImportUrl(tmpFile, "openclaw-bundled");
     expect(url).not.toContain("?t=");
     expect(url).toMatch(/^file:\/\//);
   });
 
   it("appends mtime-based cache buster for workspace hooks", () => {
-    const url = buildImportUrl(tmpFile, "godseye-workspace");
+    const url = buildImportUrl(tmpFile, "openclaw-workspace");
     expect(url).toMatch(/\?t=[\d.]+&s=\d+/);
 
     const { mtimeMs, size } = fs.statSync(tmpFile);
@@ -34,29 +34,29 @@ describe("buildImportUrl", () => {
   });
 
   it("appends mtime-based cache buster for managed hooks", () => {
-    const url = buildImportUrl(tmpFile, "godseye-managed");
+    const url = buildImportUrl(tmpFile, "openclaw-managed");
     expect(url).toMatch(/\?t=[\d.]+&s=\d+/);
   });
 
   it("appends mtime-based cache buster for plugin hooks", () => {
-    const url = buildImportUrl(tmpFile, "godseye-plugin");
+    const url = buildImportUrl(tmpFile, "openclaw-plugin");
     expect(url).toMatch(/\?t=[\d.]+&s=\d+/);
   });
 
   it("returns same URL for bundled hooks across calls (cacheable)", () => {
-    const url1 = buildImportUrl(tmpFile, "godseye-bundled");
-    const url2 = buildImportUrl(tmpFile, "godseye-bundled");
+    const url1 = buildImportUrl(tmpFile, "openclaw-bundled");
+    const url2 = buildImportUrl(tmpFile, "openclaw-bundled");
     expect(url1).toBe(url2);
   });
 
   it("returns same URL for workspace hooks when file is unchanged", () => {
-    const url1 = buildImportUrl(tmpFile, "godseye-workspace");
-    const url2 = buildImportUrl(tmpFile, "godseye-workspace");
+    const url1 = buildImportUrl(tmpFile, "openclaw-workspace");
+    const url2 = buildImportUrl(tmpFile, "openclaw-workspace");
     expect(url1).toBe(url2);
   });
 
   it("falls back to Date.now() when file does not exist", () => {
-    const url = buildImportUrl("/nonexistent/handler.js", "godseye-workspace");
+    const url = buildImportUrl("/nonexistent/handler.js", "openclaw-workspace");
     expect(url).toMatch(/\?t=\d+/);
   });
 });

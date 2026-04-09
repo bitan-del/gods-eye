@@ -1,8 +1,9 @@
+import fsSync from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { ModelDefinitionConfig } from "../../config/types.models.js";
 import type {
   ImageDescriptionRequest,
@@ -11,16 +12,16 @@ import type {
 } from "../../plugin-sdk/media-understanding.js";
 import { withFetchPreconnect } from "../../test-utils/fetch-mock.js";
 import { minimaxUnderstandImage } from "../minimax-vlm.js";
+import { createOpenClawCodingTools } from "../pi-tools.js";
 import type { SandboxFsBridge } from "../sandbox/fs-bridge.js";
 import { createHostSandboxFsBridge } from "../test-helpers/host-sandbox-fs-bridge.js";
 import { createUnsafeMountedSandbox } from "../test-helpers/unsafe-mounted-sandbox.js";
 import { makeZeroUsageSnapshot } from "../usage.js";
 import { __testing, createImageTool, resolveImageModelConfigForTool } from "./image-tool.js";
 
-type PiToolsModule = typeof import("../pi-tools.js");
-type CreateGodsEyeCodingToolsArgs = Parameters<PiToolsModule["createGodsEyeCodingTools"]>[0];
-type MockGodsEyeToolsOptions = {
-  config?: GodsEyeConfig;
+type CreateOpenClawCodingToolsArgs = Parameters<typeof createOpenClawCodingTools>[0];
+type MockOpenClawToolsOptions = {
+  config?: OpenClawConfig;
   agentDir?: string;
   workspaceDir?: string;
   sandboxRoot?: string;
@@ -65,31 +66,14 @@ const imageProviderHarness = vi.hoisted(() => {
   };
 });
 
-vi.mock("../../media-understanding/runner.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../media-understanding/runner.js")>();
+vi.mock("../bash-tools.js", async () => {
+  const actual = await vi.importActual<typeof import("../bash-tools.js")>("../bash-tools.js");
   return {
     ...actual,
-    buildProviderRegistry: (overrides?: Record<string, MediaUnderstandingProvider>) =>
-      imageProviderHarness.buildProviderRegistry(overrides),
+    createExecTool: vi.fn(() => piToolsHarness.createStubTool("exec")),
+    createProcessTool: vi.fn(() => piToolsHarness.createStubTool("process")),
   };
 });
-
-vi.mock("../../media-understanding/provider-registry.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../media-understanding/provider-registry.js")>();
-  return {
-    ...actual,
-    getMediaUnderstandingProvider: (
-      id: string,
-      registry: Map<string, MediaUnderstandingProvider>,
-    ) => imageProviderHarness.getMediaUnderstandingProvider(id, registry),
-  };
-});
-
-vi.mock("../bash-tools.js", () => ({
-  createExecTool: vi.fn(() => piToolsHarness.createStubTool("exec")),
-  createProcessTool: vi.fn(() => piToolsHarness.createStubTool("process")),
-}));
 
 vi.mock("../channel-tools.js", () => ({
   copyChannelAgentToolMeta: vi.fn((_from, to) => to),
@@ -108,10 +92,60 @@ vi.mock("../pi-tools.abort.js", () => ({
   wrapToolWithAbortSignal: vi.fn((tool) => tool),
 }));
 
-vi.mock("../godseye-tools.js", async () => {
+vi.mock("../auth-profiles.js", () => ({
+  ensureAuthProfileStore: (agentDir?: string) => {
+    if (!agentDir) {
+      return { version: 1, profiles: {} };
+    }
+    const pathname = path.join(agentDir, "auth-profiles.json");
+    try {
+      return JSON.parse(fsSync.readFileSync(pathname, "utf8")) as {
+        version?: number;
+        profiles?: Record<string, { provider?: string }>;
+      };
+    } catch {
+      return { version: 1, profiles: {} };
+    }
+  },
+  hasAnyAuthProfileStoreSource: (agentDir?: string) => {
+    if (!agentDir) {
+      return false;
+    }
+    return fsSync.existsSync(path.join(agentDir, "auth-profiles.json"));
+  },
+  listProfilesForProvider: (
+    store: { profiles?: Record<string, { provider?: string }> },
+    provider: string,
+  ) => Object.values(store.profiles ?? {}).filter((profile) => profile?.provider === provider),
+}));
+
+vi.mock("../model-auth.js", () => ({
+  resolveEnvApiKey: (provider: string) => {
+    const envVarByProvider: Record<string, string[]> = {
+      anthropic: ["ANTHROPIC_API_KEY", "ANTHROPIC_OAUTH_TOKEN"],
+      minimax: ["MINIMAX_API_KEY", "MINIMAX_OAUTH_TOKEN"],
+      "minimax-portal": ["MINIMAX_OAUTH_TOKEN"],
+      moonshot: ["MOONSHOT_API_KEY"],
+      openai: ["OPENAI_API_KEY"],
+      openrouter: ["OPENROUTER_API_KEY"],
+      zai: ["ZAI_API_KEY", "Z_AI_API_KEY"],
+    };
+    const envVar = (envVarByProvider[provider] ?? []).find((key) => {
+      const value = process.env[key];
+      return typeof value === "string" && value.length > 0;
+    });
+    return {
+      apiKey: envVar ? process.env[envVar] : undefined,
+      source: envVar ? "env" : undefined,
+      envVar,
+    };
+  },
+}));
+
+vi.mock("../openclaw-tools.js", async () => {
   const { createImageTool } = await import("./image-tool.js");
   return {
-    createGodsEyeTools: vi.fn((options?: MockGodsEyeToolsOptions) => {
+    createOpenClawTools: vi.fn((options?: MockOpenClawToolsOptions) => {
       const imageTool = createImageTool({
         config: options?.config,
         agentDir: options?.agentDir,
@@ -140,14 +174,33 @@ async function writeAuthProfiles(agentDir: string, profiles: unknown) {
   );
 }
 
-async function createGodsEyeCodingToolsWithFreshModules(options?: CreateGodsEyeCodingToolsArgs) {
-  vi.resetModules();
-  const { createGodsEyeCodingTools } = await import("../pi-tools.js");
-  return createGodsEyeCodingTools(options);
+async function createOpenClawCodingToolsWithFreshModules(options?: CreateOpenClawCodingToolsArgs) {
+  const defaultImageModels = new Map<string, string>([
+    ["anthropic", "claude-opus-4-6"],
+    ["minimax", "MiniMax-VL-01"],
+    ["minimax-portal", "MiniMax-VL-01"],
+    ["openai", "gpt-5.4-mini"],
+    ["zai", "glm-4.6v"],
+  ]);
+  __testing.setProviderDepsForTest({
+    buildProviderRegistry: (overrides?: Record<string, MediaUnderstandingProvider>) =>
+      imageProviderHarness.buildProviderRegistry(overrides),
+    getMediaUnderstandingProvider: (
+      id: string,
+      registry: Map<string, MediaUnderstandingProvider>,
+    ) => imageProviderHarness.getMediaUnderstandingProvider(id, registry),
+    describeImageWithModel: describeGenericImageWithModel,
+    describeImagesWithModel: describeGenericImagesWithModel,
+    resolveAutoMediaKeyProviders: ({ capability }) =>
+      capability === "image" ? ["openai", "anthropic"] : [],
+    resolveDefaultMediaModel: ({ providerId, capability }) =>
+      capability === "image" ? defaultImageModels.get(providerId.toLowerCase()) : undefined,
+  });
+  return createOpenClawCodingTools(options);
 }
 
 async function withTempAgentDir<T>(run: (agentDir: string) => Promise<T>): Promise<T> {
-  const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-image-"));
+  const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-image-"));
   try {
     return await run(agentDir);
   } finally {
@@ -165,7 +218,7 @@ async function withTempWorkspacePng(
   options?: { parentDir?: string },
 ) {
   const parentDir = options?.parentDir ?? os.tmpdir();
-  const workspaceParent = await fs.mkdtemp(path.join(parentDir, "godseye-workspace-image-"));
+  const workspaceParent = await fs.mkdtemp(path.join(parentDir, "openclaw-workspace-image-"));
   try {
     const workspaceDir = path.join(workspaceParent, "workspace");
     await fs.mkdir(workspaceDir, { recursive: true });
@@ -267,7 +320,7 @@ function stubOpenAiCompletionsOkFetch(text = "ok") {
   return fetch;
 }
 
-function createMinimaxImageConfig(): GodsEyeConfig {
+function createMinimaxImageConfig(): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -286,7 +339,7 @@ function createMinimaxImageConfig(): GodsEyeConfig {
 function createDefaultImageFallbackExpectation(primary: string) {
   return {
     primary,
-    fallbacks: ["openai/gpt-5-mini", "anthropic/claude-opus-4-5"],
+    fallbacks: ["openai/gpt-5.4-mini", "anthropic/claude-opus-4-6"],
   };
 }
 
@@ -368,6 +421,50 @@ async function describeMoonshotImages(
   });
 }
 
+async function readMockResponseText(response: Response): Promise<string> {
+  const contentType =
+    response.headers instanceof Headers ? (response.headers.get("content-type") ?? "") : "";
+  if (contentType.includes("application/json") || typeof response.text !== "function") {
+    const payload = (await response.json()) as { content?: string };
+    return payload.content ?? "";
+  }
+  const raw = await response.text();
+  const match = raw.match(/"content":"([^"]*)"/);
+  return match?.[1] ?? "";
+}
+
+async function describeGenericImageWithModel(
+  params: ImageDescriptionRequest,
+): Promise<{ text: string; model: string }> {
+  const response = await global.fetch("https://example.invalid/media-image", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      provider: params.provider,
+      model: params.model,
+      prompt: params.prompt,
+      mime: params.mime,
+    }),
+  });
+  return { text: await readMockResponseText(response), model: params.model };
+}
+
+async function describeGenericImagesWithModel(
+  params: ImagesDescriptionRequest,
+): Promise<{ text: string; model: string }> {
+  const response = await global.fetch("https://example.invalid/media-images", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      provider: params.provider,
+      model: params.model,
+      prompt: params.prompt,
+      imageCount: params.images.length,
+    }),
+  });
+  return { text: await readMockResponseText(response), model: params.model };
+}
+
 const moonshotProvider = {
   id: "moonshot",
   capabilities: ["image"],
@@ -377,6 +474,13 @@ const moonshotProvider = {
 
 function installImageUnderstandingProviderStubs(...providers: MediaUnderstandingProvider[]) {
   imageProviderHarness.setProviders(providers);
+  const defaultImageModels = new Map<string, string>([
+    ["anthropic", "claude-opus-4-6"],
+    ["minimax", "MiniMax-VL-01"],
+    ["minimax-portal", "MiniMax-VL-01"],
+    ["openai", "gpt-5.4-mini"],
+    ["zai", "glm-4.6v"],
+  ]);
   __testing.setProviderDepsForTest({
     buildProviderRegistry: (overrides?: Record<string, MediaUnderstandingProvider>) =>
       imageProviderHarness.buildProviderRegistry(overrides),
@@ -384,6 +488,12 @@ function installImageUnderstandingProviderStubs(...providers: MediaUnderstanding
       id: string,
       registry: Map<string, MediaUnderstandingProvider>,
     ) => imageProviderHarness.getMediaUnderstandingProvider(id, registry),
+    describeImageWithModel: describeGenericImageWithModel,
+    describeImagesWithModel: describeGenericImagesWithModel,
+    resolveAutoMediaKeyProviders: ({ capability }) =>
+      capability === "image" ? ["openai", "anthropic"] : [],
+    resolveDefaultMediaModel: ({ providerId, capability }) =>
+      capability === "image" ? defaultImageModels.get(providerId.toLowerCase()) : undefined,
   });
 }
 
@@ -432,7 +542,7 @@ type ImageToolInstance = ReturnType<typeof createRequiredImageTool>;
 async function withTempSandboxState(
   run: (ctx: { stateDir: string; agentDir: string; sandboxRoot: string }) => Promise<void>,
 ) {
-  const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-image-sandbox-"));
+  const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-image-sandbox-"));
   const agentDir = path.join(stateDir, "agent");
   const sandboxRoot = path.join(stateDir, "sandbox");
   await fs.mkdir(agentDir, { recursive: true });
@@ -478,7 +588,12 @@ describe("image tool implicit imageModel config", () => {
     "OPENAI_API_KEY",
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_OAUTH_TOKEN",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
     "MINIMAX_API_KEY",
+    "MODELSTUDIO_API_KEY",
+    "QWEN_API_KEY",
+    "DASHSCOPE_API_KEY",
     "ZAI_API_KEY",
     "Z_AI_API_KEY",
     // Avoid implicit Copilot provider discovery hitting the network in tests.
@@ -498,8 +613,8 @@ describe("image tool implicit imageModel config", () => {
 
   it("stays disabled without auth when no pairing is possible", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: GodsEyeConfig = {
-        agents: { defaults: { model: { primary: "openai/gpt-5.2" } } },
+      const cfg: OpenClawConfig = {
+        agents: { defaults: { model: { primary: "openai/gpt-5.4" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toBeNull();
       expect(createImageTool({ config: cfg, agentDir })).toBeNull();
@@ -509,14 +624,16 @@ describe("image tool implicit imageModel config", () => {
   it("pairs minimax primary with MiniMax-VL-01 (and fallbacks) when auth exists", async () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
+      vi.stubEnv("MINIMAX_OAUTH_TOKEN", "minimax-oauth-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
-      expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
-        createDefaultImageFallbackExpectation("minimax/MiniMax-VL-01"),
-      );
+      expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
+        ...createDefaultImageFallbackExpectation("minimax/MiniMax-VL-01"),
+        fallbacks: ["openai/gpt-5.4-mini", "anthropic/claude-opus-4-6"],
+      });
       expect(createImageTool({ config: cfg, agentDir })).not.toBeNull();
     });
   });
@@ -537,7 +654,7 @@ describe("image tool implicit imageModel config", () => {
       });
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: { defaults: { model: { primary: "minimax-portal/MiniMax-M2.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
@@ -552,7 +669,7 @@ describe("image tool implicit imageModel config", () => {
       vi.stubEnv("ZAI_API_KEY", "zai-test");
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
       vi.stubEnv("ANTHROPIC_API_KEY", "anthropic-test");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: { defaults: { model: { primary: "zai/glm-4.7" } } },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual(
@@ -570,7 +687,7 @@ describe("image tool implicit imageModel config", () => {
           "acme:default": { type: "api_key", provider: "acme", key: "sk-test" },
         },
       });
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: { defaults: { model: { primary: "acme/text-1" } } },
         models: {
           providers: {
@@ -591,18 +708,51 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
-  it("prefers explicit agents.defaults.imageModel", async () => {
+  it("pairs a provider when config uses an alias key", async () => {
     await withTempAgentDir(async (agentDir) => {
-      const cfg: GodsEyeConfig = {
-        agents: {
-          defaults: {
-            model: { primary: "minimax/MiniMax-M2.7" },
-            imageModel: { primary: "openai/gpt-5-mini" },
+      await writeAuthProfiles(agentDir, {
+        version: 1,
+        profiles: {
+          "amazon-bedrock:default": {
+            type: "api_key",
+            provider: "amazon-bedrock",
+            key: "sk-test",
+          },
+        },
+      });
+      const cfg: OpenClawConfig = {
+        agents: { defaults: { model: { primary: "aws-bedrock/text-1" } } },
+        models: {
+          providers: {
+            "amazon-bedrock": {
+              baseUrl: "https://example.com",
+              models: [
+                makeModelDefinition("text-1", ["text"]),
+                makeModelDefinition("vision-1", ["text", "image"]),
+              ],
+            },
           },
         },
       };
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
-        primary: "openai/gpt-5-mini",
+        primary: "amazon-bedrock/vision-1",
+      });
+      expect(createImageTool({ config: cfg, agentDir })).not.toBeNull();
+    });
+  });
+
+  it("prefers explicit agents.defaults.imageModel", async () => {
+    await withTempAgentDir(async (agentDir) => {
+      const cfg: OpenClawConfig = {
+        agents: {
+          defaults: {
+            model: { primary: "minimax/MiniMax-M2.7" },
+            imageModel: { primary: "openai/gpt-5.4-mini" },
+          },
+        },
+      };
+      expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
+        primary: "openai/gpt-5.4-mini",
       });
     });
   });
@@ -613,11 +763,11 @@ describe("image tool implicit imageModel config", () => {
     // adjusted via modelHasVision to discourage redundant usage.
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     await withTempAgentDir(async (agentDir) => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "acme/vision-1" },
-            imageModel: { primary: "openai/gpt-5-mini" },
+            imageModel: { primary: "openai/gpt-5.4-mini" },
           },
         },
         models: {
@@ -631,7 +781,7 @@ describe("image tool implicit imageModel config", () => {
       };
       // Tool should still be available for explicit image analysis requests
       expect(resolveImageModelConfigForTool({ cfg, agentDir })).toEqual({
-        primary: "openai/gpt-5-mini",
+        primary: "openai/gpt-5.4-mini",
       });
       const tool = createImageTool({ config: cfg, agentDir, modelHasVision: true });
       expect(tool).not.toBeNull();
@@ -645,7 +795,7 @@ describe("image tool implicit imageModel config", () => {
     await withTempAgentDir(async (agentDir) => {
       vi.stubEnv("MOONSHOT_API_KEY", "moonshot-test");
       const fetch = stubOpenAiCompletionsOkFetch("ok moonshot");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "moonshot/kimi-k2.5" },
@@ -709,7 +859,7 @@ describe("image tool implicit imageModel config", () => {
   it("falls back to the generic image runtime when openrouter has no media provider registration", async () => {
     await withTempAgentDir(async (agentDir) => {
       const fetch = stubOpenAiCompletionsOkFetch("ok openrouter");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "openrouter/google/gemini-2.5-flash-lite" },
@@ -744,7 +894,7 @@ describe("image tool implicit imageModel config", () => {
   it("falls back to the generic multi-image runtime when openrouter has no media provider registration", async () => {
     await withTempAgentDir(async (agentDir) => {
       const fetch = stubOpenAiCompletionsOkFetch("ok multi");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "openrouter/google/gemini-2.5-flash-lite" },
@@ -795,7 +945,7 @@ describe("image tool implicit imageModel config", () => {
         },
       });
       const fetch = stubMinimaxOkFetch();
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "minimax-portal/MiniMax-M2.7" },
@@ -850,20 +1000,22 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
-  it("allows local image paths outside default media roots when workspaceOnly is off", async () => {
+  it("still rejects temp workspace paths outside allowed local roots when workspaceOnly is off", async () => {
     await withTempWorkspacePng(async ({ workspaceDir, imagePath }) => {
       const fetch = stubMinimaxOkFetch();
       await withTempAgentDir(async (agentDir) => {
         const cfg = createMinimaxImageConfig();
 
         const withoutWorkspace = createRequiredImageTool({ config: cfg, agentDir });
-        await expectImageToolExecOk(withoutWorkspace, imagePath);
+        await expect(
+          withoutWorkspace.execute("t1", { prompt: "Describe.", image: imagePath }),
+        ).rejects.toThrow(/not under an allowed directory/i);
 
         const withWorkspace = createRequiredImageTool({ config: cfg, agentDir, workspaceDir });
 
         await expectImageToolExecOk(withWorkspace, imagePath);
 
-        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(fetch).toHaveBeenCalledTimes(1);
       });
     });
   });
@@ -886,7 +1038,7 @@ describe("image tool implicit imageModel config", () => {
         expect(fetch).toHaveBeenCalledTimes(1);
 
         // File outside workspace is rejected even without sandbox.
-        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-outside-"));
+        const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-outside-"));
         const outsideImage = path.join(outsideDir, "secret.png");
         await fs.writeFile(outsideImage, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
         try {
@@ -900,11 +1052,11 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
-  it("allows non-workspace local image paths when workspaceOnly is disabled", async () => {
+  it("still rejects non-workspace local image paths when workspaceOnly is disabled", async () => {
     const fetch = stubMinimaxOkFetch();
     await withTempAgentDir(async (agentDir) => {
       const cfg = createMinimaxImageConfig();
-      const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-image-outside-"));
+      const outsideDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-image-outside-"));
       const outsideImage = path.join(outsideDir, "secret.png");
       await fs.writeFile(outsideImage, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
       try {
@@ -914,21 +1066,23 @@ describe("image tool implicit imageModel config", () => {
           fsPolicy: { workspaceOnly: false },
         });
 
-        await expectImageToolExecOk(tool, outsideImage);
-        expect(fetch).toHaveBeenCalledTimes(1);
+        await expect(
+          tool.execute("t1", { prompt: "Describe.", image: outsideImage }),
+        ).rejects.toThrow(/not under an allowed directory/i);
+        expect(fetch).not.toHaveBeenCalled();
       } finally {
         await fs.rm(outsideDir, { recursive: true, force: true });
       }
     });
   });
 
-  it("allows workspace images via createGodsEyeCodingTools when workspace root is explicit", async () => {
+  it("allows workspace images via createOpenClawCodingTools when workspace root is explicit", async () => {
     await withTempWorkspacePng(async ({ workspaceDir, imagePath }) => {
       const fetch = stubMinimaxOkFetch();
       await withTempAgentDir(async (agentDir) => {
         const cfg = createMinimaxImageConfig();
 
-        const tools = await createGodsEyeCodingToolsWithFreshModules({
+        const tools = await createOpenClawCodingToolsWithFreshModules({
           config: cfg,
           agentDir,
           workspaceDir,
@@ -942,13 +1096,33 @@ describe("image tool implicit imageModel config", () => {
     });
   });
 
+  it("resolves relative image paths against workspaceDir", async () => {
+    await withTempWorkspacePng(async ({ workspaceDir }) => {
+      // Place image in a subdirectory of the workspace
+      const subdir = path.join(workspaceDir, "inbox");
+      await fs.mkdir(subdir, { recursive: true });
+      const imagePath = path.join(subdir, "receipt.png");
+      await fs.writeFile(imagePath, Buffer.from(ONE_PIXEL_PNG_B64, "base64"));
+
+      const fetch = stubMinimaxOkFetch();
+      await withTempAgentDir(async (agentDir) => {
+        const cfg = createMinimaxImageConfig();
+        const tool = createRequiredImageTool({ config: cfg, agentDir, workspaceDir });
+
+        // Relative path should be resolved against workspaceDir
+        await expectImageToolExecOk(tool, "inbox/receipt.png");
+        expect(fetch).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
   it("sandboxes image paths like the read tool", async () => {
     await withTempSandboxState(async ({ agentDir, sandboxRoot }) => {
       await fs.writeFile(path.join(sandboxRoot, "img.png"), "fake", "utf8");
       const sandbox = { root: sandboxRoot, bridge: createHostSandboxFsBridge(sandboxRoot) };
 
       vi.stubEnv("OPENAI_API_KEY", "openai-test");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: { defaults: { model: { primary: "minimax/MiniMax-M2.7" } } },
       };
       const tool = createRequiredImageTool({ config: cfg, agentDir, sandbox });
@@ -971,12 +1145,12 @@ describe("image tool implicit imageModel config", () => {
       );
       const sandbox = createUnsafeMountedSandbox({ sandboxRoot, agentRoot: agentDir });
       const fetch = stubMinimaxOkFetch();
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         ...createMinimaxImageConfig(),
         tools: { fs: { workspaceOnly: true } },
       };
 
-      const tools = await createGodsEyeCodingToolsWithFreshModules({
+      const tools = await createOpenClawCodingToolsWithFreshModules({
         config: cfg,
         agentDir,
         sandbox,
@@ -1013,7 +1187,7 @@ describe("image tool implicit imageModel config", () => {
 
       const fetch = stubMinimaxOkFetch();
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "minimax/MiniMax-M2.7" },
@@ -1026,7 +1200,7 @@ describe("image tool implicit imageModel config", () => {
 
       const res = await tool.execute("t1", {
         prompt: "Describe the image.",
-        image: "@/Users/steipete/.godseye/media/inbound/photo.png",
+        image: "@/Users/steipete/.openclaw/media/inbound/photo.png",
       });
 
       expect(fetch).toHaveBeenCalledTimes(1);
@@ -1049,6 +1223,19 @@ describe("image tool data URL support", () => {
     expect(() => __testing.decodeDataUrl("data:text/plain;base64,SGVsbG8=")).toThrow(
       /Unsupported data URL type/i,
     );
+  });
+
+  it("rejects oversized data URLs before decoding", () => {
+    const oversizedBase64 = "A".repeat(16);
+    const dataUrl = `data:image/png;base64,${oversizedBase64}`;
+    const bufferFromSpy = vi.spyOn(Buffer, "from");
+
+    try {
+      expect(() => __testing.decodeDataUrl(dataUrl, { maxBytes: 4 })).toThrow(/size limit/i);
+      expect(bufferFromSpy).not.toHaveBeenCalledWith(oversizedBase64, "base64");
+    } finally {
+      bufferFromSpy.mockRestore();
+    }
   });
 });
 
@@ -1075,7 +1262,7 @@ describe("image tool MiniMax VLM routing", () => {
   async function createMinimaxVlmFixture(baseResp: { status_code: number; status_msg: string }) {
     const fetch = stubMinimaxFetch(baseResp, baseResp.status_code === 0 ? "ok" : "");
 
-    const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-minimax-vlm-"));
+    const agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-minimax-vlm-"));
     vi.stubEnv("MINIMAX_API_KEY", "minimax-test");
     const cfg = createMinimaxImageConfig();
     const tool = createRequiredImageTool({ config: cfg, agentDir });
@@ -1184,7 +1371,7 @@ describe("image tool response validation", () => {
       role: "assistant",
       api: "openai-responses",
       provider: "openai",
-      model: "gpt-5-mini",
+      model: "gpt-5.4-mini",
       stopReason: "stop",
       timestamp: Date.now(),
       usage: makeZeroUsageSnapshot(),
@@ -1233,7 +1420,7 @@ describe("image tool response validation", () => {
     expect(() =>
       __testing.coerceImageAssistantText({
         provider: "openai",
-        model: "gpt-5-mini",
+        model: "gpt-5.4-mini",
         message,
       }),
     ).toThrow(expectedError);
@@ -1242,12 +1429,12 @@ describe("image tool response validation", () => {
   it("returns trimmed text from image-model responses", () => {
     const text = __testing.coerceImageAssistantText({
       provider: "anthropic",
-      model: "claude-opus-4-5",
+      model: "claude-opus-4-6",
       message: {
         ...createAssistantMessage({
           api: "anthropic-messages",
           provider: "anthropic",
-          model: "claude-opus-4-5",
+          model: "claude-opus-4-6",
         }),
         content: [{ type: "text", text: "  hello  " }],
       } as never,

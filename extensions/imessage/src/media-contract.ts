@@ -1,4 +1,4 @@
-import { mergeInboundPathRoots } from "openclaw/plugin-sdk/media-runtime";
+import { mergeInboundPathRoots } from "godseye/plugin-sdk/media-runtime";
 import type { OpenClawConfig } from "../runtime-api.js";
 import { resolveIMessageAccount } from "./accounts.js";
 

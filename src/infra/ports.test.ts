@@ -1,5 +1,5 @@
 import net from "node:net";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { stripAnsi } from "../terminal/ansi.js";
 
 const runCommandWithTimeoutMock = vi.hoisted(() => vi.fn());
@@ -15,17 +15,52 @@ let PortInUseError: typeof import("./ports.js").PortInUseError;
 
 const describeUnix = process.platform === "win32" ? describe.skip : describe;
 
-beforeEach(async () => {
-  vi.resetModules();
+async function listenServer(
+  server: net.Server,
+  port: number,
+  host?: string,
+): Promise<net.AddressInfo | null> {
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      if (host) {
+        server.listen(port, host, resolve);
+        return;
+      }
+      server.listen(port, resolve);
+    });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EPERM" || code === "EACCES") {
+      return null;
+    }
+    throw err;
+  }
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("expected tcp address");
+  }
+  return address;
+}
+
+beforeAll(async () => {
   ({ inspectPortUsage } = await import("./ports-inspect.js"));
   ({ ensurePortAvailable, handlePortError, PortInUseError } = await import("./ports.js"));
+});
+
+beforeEach(() => {
+  runCommandWithTimeoutMock.mockReset();
 });
 
 describe("ports helpers", () => {
   it("ensurePortAvailable rejects when port busy", async () => {
     const server = net.createServer();
-    await new Promise<void>((resolve) => server.listen(0, () => resolve()));
-    const port = (server.address() as net.AddressInfo).port;
+    const address = await listenServer(server, 0);
+    if (!address) {
+      return;
+    }
+    const port = address.port;
     await expect(ensurePortAvailable(port)).rejects.toBeInstanceOf(PortInUseError);
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
@@ -46,7 +81,7 @@ describe("ports helpers", () => {
     expect(runtime.exit).toHaveBeenCalledWith(1);
   });
 
-  it("prints an GodsEye-specific hint when port details look like another GodsEye instance", async () => {
+  it("prints an OpenClaw-specific hint when port details look like another OpenClaw instance", async () => {
     const runtime = {
       error: vi.fn(),
       log: vi.fn(),
@@ -54,26 +89,25 @@ describe("ports helpers", () => {
     };
 
     await handlePortError(
-      new PortInUseError(18789, "node dist/index.js godseye gateway"),
+      new PortInUseError(18789, "node dist/index.js openclaw gateway"),
       18789,
       "gateway start",
       runtime,
     ).catch(() => {});
 
     const messages = runtime.error.mock.calls.map((call) => stripAnsi(String(call[0] ?? "")));
-    expect(messages.join("\n")).toContain("another GodsEye instance is already running");
+    expect(messages.join("\n")).toContain("another OpenClaw instance is already running");
   });
 });
 
 describeUnix("inspectPortUsage", () => {
-  beforeEach(() => {
-    runCommandWithTimeoutMock.mockClear();
-  });
-
   it("reports busy when lsof is missing but loopback listener exists", async () => {
     const server = net.createServer();
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const port = (server.address() as net.AddressInfo).port;
+    const address = await listenServer(server, 0, "127.0.0.1");
+    if (!address) {
+      return;
+    }
+    const port = address.port;
 
     runCommandWithTimeoutMock.mockRejectedValueOnce(
       Object.assign(new Error("spawn lsof ENOENT"), { code: "ENOENT" }),
@@ -90,8 +124,11 @@ describeUnix("inspectPortUsage", () => {
 
   it("falls back to ss when lsof is unavailable", async () => {
     const server = net.createServer();
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    const port = (server.address() as net.AddressInfo).port;
+    const address = await listenServer(server, 0, "127.0.0.1");
+    if (!address) {
+      return;
+    }
+    const port = address.port;
 
     runCommandWithTimeoutMock.mockImplementation(async (argv: string[]) => {
       const command = argv[0];
@@ -111,7 +148,7 @@ describeUnix("inspectPortUsage", () => {
       if (command === "ps") {
         if (argv.includes("command=")) {
           return {
-            stdout: "node /tmp/godseye/dist/index.js gateway --port 18789\n",
+            stdout: "node /tmp/openclaw/dist/index.js gateway --port 18789\n",
             stderr: "",
             code: 0,
           };
@@ -139,7 +176,7 @@ describeUnix("inspectPortUsage", () => {
       expect(result.status).toBe("busy");
       expect(result.listeners.length).toBeGreaterThan(0);
       expect(result.listeners[0]?.pid).toBe(process.pid);
-      expect(result.listeners[0]?.commandLine).toContain("godseye");
+      expect(result.listeners[0]?.commandLine).toContain("openclaw");
       expect(result.errors).toBeUndefined();
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

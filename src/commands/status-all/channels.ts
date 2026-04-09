@@ -17,8 +17,10 @@ import type {
   ChannelPlugin,
 } from "../../channels/plugins/types.js";
 import { inspectReadOnlyChannelAccount } from "../../channels/read-only-account-inspect.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { sha256HexPrefix } from "../../logging/redact-identifier.js";
+import { asRecord } from "../../shared/record-coerce.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { formatTimeAgo } from "./format.js";
 
 export type ChannelRow = {
@@ -39,13 +41,10 @@ type ChannelAccountRow = {
 
 type ResolvedChannelAccountRowParams = {
   plugin: ChannelPlugin;
-  cfg: GodsEyeConfig;
-  sourceConfig: GodsEyeConfig;
+  cfg: OpenClawConfig;
+  sourceConfig: OpenClawConfig;
   accountId: string;
 };
-
-const asRecord = (value: unknown): Record<string, unknown> =>
-  value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 
 function summarizeSources(sources: Array<string | undefined>): {
   label: string;
@@ -64,7 +63,7 @@ function summarizeSources(sources: Array<string | undefined>): {
 }
 
 function existsSyncMaybe(p: string | undefined): boolean | null {
-  const path = p?.trim() || "";
+  const path = normalizeOptionalString(p) ?? "";
   if (!path) {
     return null;
   }
@@ -91,7 +90,11 @@ function formatTokenHint(token: string, opts: { showSecrets: boolean }): string 
   return `${head}…${tail} · len ${t.length}`;
 }
 
-async function inspectChannelAccount(plugin: ChannelPlugin, cfg: GodsEyeConfig, accountId: string) {
+async function inspectChannelAccount(
+  plugin: ChannelPlugin,
+  cfg: OpenClawConfig,
+  accountId: string,
+) {
   return (
     plugin.config.inspectAccount?.(cfg, accountId) ??
     (await inspectReadOnlyChannelAccount({
@@ -156,7 +159,7 @@ const formatAccountLabel = (params: { accountId: string; name?: string }) => {
 
 const buildAccountNotes = (params: {
   plugin: ChannelPlugin;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   entry: ChannelAccountRow;
 }) => {
   const { plugin, cfg, entry } = params;
@@ -255,7 +258,7 @@ function collectMissingPaths(accounts: ChannelAccountRow[]): string[] {
 
 function summarizeTokenConfig(params: {
   plugin: ChannelPlugin;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accounts: ChannelAccountRow[];
   showSecrets: boolean;
 }): { state: "ok" | "setup" | "warn" | null; detail: string | null } {
@@ -353,14 +356,14 @@ function summarizeTokenConfig(params: {
     const unavailable = enabled.filter((a) => hasConfiguredUnavailableCredentialStatus(a.account));
     const ready = enabled.filter((a) => {
       const rec = asRecord(a.account);
-      const bot = typeof rec.botToken === "string" ? rec.botToken.trim() : "";
-      const app = typeof rec.appToken === "string" ? rec.appToken.trim() : "";
+      const bot = normalizeOptionalString(rec.botToken) ?? "";
+      const app = normalizeOptionalString(rec.appToken) ?? "";
       return Boolean(bot) && Boolean(app);
     });
     const partial = enabled.filter((a) => {
       const rec = asRecord(a.account);
-      const bot = typeof rec.botToken === "string" ? rec.botToken.trim() : "";
-      const app = typeof rec.appToken === "string" ? rec.appToken.trim() : "";
+      const bot = normalizeOptionalString(rec.botToken) ?? "";
+      const app = normalizeOptionalString(rec.appToken) ?? "";
       const hasBot = Boolean(bot);
       const hasApp = Boolean(app);
       return (hasBot && !hasApp) || (!hasBot && hasApp);
@@ -408,7 +411,7 @@ function summarizeTokenConfig(params: {
     const unavailable = enabled.filter((a) => hasConfiguredUnavailableCredentialStatus(a.account));
     const ready = enabled.filter((a) => {
       const rec = asRecord(a.account);
-      const bot = typeof rec.botToken === "string" ? rec.botToken.trim() : "";
+      const bot = normalizeOptionalString(rec.botToken) ?? "";
       return Boolean(bot);
     });
 
@@ -439,7 +442,7 @@ function summarizeTokenConfig(params: {
   const unavailable = enabled.filter((a) => hasConfiguredUnavailableCredentialStatus(a.account));
   const ready = enabled.filter((a) => {
     const rec = asRecord(a.account);
-    return typeof rec.token === "string" ? Boolean(rec.token.trim()) : false;
+    return Boolean(normalizeOptionalString(rec.token));
   });
   if (unavailable.length > 0) {
     return {
@@ -466,8 +469,8 @@ function summarizeTokenConfig(params: {
 // `status --all` channels table.
 // Keep this generic: channel-specific rules belong in the channel plugin.
 export async function buildChannelsTable(
-  cfg: GodsEyeConfig,
-  opts?: { showSecrets?: boolean; sourceConfig?: GodsEyeConfig },
+  cfg: OpenClawConfig,
+  opts?: { showSecrets?: boolean; sourceConfig?: OpenClawConfig },
 ): Promise<{
   rows: ChannelRow[];
   details: Array<{

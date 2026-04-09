@@ -7,10 +7,15 @@ let registerSlackMemberEvents: typeof import("./members.js").registerSlackMember
 let initSlackHarness: typeof import("./system-event-test-harness.js").createSlackSystemEventTestHarness;
 type MemberOverrides = import("./system-event-test-harness.js").SlackSystemEventTestOverrides;
 
-vi.mock("godseye/plugin-sdk/infra-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/infra-runtime")>();
+async function createChannelRuntimeMock() {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/infra-runtime")>(
+    "godseye/plugin-sdk/infra-runtime",
+  );
   return { ...actual, enqueueSystemEvent: memberMocks.enqueue };
-});
+}
+
+vi.mock("godseye/plugin-sdk/infra-runtime", createChannelRuntimeMock);
+vi.mock("godseye/plugin-sdk/infra-runtime.js", createChannelRuntimeMock);
 
 type MemberHandler = (args: { event: Record<string, unknown>; body: unknown }) => Promise<void>;
 

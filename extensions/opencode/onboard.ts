@@ -1,13 +1,12 @@
-import { OPENCODE_ZEN_DEFAULT_MODEL_REF } from "godseye/plugin-sdk/provider-models";
 import {
   applyAgentDefaultModelPrimary,
   withAgentModelAliases,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 
-export { OPENCODE_ZEN_DEFAULT_MODEL_REF };
+export const OPENCODE_ZEN_DEFAULT_MODEL_REF = "opencode/claude-opus-4-6";
 
-export function applyOpencodeZenProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpencodeZenProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return {
     ...cfg,
     agents: {
@@ -22,7 +21,7 @@ export function applyOpencodeZenProviderConfig(cfg: GodsEyeConfig): GodsEyeConfi
   };
 }
 
-export function applyOpencodeZenConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyOpencodeZenConfig(cfg: OpenClawConfig): OpenClawConfig {
   return applyAgentDefaultModelPrimary(
     applyOpencodeZenProviderConfig(cfg),
     OPENCODE_ZEN_DEFAULT_MODEL_REF,

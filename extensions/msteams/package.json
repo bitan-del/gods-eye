@@ -1,18 +1,19 @@
 {
   "name": "@godseye/msteams",
-  "version": "2026.3.22",
-  "description": "GodsEye Microsoft Teams channel plugin",
+  "version": "2026.4.10",
+  "description": "OpenClaw Microsoft Teams channel plugin",
   "type": "module",
   "dependencies": {
-    "@microsoft/teams.api": "2.0.5",
-    "@microsoft/teams.apps": "2.0.5",
+    "@microsoft/teams.api": "2.0.6",
+    "@microsoft/teams.apps": "2.0.6",
     "express": "^5.2.1"
   },
   "devDependencies": {
+    "@godseye/plugin-sdk": "workspace:*",
     "godseye": "workspace:*"
   },
   "peerDependencies": {
-    "godseye": ">=2026.3.22"
+    "godseye": ">=2026.4.10"
   },
   "peerDependenciesMeta": {
     "godseye": {
@@ -38,11 +39,17 @@
     },
     "install": {
       "npmSpec": "@godseye/msteams",
-      "localPath": "extensions/msteams",
       "defaultChoice": "npm",
-      "minHostVersion": ">=2026.3.22"
+      "minHostVersion": ">=2026.4.10"
+    },
+    "compat": {
+      "pluginApi": ">=2026.4.10"
+    },
+    "build": {
+      "openclawVersion": "2026.4.10"
     },
     "release": {
+      "publishToClawHub": true,
       "publishToNpm": true
     }
   }

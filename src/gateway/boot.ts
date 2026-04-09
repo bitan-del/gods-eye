@@ -4,7 +4,7 @@ import path from "node:path";
 import { SILENT_REPLY_TOKEN } from "../auto-reply/tokens.js";
 import type { CliDeps } from "../cli/deps.js";
 import { agentCommand } from "../commands/agent.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveAgentIdFromSessionKey,
   resolveAgentMainSessionKey,
@@ -13,6 +13,7 @@ import {
 import { resolveStorePath } from "../config/sessions/paths.js";
 import { loadSessionStore, updateSessionStore } from "../config/sessions/store.js";
 import type { SessionEntry } from "../config/sessions/types.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { type RuntimeEnv, defaultRuntime } from "../runtime.js";
 
@@ -74,7 +75,7 @@ async function loadBootFile(
 }
 
 function snapshotMainSessionMapping(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
 }): SessionMappingSnapshot {
   const agentId = resolveAgentIdFromSessionKey(params.sessionKey);
@@ -131,12 +132,12 @@ async function restoreMainSessionMapping(
     );
     return undefined;
   } catch (err) {
-    return err instanceof Error ? err.message : String(err);
+    return formatErrorMessage(err);
   }
 }
 
 export async function runBootOnce(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   deps: CliDeps;
   workspaceDir: string;
   agentId?: string;
@@ -150,7 +151,7 @@ export async function runBootOnce(params: {
   try {
     result = await loadBootFile(params.workspaceDir);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatErrorMessage(err);
     log.error(`boot: failed to read ${BOOT_FILENAME}: ${message}`);
     return { status: "failed", reason: message };
   }
@@ -183,7 +184,7 @@ export async function runBootOnce(params: {
       params.deps,
     );
   } catch (err) {
-    agentFailure = err instanceof Error ? err.message : String(err);
+    agentFailure = formatErrorMessage(err);
     log.error(`boot: agent run failed: ${agentFailure}`);
   }
 

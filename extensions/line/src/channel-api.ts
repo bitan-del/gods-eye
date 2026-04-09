@@ -1,7 +1,7 @@
-export { clearAccountEntryFields } from "openclaw/plugin-sdk/core";
-import { DEFAULT_ACCOUNT_ID } from "openclaw/plugin-sdk/account-id";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/account-resolution";
-import type { ChannelPlugin } from "openclaw/plugin-sdk/core";
+export { clearAccountEntryFields } from "godseye/plugin-sdk/core";
+import { DEFAULT_ACCOUNT_ID } from "godseye/plugin-sdk/account-id";
+import type { OpenClawConfig } from "godseye/plugin-sdk/account-resolution";
+import type { ChannelPlugin } from "godseye/plugin-sdk/core";
 import {
   listLineAccountIds,
   normalizeAccountId,

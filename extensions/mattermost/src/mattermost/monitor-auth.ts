@@ -1,13 +1,14 @@
-import type { GodsEyeConfig } from "../runtime-api.js";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import type { ResolvedMattermostAccount } from "./accounts.js";
+import type { MattermostChannel } from "./client.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 import {
   evaluateSenderGroupAccessForPolicy,
   isDangerousNameMatchingEnabled,
   resolveAllowlistMatchSimple,
   resolveControlCommandGate,
   resolveEffectiveAllowFromLists,
-} from "../runtime-api.js";
-import type { ResolvedMattermostAccount } from "./accounts.js";
-import type { MattermostChannel } from "./client.js";
+} from "./runtime-api.js";
 
 export function normalizeMattermostAllowEntry(entry: string): string {
   const trimmed = entry.trim();
@@ -20,7 +21,9 @@ export function normalizeMattermostAllowEntry(entry: string): string {
   return trimmed
     .replace(/^(mattermost|user):/i, "")
     .replace(/^@/, "")
-    .toLowerCase();
+    .trim()
+    ? normalizeLowercaseStringOrEmpty(trimmed.replace(/^(mattermost|user):/i, "").replace(/^@/, ""))
+    : "";
 }
 
 export function normalizeMattermostAllowList(entries: Array<string | number>): string[] {
@@ -108,7 +111,7 @@ export type MattermostCommandAuthDecision =
 
 export function authorizeMattermostCommandInvocation(params: {
   account: ResolvedMattermostAccount;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   senderId: string;
   senderName: string;
   channelId: string;

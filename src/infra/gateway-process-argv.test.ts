@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isGatewayArgv, parseProcCmdline } from "./gateway-process-argv.js";
+import { isGatewayArgv, parseProcCmdline, parseWindowsCmdline } from "./gateway-process-argv.js";
 
 describe("parseProcCmdline", () => {
   it("splits null-delimited argv and trims empty entries", () => {
@@ -17,36 +17,57 @@ describe("parseProcCmdline", () => {
   });
 });
 
+describe("parseWindowsCmdline", () => {
+  it("splits unquoted tokens by whitespace", () => {
+    expect(parseWindowsCmdline("node.exe gateway run")).toEqual(["node.exe", "gateway", "run"]);
+  });
+
+  it("handles double-quoted paths with spaces", () => {
+    expect(
+      parseWindowsCmdline('"C:\\Program Files\\node.exe" "C:\\my app\\dist\\index.js" gateway run'),
+    ).toEqual(["C:\\Program Files\\node.exe", "C:\\my app\\dist\\index.js", "gateway", "run"]);
+  });
+
+  it("returns empty array for empty input", () => {
+    expect(parseWindowsCmdline("")).toEqual([]);
+    expect(parseWindowsCmdline("   ")).toEqual([]);
+  });
+
+  it("collapses consecutive spaces outside quotes", () => {
+    expect(parseWindowsCmdline("node.exe   gateway   run")).toEqual(["node.exe", "gateway", "run"]);
+  });
+});
+
 describe("isGatewayArgv", () => {
   it("requires a gateway token", () => {
     expect(isGatewayArgv(["node", "dist/index.js", "--port", "18789"])).toBe(false);
   });
 
   it("matches known entrypoints across slash and case variants", () => {
-    expect(isGatewayArgv(["NODE", "C:\\GodsEye\\DIST\\ENTRY.JS", "gateway"])).toBe(true);
-    expect(isGatewayArgv(["bun", "/srv/godseye/scripts/run-node.mjs", "gateway"])).toBe(true);
-    expect(isGatewayArgv(["node", "/srv/godseye/godseye.mjs", "gateway"])).toBe(true);
-    expect(isGatewayArgv(["tsx", "/srv/godseye/src/entry.ts", "gateway"])).toBe(true);
-    expect(isGatewayArgv(["tsx", "/srv/godseye/src/index.ts", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["NODE", "C:\\OpenClaw\\DIST\\ENTRY.JS", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["bun", "/srv/openclaw/scripts/run-node.mjs", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["node", "/srv/openclaw/openclaw.mjs", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["tsx", "/srv/openclaw/src/entry.ts", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["tsx", "/srv/openclaw/src/index.ts", "gateway"])).toBe(true);
   });
 
-  it("matches the godseye executable but gates the gateway binary behind the opt-in flag", () => {
-    expect(isGatewayArgv(["C:\\bin\\godseye.cmd", "gateway"])).toBe(true);
-    expect(isGatewayArgv(["/usr/local/bin/godseye-gateway", "gateway"])).toBe(false);
+  it("matches the openclaw executable but gates the gateway binary behind the opt-in flag", () => {
+    expect(isGatewayArgv(["C:\\bin\\openclaw.cmd", "gateway"])).toBe(true);
+    expect(isGatewayArgv(["/usr/local/bin/openclaw-gateway", "gateway"])).toBe(false);
     expect(
-      isGatewayArgv(["/usr/local/bin/godseye-gateway", "gateway"], {
+      isGatewayArgv(["/usr/local/bin/openclaw-gateway", "gateway"], {
         allowGatewayBinary: true,
       }),
     ).toBe(true);
     expect(
-      isGatewayArgv(["C:\\bin\\godseye-gateway.EXE", "gateway"], {
+      isGatewayArgv(["C:\\bin\\openclaw-gateway.EXE", "gateway"], {
         allowGatewayBinary: true,
       }),
     ).toBe(true);
   });
 
   it("rejects unknown gateway argv even when the token is present", () => {
-    expect(isGatewayArgv(["node", "/srv/godseye/custom.js", "gateway"])).toBe(false);
+    expect(isGatewayArgv(["node", "/srv/openclaw/custom.js", "gateway"])).toBe(false);
     expect(isGatewayArgv(["python", "gateway", "script.py"])).toBe(false);
   });
 });

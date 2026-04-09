@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { PluginManifestRegistry } from "../../plugins/manifest-registry.js";
 import { createTrackedTempDirs } from "../../test-utils/tracked-temp-dirs.js";
 
@@ -15,14 +15,6 @@ vi.mock("../../plugins/manifest-registry.js", () => ({
 
 let resolvePluginSkillDirs: typeof import("./plugin-skills.js").resolvePluginSkillDirs;
 
-async function loadFreshPluginSkillsModuleForTest() {
-  vi.resetModules();
-  vi.doMock("../../plugins/manifest-registry.js", () => ({
-    loadPluginManifestRegistry: (...args: unknown[]) => hoisted.loadPluginManifestRegistry(...args),
-  }));
-  ({ resolvePluginSkillDirs } = await import("./plugin-skills.js"));
-}
-
 const tempDirs = createTrackedTempDirs();
 
 function buildRegistry(params: { acpxRoot: string; helperRoot: string }): PluginManifestRegistry {
@@ -34,24 +26,26 @@ function buildRegistry(params: { acpxRoot: string; helperRoot: string }): Plugin
         name: "ACPX Runtime",
         channels: [],
         providers: [],
+        cliBackends: [],
         skills: ["./skills"],
         hooks: [],
         origin: "workspace",
         rootDir: params.acpxRoot,
         source: params.acpxRoot,
-        manifestPath: path.join(params.acpxRoot, "godseye.plugin.json"),
+        manifestPath: path.join(params.acpxRoot, "openclaw.plugin.json"),
       },
       {
         id: "helper",
         name: "Helper",
         channels: [],
         providers: [],
+        cliBackends: [],
         skills: ["./skills"],
         hooks: [],
         origin: "workspace",
         rootDir: params.helperRoot,
         source: params.helperRoot,
-        manifestPath: path.join(params.helperRoot, "godseye.plugin.json"),
+        manifestPath: path.join(params.helperRoot, "openclaw.plugin.json"),
       },
     ],
   };
@@ -60,7 +54,8 @@ function buildRegistry(params: { acpxRoot: string; helperRoot: string }): Plugin
 function createSinglePluginRegistry(params: {
   pluginRoot: string;
   skills: string[];
-  format?: "godseye" | "bundle";
+  format?: "openclaw" | "bundle";
+  legacyPluginIds?: string[];
 }): PluginManifestRegistry {
   return {
     diagnostics: [],
@@ -71,21 +66,23 @@ function createSinglePluginRegistry(params: {
         format: params.format,
         channels: [],
         providers: [],
+        cliBackends: [],
+        legacyPluginIds: params.legacyPluginIds,
         skills: params.skills,
         hooks: [],
         origin: "workspace",
         rootDir: params.pluginRoot,
         source: params.pluginRoot,
-        manifestPath: path.join(params.pluginRoot, "godseye.plugin.json"),
+        manifestPath: path.join(params.pluginRoot, "openclaw.plugin.json"),
       },
     ],
   };
 }
 
 async function setupAcpxAndHelperRegistry() {
-  const workspaceDir = await tempDirs.make("godseye-");
-  const acpxRoot = await tempDirs.make("godseye-acpx-plugin-");
-  const helperRoot = await tempDirs.make("godseye-helper-plugin-");
+  const workspaceDir = await tempDirs.make("openclaw-");
+  const acpxRoot = await tempDirs.make("openclaw-acpx-plugin-");
+  const helperRoot = await tempDirs.make("openclaw-helper-plugin-");
   await fs.mkdir(path.join(acpxRoot, "skills"), { recursive: true });
   await fs.mkdir(path.join(helperRoot, "skills"), { recursive: true });
   hoisted.loadPluginManifestRegistry.mockReturnValue(buildRegistry({ acpxRoot, helperRoot }));
@@ -93,9 +90,9 @@ async function setupAcpxAndHelperRegistry() {
 }
 
 async function setupPluginOutsideSkills() {
-  const workspaceDir = await tempDirs.make("godseye-");
-  const pluginRoot = await tempDirs.make("godseye-plugin-");
-  const outsideDir = await tempDirs.make("godseye-outside-");
+  const workspaceDir = await tempDirs.make("openclaw-");
+  const pluginRoot = await tempDirs.make("openclaw-plugin-");
+  const outsideDir = await tempDirs.make("openclaw-outside-");
   const outsideSkills = path.join(outsideDir, "skills");
   return { workspaceDir, pluginRoot, outsideSkills };
 }
@@ -106,8 +103,12 @@ afterEach(async () => {
 });
 
 describe("resolvePluginSkillDirs", () => {
-  beforeEach(async () => {
-    await loadFreshPluginSkillsModuleForTest();
+  beforeAll(async () => {
+    ({ resolvePluginSkillDirs } = await import("./plugin-skills.js"));
+  });
+
+  beforeEach(() => {
+    hoisted.loadPluginManifestRegistry.mockReset();
   });
 
   it.each([
@@ -139,7 +140,7 @@ describe("resolvePluginSkillDirs", () => {
             helper: { enabled: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(dirs).toEqual(expectedDirs({ acpxRoot, helperRoot }));
@@ -166,7 +167,7 @@ describe("resolvePluginSkillDirs", () => {
             helper: { enabled: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(dirs).toEqual([path.resolve(pluginRoot, "skills")]);
@@ -197,15 +198,15 @@ describe("resolvePluginSkillDirs", () => {
             helper: { enabled: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(dirs).toEqual([]);
   });
 
   it("resolves Claude bundle command roots through the normal plugin skill path", async () => {
-    const workspaceDir = await tempDirs.make("godseye-");
-    const pluginRoot = await tempDirs.make("godseye-claude-bundle-");
+    const workspaceDir = await tempDirs.make("openclaw-");
+    const pluginRoot = await tempDirs.make("openclaw-claude-bundle-");
     await fs.mkdir(path.join(pluginRoot, "commands"), { recursive: true });
     await fs.mkdir(path.join(pluginRoot, "skills"), { recursive: true });
 
@@ -225,12 +226,39 @@ describe("resolvePluginSkillDirs", () => {
             helper: { enabled: true },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(dirs).toEqual([
       path.resolve(pluginRoot, "skills"),
       path.resolve(pluginRoot, "commands"),
     ]);
+  });
+
+  it("resolves enabled plugin skills through legacy manifest aliases", async () => {
+    const workspaceDir = await tempDirs.make("openclaw-");
+    const pluginRoot = await tempDirs.make("openclaw-legacy-plugin-");
+    await fs.mkdir(path.join(pluginRoot, "skills"), { recursive: true });
+
+    hoisted.loadPluginManifestRegistry.mockReturnValue(
+      createSinglePluginRegistry({
+        pluginRoot,
+        skills: ["./skills"],
+        legacyPluginIds: ["helper-legacy"],
+      }),
+    );
+
+    const dirs = resolvePluginSkillDirs({
+      workspaceDir,
+      config: {
+        plugins: {
+          entries: {
+            "helper-legacy": { enabled: true },
+          },
+        },
+      } as OpenClawConfig,
+    });
+
+    expect(dirs).toEqual([path.resolve(pluginRoot, "skills")]);
   });
 });

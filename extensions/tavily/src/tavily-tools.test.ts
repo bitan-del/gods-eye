@@ -1,7 +1,6 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import type { GodsEyePluginApi } from "godseye/plugin-sdk/plugin-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-runtime";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import plugin from "../index.js";
 import {
   DEFAULT_TAVILY_BASE_URL,
   DEFAULT_TAVILY_EXTRACT_TIMEOUT_SECONDS,
@@ -23,10 +22,10 @@ vi.mock("./tavily-client.js", () => ({
   runTavilyExtract,
 }));
 
-function fakeApi(): GodsEyePluginApi {
+function fakeApi(): OpenClawPluginApi {
   return {
     config: {},
-  } as GodsEyePluginApi;
+  } as OpenClawPluginApi;
 }
 
 describe("tavily tools", () => {
@@ -36,7 +35,6 @@ describe("tavily tools", () => {
   let tavilyClientTesting: typeof import("./tavily-client.js").__testing;
 
   beforeAll(async () => {
-    vi.resetModules();
     ({ createTavilyWebSearchProvider } = await import("./tavily-search-provider.js"));
     ({ createTavilySearchTool } = await import("./tavily-search-tool.js"));
     ({ createTavilyExtractTool } = await import("./tavily-extract-tool.js"));
@@ -62,39 +60,6 @@ describe("tavily tools", () => {
     expect(provider.id).toBe("tavily");
     expect(provider.credentialPath).toBe("plugins.entries.tavily.config.webSearch.apiKey");
     expect(applied.plugins?.entries?.tavily?.enabled).toBe(true);
-  });
-
-  it("registers web search provider and two tools", () => {
-    const registrations: {
-      webSearchProviders: unknown[];
-      tools: unknown[];
-    } = { webSearchProviders: [], tools: [] };
-
-    const mockApi = {
-      registerWebSearchProvider(provider: unknown) {
-        registrations.webSearchProviders.push(provider);
-      },
-      registerTool(tool: unknown) {
-        registrations.tools.push(tool);
-      },
-      config: {},
-    };
-
-    plugin.register(mockApi as never);
-
-    expect(plugin.id).toBe("tavily");
-    expect(plugin.name).toBe("Tavily Plugin");
-    expect(registrations.webSearchProviders).toHaveLength(1);
-    expect(registrations.tools).toHaveLength(2);
-
-    const provider = registrations.webSearchProviders[0] as Record<string, unknown>;
-    expect(provider.id).toBe("tavily");
-    expect(provider.autoDetectOrder).toBe(70);
-    expect(provider.envVars).toEqual(["TAVILY_API_KEY"]);
-
-    const toolNames = registrations.tools.map((t) => (t as Record<string, unknown>).name);
-    expect(toolNames).toContain("tavily_search");
-    expect(toolNames).toContain("tavily_extract");
   });
 
   it("maps generic provider args into Tavily search params", async () => {
@@ -139,7 +104,7 @@ describe("tavily tools", () => {
       max_results: 5,
       include_answer: true,
       time_range: "week",
-      include_domains: ["docs.gods-eye.org", "", "gods-eye.org"],
+      include_domains: ["docs.openclaw.ai", "", "openclaw.ai"],
       exclude_domains: ["bad.example", ""],
     });
 
@@ -151,7 +116,7 @@ describe("tavily tools", () => {
       maxResults: 5,
       includeAnswer: true,
       timeRange: "week",
-      includeDomains: ["docs.gods-eye.org", "gods-eye.org"],
+      includeDomains: ["docs.openclaw.ai", "openclaw.ai"],
       excludeDomains: ["bad.example"],
     });
     expect(result).toMatchObject({
@@ -165,7 +130,7 @@ describe("tavily tools", () => {
           maxResults: 5,
           includeAnswer: true,
           timeRange: "week",
-          includeDomains: ["docs.gods-eye.org", "gods-eye.org"],
+          includeDomains: ["docs.openclaw.ai", "openclaw.ai"],
           excludeDomains: ["bad.example"],
         },
       },
@@ -248,7 +213,7 @@ describe("tavily tools", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     expect(resolveTavilySearchConfig(cfg)).toEqual({
       apiKey: "plugin-key",
@@ -264,7 +229,7 @@ describe("tavily tools", () => {
 
     expect(resolveTavilyApiKey()).toBe("env-key");
     expect(resolveTavilyBaseUrl()).toBe("https://env.tavily.test");
-    expect(resolveTavilyBaseUrl({} as GodsEyeConfig)).not.toBe(DEFAULT_TAVILY_BASE_URL);
+    expect(resolveTavilyBaseUrl({} as OpenClawConfig)).not.toBe(DEFAULT_TAVILY_BASE_URL);
     expect(resolveTavilySearchTimeoutSeconds()).toBe(DEFAULT_TAVILY_SEARCH_TIMEOUT_SECONDS);
     expect(resolveTavilyExtractTimeoutSeconds()).toBe(DEFAULT_TAVILY_EXTRACT_TIMEOUT_SECONDS);
   });

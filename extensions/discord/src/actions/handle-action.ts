@@ -8,10 +8,11 @@ import { readBooleanParam } from "godseye/plugin-sdk/boolean-param";
 import { resolveReactionMessageId } from "godseye/plugin-sdk/channel-actions";
 import type { ChannelMessageActionContext } from "godseye/plugin-sdk/channel-contract";
 import { normalizeInteractiveReply } from "godseye/plugin-sdk/interactive-runtime";
+import { normalizeOptionalStringifiedId } from "godseye/plugin-sdk/text-runtime";
+import { handleDiscordAction } from "../../action-runtime-api.js";
 import { buildDiscordInteractiveComponents } from "../shared-interactive.js";
 import { resolveDiscordChannelId } from "../targets.js";
 import { tryHandleDiscordMessageActionGuildAdmin } from "./handle-action.guild-admin.js";
-import { handleDiscordAction } from "./runtime.js";
 import { readDiscordParentIdParam } from "./runtime.shared.js";
 
 const providerId = "discord";
@@ -25,13 +26,17 @@ export async function handleDiscordMessageAction(
     | "accountId"
     | "requesterSenderId"
     | "toolContext"
+    | "mediaAccess"
     | "mediaLocalRoots"
+    | "mediaReadFile"
   >,
 ): Promise<AgentToolResult<unknown>> {
   const { action, params, cfg } = ctx;
   const accountId = ctx.accountId ?? readStringParam(params, "accountId");
   const actionOptions = {
+    mediaAccess: ctx.mediaAccess,
     mediaLocalRoots: ctx.mediaLocalRoots,
+    mediaReadFile: ctx.mediaReadFile,
   } as const;
 
   const resolveChannelId = () =>
@@ -115,7 +120,7 @@ export async function handleDiscordMessageAction(
 
   if (action === "react") {
     const messageIdRaw = resolveReactionMessageId({ args: params, toolContext: ctx.toolContext });
-    const messageId = messageIdRaw != null ? String(messageIdRaw).trim() : "";
+    const messageId = normalizeOptionalStringifiedId(messageIdRaw) ?? "";
     if (!messageId) {
       throw new Error(
         "messageId required. Provide messageId explicitly or react to the current inbound message.",

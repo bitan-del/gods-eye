@@ -1,4 +1,4 @@
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { isBlockedHostnameOrIp } from "../runtime-api.js";
 
 export function validateUrlSafety(urlStr: string): { ok: true } | { ok: false; error: string } {

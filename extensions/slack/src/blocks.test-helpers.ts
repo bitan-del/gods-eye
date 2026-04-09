@@ -26,16 +26,18 @@ const slackBlockTestState = vi.hoisted(() => ({
   config: {},
 }));
 
-vi.mock("godseye/plugin-sdk/config-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/config-runtime")>();
+vi.mock("godseye/plugin-sdk/config-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/config-runtime")>(
+    "godseye/plugin-sdk/config-runtime",
+  );
   return {
     ...actual,
     loadConfig: () => slackBlockTestState.config,
   };
 });
 
-vi.mock("./accounts.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./accounts.js")>();
+vi.mock("./accounts.js", async () => {
+  const actual = await vi.importActual<typeof import("./accounts.js")>("./accounts.js");
   return {
     ...actual,
     resolveSlackAccount: () => slackBlockTestState.account,

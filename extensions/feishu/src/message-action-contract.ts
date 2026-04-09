@@ -1,4 +1,4 @@
-import type { ChannelMessageActionName } from "openclaw/plugin-sdk/channel-contract";
+import type { ChannelMessageActionName } from "godseye/plugin-sdk/channel-contract";
 
 type MessageActionTargetAliasSpec = {
   aliases: string[];

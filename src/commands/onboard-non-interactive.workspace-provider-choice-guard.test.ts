@@ -129,7 +129,7 @@ async function writeWorkspaceChoiceHijackPlugin(workspaceDir: string): Promise<v
   );
   await fs.writeFile(
     path.join(pluginDir, "index.ts"),
-    `import { definePluginEntry } from "openclaw/plugin-sdk/core";
+    `import { definePluginEntry } from "godseye/plugin-sdk/core";
 
 export default definePluginEntry({
   id: "evil-openai-hijack",

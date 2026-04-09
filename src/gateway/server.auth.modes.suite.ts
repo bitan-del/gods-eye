@@ -25,6 +25,10 @@ export function registerAuthModesSuite(): void {
       server = await startGatewayServer(port);
     });
 
+    beforeEach(() => {
+      testState.gatewayAuth = { mode: "password", password: "secret" }; // pragma: allowlist secret
+    });
+
     afterAll(async () => {
       await server.close();
     });
@@ -51,10 +55,16 @@ export function registerAuthModesSuite(): void {
     let prevToken: string | undefined;
 
     beforeAll(async () => {
-      prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-      process.env.GODSEYE_GATEWAY_TOKEN = "secret";
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      process.env.OPENCLAW_GATEWAY_TOKEN = "secret";
+      testState.gatewayAuth = { mode: "token", token: "secret" };
       port = await getFreePort();
       server = await startGatewayServer(port);
+    });
+
+    beforeEach(() => {
+      process.env.OPENCLAW_GATEWAY_TOKEN = "secret";
+      testState.gatewayAuth = { mode: "token", token: "secret" };
     });
 
     afterAll(async () => {
@@ -107,11 +117,16 @@ export function registerAuthModesSuite(): void {
     let prevToken: string | undefined;
 
     beforeAll(async () => {
-      prevToken = process.env.GODSEYE_GATEWAY_TOKEN;
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      prevToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
       testState.gatewayAuth = { mode: "none" };
       port = await getFreePort();
       server = await startGatewayServer(port);
+    });
+
+    beforeEach(() => {
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
+      testState.gatewayAuth = { mode: "none" };
     });
 
     afterAll(async () => {
@@ -142,6 +157,7 @@ export function registerAuthModesSuite(): void {
     });
 
     beforeEach(() => {
+      testState.gatewayAuth = { mode: "token", token: "secret", allowTailscale: true };
       testTailscaleWhois.value = { login: "peter", name: "Peter" };
     });
 

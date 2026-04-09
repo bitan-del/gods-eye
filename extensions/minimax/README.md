@@ -1,4 +1,4 @@
-# MiniMax (Gods Eye plugin)
+# MiniMax (OpenClaw plugin)
 
 Bundled MiniMax plugin for both:
 
@@ -8,13 +8,13 @@ Bundled MiniMax plugin for both:
 ## Enable
 
 ```bash
-godseye plugins enable minimax
+openclaw plugins enable minimax
 ```
 
 Restart the Gateway after enabling.
 
 ```bash
-godseye gateway restart
+openclaw gateway restart
 ```
 
 ## Authenticate
@@ -22,13 +22,13 @@ godseye gateway restart
 OAuth:
 
 ```bash
-godseye models auth login --provider minimax-portal --set-default
+openclaw models auth login --provider minimax-portal --set-default
 ```
 
 API key:
 
 ```bash
-godseye setup --wizard --auth-choice minimax-global-api
+openclaw setup --wizard --auth-choice minimax-global-api
 ```
 
 ## Notes

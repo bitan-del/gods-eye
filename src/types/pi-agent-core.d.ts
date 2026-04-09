@@ -1,7 +1,7 @@
 import "@mariozechner/pi-agent-core";
 
 declare module "@mariozechner/pi-agent-core" {
-  // GodsEye persists compaction markers alongside normal agent history.
+  // OpenClaw persists compaction markers alongside normal agent history.
   interface CustomAgentMessages {
     compactionSummary: {
       role: "compactionSummary";

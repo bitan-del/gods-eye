@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 export type DiagnosticSessionState = "idle" | "processing" | "waiting";
 
@@ -176,19 +176,19 @@ type DiagnosticEventsGlobalState = {
 
 function getDiagnosticEventsState(): DiagnosticEventsGlobalState {
   const globalStore = globalThis as typeof globalThis & {
-    __godseyeDiagnosticEventsState?: DiagnosticEventsGlobalState;
+    __openclawDiagnosticEventsState?: DiagnosticEventsGlobalState;
   };
-  if (!globalStore.__godseyeDiagnosticEventsState) {
-    globalStore.__godseyeDiagnosticEventsState = {
+  if (!globalStore.__openclawDiagnosticEventsState) {
+    globalStore.__openclawDiagnosticEventsState = {
       seq: 0,
       listeners: new Set<(evt: DiagnosticEventPayload) => void>(),
       dispatchDepth: 0,
     };
   }
-  return globalStore.__godseyeDiagnosticEventsState;
+  return globalStore.__openclawDiagnosticEventsState;
 }
 
-export function isDiagnosticsEnabled(config?: GodsEyeConfig): boolean {
+export function isDiagnosticsEnabled(config?: OpenClawConfig): boolean {
   return config?.diagnostics?.enabled === true;
 }
 

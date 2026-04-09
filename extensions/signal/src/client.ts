@@ -1,5 +1,6 @@
-import { resolveFetch } from "godseye/plugin-sdk/infra-runtime";
-import { generateSecureUuid } from "godseye/plugin-sdk/infra-runtime";
+import { generateSecureUuid } from "godseye/plugin-sdk/core";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
+import { resolveFetch } from "godseye/plugin-sdk/fetch-runtime";
 import { fetchWithTimeout } from "godseye/plugin-sdk/text-runtime";
 
 export type SignalRpcOptions = {
@@ -126,7 +127,7 @@ export async function signalCheck(
     return {
       ok: false,
       status: null,
-      error: err instanceof Error ? err.message : String(err),
+      error: formatErrorMessage(err),
     };
   }
 }

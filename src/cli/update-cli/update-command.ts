@@ -7,10 +7,11 @@ import {
 import { doctorCommand } from "../../commands/doctor.js";
 import {
   readConfigFileSnapshot,
+  replaceConfigFile,
   resolveGatewayPort,
-  writeConfigFile,
 } from "../../config/config.js";
 import { formatConfigIssueLines } from "../../config/issue-format.js";
+import { asResolvedSourceConfig, asRuntimeConfig } from "../../config/materialize.js";
 import { resolveGatewayService } from "../../daemon/service.js";
 import { nodeVersionSatisfiesEngine } from "../../infra/runtime-guard.js";
 import {
@@ -32,8 +33,8 @@ import {
   cleanupGlobalRenameDirs,
   globalInstallArgs,
   resolveExpectedInstalledVersionFromSpec,
+  resolveGlobalInstallTarget,
   resolveGlobalInstallSpec,
-  resolveGlobalPackageRoot,
 } from "../../infra/update-global.js";
 import { runGatewayUpdate, type UpdateRunResult } from "../../infra/update-runner.js";
 import { syncPluginsForUpdateChannel, updateNpmInstalledPlugins } from "../../plugins/update.js";
@@ -75,9 +76,9 @@ import { suppressDeprecations } from "./suppress-deprecations.js";
 const CLI_NAME = resolveCliName();
 const SERVICE_REFRESH_TIMEOUT_MS = 60_000;
 const SERVICE_REFRESH_PATH_ENV_KEYS = [
-  "GODSEYE_HOME",
-  "GODSEYE_STATE_DIR",
-  "GODSEYE_CONFIG_PATH",
+  "OPENCLAW_HOME",
+  "OPENCLAW_STATE_DIR",
+  "OPENCLAW_CONFIG_PATH",
 ] as const;
 
 const UPDATE_QUIPS = [
@@ -159,11 +160,11 @@ async function resolvePackageRuntimePreflightError(params: {
   }
   const targetLabel = status.version ?? target;
   return [
-    `Node ${process.versions.node ?? "unknown"} is too old for godseye@${targetLabel}.`,
+    `Node ${process.versions.node ?? "unknown"} is too old for openclaw@${targetLabel}.`,
     `The requested package requires ${status.nodeEngine}.`,
-    "Upgrade Node to 22.14+ or Node 24, then rerun `godseye update`.",
-    "Bare `npm i -g godseye` can silently install an older compatible release.",
-    "After upgrading Node, use `npm i -g godseye@latest`.",
+    "Upgrade Node to 22.14+ or Node 24, then rerun `openclaw update`.",
+    "Bare `npm i -g openclaw` can silently install an older compatible release.",
+    "After upgrading Node, use `npm i -g openclaw@latest`.",
   ].join("\n");
 }
 
@@ -317,7 +318,7 @@ async function tryInstallShellCompletion(opts: {
       if (!opts.skipPrompt) {
         defaultRuntime.log(
           theme.muted(
-            `Skipped. Run \`${replaceCliName(formatCliCommand("godseye completion --install"), CLI_NAME)}\` later to enable.`,
+            `Skipped. Run \`${replaceCliName(formatCliCommand("openclaw completion --install"), CLI_NAME)}\` later to enable.`,
           ),
         );
       }
@@ -349,8 +350,13 @@ async function runPackageInstallUpdate(params: {
   });
   const installEnv = await createGlobalInstallEnv();
   const runCommand = createGlobalCommandRunner();
-
-  const pkgRoot = await resolveGlobalPackageRoot(manager, runCommand, params.timeoutMs);
+  const installTarget = await resolveGlobalInstallTarget({
+    manager,
+    runCommand,
+    timeoutMs: params.timeoutMs,
+    pkgRoot: params.root,
+  });
+  const pkgRoot = installTarget.packageRoot;
   const packageName =
     (pkgRoot ? await readPackageName(pkgRoot) : await readPackageName(params.root)) ??
     DEFAULT_PACKAGE_NAME;
@@ -370,7 +376,7 @@ async function runPackageInstallUpdate(params: {
 
   const updateStep = await runUpdateStep({
     name: "global update",
-    argv: globalInstallArgs(manager, installSpec),
+    argv: globalInstallArgs(installTarget, installSpec),
     env: installEnv,
     timeoutMs: params.timeoutMs,
     progress: params.progress,
@@ -380,7 +386,13 @@ async function runPackageInstallUpdate(params: {
   let afterVersion = beforeVersion;
 
   const verifiedPackageRoot =
-    (await resolveGlobalPackageRoot(manager, runCommand, params.timeoutMs)) ?? pkgRoot;
+    (
+      await resolveGlobalInstallTarget({
+        manager: installTarget,
+        runCommand,
+        timeoutMs: params.timeoutMs,
+      })
+    ).packageRoot ?? pkgRoot;
   if (verifiedPackageRoot) {
     afterVersion = await readPackageVersion(verifiedPackageRoot);
     const expectedVersion = resolveExpectedInstalledVersionFromSpec(packageName, installSpec);
@@ -481,9 +493,16 @@ async function runGitUpdate(params: {
       installKind: params.installKind,
       timeoutMs: effectiveTimeout,
     });
+    const runCommand = createGlobalCommandRunner();
+    const installTarget = await resolveGlobalInstallTarget({
+      manager,
+      runCommand,
+      timeoutMs: effectiveTimeout,
+      pkgRoot: params.root,
+    });
     const installStep = await runUpdateStep({
       name: "global install",
-      argv: globalInstallArgs(manager, updateRoot),
+      argv: globalInstallArgs(installTarget, updateRoot),
       cwd: updateRoot,
       env: installEnv,
       timeoutMs: effectiveTimeout,
@@ -549,7 +568,10 @@ async function updatePluginsAfterCoreUpdate(params: {
   pluginConfig = npmResult.config;
 
   if (syncResult.changed || npmResult.changed) {
-    await writeConfigFile(pluginConfig);
+    await replaceConfigFile({
+      nextConfig: pluginConfig,
+      baseHash: params.configSnapshot.hash,
+    });
   }
 
   if (params.opts.json) {
@@ -634,12 +656,14 @@ async function maybeRestartService(params: {
             invocationCwd: params.invocationCwd,
           });
         } catch (err) {
-          if (!params.opts.json) {
-            defaultRuntime.log(
-              theme.warn(
-                `Failed to refresh gateway service environment from updated install: ${String(err)}`,
-              ),
-            );
+          // Always log the refresh failure so callers can detect it (issue #56772).
+          // Previously this was silently suppressed in --json mode, hiding the root
+          // cause and preventing auto-update callers from detecting the failure.
+          const message = `Failed to refresh gateway service environment from updated install: ${String(err)}`;
+          if (params.opts.json) {
+            defaultRuntime.error(message);
+          } else {
+            defaultRuntime.log(theme.warn(message));
           }
         }
       }
@@ -653,7 +677,7 @@ async function maybeRestartService(params: {
       if (!params.opts.json && restarted) {
         defaultRuntime.log(theme.success("Daemon restarted successfully."));
         defaultRuntime.log("");
-        process.env.GODSEYE_UPDATE_IN_PROGRESS = "1";
+        process.env.OPENCLAW_UPDATE_IN_PROGRESS = "1";
         try {
           const interactiveDoctor =
             Boolean(process.stdin.isTTY) && !params.opts.json && params.opts.yes !== true;
@@ -663,7 +687,7 @@ async function maybeRestartService(params: {
         } catch (err) {
           defaultRuntime.log(theme.warn(`Doctor failed: ${String(err)}`));
         } finally {
-          delete process.env.GODSEYE_UPDATE_IN_PROGRESS;
+          delete process.env.OPENCLAW_UPDATE_IN_PROGRESS;
         }
       }
 
@@ -698,7 +722,7 @@ async function maybeRestartService(params: {
           }
           defaultRuntime.log(
             theme.muted(
-              `Run \`${replaceCliName(formatCliCommand("godseye gateway status --deep"), CLI_NAME)}\` for details.`,
+              `Run \`${replaceCliName(formatCliCommand("openclaw gateway status --deep"), CLI_NAME)}\` for details.`,
             ),
           );
         }
@@ -709,7 +733,7 @@ async function maybeRestartService(params: {
         defaultRuntime.log(theme.warn(`Daemon restart failed: ${String(err)}`));
         defaultRuntime.log(
           theme.muted(
-            `You may need to restart the service manually: ${replaceCliName(formatCliCommand("godseye gateway restart"), CLI_NAME)}`,
+            `You may need to restart the service manually: ${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}`,
           ),
         );
       }
@@ -722,13 +746,13 @@ async function maybeRestartService(params: {
     if (params.result.mode === "npm" || params.result.mode === "pnpm") {
       defaultRuntime.log(
         theme.muted(
-          `Tip: Run \`${replaceCliName(formatCliCommand("godseye doctor"), CLI_NAME)}\`, then \`${replaceCliName(formatCliCommand("godseye gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
+          `Tip: Run \`${replaceCliName(formatCliCommand("openclaw doctor"), CLI_NAME)}\`, then \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
         ),
       );
     } else {
       defaultRuntime.log(
         theme.muted(
-          `Tip: Run \`${replaceCliName(formatCliCommand("godseye gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
+          `Tip: Run \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\` to apply updates to a running gateway.`,
         ),
       );
     }
@@ -929,7 +953,7 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
 
   const showProgress = !opts.json && process.stdout.isTTY;
   if (!opts.json) {
-    defaultRuntime.log(theme.heading("Updating GodsEye..."));
+    defaultRuntime.log(theme.heading("Updating OpenClaw..."));
     defaultRuntime.log("");
   }
 
@@ -988,21 +1012,37 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
 
   if (result.status === "skipped") {
     if (result.reason === "dirty") {
+      defaultRuntime.error(theme.error("Update blocked: local files are edited in this checkout."));
       defaultRuntime.log(
         theme.warn(
-          "Skipped: working directory has uncommitted changes. Commit or stash them first.",
+          "Git-based updates need a clean working tree before they can switch commits, fetch, or rebase.",
         ),
+      );
+      defaultRuntime.log(
+        theme.muted("Commit, stash, or discard the local changes, then rerun `openclaw update`."),
       );
     }
     if (result.reason === "not-git-install") {
       defaultRuntime.log(
         theme.warn(
-          `Skipped: this GodsEye install isn't a git checkout, and the package manager couldn't be detected. Update via your package manager, then run \`${replaceCliName(formatCliCommand("godseye doctor"), CLI_NAME)}\` and \`${replaceCliName(formatCliCommand("godseye gateway restart"), CLI_NAME)}\`.`,
+          `Skipped: this OpenClaw install isn't a git checkout, and the package manager couldn't be detected. Update via your package manager, then run \`${replaceCliName(formatCliCommand("openclaw doctor"), CLI_NAME)}\` and \`${replaceCliName(formatCliCommand("openclaw gateway restart"), CLI_NAME)}\`.`,
         ),
       );
       defaultRuntime.log(
         theme.muted(
-          `Examples: \`${replaceCliName("npm i -g godseye@latest", CLI_NAME)}\` or \`${replaceCliName("pnpm add -g godseye@latest", CLI_NAME)}\``,
+          `Examples: \`${replaceCliName("npm i -g openclaw@latest", CLI_NAME)}\` or \`${replaceCliName("pnpm add -g openclaw@latest", CLI_NAME)}\``,
+        ),
+      );
+    }
+    defaultRuntime.exit(0);
+    return;
+  }
+
+  if (switchToGit && result.status === "ok" && result.mode === "git") {
+    if (!opts.json) {
+      defaultRuntime.log(
+        theme.muted(
+          "Switched from a package install to a git checkout. Skipping remaining post-update work in the old CLI process; rerun follow-up commands from the new git install if needed.",
         ),
       );
     }
@@ -1012,47 +1052,91 @@ export async function updateCommand(opts: UpdateCommandOptions): Promise<void> {
 
   let postUpdateConfigSnapshot = configSnapshot;
   if (requestedChannel && configSnapshot.valid && requestedChannel !== storedChannel) {
-    const next = {
-      ...configSnapshot.config,
-      update: {
-        ...configSnapshot.config.update,
-        channel: requestedChannel,
-      },
-    };
-    await writeConfigFile(next);
-    postUpdateConfigSnapshot = {
-      ...configSnapshot,
-      parsed: next,
-      resolved: next,
-      config: next,
-    };
-    if (!opts.json) {
-      defaultRuntime.log(theme.muted(`Update channel set to ${requestedChannel}.`));
+    if (switchToGit) {
+      if (!opts.json) {
+        defaultRuntime.log(
+          theme.muted(
+            `Skipped persisting update.channel=${requestedChannel} in the pre-update CLI process after switching to a git install.`,
+          ),
+        );
+      }
+    } else {
+      const next = {
+        ...configSnapshot.config,
+        update: {
+          ...configSnapshot.config.update,
+          channel: requestedChannel,
+        },
+      };
+      await replaceConfigFile({
+        nextConfig: next,
+        baseHash: configSnapshot.hash,
+      });
+      postUpdateConfigSnapshot = {
+        ...configSnapshot,
+        hash: undefined,
+        parsed: next,
+        sourceConfig: asResolvedSourceConfig(next),
+        resolved: asResolvedSourceConfig(next),
+        runtimeConfig: asRuntimeConfig(next),
+        config: asRuntimeConfig(next),
+      };
+      if (!opts.json) {
+        defaultRuntime.log(theme.muted(`Update channel set to ${requestedChannel}.`));
+      }
     }
   }
 
-  await updatePluginsAfterCoreUpdate({
-    root,
-    channel,
-    configSnapshot: postUpdateConfigSnapshot,
-    opts,
-  });
+  const postUpdateRoot = result.root ?? root;
 
-  await tryWriteCompletionCache(root, Boolean(opts.json));
-  await tryInstallShellCompletion({
-    jsonMode: Boolean(opts.json),
-    skipPrompt: Boolean(opts.yes),
-  });
+  // A package -> git switch still runs inside the pre-update CLI process.
+  // Any follow-up work that re-enters the CLI can then compare new bundled
+  // plugin minima against the old host version and fail even though the
+  // install itself succeeded. Leave the switched checkout alone and let the
+  // new git install handle follow-up commands in a fresh process.
+  const deferOldProcessPostUpdateWork = switchToGit && result.mode === "git";
+  if (deferOldProcessPostUpdateWork) {
+    if (!opts.json) {
+      defaultRuntime.log(
+        theme.muted(
+          "Skipped plugin update sync in the pre-update CLI process after switching to a git install.",
+        ),
+      );
+    }
+  } else {
+    await updatePluginsAfterCoreUpdate({
+      root: postUpdateRoot,
+      channel,
+      configSnapshot: postUpdateConfigSnapshot,
+      opts,
+    });
+  }
 
-  await maybeRestartService({
-    shouldRestart,
-    result,
-    opts,
-    refreshServiceEnv: refreshGatewayServiceEnv,
-    gatewayPort,
-    restartScriptPath,
-    invocationCwd,
-  });
+  if (deferOldProcessPostUpdateWork) {
+    if (!opts.json) {
+      defaultRuntime.log(
+        theme.muted(
+          "Skipped completion/restart follow-ups in the pre-update CLI process after switching to a git install.",
+        ),
+      );
+    }
+  } else {
+    await tryWriteCompletionCache(postUpdateRoot, Boolean(opts.json));
+    await tryInstallShellCompletion({
+      jsonMode: Boolean(opts.json),
+      skipPrompt: Boolean(opts.yes),
+    });
+
+    await maybeRestartService({
+      shouldRestart,
+      result,
+      opts,
+      refreshServiceEnv: refreshGatewayServiceEnv,
+      gatewayPort,
+      restartScriptPath,
+      invocationCwd,
+    });
+  }
 
   if (!opts.json) {
     defaultRuntime.log(theme.muted(pickUpdateQuip()));

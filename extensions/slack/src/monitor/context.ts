@@ -1,10 +1,10 @@
 import type { App } from "@slack/bolt";
 import { formatAllowlistMatchMeta } from "godseye/plugin-sdk/allow-from";
 import type {
-  GodsEyeConfig,
+  OpenClawConfig,
   SlackReactionNotificationMode,
 } from "godseye/plugin-sdk/config-runtime";
-import { resolveSessionKey, type SessionScope } from "godseye/plugin-sdk/config-runtime";
+import type { SessionScope } from "godseye/plugin-sdk/config-runtime";
 import type { DmPolicy, GroupPolicy } from "godseye/plugin-sdk/config-runtime";
 import { createDedupeCache } from "godseye/plugin-sdk/infra-runtime";
 import type { HistoryEntry } from "godseye/plugin-sdk/reply-history";
@@ -12,17 +12,22 @@ import { resolveAgentRoute } from "godseye/plugin-sdk/routing";
 import { logVerbose } from "godseye/plugin-sdk/runtime-env";
 import { getChildLogger } from "godseye/plugin-sdk/runtime-env";
 import type { RuntimeEnv } from "godseye/plugin-sdk/runtime-env";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "godseye/plugin-sdk/text-runtime";
 import type { SlackMessageEvent } from "../types.js";
 import { normalizeAllowList, normalizeAllowListLower, normalizeSlackSlug } from "./allow-list.js";
 import type { SlackChannelConfigEntries } from "./channel-config.js";
 import { resolveSlackChannelConfig } from "./channel-config.js";
 import { normalizeSlackChannelType } from "./channel-type.js";
+import { resolveSessionKey } from "./config.runtime.js";
 import { isSlackChannelAllowedByPolicy } from "./policy.js";
 
 export { inferSlackChannelType, normalizeSlackChannelType } from "./channel-type.js";
 
 export type SlackMonitorContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   botToken: string;
   app: App;
@@ -50,9 +55,10 @@ export type SlackMonitorContext = {
   useAccessGroups: boolean;
   reactionMode: SlackReactionNotificationMode;
   reactionAllowlist: Array<string | number>;
-  replyToMode: "off" | "first" | "all";
+  replyToMode: "off" | "first" | "all" | "batched";
   threadHistoryScope: "thread" | "channel";
   threadInheritParent: boolean;
+  threadRequireExplicitMention: boolean;
   slashCommand: Required<import("godseye/plugin-sdk/config-runtime").SlackSlashCommandConfig>;
   textLimit: number;
   ackReactionScope: string;
@@ -88,7 +94,7 @@ export type SlackMonitorContext = {
 };
 
 export function createSlackMonitorContext(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   botToken: string;
   app: App;
@@ -117,6 +123,7 @@ export function createSlackMonitorContext(params: {
   replyToMode: SlackMonitorContext["replyToMode"];
   threadHistoryScope: SlackMonitorContext["threadHistoryScope"];
   threadInheritParent: SlackMonitorContext["threadInheritParent"];
+  threadRequireExplicitMention: SlackMonitorContext["threadRequireExplicitMention"];
   slashCommand: SlackMonitorContext["slashCommand"];
   textLimit: number;
   ackReactionScope: string;
@@ -158,7 +165,7 @@ export function createSlackMonitorContext(params: {
     channelType?: string | null;
     senderId?: string | null;
   }) => {
-    const channelId = p.channelId?.trim() ?? "";
+    const channelId = normalizeOptionalString(p.channelId) ?? "";
     if (!channelId) {
       return params.mainKey;
     }
@@ -171,7 +178,7 @@ export function createSlackMonitorContext(params: {
         ? `slack:group:${channelId}`
         : `slack:channel:${channelId}`;
     const chatType = isDirectMessage ? "direct" : isGroup ? "group" : "channel";
-    const senderId = p.senderId?.trim() ?? "";
+    const senderId = normalizeOptionalString(p.senderId) ?? "";
 
     // Resolve through shared channel/account bindings so system events route to
     // the same agent session as regular inbound messages.
@@ -311,7 +318,7 @@ export function createSlackMonitorContext(params: {
         p.channelName ? normalizeSlackSlug(p.channelName) : undefined,
       ]
         .filter((value): value is string => Boolean(value))
-        .map((value) => value.toLowerCase());
+        .map((value) => normalizeLowercaseStringOrEmpty(value));
       const permitted =
         groupDmChannelsLower.includes("*") ||
         candidates.some((candidate) => groupDmChannelsLower.includes(candidate));
@@ -417,6 +424,7 @@ export function createSlackMonitorContext(params: {
     replyToMode: params.replyToMode,
     threadHistoryScope: params.threadHistoryScope,
     threadInheritParent: params.threadInheritParent,
+    threadRequireExplicitMention: params.threadRequireExplicitMention,
     slashCommand: params.slashCommand,
     textLimit: params.textLimit,
     ackReactionScope: params.ackReactionScope,

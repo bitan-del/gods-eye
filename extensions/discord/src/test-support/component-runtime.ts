@@ -1,4 +1,4 @@
-import { isSingleUseReplyToMode } from "openclaw/plugin-sdk/reply-reference";
+import { isSingleUseReplyToMode } from "godseye/plugin-sdk/reply-reference";
 import { vi, type Mock } from "vitest";
 import { parsePluginBindingApprovalCustomId } from "../../../../src/plugins/conversation-binding.js";
 import { resolvePinnedMainDmOwnerFromAllowlist } from "../../../../src/security/dm-policy-shared.js";
@@ -6,7 +6,7 @@ import { resolvePinnedMainDmOwnerFromAllowlist } from "../../../../src/security/
 type UnknownMock = Mock<(...args: unknown[]) => unknown>;
 type AsyncUnknownMock = Mock<(...args: unknown[]) => Promise<unknown>>;
 type DispatchReplyWithBufferedBlockDispatcherFn =
-  typeof import("openclaw/plugin-sdk/reply-dispatch-runtime").dispatchReplyWithBufferedBlockDispatcher;
+  typeof import("godseye/plugin-sdk/reply-dispatch-runtime").dispatchReplyWithBufferedBlockDispatcher;
 type DispatchReplyMock = Mock<DispatchReplyWithBufferedBlockDispatcherFn>;
 
 type DiscordComponentRuntimeMocks = {

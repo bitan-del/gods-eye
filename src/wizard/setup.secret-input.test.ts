@@ -1,25 +1,25 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveSetupSecretInputString } from "./setup.secret-input.js";
 
-function makeConfig(): GodsEyeConfig {
+function makeConfig(): OpenClawConfig {
   return {
     secrets: {
       providers: {
         default: { source: "env" },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 describe("resolveSetupSecretInputString", () => {
   it("resolves env-template SecretInput strings", async () => {
     const resolved = await resolveSetupSecretInputString({
       config: makeConfig(),
-      value: "${GODSEYE_GATEWAY_PASSWORD}",
+      value: "${OPENCLAW_GATEWAY_PASSWORD}",
       path: "gateway.auth.password",
       env: {
-        GODSEYE_GATEWAY_PASSWORD: "gateway-secret", // pragma: allowlist secret
+        OPENCLAW_GATEWAY_PASSWORD: "gateway-secret", // pragma: allowlist secret
       },
     });
 
@@ -40,12 +40,12 @@ describe("resolveSetupSecretInputString", () => {
     await expect(
       resolveSetupSecretInputString({
         config: makeConfig(),
-        value: "${GODSEYE_GATEWAY_PASSWORD}",
+        value: "${OPENCLAW_GATEWAY_PASSWORD}",
         path: "gateway.auth.password",
         env: {},
       }),
     ).rejects.toThrow(
-      'gateway.auth.password: failed to resolve SecretRef "env:default:GODSEYE_GATEWAY_PASSWORD"',
+      'gateway.auth.password: failed to resolve SecretRef "env:default:OPENCLAW_GATEWAY_PASSWORD"',
     );
   });
 });

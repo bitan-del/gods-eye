@@ -3,7 +3,7 @@ import {
   loadBundledEntryExportSync,
   type OpenClawPluginApi,
   type PluginCommandContext,
-} from "openclaw/plugin-sdk/channel-entry-contract";
+} from "godseye/plugin-sdk/channel-entry-contract";
 
 type QQBotAccount = {
   accountId: string;

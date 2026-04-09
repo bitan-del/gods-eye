@@ -8,6 +8,7 @@ import {
 } from "../agents/skills-clawhub.js";
 import { loadConfig } from "../config/config.js";
 import { defaultRuntime } from "../runtime.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { theme } from "../terminal/theme.js";
 import { formatSkillInfo, formatSkillsCheck, formatSkillsList } from "./skills-cli.format.js";
@@ -33,7 +34,7 @@ async function loadSkillsStatusReport(): Promise<SkillStatusReport> {
 async function runSkillsAction(render: (report: SkillStatusReport) => string): Promise<void> {
   try {
     const report = await loadSkillsStatusReport();
-    defaultRuntime.log(render(report));
+    defaultRuntime.writeStdout(render(report));
   } catch (err) {
     defaultRuntime.error(String(err));
     defaultRuntime.exit(1);
@@ -55,7 +56,7 @@ export function registerSkillsCli(program: Command) {
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/skills", "docs.gods-eye.org/cli/skills")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/skills", "docs.openclaw.ai/cli/skills")}\n`,
     );
 
   skills
@@ -67,7 +68,7 @@ export function registerSkillsCli(program: Command) {
     .action(async (queryParts: string[], opts: { limit?: number; json?: boolean }) => {
       try {
         const results = await searchSkillsFromClawHub({
-          query: queryParts.join(" ").trim() || undefined,
+          query: normalizeOptionalString(queryParts.join(" ")),
           limit: opts.limit,
         });
         if (opts.json) {

@@ -14,12 +14,13 @@ import {
 import { resolveCommandSecretRefsViaGateway } from "../../cli/command-secret-gateway.js";
 import { getScopedChannelsCommandSecretTargets } from "../../cli/command-secret-targets.js";
 import { resolveMessageSecretScope } from "../../cli/message-secret-scope.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { loadConfig } from "../../config/config.js";
 import { GATEWAY_CLIENT_IDS, GATEWAY_CLIENT_MODES } from "../../gateway/protocol/client-info.js";
 import { getToolResult, runMessageAction } from "../../infra/outbound/message-action-runner.js";
 import { POLL_CREATION_PARAM_DEFS, SHARED_POLL_CREATION_PARAM_NAMES } from "../../poll-params.js";
 import { normalizeAccountId } from "../../routing/session-key.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { stripReasoningTagsFromText } from "../../shared/text/reasoning-tags.js";
 import { normalizeMessageChannel } from "../../utils/message-channel.js";
 import { resolveSessionAgentId } from "../agent-scope.js";
@@ -30,6 +31,8 @@ import { jsonResult, readNumberParam, readStringParam } from "./common.js";
 import { resolveGatewayOptions } from "./gateway.js";
 
 const AllMessageActions = CHANNEL_MESSAGE_ACTION_NAMES;
+const MESSAGE_TOOL_THREAD_READ_HINT =
+  ' Use action="read" with threadId to fetch prior messages in a thread when you need conversation context you do not have yet.';
 const EXPLICIT_TARGET_ACTIONS = new Set<ChannelMessageActionName>([
   "send",
   "sendWithEffect",
@@ -280,6 +283,9 @@ function buildEventSchema() {
     endTime: Type.Optional(Type.String()),
     desc: Type.Optional(Type.String()),
     location: Type.Optional(Type.String()),
+    image: Type.Optional(
+      Type.String({ description: "Cover image URL or local file path for the event." }),
+    ),
     durationMin: Type.Optional(Type.Number()),
     until: Type.Optional(Type.String()),
   };
@@ -392,15 +398,15 @@ type MessageToolOptions = {
   agentAccountId?: string;
   agentSessionKey?: string;
   sessionId?: string;
-  config?: GodsEyeConfig;
-  loadConfig?: () => GodsEyeConfig;
+  config?: OpenClawConfig;
+  loadConfig?: () => OpenClawConfig;
   resolveCommandSecretRefsViaGateway?: typeof resolveCommandSecretRefsViaGateway;
   runMessageAction?: typeof runMessageAction;
   currentChannelId?: string;
   currentChannelProvider?: string;
   currentThreadTs?: string;
   currentMessageId?: string | number;
-  replyToMode?: "off" | "first" | "all";
+  replyToMode?: "off" | "first" | "all" | "batched";
   hasRepliedRef?: { value: boolean };
   sandboxRoot?: string;
   requireExplicitTarget?: boolean;
@@ -408,7 +414,7 @@ type MessageToolOptions = {
 };
 
 function resolveMessageToolSchemaActions(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   currentChannelProvider?: string;
   currentChannelId?: string;
   currentThreadTs?: string;
@@ -463,7 +469,7 @@ function resolveMessageToolSchemaActions(params: {
 
 function resolveIncludeCapability(
   params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     currentChannelProvider?: string;
     currentChannelId?: string;
     currentThreadTs?: string;
@@ -498,7 +504,7 @@ function resolveIncludeCapability(
 }
 
 function resolveIncludeInteractive(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   currentChannelProvider?: string;
   currentChannelId?: string;
   currentThreadTs?: string;
@@ -513,7 +519,7 @@ function resolveIncludeInteractive(params: {
 }
 
 function buildMessageToolSchema(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   currentChannelProvider?: string;
   currentChannelId?: string;
   currentThreadTs?: string;
@@ -545,7 +551,7 @@ function buildMessageToolSchema(params: {
 }
 
 function resolveAgentAccountId(value?: string): string | undefined {
-  const trimmed = value?.trim();
+  const trimmed = normalizeOptionalString(value);
   if (!trimmed) {
     return undefined;
   }
@@ -553,7 +559,7 @@ function resolveAgentAccountId(value?: string): string | undefined {
 }
 
 function buildMessageToolDescription(options?: {
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   currentChannel?: string;
   currentChannelId?: string;
   currentThreadTs?: string;
@@ -584,7 +590,7 @@ function buildMessageToolDescription(options?: {
     });
     if (channelActions.length > 0) {
       // Always include "send" as a base action
-      const allActions = new Set(["send", ...channelActions]);
+      const allActions = new Set<ChannelMessageActionName | "send">(["send", ...channelActions]);
       const actionList = Array.from(allActions).toSorted().join(", ");
       let desc = `${baseDescription} Current channel (${currentChannel}) supports: ${actionList}.`;
 
@@ -607,7 +613,7 @@ function buildMessageToolDescription(options?: {
           requesterSenderId: resolvedOptions.requesterSenderId,
         });
         if (actions.length > 0) {
-          const all = new Set(["send", ...actions]);
+          const all = new Set<ChannelMessageActionName | "send">(["send", ...actions]);
           otherChannels.push(`${plugin.id} (${Array.from(all).toSorted().join(", ")})`);
         }
       }
@@ -615,7 +621,10 @@ function buildMessageToolDescription(options?: {
         desc += ` Other configured channels: ${otherChannels.join(", ")}.`;
       }
 
-      return desc;
+      return appendMessageToolReadHint(
+        desc,
+        Array.from(allActions) as Iterable<ChannelMessageActionName | "send">,
+      );
     }
   }
 
@@ -623,11 +632,26 @@ function buildMessageToolDescription(options?: {
   if (resolvedOptions.config) {
     const actions = listChannelMessageActions(resolvedOptions.config);
     if (actions.length > 0) {
-      return `${baseDescription} Supports actions: ${actions.join(", ")}.`;
+      return appendMessageToolReadHint(
+        `${baseDescription} Supports actions: ${actions.join(", ")}.`,
+        actions,
+      );
     }
   }
 
   return `${baseDescription} Supports actions: send, delete, react, poll, pin, threads, and more.`;
+}
+
+function appendMessageToolReadHint(
+  description: string,
+  actions: Iterable<ChannelMessageActionName | "send">,
+): string {
+  for (const action of actions) {
+    if (action === "read") {
+      return `${description}${MESSAGE_TOOL_THREAD_READ_HINT}`;
+    }
+  }
+  return description;
 }
 
 export function createMessageTool(options?: MessageToolOptions): AnyAgentTool {

@@ -1,4 +1,4 @@
-import type { PluginRuntime } from "openclaw/plugin-sdk/core";
+import type { PluginRuntime } from "godseye/plugin-sdk/core";
 import { describe, expect, it } from "vitest";
 import { extractToolPayload } from "../../../src/infra/outbound/tool-payload.js";
 import { createStartAccountContext } from "../../../test/helpers/plugins/start-account-context.js";

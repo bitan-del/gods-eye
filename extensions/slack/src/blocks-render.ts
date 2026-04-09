@@ -1,10 +1,11 @@
 import type { Block, KnownBlock } from "@slack/web-api";
 import { reduceInteractiveReply } from "godseye/plugin-sdk/interactive-runtime";
 import type { InteractiveReply } from "godseye/plugin-sdk/interactive-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import { truncateSlackText } from "./truncate.js";
 
-export const SLACK_REPLY_BUTTON_ACTION_ID = "godseye:reply_button";
-export const SLACK_REPLY_SELECT_ACTION_ID = "godseye:reply_select";
+export const SLACK_REPLY_BUTTON_ACTION_ID = "openclaw:reply_button";
+export const SLACK_REPLY_SELECT_ACTION_ID = "openclaw:reply_select";
 const SLACK_SECTION_TEXT_MAX = 3000;
 const SLACK_PLAIN_TEXT_MAX = 75;
 
@@ -16,6 +17,18 @@ function buildSlackReplyButtonActionId(buttonIndex: number, choiceIndex: number)
 
 function buildSlackReplySelectActionId(selectIndex: number): string {
   return `${SLACK_REPLY_SELECT_ACTION_ID}:${String(selectIndex)}`;
+}
+
+function resolveSlackButtonStyle(
+  style: "primary" | "secondary" | "success" | "danger" | undefined,
+) {
+  if (style === "primary" || style === "danger") {
+    return style;
+  }
+  if (style === "success") {
+    return "primary";
+  }
+  return undefined;
 }
 
 export function buildSlackInteractiveBlocks(interactive?: InteractiveReply): SlackBlock[] {
@@ -45,17 +58,21 @@ export function buildSlackInteractiveBlocks(interactive?: InteractiveReply): Sla
       }
       state.blocks.push({
         type: "actions",
-        block_id: `godseye_reply_buttons_${++state.buttonIndex}`,
-        elements: block.buttons.map((button, choiceIndex) => ({
-          type: "button",
-          action_id: buildSlackReplyButtonActionId(state.buttonIndex, choiceIndex),
-          text: {
-            type: "plain_text",
-            text: truncateSlackText(button.label, SLACK_PLAIN_TEXT_MAX),
-            emoji: true,
-          },
-          value: button.value,
-        })),
+        block_id: `openclaw_reply_buttons_${++state.buttonIndex}`,
+        elements: block.buttons.map((button, choiceIndex) => {
+          const style = resolveSlackButtonStyle(button.style);
+          return {
+            type: "button",
+            action_id: buildSlackReplyButtonActionId(state.buttonIndex, choiceIndex),
+            text: {
+              type: "plain_text",
+              text: truncateSlackText(button.label, SLACK_PLAIN_TEXT_MAX),
+              emoji: true,
+            },
+            value: button.value,
+            ...(style ? { style } : {}),
+          };
+        }),
       });
       return state;
     }
@@ -64,7 +81,7 @@ export function buildSlackInteractiveBlocks(interactive?: InteractiveReply): Sla
     }
     state.blocks.push({
       type: "actions",
-      block_id: `godseye_reply_select_${++state.selectIndex}`,
+      block_id: `openclaw_reply_select_${++state.selectIndex}`,
       elements: [
         {
           type: "static_select",
@@ -72,12 +89,12 @@ export function buildSlackInteractiveBlocks(interactive?: InteractiveReply): Sla
           placeholder: {
             type: "plain_text",
             text: truncateSlackText(
-              block.placeholder?.trim() || "Choose an option",
+              normalizeOptionalString(block.placeholder) ?? "Choose an option",
               SLACK_PLAIN_TEXT_MAX,
             ),
             emoji: true,
           },
-          options: block.options.map((option, choiceIndex) => ({
+          options: block.options.map((option, _choiceIndex) => ({
             text: {
               type: "plain_text",
               text: truncateSlackText(option.label, SLACK_PLAIN_TEXT_MAX),

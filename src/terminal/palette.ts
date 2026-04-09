@@ -1,12 +1,12 @@
-// Gods Eye palette tokens for CLI/UI theming. Use this palette for all CLI color output.
+// Lobster palette tokens for CLI/UI theming. Use this palette for all CLI color output.
 // Keep in sync with docs/cli/index.md (CLI palette section).
 export const LOBSTER_PALETTE = {
-  accent: "#1A56DB",
-  accentBright: "#3B82F6",
-  accentDim: "#1E40AF",
-  info: "#60A5FA",
-  success: "#00E5CC",
+  accent: "#FF5A2D",
+  accentBright: "#FF7A3D",
+  accentDim: "#D14A22",
+  info: "#FF8A5B",
+  success: "#2FBF71",
   warn: "#FFB020",
-  error: "#E63946",
-  muted: "#5A6480",
+  error: "#E23D2D",
+  muted: "#8B7F77",
 } as const;

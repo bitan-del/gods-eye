@@ -68,7 +68,7 @@ function resolveModelRequestPolicy(model: Model<Api>) {
 export function buildGuardedModelFetch(model: Model<Api>): typeof fetch {
   const requestConfig = resolveModelRequestPolicy(model);
   const dispatcherPolicy = buildProviderRequestDispatcherPolicy(requestConfig);
-  return async (input, init) => {
+  const guardedFetch = async (input: URL | RequestInfo, init?: RequestInit | BunFetchRequestInit) => {
     const request = input instanceof Request ? new Request(input, init) : undefined;
     const url =
       request?.url ??
@@ -100,4 +100,5 @@ export function buildGuardedModelFetch(model: Model<Api>): typeof fetch {
     });
     return buildManagedResponse(result.response, result.release);
   };
+  return guardedFetch as unknown as typeof fetch;
 }

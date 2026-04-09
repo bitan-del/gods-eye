@@ -1,9 +1,16 @@
 import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalString,
+} from "godseye/plugin-sdk/text-runtime";
+import {
+  createDedupeCache,
   formatInboundFromLabel as formatInboundFromLabelShared,
+  rawDataToString,
   resolveThreadSessionKeys as resolveThreadSessionKeysShared,
-  type GodsEyeConfig,
-} from "../runtime-api.js";
-export { createDedupeCache, rawDataToString } from "../runtime-api.js";
+  type OpenClawConfig,
+} from "./runtime-api.js";
+
+export { createDedupeCache, rawDataToString };
 
 export type ResponsePrefixContext = {
   model?: string;
@@ -30,8 +37,7 @@ function normalizeAgentId(value: string | undefined | null): string {
     return trimmed;
   }
   return (
-    trimmed
-      .toLowerCase()
+    normalizeLowercaseStringOrEmpty(trimmed)
       .replace(/[^a-z0-9_-]+/g, "-")
       .replace(/^-+/, "")
       .replace(/-+$/, "")
@@ -39,24 +45,24 @@ function normalizeAgentId(value: string | undefined | null): string {
   );
 }
 
-type AgentEntry = NonNullable<NonNullable<GodsEyeConfig["agents"]>["list"]>[number];
+type AgentEntry = NonNullable<NonNullable<OpenClawConfig["agents"]>["list"]>[number];
 
 function isAgentEntry(entry: unknown): entry is AgentEntry {
   return Boolean(entry && typeof entry === "object");
 }
 
-function listAgents(cfg: GodsEyeConfig): AgentEntry[] {
+function listAgents(cfg: OpenClawConfig): AgentEntry[] {
   return Array.isArray(cfg.agents?.list) ? cfg.agents.list.filter(isAgentEntry) : [];
 }
 
-function resolveAgentEntry(cfg: GodsEyeConfig, agentId: string): AgentEntry | undefined {
+function resolveAgentEntry(cfg: OpenClawConfig, agentId: string): AgentEntry | undefined {
   const id = normalizeAgentId(agentId);
   return listAgents(cfg).find((entry) => normalizeAgentId(entry.id) === id);
 }
 
-export function resolveIdentityName(cfg: GodsEyeConfig, agentId: string): string | undefined {
+export function resolveIdentityName(cfg: OpenClawConfig, agentId: string): string | undefined {
   const entry = resolveAgentEntry(cfg, agentId);
-  return entry?.identity?.name?.trim() || undefined;
+  return normalizeOptionalString(entry?.identity?.name);
 }
 
 export function resolveThreadSessionKeys(params: {

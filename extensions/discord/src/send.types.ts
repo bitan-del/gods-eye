@@ -1,6 +1,6 @@
 import type { RequestClient } from "@buape/carbon";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import type { RetryConfig } from "godseye/plugin-sdk/infra-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { RetryConfig } from "godseye/plugin-sdk/retry-runtime";
 
 export class DiscordSendError extends Error {
   kind?: "missing-permissions" | "dm-blocked";
@@ -22,19 +22,29 @@ export class DiscordSendError extends Error {
 
 export const DISCORD_MAX_EMOJI_BYTES = 256 * 1024;
 export const DISCORD_MAX_STICKER_BYTES = 512 * 1024;
+export const DISCORD_MAX_EVENT_COVER_BYTES = 8 * 1024 * 1024;
 
 export type DiscordSendResult = {
   messageId: string;
   channelId: string;
 };
 
+export type DiscordRuntimeAccountContext = {
+  cfg: OpenClawConfig;
+  accountId: string;
+};
+
 export type DiscordReactOpts = {
-  cfg?: GodsEyeConfig;
-  token?: string;
+  cfg?: OpenClawConfig;
   accountId?: string;
+  token?: string;
   rest?: RequestClient;
   verbose?: boolean;
   retry?: RetryConfig;
+};
+
+export type DiscordReactionRuntimeContext = DiscordRuntimeAccountContext & {
+  rest: RequestClient;
 };
 
 export type DiscordReactionUser = {

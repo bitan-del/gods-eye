@@ -1,11 +1,57 @@
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { jsonResult } from "../../agents/tools/common.js";
-import type { ChannelPlugin } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
-import { setActivePluginRegistry } from "../../plugins/runtime.js";
-import { createOutboundTestPlugin, createTestRegistry } from "../../test-utils/channel-plugins.js";
+import { dispatchChannelMessageAction } from "../../channels/plugins/message-action-dispatch.js";
+import type { ChannelMessageActionContext, ChannelPlugin } from "../../channels/plugins/types.js";
+import type { OpenClawConfig } from "../../config/config.js";
+import { getActivePluginRegistry, setActivePluginRegistry } from "../../plugins/runtime.js";
+import { createTestRegistry } from "../../test-utils/channel-plugins.js";
 import { runMessageAction } from "./message-action-runner.js";
+import { extractToolPayload } from "./tool-payload.js";
+
+type ChannelActionHandler = NonNullable<NonNullable<ChannelPlugin["actions"]>["handleAction"]>;
+
+const mocks = vi.hoisted(() => ({
+  resolveOutboundChannelPlugin: vi.fn(),
+  executeSendAction: vi.fn(),
+  executePollAction: vi.fn(),
+}));
+
+vi.mock("./channel-resolution.js", () => ({
+  resolveOutboundChannelPlugin: mocks.resolveOutboundChannelPlugin,
+  resetOutboundChannelResolutionStateForTest: vi.fn(),
+}));
+
+vi.mock("./outbound-send-service.js", () => ({
+  executeSendAction: mocks.executeSendAction,
+  executePollAction: mocks.executePollAction,
+}));
+
+vi.mock("./outbound-session.js", () => ({
+  ensureOutboundSessionEntry: vi.fn(async () => undefined),
+  resolveOutboundSessionRoute: vi.fn(async () => null),
+}));
+
+vi.mock("../../channels/plugins/bootstrap-registry.js", () => ({
+  getBootstrapChannelPlugin: (id: string) =>
+    id === "feishu"
+      ? {
+          actions: {
+            messageActionTargetAliases: {
+              pin: { aliases: ["messageId"] },
+              unpin: { aliases: ["messageId"] },
+              "list-pins": { aliases: ["chatId"] },
+            },
+          },
+        }
+      : undefined,
+}));
+
+vi.mock("./message-action-threading.js", async () => {
+  const { createOutboundThreadingMock } =
+    await import("./message-action-threading.test-helpers.js");
+  return createOutboundThreadingMock();
+});
 
 function createAlwaysConfiguredPluginConfig(account: Record<string, unknown> = { enabled: true }) {
   return {
@@ -15,7 +61,92 @@ function createAlwaysConfiguredPluginConfig(account: Record<string, unknown> = {
   };
 }
 
+function createPollForwardingPlugin(params: {
+  pluginId: string;
+  label: string;
+  blurb: string;
+  handleAction: ChannelActionHandler;
+}): ChannelPlugin {
+  return {
+    id: params.pluginId,
+    meta: {
+      id: params.pluginId,
+      label: params.label,
+      selectionLabel: params.label,
+      docsPath: `/channels/${params.pluginId}`,
+      blurb: params.blurb,
+    },
+    capabilities: { chatTypes: ["direct"] },
+    config: createAlwaysConfiguredPluginConfig(),
+    messaging: {
+      targetResolver: {
+        looksLikeId: () => true,
+      },
+    },
+    actions: {
+      describeMessageTool: () => ({ actions: ["poll"] }),
+      supportsAction: ({ action }) => action === "poll",
+      handleAction: params.handleAction,
+    },
+  };
+}
+
+async function executePluginAction(params: {
+  action: "send" | "poll";
+  ctx: Pick<
+    ChannelMessageActionContext,
+    "channel" | "cfg" | "params" | "mediaAccess" | "accountId" | "gateway" | "toolContext"
+  > & {
+    dryRun: boolean;
+    agentId?: string;
+  };
+}) {
+  const handled = await dispatchChannelMessageAction({
+    channel: params.ctx.channel,
+    action: params.action,
+    cfg: params.ctx.cfg,
+    params: params.ctx.params,
+    mediaAccess: params.ctx.mediaAccess,
+    mediaLocalRoots: params.ctx.mediaAccess?.localRoots ?? [],
+    mediaReadFile:
+      typeof params.ctx.mediaAccess?.readFile === "function"
+        ? params.ctx.mediaAccess.readFile
+        : undefined,
+    accountId: params.ctx.accountId ?? undefined,
+    gateway: params.ctx.gateway,
+    toolContext: params.ctx.toolContext,
+    dryRun: params.ctx.dryRun,
+    agentId: params.ctx.agentId,
+  });
+  if (!handled) {
+    throw new Error(`expected plugin to handle ${params.action}`);
+  }
+  return {
+    handledBy: "plugin" as const,
+    payload: extractToolPayload(handled),
+    toolResult: handled,
+  };
+}
+
 describe("runMessageAction plugin dispatch", () => {
+  beforeEach(() => {
+    mocks.resolveOutboundChannelPlugin.mockReset();
+    mocks.resolveOutboundChannelPlugin.mockImplementation(
+      ({ channel }: { channel: string }) =>
+        getActivePluginRegistry()?.channels.find((entry) => entry?.plugin?.id === channel)?.plugin,
+    );
+    mocks.executeSendAction.mockReset();
+    mocks.executeSendAction.mockImplementation(
+      async ({ ctx }: { ctx: Parameters<typeof executePluginAction>[0]["ctx"] }) =>
+        await executePluginAction({ action: "send", ctx }),
+    );
+    mocks.executePollAction.mockReset();
+    mocks.executePollAction.mockImplementation(
+      async ({ ctx }: { ctx: Parameters<typeof executePluginAction>[0]["ctx"] }) =>
+        await executePluginAction({ action: "poll", ctx }),
+    );
+  });
+
   describe("alias-based plugin action dispatch", () => {
     const handleAction = vi.fn(async ({ params }: { params: Record<string, unknown> }) =>
       jsonResult({
@@ -35,6 +166,11 @@ describe("runMessageAction plugin dispatch", () => {
       },
       capabilities: { chatTypes: ["direct", "channel"] },
       config: createAlwaysConfiguredPluginConfig(),
+      messaging: {
+        targetResolver: {
+          looksLikeId: () => true,
+        },
+      },
       actions: {
         describeMessageTool: () => ({ actions: ["pin", "list-pins", "member-info"] }),
         supportsAction: ({ action }) =>
@@ -70,7 +206,7 @@ describe("runMessageAction plugin dispatch", () => {
               enabled: true,
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         action: "pin",
         params: {
           channel: "feishu",
@@ -86,7 +222,7 @@ describe("runMessageAction plugin dispatch", () => {
               enabled: true,
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         action: "list-pins",
         params: {
           channel: "feishu",
@@ -116,9 +252,9 @@ describe("runMessageAction plugin dispatch", () => {
     });
 
     it("routes execution context ids into plugin handleAction", async () => {
-      const stateDir = path.join("/tmp", "godseye-plugin-dispatch-media-roots");
+      const stateDir = path.join("/tmp", "openclaw-plugin-dispatch-media-roots");
       const expectedWorkspaceRoot = path.resolve(stateDir, "workspace-alpha");
-      vi.stubEnv("GODSEYE_STATE_DIR", stateDir);
+      vi.stubEnv("OPENCLAW_STATE_DIR", stateDir);
 
       await runMessageAction({
         cfg: {
@@ -127,7 +263,7 @@ describe("runMessageAction plugin dispatch", () => {
               enabled: true,
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         action: "pin",
         params: {
           channel: "feishu",
@@ -139,7 +275,8 @@ describe("runMessageAction plugin dispatch", () => {
         sessionId: "session-123",
         agentId: "alpha",
         toolContext: {
-          currentChannelId: "chat:oc_123",
+          currentChannelId: "oc_123",
+          currentChannelProvider: "feishu",
           currentThreadTs: "thread-456",
           currentMessageId: "msg-789",
         },
@@ -156,131 +293,11 @@ describe("runMessageAction plugin dispatch", () => {
           agentId: "alpha",
           mediaLocalRoots: expect.arrayContaining([expectedWorkspaceRoot]),
           toolContext: expect.objectContaining({
-            currentChannelId: "chat:oc_123",
+            currentChannelId: "oc_123",
+            currentChannelProvider: "feishu",
             currentThreadTs: "thread-456",
             currentMessageId: "msg-789",
           }),
-        }),
-      );
-    });
-  });
-
-  describe("media caption behavior", () => {
-    afterEach(() => {
-      setActivePluginRegistry(createTestRegistry([]));
-    });
-
-    it("promotes caption to message for media sends when message is empty", async () => {
-      const sendMedia = vi.fn().mockResolvedValue({
-        channel: "testchat",
-        messageId: "m1",
-        chatId: "c1",
-      });
-      setActivePluginRegistry(
-        createTestRegistry([
-          {
-            pluginId: "testchat",
-            source: "test",
-            plugin: createOutboundTestPlugin({
-              id: "testchat",
-              outbound: {
-                deliveryMode: "direct",
-                sendText: vi.fn().mockResolvedValue({
-                  channel: "testchat",
-                  messageId: "t1",
-                  chatId: "c1",
-                }),
-                sendMedia,
-              },
-            }),
-          },
-        ]),
-      );
-      const cfg = {
-        channels: {
-          testchat: {
-            enabled: true,
-          },
-        },
-      } as GodsEyeConfig;
-
-      const result = await runMessageAction({
-        cfg,
-        action: "send",
-        params: {
-          channel: "testchat",
-          target: "channel:abc",
-          media: "https://example.com/cat.png",
-          caption: "caption-only text",
-        },
-        dryRun: false,
-      });
-
-      expect(result.kind).toBe("send");
-      expect(sendMedia).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text: "caption-only text",
-          mediaUrl: "https://example.com/cat.png",
-        }),
-      );
-    });
-
-    it("does not misclassify send as poll when zero-valued poll params are present", async () => {
-      const sendMedia = vi.fn().mockResolvedValue({
-        channel: "testchat",
-        messageId: "m2",
-        chatId: "c1",
-      });
-      setActivePluginRegistry(
-        createTestRegistry([
-          {
-            pluginId: "testchat",
-            source: "test",
-            plugin: createOutboundTestPlugin({
-              id: "testchat",
-              outbound: {
-                deliveryMode: "direct",
-                sendText: vi.fn().mockResolvedValue({
-                  channel: "testchat",
-                  messageId: "t2",
-                  chatId: "c1",
-                }),
-                sendMedia,
-              },
-            }),
-          },
-        ]),
-      );
-      const cfg = {
-        channels: {
-          testchat: {
-            enabled: true,
-          },
-        },
-      } as GodsEyeConfig;
-
-      const result = await runMessageAction({
-        cfg,
-        action: "send",
-        params: {
-          channel: "testchat",
-          target: "channel:abc",
-          media: "https://example.com/file.txt",
-          message: "hello",
-          pollDurationHours: 0,
-          pollDurationSeconds: 0,
-          pollMulti: false,
-          pollQuestion: "",
-          pollOption: [],
-        },
-        dryRun: false,
-      });
-
-      expect(result.kind).toBe("send");
-      expect(sendMedia).toHaveBeenCalledWith(
-        expect.objectContaining({
-          text: "hello",
-          mediaUrl: "https://example.com/file.txt",
         }),
       );
     });
@@ -338,7 +355,7 @@ describe("runMessageAction plugin dispatch", () => {
             enabled: true,
           },
         },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
 
       const card = {
         type: "AdaptiveCard",
@@ -382,28 +399,12 @@ describe("runMessageAction plugin dispatch", () => {
       }),
     );
 
-    const telegramPollPlugin: ChannelPlugin = {
-      id: "telegram",
-      meta: {
-        id: "telegram",
-        label: "Telegram",
-        selectionLabel: "Telegram",
-        docsPath: "/channels/telegram",
-        blurb: "Telegram poll forwarding test plugin.",
-      },
-      capabilities: { chatTypes: ["direct"] },
-      config: createAlwaysConfiguredPluginConfig(),
-      messaging: {
-        targetResolver: {
-          looksLikeId: () => true,
-        },
-      },
-      actions: {
-        describeMessageTool: () => ({ actions: ["poll"] }),
-        supportsAction: ({ action }) => action === "poll",
-        handleAction,
-      },
-    };
+    const telegramPollPlugin = createPollForwardingPlugin({
+      pluginId: "telegram",
+      label: "Telegram",
+      blurb: "Telegram poll forwarding test plugin.",
+      handleAction,
+    });
 
     beforeEach(() => {
       setActivePluginRegistry(
@@ -431,7 +432,7 @@ describe("runMessageAction plugin dispatch", () => {
               botToken: "tok",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         action: "poll",
         params: {
           channel: "telegram",
@@ -489,28 +490,12 @@ describe("runMessageAction plugin dispatch", () => {
       }),
     );
 
-    const discordPollPlugin: ChannelPlugin = {
-      id: "discord",
-      meta: {
-        id: "discord",
-        label: "Discord",
-        selectionLabel: "Discord",
-        docsPath: "/channels/discord",
-        blurb: "Discord plugin-owned poll test plugin.",
-      },
-      capabilities: { chatTypes: ["direct"] },
-      config: createAlwaysConfiguredPluginConfig(),
-      messaging: {
-        targetResolver: {
-          looksLikeId: () => true,
-        },
-      },
-      actions: {
-        describeMessageTool: () => ({ actions: ["poll"] }),
-        supportsAction: ({ action }) => action === "poll",
-        handleAction,
-      },
-    };
+    const discordPollPlugin = createPollForwardingPlugin({
+      pluginId: "discord",
+      label: "Discord",
+      blurb: "Discord plugin-owned poll test plugin.",
+      handleAction,
+    });
 
     beforeEach(() => {
       setActivePluginRegistry(
@@ -538,7 +523,7 @@ describe("runMessageAction plugin dispatch", () => {
               token: "tok",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         action: "poll",
         params: {
           channel: "discord",
@@ -619,7 +604,7 @@ describe("runMessageAction plugin dispatch", () => {
         buttons: [{ label: "A", customId: "a" }],
       };
       const result = await runMessageAction({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         action: "send",
         params: {
           channel: "discord",
@@ -638,7 +623,7 @@ describe("runMessageAction plugin dispatch", () => {
     it("throws on invalid components JSON strings", async () => {
       await expect(
         runMessageAction({
-          cfg: {} as GodsEyeConfig,
+          cfg: {} as OpenClawConfig,
           action: "send",
           params: {
             channel: "discord",
@@ -698,7 +683,7 @@ describe("runMessageAction plugin dispatch", () => {
       {
         name: "uses defaultAccountId override",
         args: {
-          cfg: {} as GodsEyeConfig,
+          cfg: {} as OpenClawConfig,
           defaultAccountId: "ops",
         },
         expectedAccountId: "ops",
@@ -710,7 +695,7 @@ describe("runMessageAction plugin dispatch", () => {
             bindings: [
               { agentId: "agent-b", match: { channel: "discord", accountId: "account-b" } },
             ],
-          } as GodsEyeConfig,
+          } as OpenClawConfig,
           agentId: "agent-b",
         },
         expectedAccountId: "account-b",

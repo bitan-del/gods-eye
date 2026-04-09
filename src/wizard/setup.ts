@@ -5,14 +5,10 @@ import type {
   OnboardOptions,
   ResetScope,
 } from "../commands/onboard-types.js";
-import type { GodsEyeConfig } from "../config/config.js";
-import {
-  DEFAULT_GATEWAY_PORT,
-  readConfigFileSnapshot,
-  resolveGatewayPort,
-  writeConfigFile,
-} from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import { readConfigFileSnapshot, resolveGatewayPort, writeConfigFile } from "../config/config.js";
 import { normalizeSecretInputString } from "../config/types.secrets.js";
+import { formatErrorMessage } from "../infra/errors.js";
 import {
   buildPluginCompatibilityNotices,
   formatPluginCompatibilityNotice,
@@ -23,6 +19,56 @@ import { resolveUserPath } from "../utils.js";
 import { WizardCancelledError, type WizardPrompter } from "./prompts.js";
 import { resolveSetupSecretInputString } from "./setup.secret-input.js";
 import type { QuickstartGatewayDefaults, WizardFlow } from "./setup.types.js";
+
+async function resolveAuthChoiceModelSelectionPolicy(params: {
+  authChoice: string;
+  config: OpenClawConfig;
+  workspaceDir?: string;
+  env?: NodeJS.ProcessEnv;
+  resolvePreferredProviderForAuthChoice: (params: {
+    choice: string;
+    config?: OpenClawConfig;
+    workspaceDir?: string;
+    env?: NodeJS.ProcessEnv;
+  }) => Promise<string | undefined>;
+}): Promise<{
+  preferredProvider?: string;
+  promptWhenAuthChoiceProvided: boolean;
+  allowKeepCurrent: boolean;
+}> {
+  const preferredProvider = await params.resolvePreferredProviderForAuthChoice({
+    choice: params.authChoice,
+    config: params.config,
+    workspaceDir: params.workspaceDir,
+    env: params.env,
+  });
+
+  const { resolvePluginProviders, resolveProviderPluginChoice } =
+    await import("../plugins/provider-auth-choice.runtime.js");
+  const providers = resolvePluginProviders({
+    config: params.config,
+    workspaceDir: params.workspaceDir,
+    env: params.env,
+    mode: "setup",
+  });
+  const resolvedChoice = resolveProviderPluginChoice({
+    providers,
+    choice: params.authChoice,
+  });
+  const matchedProvider =
+    resolvedChoice?.provider ??
+    (preferredProvider
+      ? providers.find((provider) => provider.id.trim() === preferredProvider.trim())
+      : undefined);
+  const setupPolicy =
+    resolvedChoice?.wizard?.modelSelection ?? matchedProvider?.wizard?.setup?.modelSelection;
+
+  return {
+    preferredProvider,
+    promptWhenAuthChoiceProvided: setupPolicy?.promptWhenAuthChoiceProvided === true,
+    allowKeepCurrent: setupPolicy?.allowKeepCurrent ?? true,
+  };
+}
 
 async function requireRiskAcknowledgement(params: {
   opts: OnboardOptions;
@@ -36,15 +82,15 @@ async function requireRiskAcknowledgement(params: {
     [
       "Security warning — please read.",
       "",
-      "GodsEye is a hobby project and still in beta. Expect sharp edges.",
-      "By default, GodsEye is a personal agent: one trusted operator boundary.",
+      "OpenClaw is a hobby project and still in beta. Expect sharp edges.",
+      "By default, OpenClaw is a personal agent: one trusted operator boundary.",
       "This bot can read files and run actions if tools are enabled.",
       "A bad prompt can trick it into doing unsafe things.",
       "",
-      "GodsEye is not a hostile multi-tenant boundary by default.",
+      "OpenClaw is not a hostile multi-tenant boundary by default.",
       "If multiple users can message one tool-enabled agent, they share that delegated tool authority.",
       "",
-      "If you’re not comfortable with security hardening and access control, don’t run GodsEye.",
+      "If you’re not comfortable with security hardening and access control, don’t run OpenClaw.",
       "Ask someone experienced to help before enabling tools or exposing it to the internet.",
       "",
       "Recommended baseline:",
@@ -56,10 +102,10 @@ async function requireRiskAcknowledgement(params: {
       "- Use the strongest available model for any bot with tools or untrusted inboxes.",
       "",
       "Run regularly:",
-      "godseye security audit --deep",
-      "godseye security audit --fix",
+      "openclaw security audit --deep",
+      "openclaw security audit --fix",
       "",
-      "Must read: https://docs.gods-eye.org/gateway/security",
+      "Must read: https://docs.openclaw.ai/gateway/security",
     ].join("\n"),
     "Security",
   );
@@ -81,11 +127,15 @@ export async function runSetupWizard(
 ) {
   const onboardHelpers = await import("../commands/onboard-helpers.js");
   onboardHelpers.printWizardHeader(runtime);
-  await prompter.intro("GodsEye setup");
+  await prompter.intro("OpenClaw setup");
   await requireRiskAcknowledgement({ opts, prompter });
 
   const snapshot = await readConfigFileSnapshot();
-  let baseConfig: GodsEyeConfig = snapshot.valid ? (snapshot.exists ? snapshot.config : {}) : {};
+  let baseConfig: OpenClawConfig = snapshot.valid
+    ? snapshot.exists
+      ? (snapshot.sourceConfig ?? snapshot.config)
+      : {}
+    : {};
 
   if (snapshot.exists && !snapshot.valid) {
     await prompter.note(onboardHelpers.summarizeExistingConfig(baseConfig), "Invalid config");
@@ -94,13 +144,13 @@ export async function runSetupWizard(
         [
           ...snapshot.issues.map((iss) => `- ${iss.path}: ${iss.message}`),
           "",
-          "Docs: https://docs.gods-eye.org/gateway/configuration",
+          "Docs: https://docs.openclaw.ai/gateway/configuration",
         ].join("\n"),
         "Config issues",
       );
     }
     await prompter.outro(
-      `Config invalid. Run \`${formatCliCommand("godseye doctor")}\` to repair it, then re-run setup.`,
+      `Config invalid. Run \`${formatCliCommand("openclaw doctor")}\` to repair it, then re-run setup.`,
     );
     runtime.exit(1);
     return;
@@ -120,14 +170,14 @@ export async function runSetupWizard(
           ? [`- ... +${compatibilityNotices.length - 4} more`]
           : []),
         "",
-        `Review: ${formatCliCommand("godseye doctor")}`,
-        `Inspect: ${formatCliCommand("godseye plugins inspect --all")}`,
+        `Review: ${formatCliCommand("openclaw doctor")}`,
+        `Inspect: ${formatCliCommand("openclaw plugins inspect --all")}`,
       ].join("\n"),
       "Plugin compatibility",
     );
   }
 
-  const quickstartHint = `Configure details later via ${formatCliCommand("godseye configure")}.`;
+  const quickstartHint = `Configure details later via ${formatCliCommand("openclaw configure")}.`;
   const manualHint = "Configure port, network, Tailscale, and auth options.";
   const explicitFlowRaw = opts.flow?.trim();
   const normalizedExplicitFlow = explicitFlowRaw === "manual" ? "advanced" : explicitFlowRaw;
@@ -295,7 +345,7 @@ export async function runSetupWizard(
           "Direct to chat channels.",
         ]
       : [
-          `Gateway port: ${DEFAULT_GATEWAY_PORT}`,
+          `Gateway port: ${quickstartGateway.port}`,
           "Gateway bind: Loopback (127.0.0.1)",
           "Gateway auth: Token (default)",
           "Tailscale exposure: Off",
@@ -306,7 +356,7 @@ export async function runSetupWizard(
 
   const localPort = resolveGatewayPort(baseConfig);
   const localUrl = `ws://127.0.0.1:${localPort}`;
-  let localGatewayToken = process.env.GODSEYE_GATEWAY_TOKEN;
+  let localGatewayToken = process.env.OPENCLAW_GATEWAY_TOKEN;
   try {
     const resolvedGatewayToken = await resolveSetupSecretInputString({
       config: baseConfig,
@@ -321,12 +371,12 @@ export async function runSetupWizard(
     await prompter.note(
       [
         "Could not resolve gateway.auth.token SecretRef for setup probe.",
-        error instanceof Error ? error.message : String(error),
+        formatErrorMessage(error),
       ].join("\n"),
       "Gateway auth",
     );
   }
-  let localGatewayPassword = process.env.GODSEYE_GATEWAY_PASSWORD;
+  let localGatewayPassword = process.env.OPENCLAW_GATEWAY_PASSWORD;
   try {
     const resolvedGatewayPassword = await resolveSetupSecretInputString({
       config: baseConfig,
@@ -341,7 +391,7 @@ export async function runSetupWizard(
     await prompter.note(
       [
         "Could not resolve gateway.auth.password SecretRef for setup probe.",
-        error instanceof Error ? error.message : String(error),
+        formatErrorMessage(error),
       ].join("\n"),
       "Gateway auth",
     );
@@ -368,7 +418,7 @@ export async function runSetupWizard(
     await prompter.note(
       [
         "Could not resolve gateway.remote.token SecretRef for setup probe.",
-        error instanceof Error ? error.message : String(error),
+        formatErrorMessage(error),
       ].join("\n"),
       "Gateway auth",
     );
@@ -431,7 +481,7 @@ export async function runSetupWizard(
   const workspaceDir = resolveUserPath(workspaceInput.trim() || onboardHelpers.DEFAULT_WORKSPACE);
 
   const { applyLocalSetupWorkspaceConfig } = await import("../commands/onboard-config.js");
-  let nextConfig: GodsEyeConfig = applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir);
+  let nextConfig: OpenClawConfig = applyLocalSetupWorkspaceConfig(baseConfig, workspaceDir);
 
   const { ensureAuthProfileStore } = await import("../agents/auth-profiles.runtime.js");
   const { promptAuthChoiceGrouped } = await import("../commands/auth-choice-prompt.js");
@@ -481,21 +531,26 @@ export async function runSetupWizard(
     }
   }
 
+  const authChoiceModelSelectionPolicy =
+    authChoice === "custom-api-key"
+      ? undefined
+      : await resolveAuthChoiceModelSelectionPolicy({
+          authChoice,
+          config: nextConfig,
+          workspaceDir,
+          resolvePreferredProviderForAuthChoice,
+        });
   const shouldPromptModelSelection =
-    authChoice !== "custom-api-key" && (authChoiceFromPrompt || authChoice === "ollama");
+    authChoice !== "custom-api-key" &&
+    (authChoiceFromPrompt || authChoiceModelSelectionPolicy?.promptWhenAuthChoiceProvided === true);
   if (shouldPromptModelSelection) {
     const modelSelection = await promptDefaultModel({
       config: nextConfig,
       prompter,
-      // For ollama, don't allow "keep current" since we may need to download the selected model
-      allowKeep: authChoice !== "ollama",
+      allowKeep: authChoiceModelSelectionPolicy?.allowKeepCurrent ?? true,
       ignoreAllowlist: true,
       includeProviderPluginSetups: true,
-      preferredProvider: await resolvePreferredProviderForAuthChoice({
-        choice: authChoice,
-        config: nextConfig,
-        workspaceDir,
-      }),
+      preferredProvider: authChoiceModelSelectionPolicy?.preferredProvider,
       workspaceDir,
       runtime,
     });
@@ -561,21 +616,21 @@ export async function runSetupWizard(
     });
   }
 
-  // Creative tools (Gods Eye Studio) — image gen, video gen, brand intelligence
-  if (opts.skipCreative) {
-    await prompter.note("Skipping creative tools setup.", "Studio");
-  } else {
-    const { setupCreativeTools } = await import("../commands/onboard-creative.js");
-    nextConfig = await setupCreativeTools(nextConfig, runtime, prompter, {
-      quickstartDefaults: flow === "quickstart",
-    });
-  }
-
   if (opts.skipSkills) {
     await prompter.note("Skipping skills setup.", "Skills");
   } else {
     const { setupSkills } = await import("../commands/onboard-skills.js");
     nextConfig = await setupSkills(nextConfig, workspaceDir, runtime, prompter);
+  }
+
+  // Plugin configuration (sandbox backends, tool plugins, etc.)
+  if (flow !== "quickstart") {
+    const { setupPluginConfig } = await import("./setup.plugin-config.js");
+    nextConfig = await setupPluginConfig({
+      config: nextConfig,
+      prompter,
+      workspaceDir,
+    });
   }
 
   // Setup hooks (session memory on /new)

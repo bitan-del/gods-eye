@@ -1,7 +1,7 @@
 import {
   createWebSearchProviderContractFields,
   type WebSearchProviderPlugin,
-} from "openclaw/plugin-sdk/provider-web-search-contract";
+} from "godseye/plugin-sdk/provider-web-search-contract";
 
 export function createTavilyWebSearchProvider(): WebSearchProviderPlugin {
   const credentialPath = "plugins.entries.tavily.config.webSearch.apiKey";

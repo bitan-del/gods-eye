@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetContainerCacheForTest } from "./net.js";
 import { resolveGatewayRuntimeConfig } from "./server-runtime-config.js";
 
 const TRUSTED_PROXY_AUTH = {
@@ -77,18 +78,6 @@ describe("resolveGatewayRuntimeConfig", () => {
           "gateway auth mode=trusted-proxy requires gateway.trustedProxies to be configured",
       },
       {
-        name: "loopback binding without loopback trusted proxy",
-        cfg: {
-          gateway: {
-            bind: "loopback" as const,
-            auth: TRUSTED_PROXY_AUTH,
-            trustedProxies: ["10.0.0.1"],
-          },
-        },
-        expectedMessage:
-          "gateway auth mode=trusted-proxy with bind=loopback requires gateway.trustedProxies to include 127.0.0.1, ::1, or a loopback CIDR",
-      },
-      {
         name: "lan binding without trusted proxies",
         cfg: {
           gateway: {
@@ -106,21 +95,37 @@ describe("resolveGatewayRuntimeConfig", () => {
         expectedMessage,
       );
     });
+
+    it("allows loopback binding with non-loopback trusted proxies", async () => {
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: {
+          gateway: {
+            bind: "loopback",
+            auth: TRUSTED_PROXY_AUTH,
+            trustedProxies: ["10.0.0.1"],
+          },
+        },
+        port: 18789,
+      });
+
+      expect(result.authMode).toBe("trusted-proxy");
+      expect(result.bindHost).toBe("127.0.0.1");
+    });
   });
 
   describe("token/password auth modes", () => {
     let originalToken: string | undefined;
 
     beforeEach(() => {
-      originalToken = process.env.GODSEYE_GATEWAY_TOKEN;
-      delete process.env.GODSEYE_GATEWAY_TOKEN;
+      originalToken = process.env.OPENCLAW_GATEWAY_TOKEN;
+      delete process.env.OPENCLAW_GATEWAY_TOKEN;
     });
 
     afterEach(() => {
       if (originalToken !== undefined) {
-        process.env.GODSEYE_GATEWAY_TOKEN = originalToken;
+        process.env.OPENCLAW_GATEWAY_TOKEN = originalToken;
       } else {
-        delete process.env.GODSEYE_GATEWAY_TOKEN;
+        delete process.env.OPENCLAW_GATEWAY_TOKEN;
       }
     });
 
@@ -154,7 +159,7 @@ describe("resolveGatewayRuntimeConfig", () => {
         name: "token mode without token",
         cfg: { gateway: { bind: "lan" as const, auth: { mode: "token" as const } } },
         expectedMessage:
-          "gateway auth mode is token, but no token was configured (set gateway.auth.token or GODSEYE_GATEWAY_TOKEN)",
+          "gateway auth mode is token, but no token was configured (set gateway.auth.token or OPENCLAW_GATEWAY_TOKEN)",
       },
       {
         name: "lan binding with explicit none auth",
@@ -247,6 +252,108 @@ describe("resolveGatewayRuntimeConfig", () => {
       }
       const result = await resolveGatewayRuntimeConfig({ cfg, port: 18789 });
       expect(result.bindHost).toBe(expectedBindHost);
+    });
+  });
+
+  describe("container-aware bind default", () => {
+    afterEach(() => {
+      __resetContainerCacheForTest();
+      vi.restoreAllMocks();
+    });
+
+    it("defaults to auto (0.0.0.0) inside a container with auth configured", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: {
+          gateway: {
+            auth: TOKEN_AUTH,
+            controlUi: { allowedOrigins: ["https://control.example.com"] },
+          },
+        },
+        port: 18789,
+      });
+      expect(result.bindHost).toBe("0.0.0.0");
+    });
+
+    it("rejects container auto-bind with auth but without allowedOrigins (origin check preserved)", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      await expect(
+        resolveGatewayRuntimeConfig({
+          cfg: { gateway: { auth: TOKEN_AUTH } },
+          port: 18789,
+        }),
+      ).rejects.toThrow(/non-loopback Control UI requires gateway\.controlUi\.allowedOrigins/);
+    });
+
+    it("rejects container auto-bind without auth (security invariant preserved)", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      await expect(
+        resolveGatewayRuntimeConfig({
+          cfg: { gateway: { auth: { mode: "none" } } },
+          port: 18789,
+        }),
+      ).rejects.toThrow(/refusing to bind gateway/);
+    });
+
+    it("respects explicit loopback config even inside a container", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: { gateway: { bind: "loopback", auth: { mode: "none" } } },
+        port: 18789,
+      });
+      expect(result.bindHost).toBe("127.0.0.1");
+    });
+
+    it("falls back to loopback inside a container when tailscale serve is enabled", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: {
+          gateway: {
+            auth: { mode: "none" },
+            tailscale: { mode: "serve" },
+          },
+        },
+        port: 18789,
+      });
+      // Tailscale serve requires loopback — container auto-detection must not
+      // override this constraint when bind is unset.
+      expect(result.bindHost).toBe("127.0.0.1");
+    });
+
+    it("falls back to loopback inside a container when tailscale funnel is enabled", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: {
+          gateway: {
+            auth: { mode: "password", password: "test-pw" },
+            tailscale: { mode: "funnel" },
+          },
+        },
+        port: 18789,
+      });
+      expect(result.bindHost).toBe("127.0.0.1");
+    });
+
+    it("respects explicit lan config inside a container (requires auth)", async () => {
+      const fs = require("node:fs");
+      vi.spyOn(fs, "accessSync").mockImplementation(() => undefined); // /.dockerenv exists
+      const result = await resolveGatewayRuntimeConfig({
+        cfg: {
+          gateway: {
+            bind: "lan",
+            auth: TOKEN_AUTH,
+            controlUi: { allowedOrigins: ["https://control.example.com"] },
+          },
+        },
+        port: 18789,
+      });
+      expect(result.bindHost).toBe("0.0.0.0");
     });
   });
 

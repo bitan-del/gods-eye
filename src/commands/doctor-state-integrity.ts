@@ -2,8 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { listBundledChannelPluginIds } from "../channels/plugins/bundled-ids.js";
+import { hasBundledChannelPersistedAuthState } from "../channels/plugins/persisted-auth-state.js";
 import { formatCliCommand } from "../cli/command-format.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveOAuthDir, resolveStateDir } from "../config/paths.js";
 import {
   formatSessionArchiveTimestamp,
@@ -16,12 +18,16 @@ import {
   resolveStorePath,
 } from "../config/sessions.js";
 import { resolveRequiredHomeDir } from "../infra/home-dir.js";
+import { resolveMemoryBackendConfig } from "../memory-host-sdk/engine-storage.js";
 import { parseAgentSessionKey } from "../sessions/session-key-utils.js";
+import { asNullableObjectRecord } from "../shared/record-coerce.js";
+import { normalizeOptionalLowercaseString } from "../shared/string-coerce.js";
 import { note } from "../terminal/note.js";
 import { shortenHomePath } from "../utils.js";
 
 type DoctorPrompterLike = {
   confirmRuntimeRepair: (params: { message: string; initialValue?: boolean }) => Promise<boolean>;
+  note?: typeof note;
 };
 
 function countLabel(count: number, singular: string, plural = `${singular}s`): string {
@@ -133,7 +139,7 @@ function findOtherStateDirs(stateDir: string): string[] {
       if (entry.name.startsWith(".")) {
         continue;
       }
-      const candidates = [".godseye"].map((dir) => path.resolve(root, entry.name, dir));
+      const candidates = [".openclaw"].map((dir) => path.resolve(root, entry.name, dir));
       for (const candidate of candidates) {
         if (candidate === resolvedState) {
           continue;
@@ -366,7 +372,7 @@ export function formatLinuxSdBackedStateDirWarning(
   return [
     `- State directory appears to be on SD/eMMC storage (${displayStateDir}; device ${safeSource}, fs ${safeFsType}, mount ${safeMountPoint}).`,
     "- SD/eMMC media can be slower for random I/O and wear faster under session/log churn.",
-    "- For better startup and state durability, prefer SSD/NVMe (or USB SSD on Raspberry Pi) for GODSEYE_STATE_DIR.",
+    "- For better startup and state durability, prefer SSD/NVMe (or USB SSD on Raspberry Pi) for OPENCLAW_STATE_DIR.",
   ].join("\n");
 }
 
@@ -387,7 +393,7 @@ export function detectMacCloudSyncedStateDir(
   }
 
   // Cloud-sync roots should always be anchored to the OS account home on macOS.
-  // GODSEYE_HOME can relocate app data defaults, but iCloud/CloudStorage remain under the OS home.
+  // OPENCLAW_HOME can relocate app data defaults, but iCloud/CloudStorage remain under the OS home.
   const homedir = deps?.homedir ?? os.homedir();
   const roots = [
     {
@@ -415,28 +421,27 @@ export function detectMacCloudSyncedStateDir(
   return null;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 function isPairingPolicy(value: unknown): boolean {
-  return typeof value === "string" && value.trim().toLowerCase() === "pairing";
+  return normalizeOptionalLowercaseString(value) === "pairing";
 }
 
 function hasPairingPolicy(value: unknown): boolean {
-  if (!isRecord(value)) {
+  const record = asNullableObjectRecord(value);
+  if (!record) {
     return false;
   }
-  if (isPairingPolicy(value.dmPolicy)) {
+  if (isPairingPolicy(record.dmPolicy)) {
     return true;
   }
-  if (isRecord(value.dm) && isPairingPolicy(value.dm.policy)) {
+  const dm = asNullableObjectRecord(record.dm);
+  if (dm && isPairingPolicy(dm.policy)) {
     return true;
   }
-  if (!isRecord(value.accounts)) {
+  const accounts = asNullableObjectRecord(record.accounts);
+  if (!accounts) {
     return false;
   }
-  for (const accountCfg of Object.values(value.accounts)) {
+  for (const accountCfg of Object.values(accounts)) {
     if (hasPairingPolicy(accountCfg)) {
       return true;
     }
@@ -445,7 +450,7 @@ function hasPairingPolicy(value: unknown): boolean {
 }
 
 function isSlashRoutingSessionKey(sessionKey: string): boolean {
-  const raw = sessionKey.trim().toLowerCase();
+  const raw = normalizeOptionalLowercaseString(sessionKey);
   if (!raw) {
     return false;
   }
@@ -453,17 +458,18 @@ function isSlashRoutingSessionKey(sessionKey: string): boolean {
   return /^[^:]+:slash:[^:]+(?:$|:)/.test(scoped);
 }
 
-function shouldRequireOAuthDir(cfg: GodsEyeConfig, env: NodeJS.ProcessEnv): boolean {
-  if (env.GODSEYE_OAUTH_DIR?.trim()) {
+function shouldRequireOAuthDir(cfg: OpenClawConfig, env: NodeJS.ProcessEnv): boolean {
+  if (env.OPENCLAW_OAUTH_DIR?.trim()) {
     return true;
   }
-  const channels = cfg.channels;
-  if (!isRecord(channels)) {
+  const channels = asNullableObjectRecord(cfg.channels);
+  if (!channels) {
     return false;
   }
-  // WhatsApp auth always uses the credentials tree.
-  if (isRecord(channels.whatsapp)) {
-    return true;
+  for (const channelId of listBundledChannelPluginIds()) {
+    if (hasBundledChannelPersistedAuthState({ channelId, cfg, env })) {
+      return true;
+    }
   }
   // Pairing allowlists are persisted under credentials/<channel>-allowFrom.json.
   for (const [channelId, channelCfg] of Object.entries(channels)) {
@@ -477,17 +483,23 @@ function shouldRequireOAuthDir(cfg: GodsEyeConfig, env: NodeJS.ProcessEnv): bool
   return false;
 }
 
+function shouldSuppressOrphanTranscriptWarning(cfg: OpenClawConfig, agentId: string): boolean {
+  const backendConfig = resolveMemoryBackendConfig({ cfg, agentId });
+  return backendConfig?.backend === "qmd" && backendConfig.qmd?.sessions.enabled === true;
+}
+
 export async function noteStateIntegrity(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   prompter: DoctorPrompterLike,
   configPath?: string,
 ) {
   const warnings: string[] = [];
   const changes: string[] = [];
+  const noteFn = prompter.note ?? note;
   const env = process.env;
   const homedir = () => resolveRequiredHomeDir(env, os.homedir);
   const stateDir = resolveStateDir(env, homedir);
-  const defaultStateDir = path.join(homedir(), ".godseye");
+  const defaultStateDir = path.join(homedir(), ".openclaw");
   const oauthDir = resolveOAuthDir(env, stateDir);
   const agentId = resolveDefaultAgentId(cfg);
   const sessionsDir = resolveSessionTranscriptsDirForAgent(agentId, env, homedir);
@@ -502,14 +514,15 @@ export async function noteStateIntegrity(
   const requireOAuthDir = shouldRequireOAuthDir(cfg, env);
   const cloudSyncedStateDir = detectMacCloudSyncedStateDir(stateDir);
   const linuxSdBackedStateDir = detectLinuxSdBackedStateDir(stateDir);
+  const suppressOrphanTranscriptWarning = shouldSuppressOrphanTranscriptWarning(cfg, agentId);
 
   if (cloudSyncedStateDir) {
     warnings.push(
       [
         `- State directory is under macOS cloud-synced storage (${displayStateDir}; ${cloudSyncedStateDir.storage}).`,
         "- This can cause slow I/O and sync/lock races for sessions and credentials.",
-        "- Prefer a local non-synced state dir (for example: ~/.godseye).",
-        `  Set locally: GODSEYE_STATE_DIR=~/.godseye ${formatCliCommand("godseye doctor")}`,
+        "- Prefer a local non-synced state dir (for example: ~/.openclaw).",
+        `  Set locally: OPENCLAW_STATE_DIR=~/.openclaw ${formatCliCommand("openclaw doctor")}`,
       ].join("\n"),
     );
   }
@@ -730,9 +743,9 @@ export async function noteStateIntegrity(
       warnings.push(
         [
           `- ${missing.length}/${recentTranscriptCandidates.length} recent sessions are missing transcripts.`,
-          `  Verify sessions in store: ${formatCliCommand(`godseye sessions --store "${absoluteStorePath}"`)}`,
-          `  Preview cleanup impact: ${formatCliCommand(`godseye sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
-          `  Prune missing entries: ${formatCliCommand(`godseye sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
+          `  Verify sessions in store: ${formatCliCommand(`openclaw sessions --store "${absoluteStorePath}"`)}`,
+          `  Preview cleanup impact: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --dry-run`)}`,
+          `  Prune missing entries: ${formatCliCommand(`openclaw sessions cleanup --store "${absoluteStorePath}" --enforce --fix-missing`)}`,
         ].join("\n"),
       );
     }
@@ -779,7 +792,7 @@ export async function noteStateIntegrity(
       .filter((entry) => entry.isFile() && isPrimarySessionTranscriptFileName(entry.name))
       .map((entry) => path.resolve(path.join(sessionsDir, entry.name)))
       .filter((filePath) => !referencedTranscriptPaths.has(filePath));
-    if (orphanTranscriptPaths.length > 0) {
+    if (orphanTranscriptPaths.length > 0 && !suppressOrphanTranscriptWarning) {
       const orphanCount = countLabel(orphanTranscriptPaths.length, "orphan transcript file");
       const orphanPreview = formatFilePreview(orphanTranscriptPaths);
       warnings.push(
@@ -818,10 +831,10 @@ export async function noteStateIntegrity(
   }
 
   if (warnings.length > 0) {
-    note(warnings.join("\n"), "State integrity");
+    noteFn(warnings.join("\n"), "State integrity");
   }
   if (changes.length > 0) {
-    note(changes.join("\n"), "Doctor changes");
+    noteFn(changes.join("\n"), "Doctor changes");
   }
 }
 
@@ -836,7 +849,7 @@ export function noteWorkspaceBackupTip(workspaceDir: string) {
   note(
     [
       "- Tip: back up the workspace in a private git repo (GitHub or GitLab).",
-      "- Keep ~/.godseye out of git; it contains credentials and session history.",
+      "- Keep ~/.openclaw out of git; it contains credentials and session history.",
       "- Details: /concepts/agent-workspace#git-backup-recommended",
     ].join("\n"),
     "Workspace",

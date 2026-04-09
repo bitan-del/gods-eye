@@ -1,15 +1,15 @@
 ---
 name: bootstrap-extra-files
 description: "Inject additional workspace bootstrap files via glob/path patterns"
-homepage: https://docs.gods-eye.org/automation/hooks#bootstrap-extra-files
+homepage: https://docs.openclaw.ai/automation/hooks#bootstrap-extra-files
 metadata:
   {
-    "godseye":
+    "openclaw":
       {
         "emoji": "📎",
         "events": ["agent:bootstrap"],
         "requires": { "config": ["workspace.dir"] },
-        "install": [{ "id": "bundled", "kind": "bundled", "label": "Bundled with Gods Eye" }],
+        "install": [{ "id": "bundled", "kind": "bundled", "label": "Bundled with OpenClaw" }],
       },
   }
 ---

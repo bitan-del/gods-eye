@@ -1,5 +1,5 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../../src/config/config.js";
 import { sanitizeTerminalText } from "../../../../src/terminal/safe-text.js";
 import {
   describeIMessageEchoDropLog,
@@ -8,7 +8,7 @@ import {
 import { createSelfChatCache } from "./self-chat-cache.js";
 
 describe("resolveIMessageInboundDecision echo detection", () => {
-  const cfg = {} as GodsEyeConfig;
+  const cfg = {} as OpenClawConfig;
   type InboundDecisionParams = Parameters<typeof resolveIMessageInboundDecision>[0];
 
   function createInboundDecisionParams(
@@ -75,12 +75,39 @@ describe("resolveIMessageInboundDecision echo detection", () => {
     });
 
     expect(decision).toEqual({ kind: "drop", reason: "echo" });
-    expect(echoHas).toHaveBeenCalledWith(
+    expect(echoHas).toHaveBeenNthCalledWith(1, "default:imessage:+15555550123", {
+      messageId: "42",
+    });
+    expect(echoHas).toHaveBeenCalledTimes(1);
+  });
+
+  it("matches attachment-only echoes by bodyText placeholder", () => {
+    const echoHas = vi.fn((_scope: string, lookup: { text?: string; messageId?: string }) => {
+      return lookup.text === "<media:image>" && lookup.messageId === "42";
+    });
+
+    const decision = resolveDecision({
+      message: {
+        id: 42,
+        text: "",
+      },
+      messageText: "",
+      bodyText: "<media:image>",
+      echoCache: { has: echoHas },
+    });
+
+    expect(decision).toEqual({ kind: "drop", reason: "echo" });
+    expect(echoHas).toHaveBeenNthCalledWith(1, "default:imessage:+15555550123", {
+      messageId: "42",
+    });
+    expect(echoHas).toHaveBeenNthCalledWith(
+      2,
       "default:imessage:+15555550123",
-      expect.objectContaining({
-        text: "Reasoning:\n_step_",
+      {
+        text: "<media:image>",
         messageId: "42",
-      }),
+      },
+      undefined,
     );
   });
 
@@ -152,7 +179,7 @@ describe("resolveIMessageInboundDecision echo detection", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const createdAt = "2026-03-02T20:58:10.649Z";
 
     expect(
@@ -265,7 +292,7 @@ describe("describeIMessageEchoDropLog", () => {
 });
 
 describe("resolveIMessageInboundDecision command auth", () => {
-  const cfg = {} as GodsEyeConfig;
+  const cfg = {} as OpenClawConfig;
   const resolveDmCommandDecision = (params: { messageId: number; storeAllowFrom: string[] }) =>
     resolveIMessageInboundDecision({
       cfg,

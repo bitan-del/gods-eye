@@ -1,12 +1,10 @@
+import { ToolAuthorizationError } from "godseye/plugin-sdk/channel-actions";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { resolveWhatsAppAccount } from "./accounts.js";
-import {
-  ToolAuthorizationError,
-  resolveWhatsAppOutboundTarget,
-  type GodsEyeConfig,
-} from "./runtime-api.js";
+import { resolveWhatsAppOutboundTarget } from "./resolve-outbound-target.js";
 
 export function resolveAuthorizedWhatsAppOutboundTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   chatJid: string;
   accountId?: string;
   actionLabel: string;

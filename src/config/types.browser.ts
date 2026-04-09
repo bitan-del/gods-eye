@@ -5,8 +5,8 @@ export type BrowserProfileConfig = {
   cdpUrl?: string;
   /** Explicit user data directory for existing-session Chrome MCP attachment. */
   userDataDir?: string;
-  /** Profile driver (default: godseye). */
-  driver?: "godseye" | "clawd" | "existing-session";
+  /** Profile driver (default: openclaw). */
+  driver?: "openclaw" | "clawd" | "existing-session";
   /** If true, never launch a browser for this profile; only attach. Falls back to browser.attachOnly. */
   attachOnly?: boolean;
   /** Profile color (hex). Auto-assigned at creation. */
@@ -17,8 +17,6 @@ export type BrowserSnapshotDefaults = {
   mode?: "efficient";
 };
 export type BrowserSsrFPolicyConfig = {
-  /** Legacy alias for private-network access. Prefer dangerouslyAllowPrivateNetwork. */
-  allowPrivateNetwork?: boolean;
   /** If true, permit browser navigation to private/internal networks. Default: true */
   dangerouslyAllowPrivateNetwork?: boolean;
   /**
@@ -42,7 +40,7 @@ export type BrowserConfig = {
   remoteCdpTimeoutMs?: number;
   /** Remote CDP WebSocket handshake timeout (ms). Default: max(remoteCdpTimeoutMs * 2, 2000). */
   remoteCdpHandshakeTimeoutMs?: number;
-  /** Accent color for the godseye browser profile (hex). Default: #FF4500 */
+  /** Accent color for the openclaw browser profile (hex). Default: #FF4500 */
   color?: string;
   /** Override the browser executable path (all platforms). */
   executablePath?: string;

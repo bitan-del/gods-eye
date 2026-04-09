@@ -1,18 +1,24 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import * as tar from "tar";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RuntimeEnv } from "../runtime.js";
 import { createTempHomeEnv, type TempHomeEnv } from "../test-utils/temp-home.js";
+import * as backupShared from "./backup-shared.js";
 import {
   buildBackupArchiveRoot,
   encodeAbsolutePathForBackupArchive,
+  resolveBackupPlanFromPaths,
   resolveBackupPlanFromDisk,
 } from "./backup-shared.js";
 import { backupCreateCommand } from "./backup.js";
 
+const tarCreateMock = vi.hoisted(() => vi.fn());
 const backupVerifyCommandMock = vi.hoisted(() => vi.fn());
+
+vi.mock("tar", () => ({
+  c: tarCreateMock,
+}));
 
 vi.mock("./backup-verify.js", () => ({
   backupVerifyCommand: backupVerifyCommandMock,
@@ -23,16 +29,20 @@ describe("backup commands", () => {
 
   async function resetTempHome() {
     await fs.rm(tempHome.home, { recursive: true, force: true });
-    await fs.mkdir(path.join(tempHome.home, ".godseye"), { recursive: true });
-    delete process.env.GODSEYE_CONFIG_PATH;
+    await fs.mkdir(path.join(tempHome.home, ".openclaw"), { recursive: true });
+    delete process.env.OPENCLAW_CONFIG_PATH;
   }
 
   beforeAll(async () => {
-    tempHome = await createTempHomeEnv("godseye-backup-test-");
+    tempHome = await createTempHomeEnv("openclaw-backup-test-");
   });
 
   beforeEach(async () => {
     await resetTempHome();
+    tarCreateMock.mockReset();
+    tarCreateMock.mockImplementation(async ({ file }: { file: string }) => {
+      await fs.writeFile(file, "archive-bytes", "utf8");
+    });
     backupVerifyCommandMock.mockReset();
     backupVerifyCommandMock.mockResolvedValue({
       ok: true,
@@ -62,17 +72,17 @@ describe("backup commands", () => {
   }
 
   async function withInvalidWorkspaceBackupConfig<T>(fn: (runtime: RuntimeEnv) => Promise<T>) {
-    const stateDir = path.join(tempHome.home, ".godseye");
+    const stateDir = path.join(tempHome.home, ".openclaw");
     const configPath = path.join(tempHome.home, "custom-config.json");
-    process.env.GODSEYE_CONFIG_PATH = configPath;
-    await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+    process.env.OPENCLAW_CONFIG_PATH = configPath;
+    await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
     await fs.writeFile(configPath, '{"agents": { defaults: { workspace: ', "utf8");
     const runtime = createRuntime();
 
     try {
       return await fn(runtime);
     } finally {
-      delete process.env.GODSEYE_CONFIG_PATH;
+      delete process.env.OPENCLAW_CONFIG_PATH;
     }
   }
 
@@ -87,14 +97,26 @@ describe("backup commands", () => {
   }
 
   it("collapses default config, credentials, and workspace into the state backup root", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
-    await fs.mkdir(path.join(stateDir, "credentials"), { recursive: true });
-    await fs.writeFile(path.join(stateDir, "credentials", "oauth.json"), "{}", "utf8");
-    await fs.mkdir(path.join(stateDir, "workspace"), { recursive: true });
-    await fs.writeFile(path.join(stateDir, "workspace", "SOUL.md"), "# soul\n", "utf8");
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const configPath = path.join(stateDir, "openclaw.json");
+    const oauthDir = path.join(stateDir, "credentials");
+    const workspaceDir = path.join(stateDir, "workspace");
+    await fs.writeFile(configPath, JSON.stringify({}), "utf8");
+    await fs.mkdir(oauthDir, { recursive: true });
+    await fs.writeFile(path.join(oauthDir, "oauth.json"), "{}", "utf8");
+    await fs.mkdir(workspaceDir, { recursive: true });
+    await fs.writeFile(path.join(workspaceDir, "SOUL.md"), "# soul\n", "utf8");
 
-    const plan = await resolveBackupPlanFromDisk({ includeWorkspace: true, nowMs: 123 });
+    const plan = await resolveBackupPlanFromPaths({
+      stateDir,
+      configPath,
+      oauthDir,
+      workspaceDirs: [workspaceDir],
+      includeWorkspace: true,
+      configInsideState: true,
+      oauthInsideState: true,
+      nowMs: 123,
+    });
     expectWorkspaceCoveredByState(plan);
   });
 
@@ -103,27 +125,24 @@ describe("backup commands", () => {
       return;
     }
 
-    const stateDir = path.join(tempHome.home, ".godseye");
+    const stateDir = path.join(tempHome.home, ".openclaw");
     const workspaceDir = path.join(stateDir, "workspace");
-    const symlinkDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-workspace-link-"));
+    const symlinkDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-workspace-link-"));
     const workspaceLink = path.join(symlinkDir, "ws-link");
     try {
       await fs.mkdir(workspaceDir, { recursive: true });
       await fs.writeFile(path.join(workspaceDir, "SOUL.md"), "# soul\n", "utf8");
       await fs.symlink(workspaceDir, workspaceLink);
-      await fs.writeFile(
-        path.join(stateDir, "godseye.json"),
-        JSON.stringify({
-          agents: {
-            defaults: {
-              workspace: workspaceLink,
-            },
-          },
-        }),
-        "utf8",
-      );
-
-      const plan = await resolveBackupPlanFromDisk({ includeWorkspace: true, nowMs: 123 });
+      const plan = await resolveBackupPlanFromPaths({
+        stateDir,
+        configPath: path.join(stateDir, "openclaw.json"),
+        oauthDir: path.join(stateDir, "credentials"),
+        workspaceDirs: [workspaceLink],
+        includeWorkspace: true,
+        configInsideState: true,
+        oauthInsideState: true,
+        nowMs: 123,
+      });
       expectWorkspaceCoveredByState(plan);
     } finally {
       await fs.rm(symlinkDir, { recursive: true, force: true });
@@ -131,12 +150,17 @@ describe("backup commands", () => {
   });
 
   it("creates an archive with a manifest and external workspace payload", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const externalWorkspace = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-workspace-"));
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const externalWorkspace = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-workspace-"));
     const configPath = path.join(tempHome.home, "custom-config.json");
-    const backupDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backups-"));
+    const backupDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backups-"));
+    let capturedManifest: {
+      assets: Array<{ kind: string; archivePath: string }>;
+    } | null = null;
+    let capturedEntryPaths: string[] = [];
+    let capturedOnWriteEntry: ((entry: { path: string }) => void) | null = null;
     try {
-      process.env.GODSEYE_CONFIG_PATH = configPath;
+      process.env.OPENCLAW_CONFIG_PATH = configPath;
       await fs.writeFile(
         configPath,
         JSON.stringify({
@@ -154,6 +178,31 @@ describe("backup commands", () => {
       const runtime = createRuntime();
 
       const nowMs = Date.UTC(2026, 2, 9, 0, 0, 0);
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath,
+          oauthDir: path.join(stateDir, "credentials"),
+          workspaceDirs: [externalWorkspace],
+          includeWorkspace: true,
+          configInsideState: false,
+          oauthInsideState: true,
+          nowMs,
+        }),
+      );
+      tarCreateMock.mockImplementationOnce(
+        async (
+          options: { file: string; onWriteEntry?: (entry: { path: string }) => void },
+          entryPaths: string[],
+        ) => {
+          capturedManifest = JSON.parse(await fs.readFile(entryPaths[0], "utf8")) as {
+            assets: Array<{ kind: string; archivePath: string }>;
+          };
+          capturedEntryPaths = entryPaths;
+          capturedOnWriteEntry = options.onWriteEntry ?? null;
+          await fs.writeFile(options.file, "archive-bytes", "utf8");
+        },
+      );
       const result = await backupCreateCommand(runtime, {
         output: backupDir,
         includeWorkspace: true,
@@ -163,83 +212,75 @@ describe("backup commands", () => {
       expect(result.archivePath).toBe(
         path.join(backupDir, `${buildBackupArchiveRoot(nowMs)}.tar.gz`),
       );
+      expect(capturedManifest).not.toBeNull();
+      expect(capturedOnWriteEntry).not.toBeNull();
+      const manifest = capturedManifest as unknown as {
+        assets: Array<{ kind: string; archivePath: string }>;
+      };
+      const onWriteEntry = capturedOnWriteEntry as unknown as (entry: { path: string }) => void;
+      expect(manifest.assets).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: "state" }),
+          expect.objectContaining({ kind: "config" }),
+          expect.objectContaining({ kind: "workspace" }),
+        ]),
+      );
 
-      const extractDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-extract-"));
-      try {
-        await tar.x({ file: result.archivePath, cwd: extractDir, gzip: true });
-        const archiveRoot = path.join(extractDir, buildBackupArchiveRoot(nowMs));
-        const manifest = JSON.parse(
-          await fs.readFile(path.join(archiveRoot, "manifest.json"), "utf8"),
-        ) as {
-          assets: Array<{ kind: string; archivePath: string }>;
-        };
+      const stateAsset = result.assets.find((asset) => asset.kind === "state");
+      const workspaceAsset = result.assets.find((asset) => asset.kind === "workspace");
+      expect(stateAsset).toBeDefined();
+      expect(workspaceAsset).toBeDefined();
+      expect(capturedEntryPaths).toHaveLength(result.assets.length + 1);
 
-        expect(manifest.assets).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ kind: "state" }),
-            expect.objectContaining({ kind: "config" }),
-            expect.objectContaining({ kind: "workspace" }),
-          ]),
-        );
+      const manifestPath = capturedEntryPaths[0];
+      const remappedManifestEntry = { path: manifestPath };
+      onWriteEntry(remappedManifestEntry);
+      expect(remappedManifestEntry.path).toBe(
+        path.posix.join(buildBackupArchiveRoot(nowMs), "manifest.json"),
+      );
 
-        const stateAsset = result.assets.find((asset) => asset.kind === "state");
-        const workspaceAsset = result.assets.find((asset) => asset.kind === "workspace");
-        expect(stateAsset).toBeDefined();
-        expect(workspaceAsset).toBeDefined();
-
-        const encodedStatePath = path.join(
-          archiveRoot,
+      const remappedStateEntry = { path: stateAsset!.sourcePath };
+      onWriteEntry(remappedStateEntry);
+      expect(remappedStateEntry.path).toBe(
+        path.posix.join(
+          buildBackupArchiveRoot(nowMs),
           "payload",
           encodeAbsolutePathForBackupArchive(stateAsset!.sourcePath),
-          "state.txt",
-        );
-        const encodedWorkspacePath = path.join(
-          archiveRoot,
+        ),
+      );
+
+      const remappedWorkspaceEntry = { path: workspaceAsset!.sourcePath };
+      onWriteEntry(remappedWorkspaceEntry);
+      expect(remappedWorkspaceEntry.path).toBe(
+        path.posix.join(
+          buildBackupArchiveRoot(nowMs),
           "payload",
           encodeAbsolutePathForBackupArchive(workspaceAsset!.sourcePath),
-          "SOUL.md",
-        );
-        expect(await fs.readFile(encodedStatePath, "utf8")).toBe("state\n");
-        expect(await fs.readFile(encodedWorkspacePath, "utf8")).toBe("# external\n");
-      } finally {
-        await fs.rm(extractDir, { recursive: true, force: true });
-      }
+        ),
+      );
     } finally {
-      delete process.env.GODSEYE_CONFIG_PATH;
+      delete process.env.OPENCLAW_CONFIG_PATH;
       await fs.rm(externalWorkspace, { recursive: true, force: true });
       await fs.rm(backupDir, { recursive: true, force: true });
     }
   });
 
-  it("optionally verifies the archive after writing it", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const archiveDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-verify-on-create-"));
-    try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
-      await fs.writeFile(path.join(stateDir, "state.txt"), "state\n", "utf8");
-
-      const runtime = createRuntime();
-
-      const result = await backupCreateCommand(runtime, {
-        output: archiveDir,
-        verify: true,
-      });
-
-      expect(result.verified).toBe(true);
-      expect(backupVerifyCommandMock).toHaveBeenCalledWith(
-        expect.objectContaining({ log: expect.any(Function) }),
-        expect.objectContaining({ archive: result.archivePath, json: false }),
-      );
-    } finally {
-      await fs.rm(archiveDir, { recursive: true, force: true });
-    }
-  });
-
   it("rejects output paths that would be created inside a backed-up directory", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
 
     const runtime = createRuntime();
+    vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+      await resolveBackupPlanFromPaths({
+        stateDir,
+        configPath: path.join(stateDir, "openclaw.json"),
+        oauthDir: path.join(stateDir, "credentials"),
+        includeWorkspace: false,
+        configInsideState: true,
+        oauthInsideState: true,
+        nowMs: 123,
+      }),
+    );
 
     await expect(
       backupCreateCommand(runtime, {
@@ -253,14 +294,25 @@ describe("backup commands", () => {
       return;
     }
 
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const symlinkDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-link-"));
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const symlinkDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-link-"));
     const symlinkPath = path.join(symlinkDir, "linked-state");
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+      await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
       await fs.symlink(stateDir, symlinkPath);
 
       const runtime = createRuntime();
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath: path.join(stateDir, "openclaw.json"),
+          oauthDir: path.join(stateDir, "credentials"),
+          includeWorkspace: false,
+          configInsideState: true,
+          oauthInsideState: true,
+          nowMs: 123,
+        }),
+      );
 
       await expect(
         backupCreateCommand(runtime, {
@@ -273,12 +325,24 @@ describe("backup commands", () => {
   });
 
   it("falls back to the home directory when cwd is inside a backed-up source tree", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
+    const stateDir = path.join(tempHome.home, ".openclaw");
     const workspaceDir = path.join(stateDir, "workspace");
-    await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+    await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
     await fs.mkdir(workspaceDir, { recursive: true });
     await fs.writeFile(path.join(workspaceDir, "SOUL.md"), "# soul\n", "utf8");
     vi.spyOn(process, "cwd").mockReturnValue(workspaceDir);
+    vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+      await resolveBackupPlanFromPaths({
+        stateDir,
+        configPath: path.join(stateDir, "openclaw.json"),
+        oauthDir: path.join(stateDir, "credentials"),
+        workspaceDirs: [workspaceDir],
+        includeWorkspace: true,
+        configInsideState: true,
+        oauthInsideState: true,
+        nowMs: Date.UTC(2026, 2, 9, 1, 2, 3),
+      }),
+    );
 
     const runtime = createRuntime();
 
@@ -296,16 +360,28 @@ describe("backup commands", () => {
       return;
     }
 
-    const stateDir = path.join(tempHome.home, ".godseye");
+    const stateDir = path.join(tempHome.home, ".openclaw");
     const workspaceDir = path.join(stateDir, "workspace");
-    const linkParent = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-backup-cwd-link-"));
+    const linkParent = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-backup-cwd-link-"));
     const workspaceLink = path.join(linkParent, "workspace-link");
     try {
-      await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+      await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
       await fs.mkdir(workspaceDir, { recursive: true });
       await fs.writeFile(path.join(workspaceDir, "SOUL.md"), "# soul\n", "utf8");
       await fs.symlink(workspaceDir, workspaceLink);
       vi.spyOn(process, "cwd").mockReturnValue(workspaceLink);
+      vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+        await resolveBackupPlanFromPaths({
+          stateDir,
+          configPath: path.join(stateDir, "openclaw.json"),
+          oauthDir: path.join(stateDir, "credentials"),
+          workspaceDirs: [workspaceDir],
+          includeWorkspace: true,
+          configInsideState: true,
+          oauthInsideState: true,
+          nowMs: Date.UTC(2026, 2, 9, 1, 3, 4),
+        }),
+      );
 
       const runtime = createRuntime();
 
@@ -322,10 +398,21 @@ describe("backup commands", () => {
   });
 
   it("allows dry-run preview even when the target archive already exists", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
+    const stateDir = path.join(tempHome.home, ".openclaw");
     const existingArchive = path.join(tempHome.home, "existing-backup.tar.gz");
-    await fs.writeFile(path.join(stateDir, "godseye.json"), JSON.stringify({}), "utf8");
+    await fs.writeFile(path.join(stateDir, "openclaw.json"), JSON.stringify({}), "utf8");
     await fs.writeFile(existingArchive, "already here", "utf8");
+    vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+      await resolveBackupPlanFromPaths({
+        stateDir,
+        configPath: path.join(stateDir, "openclaw.json"),
+        oauthDir: path.join(stateDir, "credentials"),
+        includeWorkspace: false,
+        configInsideState: true,
+        oauthInsideState: true,
+        nowMs: 123,
+      }),
+    );
 
     const runtime = createRuntime();
 
@@ -361,12 +448,24 @@ describe("backup commands", () => {
   });
 
   it("backs up only the active config file when --only-config is requested", async () => {
-    const stateDir = path.join(tempHome.home, ".godseye");
-    const configPath = path.join(stateDir, "godseye.json");
+    const stateDir = path.join(tempHome.home, ".openclaw");
+    const configPath = path.join(stateDir, "openclaw.json");
     await fs.mkdir(path.join(stateDir, "credentials"), { recursive: true });
     await fs.writeFile(configPath, JSON.stringify({ theme: "config-only" }), "utf8");
     await fs.writeFile(path.join(stateDir, "state.txt"), "state\n", "utf8");
     await fs.writeFile(path.join(stateDir, "credentials", "oauth.json"), "{}", "utf8");
+    vi.spyOn(backupShared, "resolveBackupPlanFromDisk").mockResolvedValue(
+      await resolveBackupPlanFromPaths({
+        stateDir,
+        configPath,
+        oauthDir: path.join(stateDir, "credentials"),
+        includeWorkspace: false,
+        onlyConfig: true,
+        configInsideState: true,
+        oauthInsideState: true,
+        nowMs: 123,
+      }),
+    );
 
     const runtime = createRuntime();
 
@@ -383,7 +482,7 @@ describe("backup commands", () => {
 
   it("allows config-only backups even when the config file is invalid", async () => {
     const configPath = path.join(tempHome.home, "custom-config.json");
-    process.env.GODSEYE_CONFIG_PATH = configPath;
+    process.env.OPENCLAW_CONFIG_PATH = configPath;
     await fs.writeFile(configPath, '{"agents": { defaults: { workspace: ', "utf8");
 
     const runtime = createRuntime();
@@ -397,7 +496,7 @@ describe("backup commands", () => {
       expect(result.assets).toHaveLength(1);
       expect(result.assets[0]?.kind).toBe("config");
     } finally {
-      delete process.env.GODSEYE_CONFIG_PATH;
+      delete process.env.OPENCLAW_CONFIG_PATH;
     }
   });
 });

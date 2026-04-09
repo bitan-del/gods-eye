@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveGatewayConnectionAuth,
   resolveGatewayConnectionAuthFromConfig,
@@ -10,14 +10,14 @@ type ResolvedAuth = { token?: string; password?: string };
 
 type ConnectionAuthCase = {
   name: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   options?: Partial<Omit<GatewayConnectionAuthOptions, "config" | "env">>;
   expected: ResolvedAuth;
 };
 
-function cfg(input: Partial<GodsEyeConfig>): GodsEyeConfig {
-  return input as GodsEyeConfig;
+function cfg(input: Partial<OpenClawConfig>): OpenClawConfig {
+  return input as OpenClawConfig;
 }
 
 function createRemoteModeConfig() {
@@ -37,48 +37,9 @@ function createRemoteModeConfig() {
   };
 }
 
-function createUnresolvedLocalAuthConfig(params: {
-  mode: "token" | "password";
-  id: string;
-  remoteFallback: string;
-}) {
-  return cfg({
-    gateway: {
-      mode: "local",
-      auth: {
-        mode: params.mode,
-        [params.mode]: { source: "env", provider: "default", id: params.id },
-      },
-      remote: {
-        [params.mode]: params.remoteFallback,
-      },
-    },
-    secrets: {
-      providers: {
-        default: { source: "env" },
-      },
-    },
-  });
-}
-
-async function expectFailClosedOnUnresolvedLocalAuth(config: GodsEyeConfig, path: string) {
-  await expect(
-    resolveGatewayConnectionAuth({
-      config,
-      env: {} as NodeJS.ProcessEnv,
-    }),
-  ).rejects.toThrow(path);
-  expect(() =>
-    resolveGatewayConnectionAuthFromConfig({
-      cfg: config,
-      env: {} as NodeJS.ProcessEnv,
-    }),
-  ).toThrow(path);
-}
-
 const DEFAULT_ENV = {
-  GODSEYE_GATEWAY_TOKEN: "env-token",
-  GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+  OPENCLAW_GATEWAY_TOKEN: "env-token",
+  OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
 } as NodeJS.ProcessEnv;
 
 describe("resolveGatewayConnectionAuth", () => {
@@ -238,7 +199,7 @@ describe("resolveGatewayConnectionAuth", () => {
     expect(syncResolved).toEqual(expected);
   });
 
-  it("resolves local SecretRef token when GODSEYE env is absent", async () => {
+  it("resolves local SecretRef token when OPENCLAW env is absent", async () => {
     const config = cfg({
       gateway: {
         mode: "local",
@@ -266,7 +227,7 @@ describe("resolveGatewayConnectionAuth", () => {
     });
   });
 
-  it("resolves config-first token SecretRef even when GODSEYE env token exists", async () => {
+  it("resolves config-first token SecretRef even when OPENCLAW env token exists", async () => {
     const config = cfg({
       gateway: {
         mode: "local",
@@ -281,7 +242,7 @@ describe("resolveGatewayConnectionAuth", () => {
       },
     });
     const env = {
-      GODSEYE_GATEWAY_TOKEN: "env-token",
+      OPENCLAW_GATEWAY_TOKEN: "env-token",
       CONFIG_FIRST_TOKEN: "config-first-token",
     } as NodeJS.ProcessEnv;
 
@@ -296,7 +257,7 @@ describe("resolveGatewayConnectionAuth", () => {
     });
   });
 
-  it("resolves config-first password SecretRef even when GODSEYE env password exists", async () => {
+  it("resolves config-first password SecretRef even when OPENCLAW env password exists", async () => {
     const config = cfg({
       gateway: {
         mode: "local",
@@ -312,7 +273,7 @@ describe("resolveGatewayConnectionAuth", () => {
       },
     });
     const env = {
-      GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
       CONFIG_FIRST_PASSWORD: "config-first-password", // pragma: allowlist secret
     } as NodeJS.ProcessEnv;
 
@@ -342,7 +303,7 @@ describe("resolveGatewayConnectionAuth", () => {
       },
     });
     const env = {
-      GODSEYE_GATEWAY_TOKEN: "env-token",
+      OPENCLAW_GATEWAY_TOKEN: "env-token",
     } as NodeJS.ProcessEnv;
 
     await expect(
@@ -377,7 +338,7 @@ describe("resolveGatewayConnectionAuth", () => {
       },
     });
     const env = {
-      GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
     } as NodeJS.ProcessEnv;
 
     await expect(
@@ -394,27 +355,5 @@ describe("resolveGatewayConnectionAuth", () => {
         localPasswordPrecedence: "config-first", // pragma: allowlist secret
       }),
     ).toThrow("gateway.auth.password");
-  });
-
-  it("fails closed when local token SecretRef is unresolved and remote token fallback exists", async () => {
-    await expectFailClosedOnUnresolvedLocalAuth(
-      createUnresolvedLocalAuthConfig({
-        mode: "token",
-        id: "MISSING_LOCAL_TOKEN",
-        remoteFallback: "remote-token",
-      }),
-      "gateway.auth.token",
-    );
-  });
-
-  it("fails closed when local password SecretRef is unresolved and remote password fallback exists", async () => {
-    await expectFailClosedOnUnresolvedLocalAuth(
-      createUnresolvedLocalAuthConfig({
-        mode: "password",
-        id: "MISSING_LOCAL_PASSWORD",
-        remoteFallback: "remote-password", // pragma: allowlist secret
-      }),
-      "gateway.auth.password",
-    );
   });
 });

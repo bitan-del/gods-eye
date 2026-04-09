@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "godseye/plugin-sdk/zod";
 import type { CallMode } from "./config.js";
 
 // -----------------------------------------------------------------------------

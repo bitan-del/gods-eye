@@ -83,7 +83,7 @@ function expectGatewayTermination(pid: number) {
 async function withPreparedGatewayTask(
   run: (context: { env: Record<string, string>; stdout: PassThrough }) => Promise<void>,
 ) {
-  await withWindowsEnv("godseye-win-stop-", async ({ env }) => {
+  await withWindowsEnv("openclaw-win-stop-", async ({ env }) => {
     await writeGatewayScript(env, GATEWAY_PORT);
     const stdout = new PassThrough();
     await run({ env, stdout });
@@ -156,7 +156,7 @@ describe("Scheduled Task stop/restart cleanup", () => {
         .mockResolvedValueOnce(
           busyPortUsage(6262, {
             commandLine:
-              '"C:\\Program Files\\nodejs\\node.exe" "C:\\Users\\steipete\\AppData\\Roaming\\npm\\node_modules\\godseye\\dist\\index.js" gateway --port 18789',
+              '"C:\\Program Files\\nodejs\\node.exe" "C:\\Users\\steipete\\AppData\\Roaming\\npm\\node_modules\\openclaw\\dist\\index.js" gateway --port 18789',
           }),
         )
         .mockResolvedValueOnce(freePortUsage());
@@ -183,7 +183,23 @@ describe("Scheduled Task stop/restart cleanup", () => {
       expect(findVerifiedGatewayListenerPidsOnPortSync).toHaveBeenCalledWith(GATEWAY_PORT);
       expectGatewayTermination(5151);
       expect(inspectPortUsage).toHaveBeenCalledTimes(2);
-      expect(schtasksCalls.at(-1)).toEqual(["/Run", "/TN", "GodsEye Gateway"]);
+      expect(schtasksCalls.at(-1)).toEqual(["/Run", "/TN", "OpenClaw Gateway"]);
+    });
+  });
+
+  it("throws when /Run fails during restart", async () => {
+    await withPreparedGatewayTask(async ({ env, stdout }) => {
+      schtasksResponses.push(
+        { ...SUCCESS_RESPONSE },
+        { ...SUCCESS_RESPONSE },
+        { ...SUCCESS_RESPONSE },
+        { code: 1, stdout: "", stderr: "ERROR: Access is denied." },
+      );
+
+      await expect(restartScheduledTask({ env, stdout })).rejects.toThrow(
+        "schtasks run failed: ERROR: Access is denied.",
+      );
+      expect(schtasksCalls.at(-1)).toEqual(["/Run", "/TN", "OpenClaw Gateway"]);
     });
   });
 });

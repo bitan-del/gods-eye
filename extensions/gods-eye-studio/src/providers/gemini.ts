@@ -1,7 +1,6 @@
 // Google Gemini provider — handles brand analysis, creative reasoning,
 // and Imagen image generation through the Gemini API.
 
-import { type AuthProfileStore, resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth";
 
 const DEFAULT_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_ANALYSIS_MODEL = "gemini-2.5-flash";
@@ -37,19 +36,14 @@ export async function resolveGeminiApiKey(params?: {
   const envKey = (process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY)?.trim();
   if (envKey) return envKey;
 
-  // Fall back to plugin auth system
-  const auth = await resolveApiKeyForProvider({
-    provider: "google",
-    cfg: params?.cfg,
-    agentDir: params?.agentDir,
-    store: params?.authStore as AuthProfileStore | undefined,
-  });
-  if (!auth.apiKey) {
+  // Fall back to config
+  const key = (params?.cfg as any)?.models?.providers?.google?.apiKey?.trim();
+  if (!key) {
     throw new Error(
       "Gemini API key not found. Set GEMINI_API_KEY env var or run godseye onboard to configure.",
     );
   }
-  return auth.apiKey;
+  return key;
 }
 
 function resolveGeminiBaseUrl(cfg?: Record<string, unknown>): string {

@@ -1,1 +1,1 @@
-export { resolvePreferredOpenClawTmpDir } from "openclaw/plugin-sdk/temp-path";
+export { resolvePreferredOpenClawTmpDir } from "godseye/plugin-sdk/temp-path";

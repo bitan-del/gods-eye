@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/qwen-provider",
+  "name": "@godseye/qwen-provider",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw Qwen Cloud provider plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*"
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ]

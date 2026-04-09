@@ -2,7 +2,7 @@ import {
   buildChannelOutboundSessionRoute,
   stripChannelTargetPrefix,
   type ChannelOutboundSessionRouteParams,
-} from "godseye/plugin-sdk/core";
+} from "godseye/plugin-sdk/channel-core";
 import { parseBlueBubblesTarget } from "./targets.js";
 
 export function resolveBlueBubblesOutboundSessionRoute(params: ChannelOutboundSessionRouteParams) {

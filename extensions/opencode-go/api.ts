@@ -1,7 +1,7 @@
 import {
   applyAgentDefaultModelPrimary,
   resolveAgentModelPrimaryValue,
-} from "openclaw/plugin-sdk/provider-onboard";
+} from "godseye/plugin-sdk/provider-onboard";
 import { OPENCODE_GO_DEFAULT_MODEL_REF } from "./onboard.js";
 
 export {
@@ -11,9 +11,9 @@ export {
 } from "./onboard.js";
 
 export function applyOpencodeGoModelDefault(
-  cfg: import("openclaw/plugin-sdk/provider-onboard").OpenClawConfig,
+  cfg: import("godseye/plugin-sdk/provider-onboard").OpenClawConfig,
 ): {
-  next: import("openclaw/plugin-sdk/provider-onboard").OpenClawConfig;
+  next: import("godseye/plugin-sdk/provider-onboard").OpenClawConfig;
   changed: boolean;
 } {
   const current = resolveAgentModelPrimaryValue(cfg.agents?.defaults?.model);

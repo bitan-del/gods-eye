@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { resolveStateDir } from "openclaw/plugin-sdk/state-paths";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { resolveStateDir } from "godseye/plugin-sdk/state-paths";
 import { resolveLegacyMatrixFlatStoreTarget } from "./migration-config.js";
 import { resolveMatrixLegacyFlatStoragePaths } from "./storage-paths.js";
 

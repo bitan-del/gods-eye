@@ -3,7 +3,7 @@ import {
   normalizeOutboundThreadId,
   resolveThreadSessionKeys,
   type RoutePeer,
-} from "openclaw/plugin-sdk/routing";
+} from "godseye/plugin-sdk/routing";
 import type { OpenClawConfig } from "./runtime-api.js";
 import { parseDiscordTarget } from "./target-parsing.js";
 

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTempDir } from "./exec-approvals-test-helpers.js";
 
 const requestJsonlSocketMock = vi.hoisted(() => vi.fn());
@@ -14,40 +14,48 @@ import type { ExecApprovalsFile } from "./exec-approvals.js";
 type ExecApprovalsModule = typeof import("./exec-approvals.js");
 
 let addAllowlistEntry: ExecApprovalsModule["addAllowlistEntry"];
+let addDurableCommandApproval: ExecApprovalsModule["addDurableCommandApproval"];
 let ensureExecApprovals: ExecApprovalsModule["ensureExecApprovals"];
 let mergeExecApprovalsSocketDefaults: ExecApprovalsModule["mergeExecApprovalsSocketDefaults"];
 let normalizeExecApprovals: ExecApprovalsModule["normalizeExecApprovals"];
+let persistAllowAlwaysPatterns: ExecApprovalsModule["persistAllowAlwaysPatterns"];
 let readExecApprovalsSnapshot: ExecApprovalsModule["readExecApprovalsSnapshot"];
+let recordAllowlistMatchesUse: ExecApprovalsModule["recordAllowlistMatchesUse"];
 let recordAllowlistUse: ExecApprovalsModule["recordAllowlistUse"];
 let requestExecApprovalViaSocket: ExecApprovalsModule["requestExecApprovalViaSocket"];
 let resolveExecApprovalsPath: ExecApprovalsModule["resolveExecApprovalsPath"];
 let resolveExecApprovalsSocketPath: ExecApprovalsModule["resolveExecApprovalsSocketPath"];
 
 const tempDirs: string[] = [];
-const originalGodsEyeHome = process.env.GODSEYE_HOME;
+const originalOpenClawHome = process.env.OPENCLAW_HOME;
 
-beforeEach(async () => {
-  vi.resetModules();
+beforeAll(async () => {
   ({
     addAllowlistEntry,
+    addDurableCommandApproval,
     ensureExecApprovals,
     mergeExecApprovalsSocketDefaults,
     normalizeExecApprovals,
+    persistAllowAlwaysPatterns,
     readExecApprovalsSnapshot,
+    recordAllowlistMatchesUse,
     recordAllowlistUse,
     requestExecApprovalViaSocket,
     resolveExecApprovalsPath,
     resolveExecApprovalsSocketPath,
   } = await import("./exec-approvals.js"));
+});
+
+beforeEach(() => {
   requestJsonlSocketMock.mockReset();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
-  if (originalGodsEyeHome === undefined) {
-    delete process.env.GODSEYE_HOME;
+  if (originalOpenClawHome === undefined) {
+    delete process.env.OPENCLAW_HOME;
   } else {
-    process.env.GODSEYE_HOME = originalGodsEyeHome;
+    process.env.OPENCLAW_HOME = originalOpenClawHome;
   }
   for (const dir of tempDirs.splice(0)) {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -57,12 +65,12 @@ afterEach(() => {
 function createHomeDir(): string {
   const dir = makeTempDir();
   tempDirs.push(dir);
-  process.env.GODSEYE_HOME = dir;
+  process.env.OPENCLAW_HOME = dir;
   return dir;
 }
 
 function approvalsFilePath(homeDir: string): string {
-  return path.join(homeDir, ".godseye", "exec-approvals.json");
+  return path.join(homeDir, ".openclaw", "exec-approvals.json");
 }
 
 function readApprovalsFile(homeDir: string): ExecApprovalsFile {
@@ -74,10 +82,10 @@ describe("exec approvals store helpers", () => {
     const dir = createHomeDir();
 
     expect(path.normalize(resolveExecApprovalsPath())).toBe(
-      path.normalize(path.join(dir, ".godseye", "exec-approvals.json")),
+      path.normalize(path.join(dir, ".openclaw", "exec-approvals.json")),
     );
     expect(path.normalize(resolveExecApprovalsSocketPath())).toBe(
-      path.normalize(path.join(dir, ".godseye", "exec-approvals.sock")),
+      path.normalize(path.join(dir, ".openclaw", "exec-approvals.sock")),
     );
   });
 
@@ -166,6 +174,99 @@ describe("exec approvals store helpers", () => {
     expect(readApprovalsFile(dir).agents?.worker?.allowlist?.[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
   });
 
+  it("persists durable command approvals without storing plaintext command text", () => {
+    const dir = createHomeDir();
+    vi.spyOn(Date, "now").mockReturnValue(321_000);
+
+    const approvals = ensureExecApprovals();
+    addDurableCommandApproval(approvals, "worker", 'printenv API_KEY="secret-value"');
+
+    expect(readApprovalsFile(dir).agents?.worker?.allowlist).toEqual([
+      expect.objectContaining({
+        source: "allow-always",
+        lastUsedAt: 321_000,
+      }),
+    ]);
+    expect(readApprovalsFile(dir).agents?.worker?.allowlist?.[0]?.pattern).toMatch(
+      /^=command:[0-9a-f]{16}$/i,
+    );
+    expect(readApprovalsFile(dir).agents?.worker?.allowlist?.[0]).not.toHaveProperty("commandText");
+  });
+
+  it("strips legacy plaintext command text during normalization", () => {
+    expect(
+      normalizeExecApprovals({
+        version: 1,
+        agents: {
+          main: {
+            allowlist: [
+              {
+                pattern: "=command:test",
+                source: "allow-always",
+                commandText: "echo secret-token",
+              },
+            ],
+          },
+        },
+      }).agents?.main?.allowlist,
+    ).toEqual([
+      expect.objectContaining({
+        pattern: "=command:test",
+        source: "allow-always",
+      }),
+    ]);
+    expect(
+      normalizeExecApprovals({
+        version: 1,
+        agents: {
+          main: {
+            allowlist: [
+              {
+                pattern: "=command:test",
+                source: "allow-always",
+                commandText: "echo secret-token",
+              },
+            ],
+          },
+        },
+      }).agents?.main?.allowlist?.[0],
+    ).not.toHaveProperty("commandText");
+  });
+
+  it("preserves source and argPattern metadata for allow-always entries", () => {
+    const dir = createHomeDir();
+    vi.spyOn(Date, "now").mockReturnValue(321_000);
+
+    const approvals = ensureExecApprovals();
+    addAllowlistEntry(approvals, "worker", "/usr/bin/python3", {
+      argPattern: "^script\\.py\x00$",
+      source: "allow-always",
+    });
+    addAllowlistEntry(approvals, "worker", "/usr/bin/python3", {
+      argPattern: "^script\\.py\x00$",
+      source: "allow-always",
+    });
+    addAllowlistEntry(approvals, "worker", "/usr/bin/python3", {
+      argPattern: "^other\\.py\x00$",
+      source: "allow-always",
+    });
+
+    expect(readApprovalsFile(dir).agents?.worker?.allowlist).toEqual([
+      expect.objectContaining({
+        pattern: "/usr/bin/python3",
+        argPattern: "^script\\.py\x00$",
+        source: "allow-always",
+        lastUsedAt: 321_000,
+      }),
+      expect.objectContaining({
+        pattern: "/usr/bin/python3",
+        argPattern: "^other\\.py\x00$",
+        source: "allow-always",
+        lastUsedAt: 321_000,
+      }),
+    ]);
+  });
+
   it("records allowlist usage on the matching entry and backfills missing ids", () => {
     const dir = createHomeDir();
     vi.spyOn(Date, "now").mockReturnValue(999_000);
@@ -201,6 +302,95 @@ describe("exec approvals store helpers", () => {
     expect(readApprovalsFile(dir).agents?.main?.allowlist?.[0]?.id).toMatch(/^[0-9a-f-]{36}$/i);
   });
 
+  it("dedupes allowlist usage by pattern and argPattern", () => {
+    const dir = createHomeDir();
+    vi.spyOn(Date, "now").mockReturnValue(777_000);
+
+    const approvals: ExecApprovalsFile = {
+      version: 1,
+      agents: {
+        main: {
+          allowlist: [
+            { pattern: "/usr/bin/python3", argPattern: "^a\\.py\x00$" },
+            { pattern: "/usr/bin/python3", argPattern: "^b\\.py\x00$" },
+          ],
+        },
+      },
+    };
+    fs.mkdirSync(path.dirname(approvalsFilePath(dir)), { recursive: true });
+    fs.writeFileSync(approvalsFilePath(dir), JSON.stringify(approvals, null, 2), "utf8");
+
+    recordAllowlistMatchesUse({
+      approvals,
+      agentId: undefined,
+      matches: [
+        { pattern: "/usr/bin/python3", argPattern: "^a\\.py\x00$" },
+        { pattern: "/usr/bin/python3", argPattern: "^a\\.py\x00$" },
+        { pattern: "/usr/bin/python3", argPattern: "^b\\.py\x00$" },
+      ],
+      command: "python3 a.py",
+      resolvedPath: "/usr/bin/python3",
+    });
+
+    expect(readApprovalsFile(dir).agents?.main?.allowlist).toEqual([
+      expect.objectContaining({
+        pattern: "/usr/bin/python3",
+        argPattern: "^a\\.py\x00$",
+        lastUsedAt: 777_000,
+      }),
+      expect.objectContaining({
+        pattern: "/usr/bin/python3",
+        argPattern: "^b\\.py\x00$",
+        lastUsedAt: 777_000,
+      }),
+    ]);
+  });
+
+  it("persists allow-always patterns with shared helper", () => {
+    const dir = createHomeDir();
+    vi.spyOn(Date, "now").mockReturnValue(654_321);
+
+    const approvals = ensureExecApprovals();
+    const patterns = persistAllowAlwaysPatterns({
+      approvals,
+      agentId: "worker",
+      platform: "win32",
+      segments: [
+        {
+          raw: "/usr/bin/custom-tool.exe a.py",
+          argv: ["/usr/bin/custom-tool.exe", "a.py"],
+          resolution: {
+            execution: {
+              rawExecutable: "/usr/bin/custom-tool.exe",
+              resolvedPath: "/usr/bin/custom-tool.exe",
+              executableName: "custom-tool",
+            },
+            policy: {
+              rawExecutable: "/usr/bin/custom-tool.exe",
+              resolvedPath: "/usr/bin/custom-tool.exe",
+              executableName: "custom-tool",
+            },
+          },
+        },
+      ],
+    });
+
+    expect(patterns).toEqual([
+      {
+        pattern: "/usr/bin/custom-tool.exe",
+        argPattern: "^a\\.py\x00$",
+      },
+    ]);
+    expect(readApprovalsFile(dir).agents?.worker?.allowlist).toEqual([
+      expect.objectContaining({
+        pattern: "/usr/bin/custom-tool.exe",
+        argPattern: "^a\\.py\x00$",
+        source: "allow-always",
+        lastUsedAt: 654_321,
+      }),
+    ]);
+  });
+
   it("returns null when approval socket credentials are missing", async () => {
     await expect(
       requestExecApprovalViaSocket({
@@ -220,9 +410,9 @@ describe("exec approvals store helpers", () => {
   });
 
   it("builds approval socket payloads and accepts decision responses only", async () => {
-    requestJsonlSocketMock.mockImplementationOnce(async ({ payload, accept, timeoutMs }) => {
+    requestJsonlSocketMock.mockImplementationOnce(async ({ requestLine, accept, timeoutMs }) => {
       expect(timeoutMs).toBe(15_000);
-      const parsed = JSON.parse(payload) as {
+      const parsed = JSON.parse(requestLine) as {
         type: string;
         token: string;
         id: string;

@@ -1,11 +1,11 @@
-import { formatCliCommand, parseDurationMs } from "openclaw/plugin-sdk/cli-runtime";
+import { formatCliCommand, parseDurationMs } from "godseye/plugin-sdk/cli-runtime";
 import type {
   OpenClawPluginApi,
   ProviderAuthContext,
   ProviderAuthMethodNonInteractiveContext,
   ProviderResolveDynamicModelContext,
   ProviderRuntimeModel,
-} from "openclaw/plugin-sdk/plugin-entry";
+} from "godseye/plugin-sdk/plugin-entry";
 import {
   applyAuthProfileConfig,
   type AuthProfileStore,
@@ -17,10 +17,10 @@ import {
   suggestOAuthProfileIdForLegacyDefault,
   upsertAuthProfile,
   validateAnthropicSetupToken,
-} from "openclaw/plugin-sdk/provider-auth";
-import { cloneFirstTemplateModel } from "openclaw/plugin-sdk/provider-model-shared";
-import { fetchClaudeUsage } from "openclaw/plugin-sdk/provider-usage";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/provider-auth";
+import { cloneFirstTemplateModel } from "godseye/plugin-sdk/provider-model-shared";
+import { fetchClaudeUsage } from "godseye/plugin-sdk/provider-usage";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import * as claudeCliAuth from "./cli-auth-seam.js";
 import { buildAnthropicCliBackend } from "./cli-backend.js";
 import { buildAnthropicCliMigrationResult } from "./cli-migration.js";

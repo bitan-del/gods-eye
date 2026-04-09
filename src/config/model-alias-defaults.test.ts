@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CONTEXT_TOKENS } from "../agents/defaults.js";
 import { applyModelDefaults } from "./defaults.js";
-import type { GodsEyeConfig } from "./types.js";
+import type { OpenClawConfig } from "./types.js";
 
 describe("applyModelDefaults", () => {
   function buildProxyProviderConfig(overrides?: { contextWindow?: number; maxTokens?: number }) {
@@ -14,7 +14,7 @@ describe("applyModelDefaults", () => {
             api: "openai-completions",
             models: [
               {
-                id: "gpt-5.2",
+                id: "gpt-5.4",
                 name: "GPT-5.2",
                 reasoning: false,
                 input: ["text"],
@@ -26,7 +26,7 @@ describe("applyModelDefaults", () => {
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
   }
 
   function buildMistralProviderConfig(overrides?: {
@@ -55,7 +55,7 @@ describe("applyModelDefaults", () => {
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
   }
 
   it("adds default aliases when models are present", () => {
@@ -68,7 +68,7 @@ describe("applyModelDefaults", () => {
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
     const next = applyModelDefaults(cfg);
 
     expect(next.agents?.defaults?.models?.["anthropic/claude-opus-4-6"]?.alias).toBe("opus");
@@ -80,15 +80,15 @@ describe("applyModelDefaults", () => {
       agents: {
         defaults: {
           models: {
-            "anthropic/claude-opus-4-5": { alias: "Opus" },
+            "anthropic/claude-opus-4-6": { alias: "Opus" },
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
 
     const next = applyModelDefaults(cfg);
 
-    expect(next.agents?.defaults?.models?.["anthropic/claude-opus-4-5"]?.alias).toBe("Opus");
+    expect(next.agents?.defaults?.models?.["anthropic/claude-opus-4-6"]?.alias).toBe("Opus");
   });
 
   it("respects explicit empty alias disables", () => {
@@ -102,7 +102,7 @@ describe("applyModelDefaults", () => {
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
 
     const next = applyModelDefaults(cfg);
 
@@ -169,7 +169,7 @@ describe("applyModelDefaults", () => {
           },
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
 
     const next = applyModelDefaults(cfg);
     const provider = next.models?.providers?.anthropic;

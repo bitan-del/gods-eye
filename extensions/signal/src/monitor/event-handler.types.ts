@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import type {
   DmPolicy,
   GroupPolicy,
@@ -37,7 +37,11 @@ export type SignalDataMessage = {
     groupId?: string | null;
     groupName?: string | null;
   } | null;
-  quote?: { text?: string | null } | null;
+  quote?: {
+    text?: string | null;
+    author?: string | null;
+    authorUuid?: string | null;
+  } | null;
   reaction?: SignalReactionMessage | null;
 };
 
@@ -73,7 +77,7 @@ export type SignalReceivePayload = {
 
 export type SignalEventHandlerDeps = {
   runtime: RuntimeEnv;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   baseUrl: string;
   account?: string;
   accountUuid?: string;

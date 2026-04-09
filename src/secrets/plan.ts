@@ -35,9 +35,7 @@ export type SecretsPlanTarget = {
    * For provider targets, used to scrub auth-profile/static residues.
    */
   providerId?: string;
-  /**
-   * For googlechat account-scoped targets.
-   */
+  /** For account-scoped channel targets. */
   accountId?: string;
   /**
    * Optional auth-profile provider value used when creating new auth profile mappings.
@@ -49,7 +47,7 @@ export type SecretsApplyPlan = {
   version: 1;
   protocolVersion: 1;
   generatedAt: string;
-  generatedBy: "godseye secrets configure" | "manual";
+  generatedBy: "openclaw secrets configure" | "manual";
   providerUpserts?: Record<string, SecretProviderConfig>;
   providerDeletes?: string[];
   targets: SecretsPlanTarget[];

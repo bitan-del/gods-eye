@@ -6,10 +6,9 @@ import { ErrorCodes, errorShape } from "./protocol/index.js";
 import { isRoleAuthorizedForMethod, parseGatewayRole } from "./role-policy.js";
 import { agentHandlers } from "./server-methods/agent.js";
 import { agentsHandlers } from "./server-methods/agents.js";
-import { browserHandlers } from "./server-methods/browser.js";
+import { cliHandlers } from "./server-methods/cli.js";
 import { channelsHandlers } from "./server-methods/channels.js";
 import { chatHandlers } from "./server-methods/chat.js";
-import { cliHandlers } from "./server-methods/cli.js";
 import { configHandlers } from "./server-methods/config.js";
 import { connectHandlers } from "./server-methods/connect.js";
 import { cronHandlers } from "./server-methods/cron.js";
@@ -25,7 +24,6 @@ import { pushHandlers } from "./server-methods/push.js";
 import { sendHandlers } from "./server-methods/send.js";
 import { sessionsHandlers } from "./server-methods/sessions.js";
 import { skillsHandlers } from "./server-methods/skills.js";
-import { studioHandlers } from "./server-methods/studio.js";
 import { systemHandlers } from "./server-methods/system.js";
 import { talkHandlers } from "./server-methods/talk.js";
 import { toolsCatalogHandlers } from "./server-methods/tools-catalog.js";
@@ -75,7 +73,6 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...healthHandlers,
   ...channelsHandlers,
   ...chatHandlers,
-  ...cliHandlers,
   ...cronHandlers,
   ...deviceHandlers,
   ...doctorHandlers,
@@ -99,8 +96,7 @@ export const coreGatewayHandlers: GatewayRequestHandlers = {
   ...usageHandlers,
   ...agentHandlers,
   ...agentsHandlers,
-  ...browserHandlers,
-  ...studioHandlers,
+  ...cliHandlers,
 };
 
 export async function handleGatewayRequest(
@@ -110,6 +106,17 @@ export async function handleGatewayRequest(
   const authError = authorizeGatewayMethod(req.method, client);
   if (authError) {
     respond(false, undefined, authError);
+    return;
+  }
+  if (context.unavailableGatewayMethods?.has(req.method)) {
+    respond(
+      false,
+      undefined,
+      errorShape(ErrorCodes.UNAVAILABLE, `${req.method} unavailable during gateway startup`, {
+        retryable: true,
+        details: { method: req.method },
+      }),
+    );
     return;
   }
   if (CONTROL_PLANE_WRITE_METHODS.has(req.method)) {

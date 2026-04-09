@@ -2,7 +2,7 @@ import "./reply.directive.directive-behavior.e2e-mocks.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { loadSessionStore } from "../config/sessions.js";
 import type { ModelDefinitionConfig } from "../config/types.models.js";
 import { drainSystemEvents } from "../infra/system-events.js";
@@ -17,6 +17,7 @@ import {
 } from "./reply.directive.directive-behavior.e2e-harness.js";
 import { runEmbeddedPiAgentMock } from "./reply.directive.directive-behavior.e2e-mocks.js";
 import { getReplyFromConfig } from "./reply.js";
+import { withFullRuntimeReplyConfig } from "./reply/get-reply-fast-path.js";
 
 function makeModelDefinition(id: string, name: string): ModelDefinitionConfig {
   return {
@@ -35,19 +36,19 @@ function makeModelSwitchConfig(home: string) {
     model: { primary: "openai/gpt-4.1-mini" },
     models: {
       "openai/gpt-4.1-mini": {},
-      "anthropic/claude-opus-4-5": { alias: "Opus" },
+      "anthropic/claude-opus-4-6": { alias: "Opus" },
     },
   });
 }
 
 function makeMoonshotConfig(home: string, storePath: string) {
-  return {
+  return withFullRuntimeReplyConfig({
     agents: {
       defaults: {
-        model: { primary: "anthropic/claude-opus-4-5" },
-        workspace: path.join(home, "godseye"),
+        model: { primary: "anthropic/claude-opus-4-6" },
+        workspace: path.join(home, "openclaw"),
         models: {
-          "anthropic/claude-opus-4-5": {},
+          "anthropic/claude-opus-4-6": {},
           "moonshot/kimi-k2-0905-preview": {},
         },
       },
@@ -64,7 +65,7 @@ function makeMoonshotConfig(home: string, storePath: string) {
       },
     },
     session: { store: storePath },
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig);
 }
 
 describe("directive behavior", () => {
@@ -121,7 +122,7 @@ describe("directive behavior", () => {
             agents: {
               defaults: {
                 model: { primary: "minimax/MiniMax-M2.7" },
-                workspace: path.join(home, "godseye"),
+                workspace: path.join(home, "openclaw"),
                 models: {
                   "minimax/MiniMax-M2.7": {},
                   "minimax/MiniMax-M2.7-highspeed": {},
@@ -162,7 +163,7 @@ describe("directive behavior", () => {
             agents: {
               defaults: {
                 model: { primary: "minimax/MiniMax-M2.7" },
-                workspace: path.join(home, "godseye"),
+                workspace: path.join(home, "openclaw"),
                 models: {
                   "minimax/MiniMax-M2.7": {},
                   "minimax/MiniMax-M2.7-highspeed": {},
@@ -189,10 +190,10 @@ describe("directive behavior", () => {
         await getReplyFromConfig(
           { Body: testCase.body, From: "+1222", To: "+1222", CommandAuthorized: true },
           {},
-          {
+          withFullRuntimeReplyConfig({
             ...testCase.config,
             session: { store: testCase.storePath },
-          } as unknown as GodsEyeConfig,
+          } as unknown as OpenClawConfig),
         );
         assertModelSelection(testCase.storePath, testCase.expectedSelection);
       }
@@ -206,13 +207,13 @@ describe("directive behavior", () => {
       const res = await getReplyFromConfig(
         { Body: "/model ki", From: "+1222", To: "+1222", CommandAuthorized: true },
         {},
-        {
+        withFullRuntimeReplyConfig({
           agents: {
             defaults: {
-              model: { primary: "anthropic/claude-opus-4-5" },
-              workspace: path.join(home, "godseye"),
+              model: { primary: "anthropic/claude-opus-4-6" },
+              workspace: path.join(home, "openclaw"),
               models: {
-                "anthropic/claude-opus-4-5": {},
+                "anthropic/claude-opus-4-6": {},
                 "moonshot/kimi-k2-0905-preview": { alias: "Kimi" },
                 "lmstudio/kimi-k2-0905-preview": {},
               },
@@ -236,7 +237,7 @@ describe("directive behavior", () => {
             },
           },
           session: { store: storePath },
-        },
+        } as OpenClawConfig),
       );
 
       const text = replyText(res);
@@ -251,7 +252,7 @@ describe("directive behavior", () => {
   it("stores auth profile overrides on /model directive", async () => {
     await withTempHome(async (home) => {
       const storePath = sessionStorePath(home);
-      const authDir = path.join(home, ".godseye", "agents", "main", "agent");
+      const authDir = path.join(home, ".openclaw", "agents", "main", "agent");
       await fs.mkdir(authDir, { recursive: true, mode: 0o700 });
       await fs.writeFile(
         path.join(authDir, "auth-profiles.json"),
@@ -295,7 +296,7 @@ describe("directive behavior", () => {
       );
 
       let events = drainSystemEvents(MAIN_SESSION_KEY);
-      expect(events).toContain("Model switched to Opus (anthropic/claude-opus-4-5).");
+      expect(events).toContain("Model switched to Opus (anthropic/claude-opus-4-6).");
 
       drainSystemEvents(MAIN_SESSION_KEY);
 

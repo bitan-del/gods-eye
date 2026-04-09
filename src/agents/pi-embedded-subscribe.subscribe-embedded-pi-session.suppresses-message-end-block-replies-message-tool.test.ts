@@ -88,16 +88,16 @@ describe("subscribeEmbeddedPiSession", () => {
       result: { details: { status: "error" } },
     });
     emitAssistantMessageEnd(emit, messageText);
-    await Promise.resolve();
-
-    expect(onBlockReply).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => {
+      expect(onBlockReply).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("ignores delivery-mirror assistant messages", async () => {
     const { emit, onBlockReply } = createBlockReplyHarness("message_end");
 
     emitAssistantMessageEnd(emit, "Mirrored transcript text", {
-      provider: "godseye",
+      provider: "openclaw",
       model: "delivery-mirror",
     });
     await Promise.resolve();
@@ -109,7 +109,7 @@ describe("subscribeEmbeddedPiSession", () => {
     const { emit, onBlockReply } = createBlockReplyHarness("message_end");
 
     emitAssistantMessageEnd(emit, "Injected transcript text", {
-      provider: "godseye",
+      provider: "openclaw",
       model: "gateway-injected",
     });
     await Promise.resolve();

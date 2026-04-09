@@ -2,11 +2,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   __resetGatewayModelPricingCacheForTest,
   __setGatewayModelPricingForTest,
-} from "../gateway/model-pricing-cache.js";
+} from "../gateway/model-pricing-cache-state.js";
 import {
   __resetUsageFormatCachesForTest,
   estimateUsageCost,
@@ -16,21 +16,21 @@ import {
 } from "./usage-format.js";
 
 describe("usage-format", () => {
-  const originalAgentDir = process.env.GODSEYE_AGENT_DIR;
+  const originalAgentDir = process.env.OPENCLAW_AGENT_DIR;
   let agentDir: string;
 
   beforeEach(async () => {
-    agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-usage-format-"));
-    process.env.GODSEYE_AGENT_DIR = agentDir;
+    agentDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-usage-format-"));
+    process.env.OPENCLAW_AGENT_DIR = agentDir;
     __resetUsageFormatCachesForTest();
     __resetGatewayModelPricingCacheForTest();
   });
 
   afterEach(async () => {
     if (originalAgentDir === undefined) {
-      delete process.env.GODSEYE_AGENT_DIR;
+      delete process.env.OPENCLAW_AGENT_DIR;
     } else {
-      process.env.GODSEYE_AGENT_DIR = originalAgentDir;
+      process.env.OPENCLAW_AGENT_DIR = originalAgentDir;
     }
     __resetUsageFormatCachesForTest();
     __resetGatewayModelPricingCacheForTest();
@@ -66,7 +66,7 @@ describe("usage-format", () => {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     const cost = resolveModelCostConfig({
       provider: "test",
@@ -92,44 +92,44 @@ describe("usage-format", () => {
   it("returns undefined when model pricing is not configured", () => {
     expect(
       resolveModelCostConfig({
-        provider: "anthropic",
-        model: "claude-sonnet-4-6",
+        provider: "demo-unconfigured-a",
+        model: "demo-model-a",
       }),
     ).toBeUndefined();
 
     expect(
       resolveModelCostConfig({
-        provider: "openai-codex",
-        model: "gpt-5.4",
+        provider: "demo-unconfigured-b",
+        model: "demo-model-b",
       }),
     ).toBeUndefined();
   });
 
-  it("prefers models.json pricing over godseye config and cached pricing", async () => {
+  it("prefers models.json pricing over openclaw config and cached pricing", async () => {
     const config = {
       models: {
         providers: {
-          openai: {
+          "demo-preferred": {
             models: [
               {
-                id: "gpt-5.4",
+                id: "demo-model",
                 cost: { input: 20, output: 21, cacheRead: 22, cacheWrite: 23 },
               },
             ],
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     await fs.writeFile(
       path.join(agentDir, "models.json"),
       JSON.stringify(
         {
           providers: {
-            openai: {
+            "demo-preferred": {
               models: [
                 {
-                  id: "gpt-5.4",
+                  id: "demo-model",
                   cost: { input: 10, output: 11, cacheRead: 12, cacheWrite: 13 },
                 },
               ],
@@ -144,16 +144,16 @@ describe("usage-format", () => {
 
     __setGatewayModelPricingForTest([
       {
-        provider: "openai",
-        model: "gpt-5.4",
+        provider: "demo-preferred",
+        model: "demo-model",
         pricing: { input: 30, output: 31, cacheRead: 32, cacheWrite: 33 },
       },
     ]);
 
     expect(
       resolveModelCostConfig({
-        provider: "openai",
-        model: "gpt-5.4",
+        provider: "demo-preferred",
+        model: "demo-model",
         config,
       }),
     ).toEqual({
@@ -164,34 +164,34 @@ describe("usage-format", () => {
     });
   });
 
-  it("falls back to godseye config pricing when models.json is absent", () => {
+  it("falls back to openclaw config pricing when models.json is absent", () => {
     const config = {
       models: {
         providers: {
-          anthropic: {
+          "demo-config-provider": {
             models: [
               {
-                id: "claude-sonnet-4-6",
+                id: "demo-model",
                 cost: { input: 9, output: 19, cacheRead: 0.9, cacheWrite: 1.9 },
               },
             ],
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     __setGatewayModelPricingForTest([
       {
-        provider: "anthropic",
-        model: "claude-sonnet-4-6",
+        provider: "demo-config-provider",
+        model: "demo-model",
         pricing: { input: 3, output: 4, cacheRead: 0.3, cacheWrite: 0.4 },
       },
     ]);
 
     expect(
       resolveModelCostConfig({
-        provider: "anthropic",
-        model: "claude-sonnet-4-6",
+        provider: "demo-config-provider",
+        model: "demo-model",
         config,
       }),
     ).toEqual({
@@ -205,22 +205,53 @@ describe("usage-format", () => {
   it("falls back to cached gateway pricing when no configured cost exists", () => {
     __setGatewayModelPricingForTest([
       {
-        provider: "openai-codex",
-        model: "gpt-5.4",
+        provider: "demo-cached-provider",
+        model: "demo-model",
         pricing: { input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 0 },
       },
     ]);
 
     expect(
       resolveModelCostConfig({
-        provider: "openai-codex",
-        model: "gpt-5.4",
+        provider: "demo-cached-provider",
+        model: "demo-model",
       }),
     ).toEqual({
       input: 2.5,
       output: 15,
       cacheRead: 0.25,
       cacheWrite: 0,
+    });
+  });
+
+  it("can skip plugin-backed model normalization for display-only cost lookup", () => {
+    const config = {
+      models: {
+        providers: {
+          "google-vertex": {
+            models: [
+              {
+                id: "gemini-3.1-flash-lite",
+                cost: { input: 7, output: 8, cacheRead: 0.7, cacheWrite: 0.8 },
+              },
+            ],
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    expect(
+      resolveModelCostConfig({
+        provider: "google-vertex",
+        model: "gemini-3.1-flash-lite",
+        config,
+        allowPluginNormalization: false,
+      }),
+    ).toEqual({
+      input: 7,
+      output: 8,
+      cacheRead: 0.7,
+      cacheWrite: 0.8,
     });
   });
 });

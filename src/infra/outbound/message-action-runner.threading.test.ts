@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   prepareOutboundMirrorRoute,
   resolveAndApplyOutboundThreadId,
@@ -14,7 +14,7 @@ const slackConfig = {
       botToken: "xoxb-test",
     },
   },
-} as GodsEyeConfig;
+} as OpenClawConfig;
 
 const telegramConfig = {
   channels: {
@@ -22,7 +22,7 @@ const telegramConfig = {
       botToken: "telegram-test",
     },
   },
-} as GodsEyeConfig;
+} as OpenClawConfig;
 
 const defaultTelegramToolContext = {
   currentChannelId: "telegram:123",

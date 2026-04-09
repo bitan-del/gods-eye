@@ -1,14 +1,11 @@
 import { isIP } from "node:net";
 import path from "node:path";
-import { resolveSandboxConfigForAgent } from "../agents/sandbox.js";
-import { redactCdpUrl } from "../browser/cdp.helpers.js";
-import { resolveBrowserConfig, resolveProfile } from "../browser/config.js";
-import { resolveBrowserControlAuth } from "../browser/control-auth.js";
+import { resolveSandboxConfigForAgent } from "../agents/sandbox/config.js";
 import { hasPotentialConfiguredChannels } from "../channels/config-presence.js";
 import type { listChannelPlugins } from "../channels/plugins/index.js";
-import { formatCliCommand } from "../cli/command-format.js";
-import type { ConfigFileSnapshot, GodsEyeConfig } from "../config/config.js";
+import type { ConfigFileSnapshot, OpenClawConfig } from "../config/config.js";
 import { resolveConfigPath, resolveStateDir } from "../config/paths.js";
+import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { hasConfiguredSecretInput } from "../config/types.secrets.js";
 import { resolveGatewayAuth } from "../gateway/auth.js";
 import { type ExecApprovalsFile, loadExecApprovals } from "../infra/exec-approvals.js";
@@ -19,8 +16,16 @@ import {
 } from "../infra/exec-safe-bin-runtime-policy.js";
 import { listRiskyConfiguredSafeBins } from "../infra/exec-safe-bin-semantics.js";
 import { normalizeTrustedSafeBinDirs } from "../infra/exec-safe-bin-trust.js";
-import { isBlockedHostnameOrIp, isPrivateNetworkAllowedByPolicy } from "../infra/net/ssrf.js";
+import { hasNonEmptyString } from "../infra/outbound/channel-target.js";
+import { getActivePluginRegistry } from "../plugins/runtime.js";
 import { DEFAULT_AGENT_ID } from "../routing/session-key.js";
+import { asNullableRecord } from "../shared/record-coerce.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+} from "../shared/string-coerce.js";
+import { collectDeepCodeSafetyFindings } from "./audit-deep-code-safety.js";
+import { collectDeepProbeFindings } from "./audit-deep-probe-findings.js";
 import {
   formatPermissionDetail,
   formatPermissionRemediation,
@@ -65,8 +70,8 @@ export type SecurityAuditReport = {
 };
 
 export type SecurityAuditOptions = {
-  config: GodsEyeConfig;
-  sourceConfig?: GodsEyeConfig;
+  config: OpenClawConfig;
+  sourceConfig?: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
   deep?: boolean;
@@ -95,8 +100,8 @@ export type SecurityAuditOptions = {
 };
 
 type AuditExecutionContext = {
-  cfg: GodsEyeConfig;
-  sourceConfig: GodsEyeConfig;
+  cfg: OpenClawConfig;
+  sourceConfig: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   platform: NodeJS.Platform;
   includeFilesystem: boolean;
@@ -116,14 +121,20 @@ type AuditExecutionContext = {
 
 let channelPluginsModulePromise: Promise<typeof import("../channels/plugins/index.js")> | undefined;
 let auditNonDeepModulePromise: Promise<typeof import("./audit.nondeep.runtime.js")> | undefined;
-let auditDeepModulePromise: Promise<typeof import("./audit.deep.runtime.js")> | undefined;
 let auditChannelModulePromise:
   | Promise<typeof import("./audit-channel.collect.runtime.js")>
+  | undefined;
+let pluginRegistryLoaderModulePromise:
+  | Promise<typeof import("../plugins/runtime/runtime-registry-loader.js")>
+  | undefined;
+let pluginMetadataRegistryLoaderModulePromise:
+  | Promise<typeof import("../plugins/runtime/metadata-registry-loader.js")>
   | undefined;
 let gatewayProbeDepsPromise:
   | Promise<{
       buildGatewayConnectionDetails: typeof import("../gateway/call.js").buildGatewayConnectionDetails;
       resolveGatewayProbeAuthSafe: typeof import("../gateway/probe-auth.js").resolveGatewayProbeAuthSafe;
+      resolveGatewayProbeTarget: typeof import("../gateway/probe-auth.js").resolveGatewayProbeTarget;
       probeGateway: typeof import("../gateway/probe.js").probeGateway;
     }>
   | undefined;
@@ -138,14 +149,20 @@ async function loadAuditNonDeepModule() {
   return await auditNonDeepModulePromise;
 }
 
-async function loadAuditDeepModule() {
-  auditDeepModulePromise ??= import("./audit.deep.runtime.js");
-  return await auditDeepModulePromise;
-}
-
 async function loadAuditChannelModule() {
   auditChannelModulePromise ??= import("./audit-channel.collect.runtime.js");
   return await auditChannelModulePromise;
+}
+
+async function loadPluginRegistryLoaderModule() {
+  pluginRegistryLoaderModulePromise ??= import("../plugins/runtime/runtime-registry-loader.js");
+  return await pluginRegistryLoaderModulePromise;
+}
+
+async function loadPluginMetadataRegistryLoaderModule() {
+  pluginMetadataRegistryLoaderModulePromise ??=
+    import("../plugins/runtime/metadata-registry-loader.js");
+  return await pluginMetadataRegistryLoaderModulePromise;
 }
 
 async function loadGatewayProbeDeps() {
@@ -156,6 +173,7 @@ async function loadGatewayProbeDeps() {
   ]).then(([callModule, probeAuthModule, probeModule]) => ({
     buildGatewayConnectionDetails: callModule.buildGatewayConnectionDetails,
     resolveGatewayProbeAuthSafe: probeAuthModule.resolveGatewayProbeAuthSafe,
+    resolveGatewayProbeTarget: probeAuthModule.resolveGatewayProbeTarget,
     probeGateway: probeModule.probeGateway,
   }));
   return await gatewayProbeDepsPromise;
@@ -184,58 +202,7 @@ function normalizeAllowFromList(list: Array<string | number> | undefined | null)
   return list.map((v) => String(v).trim()).filter(Boolean);
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined;
-  }
-  return value as Record<string, unknown>;
-}
-
-function hasNonEmptyString(value: unknown): boolean {
-  return typeof value === "string" && value.trim().length > 0;
-}
-
-function isFeishuDocToolEnabled(cfg: GodsEyeConfig): boolean {
-  const channels = asRecord(cfg.channels);
-  const feishu = asRecord(channels?.feishu);
-  if (!feishu || feishu.enabled === false) {
-    return false;
-  }
-
-  const baseTools = asRecord(feishu.tools);
-  const baseDocEnabled = baseTools?.doc !== false;
-  const baseAppId = hasNonEmptyString(feishu.appId);
-  const baseAppSecret = hasConfiguredSecretInput(feishu.appSecret, cfg.secrets?.defaults);
-  const baseConfigured = baseAppId && baseAppSecret;
-
-  const accounts = asRecord(feishu.accounts);
-  if (!accounts || Object.keys(accounts).length === 0) {
-    return baseDocEnabled && baseConfigured;
-  }
-
-  for (const accountValue of Object.values(accounts)) {
-    const account = asRecord(accountValue) ?? {};
-    if (account.enabled === false) {
-      continue;
-    }
-    const accountTools = asRecord(account.tools);
-    const effectiveTools = accountTools ?? baseTools;
-    const docEnabled = effectiveTools?.doc !== false;
-    if (!docEnabled) {
-      continue;
-    }
-    const accountConfigured =
-      (hasNonEmptyString(account.appId) || baseAppId) &&
-      (hasConfiguredSecretInput(account.appSecret, cfg.secrets?.defaults) || baseAppSecret);
-    if (accountConfigured) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-async function collectFilesystemFindings(params: {
+export async function collectFilesystemFindings(params: {
   stateDir: string;
   configPath: string;
   env?: NodeJS.ProcessEnv;
@@ -263,7 +230,7 @@ async function collectFilesystemFindings(params: {
         checkId: "fs.state_dir.perms_world_writable",
         severity: "critical",
         title: "State dir is world-writable",
-        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; other users can write into your GodsEye state.`,
+        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; other users can write into your OpenClaw state.`,
         remediation: formatPermissionRemediation({
           targetPath: params.stateDir,
           perms: stateDirPerms,
@@ -277,7 +244,7 @@ async function collectFilesystemFindings(params: {
         checkId: "fs.state_dir.perms_group_writable",
         severity: "warn",
         title: "State dir is group-writable",
-        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; group users can write into your GodsEye state.`,
+        detail: `${formatPermissionDetail(params.stateDir, stateDirPerms)}; group users can write into your OpenClaw state.`,
         remediation: formatPermissionRemediation({
           targetPath: params.stateDir,
           perms: stateDirPerms,
@@ -366,9 +333,9 @@ async function collectFilesystemFindings(params: {
   return findings;
 }
 
-function collectGatewayConfigFindings(
-  cfg: GodsEyeConfig,
-  sourceConfig: GodsEyeConfig,
+export function collectGatewayConfigFindings(
+  cfg: OpenClawConfig,
+  sourceConfig: OpenClawConfig,
   env: NodeJS.ProcessEnv,
 ): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
@@ -387,8 +354,8 @@ function collectGatewayConfigFindings(
     : [];
   const hasToken = typeof auth.token === "string" && auth.token.trim().length > 0;
   const hasPassword = typeof auth.password === "string" && auth.password.trim().length > 0;
-  const envTokenConfigured = hasNonEmptyString(env.GODSEYE_GATEWAY_TOKEN);
-  const envPasswordConfigured = hasNonEmptyString(env.GODSEYE_GATEWAY_PASSWORD);
+  const envTokenConfigured = hasNonEmptyString(env.OPENCLAW_GATEWAY_TOKEN);
+  const envPasswordConfigured = hasNonEmptyString(env.OPENCLAW_GATEWAY_PASSWORD);
   const tokenConfiguredFromConfig = hasConfiguredSecretInput(
     sourceConfig.gateway?.auth?.token,
     sourceConfig.secrets?.defaults,
@@ -432,9 +399,7 @@ function collectGatewayConfigFindings(
     ? cfg.gateway?.tools?.allow
     : [];
   const gatewayToolsAllow = new Set(
-    gatewayToolsAllowRaw
-      .map((v) => (typeof v === "string" ? v.trim().toLowerCase() : ""))
-      .filter(Boolean),
+    gatewayToolsAllowRaw.map((v) => normalizeOptionalLowercaseString(v) ?? "").filter(Boolean),
   );
   const reenabledOverHttp = DEFAULT_GATEWAY_HTTP_TOOL_DENY.filter((name) =>
     gatewayToolsAllow.has(name),
@@ -604,18 +569,6 @@ function collectGatewayConfigFindings(
     });
   }
 
-  if (isFeishuDocToolEnabled(cfg)) {
-    findings.push({
-      checkId: "channels.feishu.doc_owner_open_id",
-      severity: "warn",
-      title: "Feishu doc create can grant requester permissions",
-      detail:
-        'channels.feishu tools include "doc"; feishu_doc action "create" can grant document access to the trusted requesting Feishu user.',
-      remediation:
-        "Disable channels.feishu.tools.doc when not needed, and restrict tool access for untrusted prompts.",
-    });
-  }
-
   const enabledDangerousFlags = collectEnabledInsecureOrDangerousFlags(cfg);
   if (enabledDangerousFlags.length > 0) {
     findings.push({
@@ -738,107 +691,84 @@ function isStrictLoopbackTrustedProxyEntry(entry: string): boolean {
     return rawIp.trim() === "127.0.0.1" && prefix === 32;
   }
   if (ipVersion === 6) {
-    return prefix === 128 && rawIp.trim().toLowerCase() === "::1";
+    return prefix === 128 && normalizeLowercaseStringOrEmpty(rawIp) === "::1";
   }
   return false;
 }
 
-function collectBrowserControlFindings(
-  cfg: GodsEyeConfig,
-  env: NodeJS.ProcessEnv,
-): SecurityAuditFinding[] {
-  const findings: SecurityAuditFinding[] = [];
-
-  let resolved: ReturnType<typeof resolveBrowserConfig>;
-  try {
-    resolved = resolveBrowserConfig(cfg.browser, cfg);
-  } catch (err) {
-    findings.push({
-      checkId: "browser.control_invalid_config",
-      severity: "warn",
-      title: "Browser control config looks invalid",
-      detail: String(err),
-      remediation: `Fix browser.cdpUrl in ${resolveConfigPath()} and re-run "${formatCliCommand("godseye security audit --deep")}".`,
+async function collectPluginSecurityAuditFindings(
+  context: AuditExecutionContext,
+): Promise<SecurityAuditFinding[]> {
+  let collectors = getActivePluginRegistry()?.securityAuditCollectors ?? [];
+  if (collectors.length === 0) {
+    const autoEnabled = applyPluginAutoEnable({
+      config: context.sourceConfig,
+      env: context.env,
     });
-    return findings;
-  }
-
-  if (!resolved.enabled) {
-    return findings;
-  }
-
-  const browserAuth = resolveBrowserControlAuth(cfg, env);
-  const explicitAuthMode = cfg.gateway?.auth?.mode;
-  const tokenConfigured =
-    Boolean(browserAuth.token) ||
-    hasNonEmptyString(env.GODSEYE_GATEWAY_TOKEN) ||
-    hasConfiguredSecretInput(cfg.gateway?.auth?.token, cfg.secrets?.defaults);
-  const passwordCanWin =
-    explicitAuthMode === "password" ||
-    (explicitAuthMode !== "token" &&
-      explicitAuthMode !== "none" &&
-      explicitAuthMode !== "trusted-proxy" &&
-      !tokenConfigured);
-  const passwordConfigured =
-    Boolean(browserAuth.password) ||
-    (passwordCanWin &&
-      (hasNonEmptyString(env.GODSEYE_GATEWAY_PASSWORD) ||
-        hasConfiguredSecretInput(cfg.gateway?.auth?.password, cfg.secrets?.defaults)));
-  if (!tokenConfigured && !passwordConfigured) {
-    findings.push({
-      checkId: "browser.control_no_auth",
-      severity: "critical",
-      title: "Browser control has no auth",
-      detail:
-        "Browser control HTTP routes are enabled but no gateway.auth token/password is configured. " +
-        "Any local process (or SSRF to loopback) can call browser control endpoints.",
-      remediation:
-        "Set gateway.auth.token (recommended) or gateway.auth.password so browser control HTTP routes require authentication. Restarting the gateway will auto-generate gateway.auth.token when browser control is enabled.",
+    const requestedPluginIds = new Set<string>();
+    for (const pluginId of Object.keys(autoEnabled.autoEnabledReasons)) {
+      const normalized = pluginId.trim();
+      if (normalized) {
+        requestedPluginIds.add(normalized);
+      }
+    }
+    for (const pluginId of autoEnabled.config.plugins?.allow ?? []) {
+      if (typeof pluginId !== "string") {
+        continue;
+      }
+      const normalized = pluginId.trim();
+      if (normalized) {
+        requestedPluginIds.add(normalized);
+      }
+    }
+    for (const [pluginId, entry] of Object.entries(autoEnabled.config.plugins?.entries ?? {})) {
+      if (entry?.enabled === false) {
+        continue;
+      }
+      const normalized = pluginId.trim();
+      if (normalized) {
+        requestedPluginIds.add(normalized);
+      }
+    }
+    if (requestedPluginIds.size === 0) {
+      return [];
+    }
+    const snapshot = (
+      await loadPluginMetadataRegistryLoaderModule()
+    ).loadPluginMetadataRegistrySnapshot({
+      config: autoEnabled.config,
+      activationSourceConfig: context.sourceConfig,
+      env: context.env,
+      onlyPluginIds: [...requestedPluginIds],
     });
+    collectors = snapshot.securityAuditCollectors ?? [];
   }
-
-  for (const name of Object.keys(resolved.profiles)) {
-    const profile = resolveProfile(resolved, name);
-    if (!profile || profile.cdpIsLoopback) {
-      continue;
-    }
-    let url: URL;
-    try {
-      url = new URL(profile.cdpUrl);
-    } catch {
-      continue;
-    }
-    const redactedCdpUrl = redactCdpUrl(profile.cdpUrl) ?? profile.cdpUrl;
-    if (url.protocol === "http:") {
-      findings.push({
-        checkId: "browser.remote_cdp_http",
-        severity: "warn",
-        title: "Remote CDP uses HTTP",
-        detail: `browser profile "${name}" uses http CDP (${redactedCdpUrl}); this is OK only if it's tailnet-only or behind an encrypted tunnel.`,
-        remediation: `Prefer HTTPS/TLS or a tailnet-only endpoint for remote CDP.`,
-      });
-    }
-    if (
-      isPrivateNetworkAllowedByPolicy(resolved.ssrfPolicy) &&
-      isBlockedHostnameOrIp(url.hostname)
-    ) {
-      findings.push({
-        checkId: "browser.remote_cdp_private_host",
-        severity: "warn",
-        title: "Remote CDP targets a private/internal host",
-        detail:
-          `browser profile "${name}" points at a private/internal CDP host (${redactedCdpUrl}). ` +
-          "This is expected for LAN/tailnet/WSL-style setups, but treat it as a trusted-network endpoint.",
-        remediation:
-          "Prefer a tailnet or tunnel for remote CDP. If you want strict blocking, set browser.ssrfPolicy.dangerouslyAllowPrivateNetwork=false and allow only explicit hosts.",
-      });
-    }
-  }
-
-  return findings;
+  const collectorResults = await Promise.all(
+    collectors.map(async (entry) => {
+      try {
+        return await entry.collector({
+          config: context.cfg,
+          sourceConfig: context.sourceConfig,
+          env: context.env,
+          stateDir: context.stateDir,
+          configPath: context.configPath,
+        });
+      } catch (err) {
+        return [
+          {
+            checkId: `plugins.${entry.pluginId}.security_audit_failed`,
+            severity: "warn" as const,
+            title: "Plugin security audit collector failed",
+            detail: `${entry.pluginId}: ${String(err)}`,
+          },
+        ];
+      }
+    }),
+  );
+  return collectorResults.flat();
 }
 
-function collectLoggingFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] {
+export function collectLoggingFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const redact = cfg.logging?.redactSensitive;
   if (redact !== "off") {
     return [];
@@ -854,7 +784,7 @@ function collectLoggingFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] {
   ];
 }
 
-function collectElevatedFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] {
+export function collectElevatedFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const enabled = cfg.tools?.elevated?.enabled;
   const allowFrom = cfg.tools?.elevated?.allowFrom ?? {};
@@ -889,7 +819,7 @@ function collectElevatedFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] {
   return findings;
 }
 
-function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] {
+export function collectExecRuntimeFindings(cfg: OpenClawConfig): SecurityAuditFinding[] {
   const findings: SecurityAuditFinding[] = [];
   const globalExecHost = cfg.tools?.exec?.host;
   const globalStrictInlineEval = cfg.tools?.exec?.strictInlineEval === true;
@@ -904,7 +834,7 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
       title: "Exec host is sandbox but sandbox mode is off",
       detail:
         "tools.exec.host is explicitly set to sandbox while agents.defaults.sandbox.mode=off. " +
-        "In this mode, exec runs directly on the gateway host.",
+        "In this mode, exec fails closed because no sandbox runtime is available.",
       remediation:
         'Enable sandbox mode (`agents.defaults.sandbox.mode="non-main"` or `"all"`) or set tools.exec.host to "gateway" with approvals.',
     });
@@ -930,7 +860,7 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
       title: "Agent exec host uses sandbox while sandbox mode is off",
       detail:
         `agents.list.*.tools.exec.host is set to sandbox for: ${riskyAgents.join(", ")}. ` +
-        "With sandbox mode off, exec runs directly on the gateway host.",
+        "With sandbox mode off, exec fails closed for those agents.",
       remediation:
         'Enable sandbox mode for these agents (`agents.list[].sandbox.mode`) or set their tools.exec.host to "gateway".',
     });
@@ -942,7 +872,7 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
         {
           id: DEFAULT_AGENT_ID,
           security: cfg.tools?.exec?.security ?? "deny",
-          host: cfg.tools?.exec?.host ?? "sandbox",
+          host: cfg.tools?.exec?.host ?? "auto",
         },
         ...agents
           .filter(
@@ -952,7 +882,7 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
           .map((entry) => ({
             id: entry.id,
             security: entry.tools?.exec?.security ?? cfg.tools?.exec?.security ?? "deny",
-            host: entry.tools?.exec?.host ?? cfg.tools?.exec?.host ?? "sandbox",
+            host: entry.tools?.exec?.host ?? cfg.tools?.exec?.host ?? "auto",
           })),
       ].map((entry) => [entry.id, entry] as const),
     ).values(),
@@ -1031,7 +961,7 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
     return Array.from(
       new Set(
         entries
-          .map((entry) => (typeof entry === "string" ? entry.trim().toLowerCase() : ""))
+          .map((entry) => normalizeOptionalLowercaseString(entry) ?? "")
           .filter((entry) => entry.length > 0),
       ),
     ).toSorted();
@@ -1197,15 +1127,15 @@ function collectExecRuntimeFindings(cfg: GodsEyeConfig): SecurityAuditFinding[] 
   return findings;
 }
 
-function collectOpenExecSurfacePaths(cfg: GodsEyeConfig): string[] {
-  const channels = asRecord(cfg.channels);
+function collectOpenExecSurfacePaths(cfg: OpenClawConfig): string[] {
+  const channels = asNullableRecord(cfg.channels);
   if (!channels) {
     return [];
   }
   const hits = new Set<string>();
   const seen = new WeakSet<object>();
   const visit = (value: unknown, scope: string) => {
-    const record = asRecord(value);
+    const record = asNullableRecord(value);
     if (!record || seen.has(record)) {
       return;
     }
@@ -1221,7 +1151,7 @@ function collectOpenExecSurfacePaths(cfg: GodsEyeConfig): string[] {
         visit(nested, `${scope}.${key}`);
         continue;
       }
-      if (asRecord(nested)) {
+      if (asNullableRecord(nested)) {
         visit(nested, `${scope}.${key}`);
       }
     }
@@ -1265,7 +1195,7 @@ function collectInterpreterAllowlistHits(params: {
 }
 
 async function maybeProbeGateway(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   timeoutMs: number;
   probe: ProbeGatewayFn;
@@ -1274,29 +1204,18 @@ async function maybeProbeGateway(params: {
   deep: SecurityAuditReport["deep"];
   authWarning?: string;
 }> {
-  const { buildGatewayConnectionDetails, resolveGatewayProbeAuthSafe } =
+  const { buildGatewayConnectionDetails, resolveGatewayProbeAuthSafe, resolveGatewayProbeTarget } =
     await loadGatewayProbeDeps();
   const connection = buildGatewayConnectionDetails({ config: params.cfg });
   const url = connection.url;
-  const isRemoteMode = params.cfg.gateway?.mode === "remote";
-  const remoteUrlRaw =
-    typeof params.cfg.gateway?.remote?.url === "string" ? params.cfg.gateway.remote.url.trim() : "";
-  const remoteUrlMissing = isRemoteMode && !remoteUrlRaw;
+  const probeTarget = resolveGatewayProbeTarget(params.cfg);
 
-  const authResolution =
-    !isRemoteMode || remoteUrlMissing
-      ? resolveGatewayProbeAuthSafe({
-          cfg: params.cfg,
-          env: params.env,
-          mode: "local",
-          explicitAuth: params.explicitAuth,
-        })
-      : resolveGatewayProbeAuthSafe({
-          cfg: params.cfg,
-          env: params.env,
-          mode: "remote",
-          explicitAuth: params.explicitAuth,
-        });
+  const authResolution = resolveGatewayProbeAuthSafe({
+    cfg: params.cfg,
+    env: params.env,
+    mode: probeTarget.mode,
+    explicitAuth: params.explicitAuth,
+  });
   const res = await params
     .probe({ url, auth: authResolution.auth, timeoutMs: params.timeoutMs })
     .catch((err) => ({
@@ -1379,7 +1298,7 @@ export async function runSecurityAudit(opts: SecurityAuditOptions): Promise<Secu
   findings.push(...auditNonDeep.collectSyncedFolderFindings({ stateDir, configPath }));
 
   findings.push(...collectGatewayConfigFindings(cfg, context.sourceConfig, env));
-  findings.push(...collectBrowserControlFindings(cfg, env));
+  findings.push(...(await collectPluginSecurityAuditFindings(context)));
   findings.push(...collectLoggingFindings(cfg));
   findings.push(...collectElevatedFindings(cfg));
   findings.push(...collectExecRuntimeFindings(cfg));
@@ -1433,28 +1352,28 @@ export async function runSecurityAudit(opts: SecurityAuditOptions): Promise<Secu
       })),
     );
     findings.push(...(await auditNonDeep.collectPluginsTrustFindings({ cfg, stateDir })));
-    if (context.deep) {
-      const auditDeep = await loadAuditDeepModule();
-      findings.push(
-        ...(await auditDeep.collectPluginsCodeSafetyFindings({
-          stateDir,
-          summaryCache: context.codeSafetySummaryCache,
-        })),
-      );
-      findings.push(
-        ...(await auditDeep.collectInstalledSkillsCodeSafetyFindings({
-          cfg,
-          stateDir,
-          summaryCache: context.codeSafetySummaryCache,
-        })),
-      );
-    }
+    findings.push(
+      ...(await collectDeepCodeSafetyFindings({
+        cfg,
+        stateDir,
+        deep: context.deep,
+        summaryCache: context.codeSafetySummaryCache,
+      })),
+    );
   }
 
   const shouldAuditChannelSecurity =
     context.includeChannelSecurity &&
     (context.plugins !== undefined || hasPotentialConfiguredChannels(cfg, env));
   if (shouldAuditChannelSecurity) {
+    if (context.plugins === undefined) {
+      (await loadPluginRegistryLoaderModule()).ensurePluginRegistryLoaded({
+        scope: "configured-channels",
+        config: cfg,
+        activationSourceConfig: context.sourceConfig,
+        env,
+      });
+    }
     const channelPlugins = context.plugins ?? (await loadChannelPlugins()).listChannelPlugins();
     const { collectChannelSecurityFindings } = await loadAuditChannelModule();
     findings.push(
@@ -1476,25 +1395,7 @@ export async function runSecurityAudit(opts: SecurityAuditOptions): Promise<Secu
       })
     : undefined;
   const deep = deepProbeResult?.deep;
-
-  if (deep?.gateway?.attempted && !deep.gateway.ok) {
-    findings.push({
-      checkId: "gateway.probe_failed",
-      severity: "warn",
-      title: "Gateway probe failed (deep)",
-      detail: deep.gateway.error ?? "gateway unreachable",
-      remediation: `Run "${formatCliCommand("godseye status --all")}" to debug connectivity/auth, then re-run "${formatCliCommand("godseye security audit --deep")}".`,
-    });
-  }
-  if (deepProbeResult?.authWarning) {
-    findings.push({
-      checkId: "gateway.probe_auth_secretref_unavailable",
-      severity: "warn",
-      title: "Gateway probe auth SecretRef is unavailable",
-      detail: deepProbeResult.authWarning,
-      remediation: `Set GODSEYE_GATEWAY_TOKEN/GODSEYE_GATEWAY_PASSWORD in this shell or resolve the external secret provider, then re-run "${formatCliCommand("godseye security audit --deep")}".`,
-    });
-  }
+  findings.push(...collectDeepProbeFindings({ deep, authWarning: deepProbeResult?.authWarning }));
 
   const summary = countBySeverity(findings);
   return { ts: Date.now(), summary, findings, deep };

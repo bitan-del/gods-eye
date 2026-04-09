@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   resolveGatewayProbeAuthSafe,
   resolveGatewayProbeAuthSafeWithSecretInputs,
+  resolveGatewayProbeTarget,
   resolveGatewayProbeAuthWithSecretInputs,
 } from "./probe-auth.js";
 
-function expectUnresolvedProbeTokenWarning(cfg: GodsEyeConfig) {
+function expectUnresolvedProbeTokenWarning(cfg: OpenClawConfig) {
   const result = resolveGatewayProbeAuthSafe({
     cfg,
     mode: "local",
@@ -27,7 +28,7 @@ describe("resolveGatewayProbeAuthSafe", () => {
             token: "token-value",
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       mode: "local",
       env: {} as NodeJS.ProcessEnv,
     });
@@ -53,7 +54,7 @@ describe("resolveGatewayProbeAuthSafe", () => {
           default: { source: "env" },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
   });
 
   it("does not fall through to remote token when local token SecretRef is unresolved", () => {
@@ -73,7 +74,7 @@ describe("resolveGatewayProbeAuthSafe", () => {
           default: { source: "env" },
         },
       },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
   });
 
   it("ignores unresolved local token SecretRef in remote mode when remote-only auth is requested", () => {
@@ -94,7 +95,7 @@ describe("resolveGatewayProbeAuthSafe", () => {
             default: { source: "env" },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       mode: "remote",
       env: {} as NodeJS.ProcessEnv,
     });
@@ -108,6 +109,39 @@ describe("resolveGatewayProbeAuthSafe", () => {
   });
 });
 
+describe("resolveGatewayProbeTarget", () => {
+  it("falls back to local probe mode when remote mode is configured without remote url", () => {
+    expect(
+      resolveGatewayProbeTarget({
+        gateway: {
+          mode: "remote",
+        },
+      } as OpenClawConfig),
+    ).toEqual({
+      gatewayMode: "remote",
+      mode: "local",
+      remoteUrlMissing: true,
+    });
+  });
+
+  it("keeps remote probe mode when remote url is configured", () => {
+    expect(
+      resolveGatewayProbeTarget({
+        gateway: {
+          mode: "remote",
+          remote: {
+            url: "wss://gateway.example",
+          },
+        },
+      } as OpenClawConfig),
+    ).toEqual({
+      gatewayMode: "remote",
+      mode: "remote",
+      remoteUrlMissing: false,
+    });
+  });
+});
+
 describe("resolveGatewayProbeAuthSafeWithSecretInputs", () => {
   it("resolves env SecretRef token via async secret-inputs path", async () => {
     const result = await resolveGatewayProbeAuthSafeWithSecretInputs({
@@ -115,7 +149,7 @@ describe("resolveGatewayProbeAuthSafeWithSecretInputs", () => {
         gateway: {
           auth: {
             mode: "token",
-            token: { source: "env", provider: "default", id: "GODSEYE_GATEWAY_TOKEN" },
+            token: { source: "env", provider: "default", id: "OPENCLAW_GATEWAY_TOKEN" },
           },
         },
         secrets: {
@@ -123,10 +157,10 @@ describe("resolveGatewayProbeAuthSafeWithSecretInputs", () => {
             default: { source: "env" },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       mode: "local",
       env: {
-        GODSEYE_GATEWAY_TOKEN: "test-token-from-env",
+        OPENCLAW_GATEWAY_TOKEN: "test-token-from-env",
       } as NodeJS.ProcessEnv,
     });
 
@@ -151,7 +185,7 @@ describe("resolveGatewayProbeAuthSafeWithSecretInputs", () => {
             default: { source: "env" },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       mode: "local",
       env: {} as NodeJS.ProcessEnv,
     });
@@ -177,7 +211,7 @@ describe("resolveGatewayProbeAuthWithSecretInputs", () => {
             default: { source: "env" },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       mode: "local",
       env: {
         DAEMON_GATEWAY_TOKEN: "resolved-daemon-token",

@@ -1,6 +1,6 @@
-import type { WebhookRequestBody } from "@line/bot-sdk";
+import type { webhook } from "@line/bot-sdk";
 import type { NextFunction, Request, Response } from "express";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { loadConfig } from "godseye/plugin-sdk/config-runtime";
 import { DEFAULT_GROUP_HISTORY_LIMIT, type HistoryEntry } from "godseye/plugin-sdk/reply-history";
 import {
@@ -19,13 +19,13 @@ export interface LineBotOptions {
   channelSecret: string;
   accountId?: string;
   runtime?: RuntimeEnv;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   mediaMaxMb?: number;
   onMessage?: (ctx: LineInboundContext) => Promise<void>;
 }
 
 export interface LineBot {
-  handleWebhook: (body: WebhookRequestBody) => Promise<void>;
+  handleWebhook: (body: webhook.CallbackRequest) => Promise<void>;
   account: ResolvedLineAccount;
 }
 
@@ -48,7 +48,7 @@ export function createLineBot(opts: LineBotOptions): LineBot {
   const replayCache = createLineWebhookReplayCache();
   const groupHistories = new Map<string, HistoryEntry[]>();
 
-  const handleWebhook = async (body: WebhookRequestBody): Promise<void> => {
+  const handleWebhook = async (body: webhook.CallbackRequest): Promise<void> => {
     if (!body.events || body.events.length === 0) {
       return;
     }

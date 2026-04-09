@@ -11,8 +11,10 @@ const mocks = vi.hoisted(() => ({
   operations: undefined as CapturedEditOperations | undefined,
 }));
 
-vi.mock("@mariozechner/pi-coding-agent", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@mariozechner/pi-coding-agent")>();
+vi.mock("@mariozechner/pi-coding-agent", async () => {
+  const actual = await vi.importActual<typeof import("@mariozechner/pi-coding-agent")>(
+    "@mariozechner/pi-coding-agent",
+  );
   return {
     ...actual,
     createEditTool: (_cwd: string, options?: { operations?: CapturedEditOperations }) => {
@@ -45,7 +47,7 @@ describe("createHostWorkspaceEditTool host access mapping", () => {
   it.runIf(process.platform !== "win32")(
     "silently passes access for outside-workspace paths so readFile reports the real error",
     async () => {
-      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-edit-access-test-"));
+      tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-edit-access-test-"));
       const workspaceDir = path.join(tmpDir, "workspace");
       const outsideDir = path.join(tmpDir, "outside");
       const linkDir = path.join(workspaceDir, "escape");

@@ -5,5 +5,5 @@ export {
   type OpenClawConfig,
   type OpenClawPluginApi,
   type OpenClawPluginConfigSchema,
-} from "openclaw/plugin-sdk/plugin-entry";
-export { z } from "openclaw/plugin-sdk/zod";
+} from "godseye/plugin-sdk/plugin-entry";
+export { z } from "godseye/plugin-sdk/zod";

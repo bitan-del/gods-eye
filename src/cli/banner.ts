@@ -2,7 +2,7 @@ import { resolveCommitHash } from "../infra/git-commit.js";
 import { visibleWidth } from "../terminal/ansi.js";
 import { isRich, theme } from "../terminal/theme.js";
 import { hasRootVersionAlias } from "./argv.js";
-import { readCliBannerTaglineMode } from "./banner-config-lite.js";
+import { parseTaglineMode, readCliBannerTaglineMode } from "./banner-config-lite.js";
 import { pickTagline, type TaglineMode, type TaglineOptions } from "./tagline.js";
 
 type BannerOptions = TaglineOptions & {
@@ -36,13 +36,6 @@ const hasJsonFlag = (argv: string[]) =>
 const hasVersionFlag = (argv: string[]) =>
   argv.some((arg) => arg === "--version" || arg === "-V") || hasRootVersionAlias(argv);
 
-function parseTaglineMode(value: unknown): TaglineMode | undefined {
-  if (value === "random" || value === "default" || value === "off") {
-    return value;
-  }
-  return undefined;
-}
-
 function resolveTaglineMode(options: BannerOptions): TaglineMode | undefined {
   const explicit = parseTaglineMode(options.mode);
   if (explicit) {
@@ -57,8 +50,8 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   const commitLabel = commit ?? "unknown";
   const tagline = pickTagline({ ...options, mode: resolveTaglineMode(options) });
   const rich = options.richTty ?? isRich();
-  const title = "👁️ Gods Eye";
-  const prefix = "👁️ ";
+  const title = "🦞 OpenClaw";
+  const prefix = "🦞 ";
   const columns = options.columns ?? process.stdout.columns ?? 120;
   const plainBaseLine = `${title} ${version} (${commitLabel})`;
   const plainFullLine = tagline ? `${plainBaseLine} — ${tagline}` : plainBaseLine;
@@ -92,20 +85,20 @@ export function formatCliBannerLine(version: string, options: BannerOptions = {}
   return `${line1}\n${line2}`;
 }
 
-const GODSEYE_ASCII = [
-  "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
-  "██░▄▄▄░██░▄▄░██░▄▄▄██░▄▄▄░███░▄▄▄██░██░██░▄▄▄██",
-  "██░███▄██░▀▀░██░▄▄▄██░▀▀▀▄███░▄▄▄██░▀▀░██░▄▄▄██",
-  "██░▀▀▀░██░█████░▀▀▀██░▀▀▀░███░▀▀▀██░███░█░▀▀▀██",
-  "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
-  "                  👁️ GODS EYE 👁️                    ",
+const LOBSTER_ASCII = [
+  "▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄",
+  "██░▄▄▄░██░▄▄░██░▄▄▄██░▀██░██░▄▄▀██░████░▄▄▀██░███░██",
+  "██░███░██░▀▀░██░▄▄▄██░█░█░██░█████░████░▀▀░██░█░█░██",
+  "██░▀▀▀░██░█████░▀▀▀██░██▄░██░▀▀▄██░▀▀░█░██░██▄▀▄▀▄██",
+  "▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀",
+  "                  🦞 OPENCLAW 🦞                    ",
   " ",
 ];
 
 export function formatCliBannerArt(options: BannerOptions = {}): string {
   const rich = options.richTty ?? isRich();
   if (!rich) {
-    return GODSEYE_ASCII.join("\n");
+    return LOBSTER_ASCII.join("\n");
   }
 
   const colorChar = (ch: string) => {
@@ -121,13 +114,13 @@ export function formatCliBannerArt(options: BannerOptions = {}): string {
     return theme.muted(ch);
   };
 
-  const colored = GODSEYE_ASCII.map((line) => {
-    if (line.includes("GODS EYE")) {
+  const colored = LOBSTER_ASCII.map((line) => {
+    if (line.includes("OPENCLAW")) {
       return (
         theme.muted("              ") +
-        theme.accent("👁️") +
-        theme.info(" GODS EYE ") +
-        theme.accent("👁️")
+        theme.accent("🦞") +
+        theme.info(" OPENCLAW ") +
+        theme.accent("🦞")
       );
     }
     return splitGraphemes(line).map(colorChar).join("");

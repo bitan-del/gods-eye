@@ -18,10 +18,10 @@ import {
   runOpenAiEmbeddingBatches,
   runVoyageEmbeddingBatches,
   type MemoryEmbeddingProviderAdapter,
-} from "openclaw/plugin-sdk/memory-core-host-engine-embeddings";
-import { resolveUserPath } from "openclaw/plugin-sdk/memory-core-host-engine-foundation";
-import { getProviderEnvVars } from "openclaw/plugin-sdk/provider-env-vars";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/memory-core-host-engine-embeddings";
+import { resolveUserPath } from "godseye/plugin-sdk/memory-core-host-engine-foundation";
+import { getProviderEnvVars } from "godseye/plugin-sdk/provider-env-vars";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import { formatErrorMessage } from "../dreaming-shared.js";
 import { filterUnregisteredMemoryEmbeddingProviderAdapters } from "./provider-adapter-registration.js";
 

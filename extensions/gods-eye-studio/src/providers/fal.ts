@@ -1,7 +1,6 @@
 // fal.ai provider — handles actual API calls for image and video generation.
 // Uses the same auth resolution as the bundled fal extension.
 
-import { type AuthProfileStore, resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth";
 
 const DEFAULT_FAL_BASE_URL = "https://fal.run";
 const DEFAULT_FAL_QUEUE_URL = "https://queue.fal.run";
@@ -58,19 +57,14 @@ export async function resolveFalApiKey(params: {
   const envKey = process.env.FAL_KEY?.trim();
   if (envKey) return envKey;
 
-  // Fall back to the plugin auth system
-  const auth = await resolveApiKeyForProvider({
-    provider: "fal",
-    cfg: params.cfg,
-    agentDir: params.agentDir,
-    store: params.authStore as AuthProfileStore | undefined,
-  });
-  if (!auth.apiKey) {
+  // Fall back to config
+  const key = (params.cfg as any)?.models?.providers?.fal?.apiKey?.trim();
+  if (!key) {
     throw new Error(
       "fal API key not found. Set FAL_KEY env var or run godseye onboard to configure.",
     );
   }
-  return auth.apiKey;
+  return key;
 }
 
 function resolveFalBaseUrl(cfg?: Record<string, unknown>): string {

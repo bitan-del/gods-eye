@@ -1,25 +1,40 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import { captureEnv } from "../test-utils/env.js";
 import {
   writeBundleProbeMcpServer,
   writeClaudeBundle,
   writeFakeClaudeCli,
 } from "./bundle-mcp.test-harness.js";
-import { runCliAgent } from "./cli-runner.js";
 
-const E2E_TIMEOUT_MS = 20_000;
+vi.mock("./cli-runner/helpers.js", async () => {
+  const original =
+    await vi.importActual<typeof import("./cli-runner/helpers.js")>("./cli-runner/helpers.js");
+  return {
+    ...original,
+    // This e2e only validates bundle MCP wiring into the spawned CLI backend.
+    // Stub the large prompt-construction path so cold Vitest workers do not
+    // time out before the actual MCP roundtrip runs.
+    buildSystemPrompt: () => "Bundle MCP e2e test prompt.",
+  };
+});
+
+// This e2e spins a real stdio MCP server plus a spawned CLI process, which is
+// notably slower under Docker and cold Vitest imports. The plugins Docker lane
+// also reaches this test after several gateway/plugin restart exercises.
+const E2E_TIMEOUT_MS = 90_000;
 
 describe("runCliAgent bundle MCP e2e", () => {
   it(
     "routes enabled bundle MCP config into the claude-cli backend and executes the tool",
     { timeout: E2E_TIMEOUT_MS },
     async () => {
+      const { runCliAgent } = await import("./cli-runner.js");
       const envSnapshot = captureEnv(["HOME"]);
-      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-cli-bundle-mcp-"));
+      const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cli-bundle-mcp-"));
       process.env.HOME = tempHome;
 
       const workspaceDir = path.join(tempHome, "workspace");
@@ -27,13 +42,13 @@ describe("runCliAgent bundle MCP e2e", () => {
       const binDir = path.join(tempHome, "bin");
       const serverScriptPath = path.join(tempHome, "mcp", "bundle-probe.mjs");
       const fakeClaudePath = path.join(binDir, "fake-claude.mjs");
-      const pluginRoot = path.join(tempHome, ".godseye", "extensions", "bundle-probe");
+      const pluginRoot = path.join(tempHome, ".openclaw", "extensions", "bundle-probe");
       await fs.mkdir(workspaceDir, { recursive: true });
       await writeBundleProbeMcpServer(serverScriptPath);
       await writeFakeClaudeCli(fakeClaudePath);
       await writeClaudeBundle({ pluginRoot, serverScriptPath });
 
-      const config: GodsEyeConfig = {
+      const config: OpenClawConfig = {
         agents: {
           defaults: {
             workspace: workspaceDir,
@@ -62,7 +77,7 @@ describe("runCliAgent bundle MCP e2e", () => {
           prompt: "Use your configured MCP tools and report the bundle probe text.",
           provider: "claude-cli",
           model: "test-bundle",
-          timeoutMs: 10_000,
+          timeoutMs: 20_000,
           runId: "bundle-mcp-e2e",
         });
 

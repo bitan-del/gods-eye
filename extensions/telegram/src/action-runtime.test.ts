@@ -1,6 +1,6 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { captureEnv } from "godseye/plugin-sdk/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
-import { captureEnv } from "../../../test/helpers/extensions/env.js";
 import {
   handleTelegramAction,
   readTelegramButtons,
@@ -49,13 +49,13 @@ describe("handleTelegramAction", () => {
     emoji: "✅",
   } as const;
 
-  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): GodsEyeConfig {
+  function reactionConfig(reactionLevel: "minimal" | "extensive" | "off" | "ack"): OpenClawConfig {
     return {
       channels: { telegram: { botToken: "tok", reactionLevel } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
-  function telegramConfig(overrides?: Record<string, unknown>): GodsEyeConfig {
+  function telegramConfig(overrides?: Record<string, unknown>): OpenClawConfig {
     return {
       channels: {
         telegram: {
@@ -63,7 +63,7 @@ describe("handleTelegramAction", () => {
           ...overrides,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   async function sendInlineButtonsMessage(params: {
@@ -168,7 +168,7 @@ describe("handleTelegramAction", () => {
   it("soft-fails when messageId is missing", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", reactionLevel: "minimal" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = await handleTelegramAction(
       {
         action: "react",
@@ -203,7 +203,7 @@ describe("handleTelegramAction", () => {
   });
 
   it("rejects sticker actions when disabled by default", async () => {
-    const cfg = { channels: { telegram: { botToken: "tok" } } } as GodsEyeConfig;
+    const cfg = { channels: { telegram: { botToken: "tok" } } } as OpenClawConfig;
     await expect(
       handleTelegramAction(
         {
@@ -220,7 +220,7 @@ describe("handleTelegramAction", () => {
   it("sends stickers when enabled", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", actions: { sticker: true } } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await handleTelegramAction(
       {
         action: "sendSticker",
@@ -239,7 +239,7 @@ describe("handleTelegramAction", () => {
   it("accepts shared sticker action aliases", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok", actions: { sticker: true } } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await handleTelegramAction(
       {
         action: "sticker",
@@ -309,7 +309,7 @@ describe("handleTelegramAction", () => {
           actions: { reactions: false },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const result = await handleTelegramAction(
       {
         action: "react",
@@ -637,7 +637,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { sendMessage: false } },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await expect(
       handleTelegramAction(
         {
@@ -655,7 +655,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { poll: false } },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await expect(
       handleTelegramAction(
         {
@@ -672,7 +672,7 @@ describe("handleTelegramAction", () => {
   it("deletes a message", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await handleTelegramAction(
       {
         action: "deleteMessage",
@@ -693,7 +693,7 @@ describe("handleTelegramAction", () => {
       channels: {
         telegram: { botToken: "tok", actions: { deleteMessage: false } },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await expect(
       handleTelegramAction(
         {
@@ -708,7 +708,7 @@ describe("handleTelegramAction", () => {
 
   it("throws on missing bot token for sendMessage", async () => {
     delete process.env.TELEGRAM_BOT_TOKEN;
-    const cfg = {} as GodsEyeConfig;
+    const cfg = {} as OpenClawConfig;
     await expect(
       handleTelegramAction(
         {
@@ -724,7 +724,7 @@ describe("handleTelegramAction", () => {
   it("allows inline buttons by default (allowlist)", async () => {
     const cfg = {
       channels: { telegram: { botToken: "tok" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await handleTelegramAction(
       {
         action: "sendMessage",
@@ -867,6 +867,28 @@ describe("readTelegramButtons", () => {
       }),
     ).toThrow(/style must be one of danger, success, primary/i);
   });
+
+  it("rejects callback_data over Telegram's 64-byte limit", () => {
+    expect(() =>
+      readTelegramButtons({
+        buttons: [[{ text: "Option A", callback_data: "x".repeat(65) }]],
+      }),
+    ).toThrow(/callback_data too long/i);
+  });
+
+  it("accepts multibyte callback_data at 64 bytes and rejects 68 bytes", () => {
+    expect(
+      readTelegramButtons({
+        buttons: [[{ text: "Option A", callback_data: "😀".repeat(16) }]],
+      }),
+    ).toEqual([[{ text: "Option A", callback_data: "😀".repeat(16) }]]);
+
+    expect(() =>
+      readTelegramButtons({
+        buttons: [[{ text: "Option A", callback_data: "😀".repeat(17) }]],
+      }),
+    ).toThrow(/callback_data too long/i);
+  });
 });
 
 describe("handleTelegramAction per-account gating", () => {
@@ -877,7 +899,7 @@ describe("handleTelegramAction per-account gating", () => {
     >;
     topLevelBotToken?: string;
     topLevelActions?: { reactions?: boolean };
-  }): GodsEyeConfig {
+  }): OpenClawConfig {
     return {
       channels: {
         telegram: {
@@ -886,10 +908,10 @@ describe("handleTelegramAction per-account gating", () => {
           accounts: params.accounts,
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
-  async function expectAccountStickerSend(cfg: GodsEyeConfig, accountId = "media") {
+  async function expectAccountStickerSend(cfg: OpenClawConfig, accountId = "media") {
     await handleTelegramAction(
       { action: "sendSticker", to: "123", fileId: "sticker-id", accountId },
       cfg,
@@ -919,7 +941,7 @@ describe("handleTelegramAction per-account gating", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     await expect(
       handleTelegramAction(

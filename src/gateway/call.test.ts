@@ -1,12 +1,26 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
+import type { DeviceIdentity } from "../infra/device-identity.js";
 import { captureEnv } from "../test-utils/env.js";
+import { GATEWAY_CLIENT_MODES, GATEWAY_CLIENT_NAMES } from "../utils/message-channel.js";
 import {
   loadConfigMock as loadConfig,
   pickPrimaryLanIPv4Mock as pickPrimaryLanIPv4,
   pickPrimaryTailnetIPv4Mock as pickPrimaryTailnetIPv4,
   resolveGatewayPortMock as resolveGatewayPort,
 } from "./gateway-connection.test-mocks.js";
+
+const deviceIdentityState = vi.hoisted(() => ({
+  value: {
+    deviceId: "test-device-identity",
+    publicKeyPem: "test-public-key",
+    privateKeyPem: "test-private-key",
+  } satisfies DeviceIdentity,
+  throwOnLoad: false,
+}));
 
 let lastClientOptions: {
   url?: string;
@@ -28,6 +42,51 @@ let startMode: StartMode = "hello";
 let closeCode = 1006;
 let closeReason = "";
 let helloMethods: string[] | undefined = ["health", "secrets.resolve"];
+
+vi.mock("./client.js", () => ({
+  describeGatewayCloseCode: (code: number) => {
+    if (code === 1000) {
+      return "normal closure";
+    }
+    if (code === 1006) {
+      return "abnormal closure (no close frame)";
+    }
+    return undefined;
+  },
+  GatewayClient: class {
+    constructor(opts: {
+      url?: string;
+      token?: string;
+      password?: string;
+      scopes?: string[];
+      onHelloOk?: (hello: { features?: { methods?: string[] } }) => void | Promise<void>;
+      onClose?: (code: number, reason: string) => void;
+    }) {
+      lastClientOptions = opts;
+    }
+    async request(
+      method: string,
+      params: unknown,
+      opts?: { expectFinal?: boolean; timeoutMs?: number | null },
+    ) {
+      lastRequestOptions = { method, params, opts };
+      return { ok: true };
+    }
+    start() {
+      if (startMode === "hello") {
+        void lastClientOptions?.onHelloOk?.({
+          features: {
+            methods: helloMethods,
+          },
+        });
+      } else if (startMode === "close") {
+        lastClientOptions?.onClose?.(closeCode, closeReason);
+      }
+    }
+    stop() {}
+  },
+}));
+
 const { __testing, buildGatewayConnectionDetails, callGateway, callGatewayCli, callGatewayScoped } =
   await import("./call.js");
 
@@ -75,17 +134,24 @@ function resetGatewayCallMocks() {
   closeCode = 1006;
   closeReason = "";
   helloMethods = ["health", "secrets.resolve"];
-  const loadConfigForTests = loadConfig as unknown as () => GodsEyeConfig;
+  const loadConfigForTests = loadConfig as unknown as () => OpenClawConfig;
   const resolveGatewayPortForTests = resolveGatewayPort as unknown as (
-    cfg?: GodsEyeConfig,
+    cfg?: OpenClawConfig,
     env?: NodeJS.ProcessEnv,
   ) => number;
   __testing.setDepsForTests({
     createGatewayClient: (opts) =>
       new StubGatewayClient(opts as ConstructorParameters<typeof StubGatewayClient>[0]) as never,
     loadConfig: loadConfigForTests,
+    loadOrCreateDeviceIdentity: () => {
+      if (deviceIdentityState.throwOnLoad) {
+        throw new Error("read-only identity dir");
+      }
+      return deviceIdentityState.value;
+    },
     resolveGatewayPort: resolveGatewayPortForTests,
   });
+  deviceIdentityState.throwOnLoad = false;
 }
 
 function setGatewayNetworkDefaults(port = 18789) {
@@ -110,16 +176,22 @@ function makeRemotePasswordGatewayConfig(remotePassword: string, localPassword =
 
 describe("callGateway url resolution", () => {
   const envSnapshot = captureEnv([
-    "GODSEYE_ALLOW_INSECURE_PRIVATE_WS",
-    "GODSEYE_GATEWAY_URL",
-    "GODSEYE_GATEWAY_TOKEN",
+    "OPENCLAW_ALLOW_INSECURE_PRIVATE_WS",
+    "OPENCLAW_CONFIG_PATH",
+    "OPENCLAW_GATEWAY_PORT",
+    "OPENCLAW_GATEWAY_URL",
+    "OPENCLAW_GATEWAY_TOKEN",
+    "OPENCLAW_STATE_DIR",
   ]);
 
   beforeEach(() => {
     envSnapshot.restore();
-    delete process.env.GODSEYE_ALLOW_INSECURE_PRIVATE_WS;
-    delete process.env.GODSEYE_GATEWAY_URL;
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_ALLOW_INSECURE_PRIVATE_WS;
+    delete process.env.OPENCLAW_CONFIG_PATH;
+    delete process.env.OPENCLAW_GATEWAY_PORT;
+    delete process.env.OPENCLAW_GATEWAY_URL;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_STATE_DIR;
     resetGatewayCallMocks();
   });
 
@@ -211,6 +283,22 @@ describe("callGateway url resolution", () => {
     expect(lastClientOptions?.token).toBe("explicit-token");
   });
 
+  it("skips config loading when explicit url and token are provided", async () => {
+    loadConfig.mockImplementation(() => {
+      throw new Error("loadConfig should not run");
+    });
+
+    await callGatewayCli({
+      method: "health",
+      url: "ws://127.0.0.1:18800",
+      token: "test-token",
+    });
+
+    expect(loadConfig).not.toHaveBeenCalled();
+    expect(lastClientOptions?.url).toBe("ws://127.0.0.1:18800");
+    expect(lastClientOptions?.token).toBe("test-token");
+  });
+
   it("keeps device identity enabled for local loopback shared-token auth", async () => {
     setLocalLoopbackGatewayConfig();
 
@@ -221,17 +309,32 @@ describe("callGateway url resolution", () => {
 
     expect(lastClientOptions?.url).toBe("ws://127.0.0.1:18789");
     expect(lastClientOptions?.token).toBe("explicit-token");
-    expect(lastClientOptions?.deviceIdentity).toBeDefined();
+    expect(lastClientOptions?.deviceIdentity).toEqual(deviceIdentityState.value);
   });
 
-  it("uses GODSEYE_GATEWAY_URL env override in remote mode when remote URL is missing", async () => {
+  it("falls back to token/password auth when device identity cannot be persisted", async () => {
+    setLocalLoopbackGatewayConfig();
+    deviceIdentityState.throwOnLoad = true;
+
+    await callGateway({
+      method: "health",
+      token: "explicit-token",
+    });
+
+    expect(lastClientOptions?.url).toBe("ws://127.0.0.1:18789");
+    expect(lastClientOptions?.token).toBe("explicit-token");
+    expect(lastClientOptions?.deviceIdentity).toBeNull();
+    expect(lastRequestOptions?.method).toBe("health");
+  });
+
+  it("uses OPENCLAW_GATEWAY_URL env override in remote mode when remote URL is missing", async () => {
     loadConfig.mockReturnValue({
       gateway: { mode: "remote", bind: "loopback", remote: {} },
     });
     resolveGatewayPort.mockReturnValue(18789);
     pickPrimaryTailnetIPv4.mockReturnValue(undefined);
-    process.env.GODSEYE_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
+    process.env.OPENCLAW_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
 
     await callGateway({
       method: "health",
@@ -256,11 +359,11 @@ describe("callGateway url resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
     resolveGatewayPort.mockReturnValue(18789);
     pickPrimaryTailnetIPv4.mockReturnValue(undefined);
-    process.env.GODSEYE_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
+    process.env.OPENCLAW_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
 
     await callGateway({
       method: "health",
@@ -283,8 +386,8 @@ describe("callGateway url resolution", () => {
     });
     setGatewayNetworkDefaults(18789);
     pickPrimaryTailnetIPv4.mockReturnValue(undefined);
-    process.env.GODSEYE_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
+    process.env.OPENCLAW_GATEWAY_URL = "wss://gateway-in-container.internal:9443/ws";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
 
     await callGateway({
       method: "health",
@@ -330,6 +433,7 @@ describe("callGateway url resolution", () => {
         "operator.write",
         "operator.approvals",
         "operator.pairing",
+        "operator.talk.secrets",
       ],
     },
   ])("scope selection: $label", async ({ call, expectedScopes }) => {
@@ -346,6 +450,54 @@ describe("callGateway url resolution", () => {
 
     await callGatewayScoped({ method: "health", scopes: [] });
     expect(lastClientOptions?.scopes).toEqual([]);
+  });
+
+  it("yields one event-loop turn before starting CLI pairing requests", async () => {
+    setLocalLoopbackGatewayConfig();
+
+    let preConnectYieldRan = false;
+    let sawYieldBeforeStart = false;
+    setImmediate(() => {
+      preConnectYieldRan = true;
+    });
+
+    __testing.setDepsForTests({
+      createGatewayClient: (opts) =>
+        ({
+          async request(
+            method: string,
+            params: unknown,
+            requestOpts?: { expectFinal?: boolean; timeoutMs?: number | null },
+          ) {
+            lastRequestOptions = { method, params, opts: requestOpts };
+            return { ok: true };
+          },
+          start() {
+            sawYieldBeforeStart = preConnectYieldRan;
+            void opts.onHelloOk?.({
+              features: {
+                methods: helloMethods ?? [],
+                events: [],
+              },
+            } as unknown as Parameters<NonNullable<typeof opts.onHelloOk>>[0]);
+          },
+          stop() {},
+        }) as never,
+      loadConfig: loadConfig as unknown as () => OpenClawConfig,
+      loadOrCreateDeviceIdentity: () => deviceIdentityState.value,
+      resolveGatewayPort: resolveGatewayPort as unknown as (
+        cfg?: OpenClawConfig,
+        env?: NodeJS.ProcessEnv,
+      ) => number,
+    });
+
+    await callGateway({
+      method: "device.pair.list",
+      mode: GATEWAY_CLIENT_MODES.CLI,
+      clientName: GATEWAY_CLIENT_NAMES.CLI,
+    });
+
+    expect(sawYieldBeforeStart).toBe(true);
   });
 });
 
@@ -431,25 +583,46 @@ describe("buildGatewayConnectionDetails", () => {
     expect(details.remoteFallbackNote).toBeUndefined();
   });
 
-  it("uses env GODSEYE_GATEWAY_URL when set", () => {
+  it("uses env OPENCLAW_GATEWAY_URL when set", () => {
     loadConfig.mockReturnValue({ gateway: { mode: "local", bind: "loopback" } });
     resolveGatewayPort.mockReturnValue(18800);
     pickPrimaryTailnetIPv4.mockReturnValue(undefined);
-    const prevUrl = process.env.GODSEYE_GATEWAY_URL;
+    const prevUrl = process.env.OPENCLAW_GATEWAY_URL;
     try {
-      process.env.GODSEYE_GATEWAY_URL = "wss://browser-gateway.local:9443/ws";
+      process.env.OPENCLAW_GATEWAY_URL = "wss://browser-gateway.local:9443/ws";
 
       const details = buildGatewayConnectionDetails();
 
       expect(details.url).toBe("wss://browser-gateway.local:9443/ws");
-      expect(details.urlSource).toBe("env GODSEYE_GATEWAY_URL");
+      expect(details.urlSource).toBe("env OPENCLAW_GATEWAY_URL");
       expect(details.bindDetail).toBeUndefined();
     } finally {
       if (prevUrl === undefined) {
-        delete process.env.GODSEYE_GATEWAY_URL;
+        delete process.env.OPENCLAW_GATEWAY_URL;
       } else {
-        process.env.GODSEYE_GATEWAY_URL = prevUrl;
+        process.env.OPENCLAW_GATEWAY_URL = prevUrl;
       }
+    }
+  });
+
+  it("falls back to the default config loader when test deps drift", () => {
+    const tempStateDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-gateway-call-"));
+    process.env.OPENCLAW_STATE_DIR = tempStateDir;
+    process.env.OPENCLAW_CONFIG_PATH = path.join(tempStateDir, "missing-config.json");
+    try {
+      loadConfig.mockReturnValue({ gateway: { mode: "local", bind: "loopback" } });
+      resolveGatewayPort.mockReturnValue(18800);
+      __testing.setDepsForTests({
+        loadConfig: {} as never,
+        resolveGatewayPort: () => 18789,
+      });
+
+      const details = buildGatewayConnectionDetails();
+
+      expect(details.url).toBe("ws://127.0.0.1:18789");
+      expect(details.urlSource).toBe("local loopback");
+    } finally {
+      fs.rmSync(tempStateDir, { recursive: true, force: true });
     }
   });
 
@@ -475,11 +648,11 @@ describe("buildGatewayConnectionDetails", () => {
     expect((thrown as Error).message).toContain("plaintext ws://");
     expect((thrown as Error).message).toContain("wss://");
     expect((thrown as Error).message).toContain("Tailscale Serve/Funnel");
-    expect((thrown as Error).message).toContain("godseye doctor --fix");
+    expect((thrown as Error).message).toContain("openclaw doctor --fix");
   });
 
-  it("allows ws:// private remote URLs only when GODSEYE_ALLOW_INSECURE_PRIVATE_WS=1", () => {
-    process.env.GODSEYE_ALLOW_INSECURE_PRIVATE_WS = "1";
+  it("allows ws:// private remote URLs only when OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1", () => {
+    process.env.OPENCLAW_ALLOW_INSECURE_PRIVATE_WS = "1";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "remote",
@@ -495,20 +668,20 @@ describe("buildGatewayConnectionDetails", () => {
     expect(details.urlSource).toBe("config gateway.remote.url");
   });
 
-  it("allows ws:// hostname remote URLs when GODSEYE_ALLOW_INSECURE_PRIVATE_WS=1", () => {
-    process.env.GODSEYE_ALLOW_INSECURE_PRIVATE_WS = "1";
+  it("allows ws:// hostname remote URLs when OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1", () => {
+    process.env.OPENCLAW_ALLOW_INSECURE_PRIVATE_WS = "1";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "remote",
         bind: "loopback",
-        remote: { url: "ws://godseye-gateway.ai:18789" },
+        remote: { url: "ws://openclaw-gateway.ai:18789" },
       },
     });
     resolveGatewayPort.mockReturnValue(18789);
 
     const details = buildGatewayConnectionDetails();
 
-    expect(details.url).toBe("ws://godseye-gateway.ai:18789");
+    expect(details.url).toBe("ws://openclaw-gateway.ai:18789");
     expect(details.urlSource).toBe("config gateway.remote.url");
   });
 
@@ -635,14 +808,14 @@ describe("callGateway url override auth requirements", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "GODSEYE_GATEWAY_TOKEN",
-      "GODSEYE_GATEWAY_PASSWORD",
-      "GODSEYE_GATEWAY_URL",
+      "OPENCLAW_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
+      "OPENCLAW_GATEWAY_URL",
     ]);
     resetGatewayCallMocks();
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
-    delete process.env.GODSEYE_GATEWAY_URL;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    delete process.env.OPENCLAW_GATEWAY_URL;
     setGatewayNetworkDefaults(18789);
   });
 
@@ -651,8 +824,8 @@ describe("callGateway url override auth requirements", () => {
   });
 
   it("throws when url override is set without explicit credentials", async () => {
-    process.env.GODSEYE_GATEWAY_TOKEN = "env-token";
-    process.env.GODSEYE_GATEWAY_PASSWORD = "env-password";
+    process.env.OPENCLAW_GATEWAY_TOKEN = "env-token";
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "env-password";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "local",
@@ -666,7 +839,7 @@ describe("callGateway url override auth requirements", () => {
   });
 
   it("throws when env URL override is set without env credentials", async () => {
-    process.env.GODSEYE_GATEWAY_URL = "wss://override.example/ws";
+    process.env.OPENCLAW_GATEWAY_URL = "wss://override.example/ws";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "local",
@@ -684,7 +857,7 @@ describe("callGateway password resolution", () => {
     {
       label: "password",
       authKey: "password", // pragma: allowlist secret
-      envKey: "GODSEYE_GATEWAY_PASSWORD",
+      envKey: "OPENCLAW_GATEWAY_PASSWORD",
       envValue: "from-env",
       configValue: "from-config",
       explicitValue: "explicit-password",
@@ -692,7 +865,7 @@ describe("callGateway password resolution", () => {
     {
       label: "token",
       authKey: "token", // pragma: allowlist secret
-      envKey: "GODSEYE_GATEWAY_TOKEN",
+      envKey: "OPENCLAW_GATEWAY_TOKEN",
       envValue: "env-token",
       configValue: "local-token",
       explicitValue: "explicit-token",
@@ -701,16 +874,16 @@ describe("callGateway password resolution", () => {
 
   beforeEach(() => {
     envSnapshot = captureEnv([
-      "GODSEYE_GATEWAY_PASSWORD",
-      "GODSEYE_GATEWAY_TOKEN",
+      "OPENCLAW_GATEWAY_PASSWORD",
+      "OPENCLAW_GATEWAY_TOKEN",
       "LOCAL_REMOTE_FALLBACK_TOKEN",
       "LOCAL_REF_PASSWORD",
       "REMOTE_REF_TOKEN",
       "REMOTE_REF_PASSWORD",
     ]);
     resetGatewayCallMocks();
-    delete process.env.GODSEYE_GATEWAY_PASSWORD;
-    delete process.env.GODSEYE_GATEWAY_TOKEN;
+    delete process.env.OPENCLAW_GATEWAY_PASSWORD;
+    delete process.env.OPENCLAW_GATEWAY_TOKEN;
     delete process.env.LOCAL_REMOTE_FALLBACK_TOKEN;
     delete process.env.LOCAL_REF_PASSWORD;
     delete process.env.REMOTE_REF_TOKEN;
@@ -761,7 +934,7 @@ describe("callGateway password resolution", () => {
     },
   ])("$label", async ({ envPassword, config, expectedPassword }) => {
     if (envPassword !== undefined) {
-      process.env.GODSEYE_GATEWAY_PASSWORD = envPassword;
+      process.env.OPENCLAW_GATEWAY_PASSWORD = envPassword;
     }
     loadConfig.mockReturnValue(config);
 
@@ -786,7 +959,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -794,7 +967,7 @@ describe("callGateway password resolution", () => {
   });
 
   it("does not resolve local password ref when env password takes precedence", async () => {
-    process.env.GODSEYE_GATEWAY_PASSWORD = "from-env";
+    process.env.OPENCLAW_GATEWAY_PASSWORD = "from-env";
     loadConfig.mockReturnValue({
       gateway: {
         mode: "local",
@@ -809,7 +982,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -832,7 +1005,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -855,7 +1028,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -882,7 +1055,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await expect(callGateway({ method: "health" })).rejects.toThrow("gateway.auth.token");
   });
@@ -904,7 +1077,7 @@ describe("callGateway password resolution", () => {
             default: { source: "env" },
           },
         },
-      } as unknown as GodsEyeConfig);
+      } as unknown as OpenClawConfig);
 
       await callGateway({ method: "health" });
 
@@ -932,7 +1105,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -956,7 +1129,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -980,7 +1153,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -1004,7 +1177,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -1030,7 +1203,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -1055,7 +1228,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -1080,7 +1253,7 @@ describe("callGateway password resolution", () => {
           default: { source: "env" },
         },
       },
-    } as unknown as GodsEyeConfig);
+    } as unknown as OpenClawConfig);
 
     await callGateway({ method: "health" });
 
@@ -1107,7 +1280,7 @@ describe("callGateway password resolution", () => {
             default: { source: "env" },
           },
         },
-      } as unknown as GodsEyeConfig);
+      } as unknown as OpenClawConfig);
 
       await callGateway({ method: "health" });
 

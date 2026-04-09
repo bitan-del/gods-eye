@@ -1,6 +1,6 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import type { ResolvedAgentRoute } from "godseye/plugin-sdk/routing";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../../src/config/config.js";
-import type { ResolvedAgentRoute } from "../../../../src/routing/resolve-route.js";
 import {
   buildDiscordRoutePeer,
   resolveDiscordBoundConversationRoute,
@@ -8,7 +8,10 @@ import {
   resolveDiscordEffectiveRoute,
 } from "./route-resolution.js";
 
-function buildWorkerBindingConfig(peer: { kind: "channel" | "direct"; id: string }): GodsEyeConfig {
+function buildWorkerBindingConfig(peer: {
+  kind: "channel" | "direct";
+  id: string;
+}): OpenClawConfig {
   return {
     agents: {
       list: [{ id: "worker" }],

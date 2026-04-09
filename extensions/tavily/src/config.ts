@@ -1,6 +1,9 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
-import { normalizeSecretInput } from "godseye/plugin-sdk/provider-auth";
-import { normalizeResolvedSecretInputString } from "godseye/plugin-sdk/secret-input";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import {
+  normalizeResolvedSecretInputString,
+  normalizeSecretInput,
+} from "godseye/plugin-sdk/secret-input";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 
 export const DEFAULT_TAVILY_BASE_URL = "https://api.tavily.com";
 export const DEFAULT_TAVILY_SEARCH_TIMEOUT_SECONDS = 30;
@@ -20,7 +23,7 @@ type PluginEntryConfig = {
   };
 };
 
-export function resolveTavilySearchConfig(cfg?: GodsEyeConfig): TavilySearchConfig {
+export function resolveTavilySearchConfig(cfg?: OpenClawConfig): TavilySearchConfig {
   const pluginConfig = cfg?.plugins?.entries?.tavily?.config as PluginEntryConfig;
   const pluginWebSearch = pluginConfig?.webSearch;
   if (pluginWebSearch && typeof pluginWebSearch === "object" && !Array.isArray(pluginWebSearch)) {
@@ -38,7 +41,7 @@ function normalizeConfiguredSecret(value: unknown, path: string): string | undef
   );
 }
 
-export function resolveTavilyApiKey(cfg?: GodsEyeConfig): string | undefined {
+export function resolveTavilyApiKey(cfg?: OpenClawConfig): string | undefined {
   const search = resolveTavilySearchConfig(cfg);
   return (
     normalizeConfiguredSecret(search?.apiKey, "plugins.entries.tavily.config.webSearch.apiKey") ||
@@ -47,10 +50,10 @@ export function resolveTavilyApiKey(cfg?: GodsEyeConfig): string | undefined {
   );
 }
 
-export function resolveTavilyBaseUrl(cfg?: GodsEyeConfig): string {
+export function resolveTavilyBaseUrl(cfg?: OpenClawConfig): string {
   const search = resolveTavilySearchConfig(cfg);
   const configured =
-    (typeof search?.baseUrl === "string" ? search.baseUrl.trim() : "") ||
+    (normalizeOptionalString(search?.baseUrl) ?? "") ||
     normalizeSecretInput(process.env.TAVILY_BASE_URL) ||
     "";
   return configured || DEFAULT_TAVILY_BASE_URL;

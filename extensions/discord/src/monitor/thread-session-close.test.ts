@@ -2,12 +2,14 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const hoisted = vi.hoisted(() => {
   const updateSessionStore = vi.fn();
-  const resolveStorePath = vi.fn(() => "/tmp/godseye-sessions.json");
+  const resolveStorePath = vi.fn(() => "/tmp/openclaw-sessions.json");
   return { updateSessionStore, resolveStorePath };
 });
 
-vi.mock("godseye/plugin-sdk/config-runtime", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("godseye/plugin-sdk/config-runtime")>();
+vi.mock("godseye/plugin-sdk/config-runtime", async () => {
+  const actual = await vi.importActual<typeof import("godseye/plugin-sdk/config-runtime")>(
+    "godseye/plugin-sdk/config-runtime",
+  );
   return {
     ...actual,
     updateSessionStore: hoisted.updateSessionStore,
@@ -37,7 +39,7 @@ describe("closeDiscordThreadSessions", () => {
   beforeEach(() => {
     hoisted.updateSessionStore.mockClear();
     hoisted.resolveStorePath.mockClear();
-    hoisted.resolveStorePath.mockReturnValue("/tmp/godseye-sessions.json");
+    hoisted.resolveStorePath.mockReturnValue("/tmp/openclaw-sessions.json");
   });
 
   it("resets updatedAt to 0 for sessions whose key contains the threadId", async () => {

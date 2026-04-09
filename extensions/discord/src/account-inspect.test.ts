@@ -1,9 +1,9 @@
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
 import { inspectDiscordAccount } from "./account-inspect.js";
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
 describe("inspectDiscordAccount", () => {

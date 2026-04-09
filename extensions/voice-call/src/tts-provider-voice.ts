@@ -1,4 +1,4 @@
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { VoiceCallTtsConfig } from "./config.js";
 
 function resolveProviderVoiceSetting(providerConfig: unknown): string | undefined {

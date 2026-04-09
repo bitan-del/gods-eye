@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import {
   GATEWAY_SERVICE_KIND,
   GATEWAY_SERVICE_MARKER,
@@ -15,7 +16,7 @@ export type ExtraGatewayService = {
   label: string;
   detail: string;
   scope: "user" | "system";
-  marker?: "godseye" | "clawdbot" | "moltbot";
+  marker?: "openclaw" | "clawdbot";
   legacy?: boolean;
 };
 
@@ -23,12 +24,12 @@ export type FindExtraGatewayServicesOptions = {
   deep?: boolean;
 };
 
-const EXTRA_MARKERS = ["godseye", "clawdbot", "moltbot"] as const;
+const EXTRA_MARKERS = ["openclaw", "clawdbot"] as const;
 
 export function renderGatewayServiceCleanupHints(
   env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
 ): string[] {
-  const profile = env.GODSEYE_PROFILE;
+  const profile = env.OPENCLAW_PROFILE;
   switch (process.platform) {
     case "darwin": {
       const label = resolveGatewayLaunchAgentLabel(profile);
@@ -53,7 +54,7 @@ export function renderGatewayServiceCleanupHints(
 type Marker = (typeof EXTRA_MARKERS)[number];
 
 function detectMarker(content: string): Marker | null {
-  const lower = content.toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(content);
   for (const marker of EXTRA_MARKERS) {
     if (lower.includes(marker)) {
       return marker;
@@ -64,7 +65,7 @@ function detectMarker(content: string): Marker | null {
 
 export function detectMarkerLineWithGateway(contents: string): Marker | null {
   // Join line continuations (trailing backslash) into single lines
-  const lower = contents.replace(/\\\r?\n\s*/g, " ").toLowerCase();
+  const lower = normalizeLowercaseStringOrEmpty(contents.replace(/\\\r?\n\s*/g, " "));
   for (const line of lower.split(/\r?\n/)) {
     if (!line.includes("gateway")) {
       continue;
@@ -79,10 +80,10 @@ export function detectMarkerLineWithGateway(contents: string): Marker | null {
 }
 
 function hasGatewayServiceMarker(content: string): boolean {
-  const lower = content.toLowerCase();
-  const markerKeys = ["godseye_service_marker"];
-  const kindKeys = ["godseye_service_kind"];
-  const markerValues = [GATEWAY_SERVICE_MARKER.toLowerCase()];
+  const lower = normalizeLowercaseStringOrEmpty(content);
+  const markerKeys = ["openclaw_service_marker"];
+  const kindKeys = ["openclaw_service_kind"];
+  const markerValues = [normalizeLowercaseStringOrEmpty(GATEWAY_SERVICE_MARKER)];
   const hasMarkerKey = markerKeys.some((key) => lower.includes(key));
   const hasKindKey = kindKeys.some((key) => lower.includes(key));
   const hasMarkerValue = markerValues.some((value) => lower.includes(value));
@@ -90,38 +91,38 @@ function hasGatewayServiceMarker(content: string): boolean {
     hasMarkerKey &&
     hasKindKey &&
     hasMarkerValue &&
-    lower.includes(GATEWAY_SERVICE_KIND.toLowerCase())
+    lower.includes(normalizeLowercaseStringOrEmpty(GATEWAY_SERVICE_KIND))
   );
 }
 
-function isGodsEyeGatewayLaunchdService(label: string, contents: string): boolean {
+function isOpenClawGatewayLaunchdService(label: string, contents: string): boolean {
   if (hasGatewayServiceMarker(contents)) {
     return true;
   }
-  const lowerContents = contents.toLowerCase();
+  const lowerContents = normalizeLowercaseStringOrEmpty(contents);
   if (!lowerContents.includes("gateway")) {
     return false;
   }
-  return label.startsWith("ai.godseye.");
+  return label.startsWith("ai.openclaw.");
 }
 
-function isGodsEyeGatewaySystemdService(name: string, contents: string): boolean {
+function isOpenClawGatewaySystemdService(name: string, contents: string): boolean {
   if (hasGatewayServiceMarker(contents)) {
     return true;
   }
-  if (!name.startsWith("godseye-gateway")) {
+  if (!name.startsWith("openclaw-gateway")) {
     return false;
   }
-  return contents.toLowerCase().includes("gateway");
+  return normalizeLowercaseStringOrEmpty(contents).includes("gateway");
 }
 
-function isGodsEyeGatewayTaskName(name: string): boolean {
-  const normalized = name.trim().toLowerCase();
+function isOpenClawGatewayTaskName(name: string): boolean {
+  const normalized = normalizeLowercaseStringOrEmpty(name);
   if (!normalized) {
     return false;
   }
-  const defaultName = resolveGatewayWindowsTaskName().toLowerCase();
-  return normalized === defaultName || normalized.startsWith("godseye gateway");
+  const defaultName = normalizeLowercaseStringOrEmpty(resolveGatewayWindowsTaskName());
+  return normalized === defaultName || normalized.startsWith("openclaw gateway");
 }
 
 function tryExtractPlistLabel(contents: string): string | null {
@@ -141,8 +142,8 @@ function isIgnoredSystemdName(name: string): boolean {
 }
 
 function isLegacyLabel(label: string): boolean {
-  const lower = label.toLowerCase();
-  return lower.includes("clawdbot") || lower.includes("moltbot");
+  const lower = normalizeLowercaseStringOrEmpty(label);
+  return lower.includes("clawdbot");
 }
 
 async function readDirEntries(dir: string): Promise<string[]> {
@@ -217,7 +218,7 @@ async function scanLaunchdDir(params: {
         label,
         detail: `plist: ${fullPath}`,
         scope: params.scope,
-        marker: isLegacyLabel(label) ? "clawdbot" : "moltbot",
+        marker: "clawdbot",
         legacy: true,
       });
       continue;
@@ -225,7 +226,7 @@ async function scanLaunchdDir(params: {
     if (isIgnoredLaunchdLabel(label)) {
       continue;
     }
-    if (marker === "godseye" && isGodsEyeGatewayLaunchdService(label, contents)) {
+    if (marker === "openclaw" && isOpenClawGatewayLaunchdService(label, contents)) {
       continue;
     }
     results.push({
@@ -234,7 +235,7 @@ async function scanLaunchdDir(params: {
       detail: `plist: ${fullPath}`,
       scope: params.scope,
       marker,
-      legacy: marker !== "godseye" || isLegacyLabel(label),
+      legacy: marker !== "openclaw" || isLegacyLabel(label),
     });
   }
 
@@ -257,7 +258,7 @@ async function scanSystemdDir(params: {
     if (!marker) {
       continue;
     }
-    if (marker === "godseye" && isGodsEyeGatewaySystemdService(name, contents)) {
+    if (marker === "openclaw" && isOpenClawGatewaySystemdService(name, contents)) {
       continue;
     }
     results.push({
@@ -266,7 +267,7 @@ async function scanSystemdDir(params: {
       detail: `unit: ${fullPath}`,
       scope: params.scope,
       marker,
-      legacy: marker !== "godseye",
+      legacy: marker !== "openclaw",
     });
   }
 
@@ -295,7 +296,7 @@ function parseSchtasksList(output: string): ScheduledTaskInfo[] {
     if (idx <= 0) {
       continue;
     }
-    const key = line.slice(0, idx).trim().toLowerCase();
+    const key = normalizeLowercaseStringOrEmpty(line.slice(0, idx));
     const value = line.slice(idx + 1).trim();
     if (!value) {
       continue;
@@ -410,11 +411,11 @@ export async function findExtraGatewayServices(
       if (!name) {
         continue;
       }
-      if (isGodsEyeGatewayTaskName(name)) {
+      if (isOpenClawGatewayTaskName(name)) {
         continue;
       }
-      const lowerName = name.toLowerCase();
-      const lowerCommand = task.taskToRun?.toLowerCase() ?? "";
+      const lowerName = normalizeLowercaseStringOrEmpty(name);
+      const lowerCommand = normalizeLowercaseStringOrEmpty(task.taskToRun ?? "");
       let marker: Marker | null = null;
       for (const candidate of EXTRA_MARKERS) {
         if (lowerName.includes(candidate) || lowerCommand.includes(candidate)) {
@@ -431,7 +432,7 @@ export async function findExtraGatewayServices(
         detail: task.taskToRun ? `task: ${name}, run: ${task.taskToRun}` : name,
         scope: "system",
         marker,
-        legacy: marker !== "godseye",
+        legacy: marker !== "openclaw",
       });
     }
     return results;

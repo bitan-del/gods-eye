@@ -1,7 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import { withAudioFixture, withVideoFixture } from "./runner.test-utils.js";
 import type { AudioTranscriptionRequest, VideoDescriptionRequest } from "./types.js";
+
+const modelAuthMocks = vi.hoisted(() => ({
+  hasAvailableAuthForProvider: vi.fn(() => true),
+  resolveApiKeyForProvider: vi.fn(async () => ({
+    apiKey: "test-key",
+    source: "test",
+    mode: "api-key",
+  })),
+  requireApiKey: vi.fn((auth: { apiKey?: string }) => auth.apiKey ?? "test-key"),
+}));
+
+vi.mock("../agents/model-auth.js", () => ({
+  hasAvailableAuthForProvider: modelAuthMocks.hasAvailableAuthForProvider,
+  resolveApiKeyForProvider: modelAuthMocks.resolveApiKeyForProvider,
+  requireApiKey: modelAuthMocks.requireApiKey,
+}));
+
+vi.mock("../plugins/capability-provider-runtime.js", () => ({
+  resolvePluginCapabilityProviders: () => [],
+}));
 
 const proxyFetchMocks = vi.hoisted(() => {
   const proxyFetch = vi.fn() as unknown as typeof fetch;
@@ -22,6 +42,7 @@ vi.mock("../infra/net/proxy-fetch.js", () => ({
 }));
 
 let buildProviderRegistry: typeof import("./runner.js").buildProviderRegistry;
+let clearMediaUnderstandingBinaryCacheForTests: typeof import("./runner.js").clearMediaUnderstandingBinaryCacheForTests;
 let runCapability: typeof import("./runner.js").runCapability;
 
 async function runAudioCapabilityWithFetchCapture(params: {
@@ -58,7 +79,7 @@ async function runAudioCapabilityWithFetchCapture(params: {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     const result = await runCapability({
       capability: "audio",
@@ -75,18 +96,22 @@ async function runAudioCapabilityWithFetchCapture(params: {
 }
 
 describe("runCapability proxy fetch passthrough", () => {
-  beforeEach(async () => {
+  beforeAll(async () => {
+    ({ buildProviderRegistry, clearMediaUnderstandingBinaryCacheForTests, runCapability } =
+      await import("./runner.js"));
+  });
+
+  beforeEach(() => {
     vi.useRealTimers();
-    vi.resetModules();
     vi.clearAllMocks();
-    ({ buildProviderRegistry, runCapability } = await import("./runner.js"));
+    clearMediaUnderstandingBinaryCacheForTests();
   });
   afterEach(() => vi.unstubAllEnvs());
 
   it("passes fetchFn to audio provider when HTTPS_PROXY is set", async () => {
     vi.stubEnv("HTTPS_PROXY", "http://proxy.test:8080");
     const seenFetchFn = await runAudioCapabilityWithFetchCapture({
-      fixturePrefix: "godseye-audio-proxy",
+      fixturePrefix: "openclaw-audio-proxy",
       outputText: "transcribed",
     });
     expect(seenFetchFn).toBe(proxyFetchMocks.proxyFetch);
@@ -95,7 +120,7 @@ describe("runCapability proxy fetch passthrough", () => {
   it("passes fetchFn to video provider when HTTPS_PROXY is set", async () => {
     vi.stubEnv("HTTPS_PROXY", "http://proxy.test:8080");
 
-    await withVideoFixture("godseye-video-proxy", async ({ ctx, media, cache }) => {
+    await withVideoFixture("openclaw-video-proxy", async ({ ctx, media, cache }) => {
       let seenFetchFn: typeof fetch | undefined;
 
       const result = await runCapability({
@@ -117,7 +142,7 @@ describe("runCapability proxy fetch passthrough", () => {
               },
             },
           },
-        } as unknown as GodsEyeConfig,
+        } as unknown as OpenClawConfig,
         ctx,
         attachments: cache,
         media,
@@ -148,7 +173,7 @@ describe("runCapability proxy fetch passthrough", () => {
     vi.stubEnv("http_proxy", "");
 
     const seenFetchFn = await runAudioCapabilityWithFetchCapture({
-      fixturePrefix: "godseye-audio-no-proxy",
+      fixturePrefix: "openclaw-audio-no-proxy",
       outputText: "ok",
     });
     expect(seenFetchFn).toBeUndefined();

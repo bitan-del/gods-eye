@@ -15,6 +15,7 @@ import { resolveStateDir } from "../config/paths.js";
 import { isTruthyEnvValue } from "../infra/env.js";
 import { detectMime } from "../media/mime.js";
 import type { RuntimeEnv } from "../runtime.js";
+import { lowercasePreservingWhitespace, normalizeOptionalString } from "../shared/string-coerce.js";
 import { ensureDir, resolveUserPath } from "../utils.js";
 import {
   CANVAS_HOST_PATH,
@@ -70,7 +71,7 @@ function defaultIndexHTML() {
   return `<!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GodsEye Canvas</title>
+<title>OpenClaw Canvas</title>
 <style>
   html, body { height: 100%; margin: 0; background: #000; color: #fff; font: 16px/1.4 -apple-system, BlinkMacSystemFont, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   .wrap { min-height: 100%; display: grid; place-items: center; padding: 24px; }
@@ -88,7 +89,7 @@ function defaultIndexHTML() {
 <div class="wrap">
   <div class="card">
     <div class="title">
-      <h1>GodsEye Canvas</h1>
+      <h1>OpenClaw Canvas</h1>
       <div class="sub">Interactive test page (auto-reload enabled)</div>
     </div>
 
@@ -113,34 +114,41 @@ function defaultIndexHTML() {
     !!(
       window.webkit &&
       window.webkit.messageHandlers &&
-      window.webkit.messageHandlers.godseyeCanvasA2UIAction
+      window.webkit.messageHandlers.openclawCanvasA2UIAction
     );
   const hasAndroid = () =>
     !!(
-      (window.godseyeCanvasA2UIAction &&
-        typeof window.godseyeCanvasA2UIAction.postMessage === "function")
+      (window.openclawCanvasA2UIAction &&
+        typeof window.openclawCanvasA2UIAction.postMessage === "function")
     );
-  const hasHelper = () => typeof window.godseyeSendUserAction === "function";
-  statusEl.innerHTML =
-    "Bridge: " +
-    (hasHelper() ? "<span class='ok'>ready</span>" : "<span class='bad'>missing</span>") +
-    " · iOS=" + (hasIOS() ? "yes" : "no") +
-    " · Android=" + (hasAndroid() ? "yes" : "no");
+  const hasHelper = () => typeof window.openclawSendUserAction === "function";
+  const helperReady = hasHelper();
+  statusEl.textContent = "";
+  statusEl.appendChild(document.createTextNode("Bridge: "));
+  const bridgeStatus = document.createElement("span");
+  bridgeStatus.className = helperReady ? "ok" : "bad";
+  bridgeStatus.textContent = helperReady ? "ready" : "missing";
+  statusEl.appendChild(bridgeStatus);
+  statusEl.appendChild(
+    document.createTextNode(
+      " · iOS=" + (hasIOS() ? "yes" : "no") + " · Android=" + (hasAndroid() ? "yes" : "no"),
+    ),
+  );
 
   const onStatus = (ev) => {
     const d = ev && ev.detail || {};
     log("Action status: id=" + (d.id || "?") + " ok=" + String(!!d.ok) + (d.error ? (" error=" + d.error) : ""));
   };
-  window.addEventListener("godseye:a2ui-action-status", onStatus);
+  window.addEventListener("openclaw:a2ui-action-status", onStatus);
 
   function send(name, sourceComponentId) {
     if (!hasHelper()) {
-      log("No action bridge found. Ensure you're viewing this on an iOS/Android GodsEye node canvas.");
+      log("No action bridge found. Ensure you're viewing this on an iOS/Android OpenClaw node canvas.");
       return;
     }
     const sendUserAction =
-      typeof window.godseyeSendUserAction === "function"
-        ? window.godseyeSendUserAction
+      typeof window.openclawSendUserAction === "function"
+        ? window.openclawSendUserAction
         : undefined;
     const ok = sendUserAction({
       name,
@@ -161,10 +169,10 @@ function defaultIndexHTML() {
 }
 
 function isDisabledByEnv() {
-  if (isTruthyEnvValue(process.env.GODSEYE_SKIP_CANVAS_HOST)) {
+  if (isTruthyEnvValue(process.env.OPENCLAW_SKIP_CANVAS_HOST)) {
     return true;
   }
-  if (isTruthyEnvValue(process.env.GODSEYE_SKIP_CANVAS_HOST)) {
+  if (isTruthyEnvValue(process.env.OPENCLAW_SKIP_CANVAS_HOST)) {
     return true;
   }
   if (process.env.NODE_ENV === "test") {
@@ -285,7 +293,9 @@ export async function createCanvasHostHandler(
       debounce = null;
       broadcastReload();
     }, reloadDebounceMs);
-    debounce.unref?.();
+    if (!testMode) {
+      debounce.unref?.();
+    }
   };
 
   let watcherClosed = false;
@@ -366,7 +376,7 @@ export async function createCanvasHostHandler(
           res.statusCode = 404;
           res.setHeader("Content-Type", "text/html; charset=utf-8");
           res.end(
-            `<!doctype html><meta charset="utf-8" /><title>GodsEye Canvas</title><pre>Missing file.\nCreate ${rootDir}/index.html</pre>`,
+            `<!doctype html><meta charset="utf-8" /><title>OpenClaw Canvas</title><pre>Missing file.\nCreate ${rootDir}/index.html</pre>`,
           );
           return true;
         }
@@ -384,7 +394,7 @@ export async function createCanvasHostHandler(
         await handle.close().catch(() => {});
       }
 
-      const lower = realPath.toLowerCase();
+      const lower = lowercasePreservingWhitespace(realPath);
       const mime =
         lower.endsWith(".html") || lower.endsWith(".htm")
           ? "text/html"
@@ -453,9 +463,9 @@ export async function startCanvasHost(opts: CanvasHostServerOpts): Promise<Canva
     }));
   const ownsHandler = opts.ownsHandler ?? opts.handler === undefined;
 
-  const bindHost = opts.listenHost?.trim() || "127.0.0.1";
+  const bindHost = normalizeOptionalString(opts.listenHost) || "127.0.0.1";
   const server: Server = http.createServer((req, res) => {
-    if (String(req.headers.upgrade ?? "").toLowerCase() === "websocket") {
+    if (lowercasePreservingWhitespace(String(req.headers.upgrade ?? "")) === "websocket") {
       return;
     }
     void (async () => {

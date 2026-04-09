@@ -1,1 +1,1 @@
-export { resolveRequestUrl } from "./runtime-api.js";
+export { resolveRequestUrl } from "godseye/plugin-sdk/request-url";

@@ -1,20 +1,20 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { withEnvAsync } from "godseye/plugin-sdk/testing";
 import { describe, expect, it } from "vitest";
-import { withEnvAsync } from "../../../test/helpers/extensions/env.js";
-import { createPluginSetupWizardStatus } from "../../../test/helpers/extensions/setup-wizard.js";
+import { createPluginSetupWizardStatus } from "../../../test/helpers/plugins/setup-wizard.js";
 import "./zalo-js.test-mocks.js";
-import { zalouserSetupPlugin } from "./channel.setup.js";
+import { zalouserSetupPlugin } from "./setup-test-helpers.js";
 
 const zalouserSetupGetStatus = createPluginSetupWizardStatus(zalouserSetupPlugin);
 
 describe("zalouser setup plugin", () => {
   it("builds setup status without an initialized runtime", async () => {
-    const stateDir = await mkdtemp(path.join(os.tmpdir(), "godseye-zalouser-setup-"));
+    const stateDir = await mkdtemp(path.join(os.tmpdir(), "openclaw-zalouser-setup-"));
 
     try {
-      await withEnvAsync({ GODSEYE_STATE_DIR: stateDir }, async () => {
+      await withEnvAsync({ OPENCLAW_STATE_DIR: stateDir }, async () => {
         await expect(
           zalouserSetupGetStatus({
             cfg: {},

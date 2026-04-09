@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createProviderUsageFetch,
   makeResponse,
-} from "../../test/helpers/extensions/provider-usage-fetch.js";
+} from "../../test/helpers/plugins/provider-usage-fetch.js";
 import { buildCopilotModelDefinition, getDefaultCopilotModelIds } from "./models-defaults.js";
 import { fetchCopilotUsage } from "./usage.js";
 
@@ -17,7 +17,7 @@ vi.mock("@mariozechner/pi-ai/oauth", async () => {
   };
 });
 
-vi.mock("godseye/plugin-sdk/provider-models", () => ({
+vi.mock("godseye/plugin-sdk/provider-model-shared", () => ({
   normalizeModelCompat: (model: Record<string, unknown>) => model,
 }));
 
@@ -30,7 +30,7 @@ vi.mock("godseye/plugin-sdk/json-store", () => ({
 }));
 
 vi.mock("godseye/plugin-sdk/state-paths", () => ({
-  resolveStateDir: () => "/tmp/godseye-state",
+  resolveStateDir: () => "/tmp/openclaw-state",
 }));
 
 import type { ProviderResolveDynamicModelContext } from "godseye/plugin-sdk/core";
@@ -83,12 +83,13 @@ describe("github-copilot model defaults", () => {
     it("builds a valid definition for claude-sonnet-4.6", () => {
       const def = buildCopilotModelDefinition("claude-sonnet-4.6");
       expect(def.id).toBe("claude-sonnet-4.6");
-      expect(def.api).toBe("openai-responses");
+      expect(def.api).toBe("anthropic-messages");
     });
 
     it("trims whitespace from model id", () => {
       const def = buildCopilotModelDefinition("  gpt-4o  ");
       expect(def.id).toBe("gpt-4o");
+      expect(def.api).toBe("openai-responses");
     });
 
     it("throws on empty model id", () => {
@@ -238,7 +239,7 @@ describe("fetchCopilotUsage", () => {
 });
 
 describe("github-copilot token", () => {
-  const cachePath = "/tmp/godseye-state/credentials/github-copilot.token.json";
+  const cachePath = "/tmp/openclaw-state/credentials/github-copilot.token.json";
 
   beforeEach(async () => {
     vi.resetModules();

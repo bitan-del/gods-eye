@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { normalizeConfigDocBaselineHelpPath } from "./doc-baseline.js";
+import {
+  buildConfigDocBaseline,
+  flattenConfigDocBaselineEntries,
+  normalizeConfigDocBaselineHelpPath,
+} from "./doc-baseline.js";
 import { FIELD_HELP } from "./schema.help.js";
 import {
   describeTalkSilenceTimeoutDefaults,
@@ -16,16 +20,11 @@ function readRepoFile(relativePath: string): string {
 }
 
 describe("talk silence timeout defaults", () => {
-  it("keeps help text and docs aligned with the policy", () => {
+  it("keeps help text and docs aligned with the policy", async () => {
     const defaultsDescription = describeTalkSilenceTimeoutDefaults();
-    const baselineLines = readRepoFile("docs/.generated/config-baseline.jsonl")
-      .trim()
-      .split("\n")
-      .map((line) => JSON.parse(line) as { recordType: string; path?: string; help?: string });
-    const talkEntry = baselineLines.find(
-      (entry) =>
-        entry.recordType === "path" &&
-        entry.path === normalizeConfigDocBaselineHelpPath("talk.silenceTimeoutMs"),
+    const baseline = await buildConfigDocBaseline();
+    const talkEntry = flattenConfigDocBaselineEntries(baseline).find(
+      (entry) => entry.path === normalizeConfigDocBaselineHelpPath("talk.silenceTimeoutMs"),
     );
 
     expect(FIELD_HELP["talk.silenceTimeoutMs"]).toContain(defaultsDescription);
@@ -35,10 +34,10 @@ describe("talk silence timeout defaults", () => {
   });
 
   it("matches the Apple and Android runtime constants", () => {
-    const macDefaults = readRepoFile("apps/macos/Sources/GodsEye/TalkDefaults.swift");
+    const macDefaults = readRepoFile("apps/macos/Sources/OpenClaw/TalkDefaults.swift");
     const iosDefaults = readRepoFile("apps/ios/Sources/Voice/TalkDefaults.swift");
     const androidDefaults = readRepoFile(
-      "apps/android/app/src/main/java/ai/godseye/app/voice/TalkDefaults.kt",
+      "apps/android/app/src/main/java/ai/openclaw/app/voice/TalkDefaults.kt",
     );
 
     expect(macDefaults).toContain(

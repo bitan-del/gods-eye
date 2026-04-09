@@ -1,6 +1,6 @@
-import type { ReplyToMode } from "openclaw/plugin-sdk/config-runtime";
-import type { ReplyThreadingPolicy } from "openclaw/plugin-sdk/reply-reference";
-import { resolveBatchedReplyThreadingPolicy } from "openclaw/plugin-sdk/reply-reference";
+import type { ReplyToMode } from "godseye/plugin-sdk/config-runtime";
+import type { ReplyThreadingPolicy } from "godseye/plugin-sdk/reply-reference";
+import { resolveBatchedReplyThreadingPolicy } from "godseye/plugin-sdk/reply-reference";
 
 type ReplyThreadingContext = {
   ReplyThreading?: ReplyThreadingPolicy;

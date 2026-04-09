@@ -1,37 +1,46 @@
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import type { OpenClawConfig } from "../config/config.js";
 import type { AuthProfileStore } from "./auth-profiles.js";
 import { makeModelFallbackCfg } from "./test-helpers/model-fallback-config-fixture.js";
 
-// Mock auth-profiles module — must be before importing model-fallback
-vi.mock("./auth-profiles.js", () => ({
+// Mock auth-profile submodules — must be before importing model-fallback
+vi.mock("./auth-profiles/store.js", () => ({
   ensureAuthProfileStore: vi.fn(),
+  loadAuthProfileStoreForRuntime: vi.fn(),
+}));
+
+vi.mock("./auth-profiles/usage.js", () => ({
   getSoonestCooldownExpiry: vi.fn(),
   isProfileInCooldown: vi.fn(),
   resolveProfilesUnavailableReason: vi.fn(),
+}));
+
+vi.mock("./auth-profiles/order.js", () => ({
   resolveAuthProfileOrder: vi.fn(),
 }));
 
-type AuthProfilesModule = typeof import("./auth-profiles.js");
+type AuthProfilesStoreModule = typeof import("./auth-profiles/store.js");
+type AuthProfilesUsageModule = typeof import("./auth-profiles/usage.js");
+type AuthProfilesOrderModule = typeof import("./auth-profiles/order.js");
 type ModelFallbackModule = typeof import("./model-fallback.js");
 type LoggerModule = typeof import("../logging/logger.js");
 
 let mockedEnsureAuthProfileStore: ReturnType<
-  typeof vi.mocked<AuthProfilesModule["ensureAuthProfileStore"]>
+  typeof vi.mocked<AuthProfilesStoreModule["ensureAuthProfileStore"]>
 >;
 let mockedGetSoonestCooldownExpiry: ReturnType<
-  typeof vi.mocked<AuthProfilesModule["getSoonestCooldownExpiry"]>
+  typeof vi.mocked<AuthProfilesUsageModule["getSoonestCooldownExpiry"]>
 >;
 let mockedIsProfileInCooldown: ReturnType<
-  typeof vi.mocked<AuthProfilesModule["isProfileInCooldown"]>
+  typeof vi.mocked<AuthProfilesUsageModule["isProfileInCooldown"]>
 >;
 let mockedResolveProfilesUnavailableReason: ReturnType<
-  typeof vi.mocked<AuthProfilesModule["resolveProfilesUnavailableReason"]>
+  typeof vi.mocked<AuthProfilesUsageModule["resolveProfilesUnavailableReason"]>
 >;
 let mockedResolveAuthProfileOrder: ReturnType<
-  typeof vi.mocked<AuthProfilesModule["resolveAuthProfileOrder"]>
+  typeof vi.mocked<AuthProfilesOrderModule["resolveAuthProfileOrder"]>
 >;
 let runWithModelFallback: ModelFallbackModule["runWithModelFallback"];
 let _probeThrottleInternals: ModelFallbackModule["_probeThrottleInternals"];
@@ -43,23 +52,26 @@ const makeCfg = makeModelFallbackCfg;
 let unregisterLogTransport: (() => void) | undefined;
 
 async function loadModelFallbackProbeModules() {
-  vi.resetModules();
-  const authProfilesModule = await import("./auth-profiles.js");
+  const authProfilesStoreModule = await import("./auth-profiles/store.js");
+  const authProfilesUsageModule = await import("./auth-profiles/usage.js");
+  const authProfilesOrderModule = await import("./auth-profiles/order.js");
   const loggerModule = await import("../logging/logger.js");
   const modelFallbackModule = await import("./model-fallback.js");
-  mockedEnsureAuthProfileStore = vi.mocked(authProfilesModule.ensureAuthProfileStore);
-  mockedGetSoonestCooldownExpiry = vi.mocked(authProfilesModule.getSoonestCooldownExpiry);
-  mockedIsProfileInCooldown = vi.mocked(authProfilesModule.isProfileInCooldown);
+  mockedEnsureAuthProfileStore = vi.mocked(authProfilesStoreModule.ensureAuthProfileStore);
+  mockedGetSoonestCooldownExpiry = vi.mocked(authProfilesUsageModule.getSoonestCooldownExpiry);
+  mockedIsProfileInCooldown = vi.mocked(authProfilesUsageModule.isProfileInCooldown);
   mockedResolveProfilesUnavailableReason = vi.mocked(
-    authProfilesModule.resolveProfilesUnavailableReason,
+    authProfilesUsageModule.resolveProfilesUnavailableReason,
   );
-  mockedResolveAuthProfileOrder = vi.mocked(authProfilesModule.resolveAuthProfileOrder);
+  mockedResolveAuthProfileOrder = vi.mocked(authProfilesOrderModule.resolveAuthProfileOrder);
   runWithModelFallback = modelFallbackModule.runWithModelFallback;
   _probeThrottleInternals = modelFallbackModule._probeThrottleInternals;
   registerLogTransport = loggerModule.registerLogTransport;
   resetLogger = loggerModule.resetLogger;
   setLoggerOverride = loggerModule.setLoggerOverride;
 }
+
+beforeAll(loadModelFallbackProbeModules);
 
 function expectFallbackUsed(
   result: { result: unknown; attempts: Array<{ reason?: string }> },
@@ -119,7 +131,7 @@ async function expectProbeFailureFallsBack({
         },
       },
     },
-  } as Partial<GodsEyeConfig>);
+  } as Partial<OpenClawConfig>);
 
   mockedIsProfileInCooldown.mockReturnValue(true);
   mockedGetSoonestCooldownExpiry.mockReturnValue(1_700_000_000_000 + 30 * 1000);
@@ -149,7 +161,7 @@ describe("runWithModelFallback – probe logic", () => {
   const NOW = 1_700_000_000_000;
 
   const runPrimaryCandidate = (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     run: (provider: string, model: string) => Promise<unknown>,
   ) =>
     runWithModelFallback({
@@ -159,8 +171,7 @@ describe("runWithModelFallback – probe logic", () => {
       run,
     });
 
-  beforeEach(async () => {
-    await loadModelFallbackProbeModules();
+  beforeEach(() => {
     realDateNow = Date.now;
     Date.now = vi.fn(() => NOW);
 
@@ -248,7 +259,7 @@ describe("runWithModelFallback – probe logic", () => {
     setLoggerOverride({
       level: "trace",
       consoleLevel: "silent",
-      file: path.join(os.tmpdir(), `godseye-model-fallback-probe-${Date.now()}.log`),
+      file: path.join(os.tmpdir(), `openclaw-model-fallback-probe-${Date.now()}.log`),
     });
     unregisterLogTransport = registerLogTransport((record) => {
       records.push(record);
@@ -271,7 +282,7 @@ describe("runWithModelFallback – probe logic", () => {
           },
         },
       },
-    } as Partial<GodsEyeConfig>);
+    } as Partial<OpenClawConfig>);
     mockedGetSoonestCooldownExpiry.mockReturnValue(NOW + 60 * 1000);
     const fallbackRun = vi
       .fn()
@@ -370,7 +381,7 @@ describe("runWithModelFallback – probe logic", () => {
           },
         },
       },
-    } as Partial<GodsEyeConfig>);
+    } as Partial<OpenClawConfig>);
 
     mockedResolveAuthProfileOrder.mockImplementation(({ provider }: { provider: string }) => {
       if (provider === "google") {
@@ -536,7 +547,7 @@ describe("runWithModelFallback – probe logic", () => {
           },
         },
       },
-    } as Partial<GodsEyeConfig>);
+    } as Partial<OpenClawConfig>);
 
     const almostExpired = NOW + 30 * 1000;
     mockedGetSoonestCooldownExpiry.mockReturnValue(almostExpired);
@@ -597,7 +608,7 @@ describe("runWithModelFallback – probe logic", () => {
           },
         },
       },
-    } as Partial<GodsEyeConfig>);
+    } as Partial<OpenClawConfig>);
 
     // Single-provider setups need periodic probes even when the billing
     // cooldown is far from expiry, otherwise topping up credits never recovers

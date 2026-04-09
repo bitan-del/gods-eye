@@ -1,35 +1,32 @@
+import type {
+  ChannelSetupAdapter,
+  ChannelSetupWizard,
+  ChannelSetupWizardTextInput,
+} from "godseye/plugin-sdk/setup-runtime";
 import {
   createCliPathTextInput,
   createDelegatedSetupWizardProxy,
   createDelegatedTextInputShouldPrompt,
   createPatchedAccountSetupAdapter,
+  mergeAllowFromEntries,
   parseSetupEntriesAllowingWildcard,
+  patchChannelConfigForAccount,
   promptParsedAllowFromForAccount,
   setAccountAllowFromForChannel,
-  setChannelDmPolicyWithAllowFrom,
   setSetupChannelEnabled,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   type WizardPrompter,
-} from "godseye/plugin-sdk/setup";
-import type {
-  ChannelSetupAdapter,
-  ChannelSetupDmPolicy,
-  ChannelSetupWizard,
-  ChannelSetupWizardTextInput,
-} from "godseye/plugin-sdk/setup";
+} from "godseye/plugin-sdk/setup-runtime";
 import { formatDocsLink } from "godseye/plugin-sdk/setup-tools";
-import {
-  listIMessageAccountIds,
-  resolveDefaultIMessageAccountId,
-  resolveIMessageAccount,
-} from "./accounts.js";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
+import { resolveDefaultIMessageAccountId, resolveIMessageAccount } from "./accounts.js";
 import { normalizeIMessageHandle } from "./targets.js";
 
 const channel = "imessage" as const;
 
 export function parseIMessageAllowFromEntries(raw: string): { entries: string[]; error?: string } {
   return parseSetupEntriesAllowingWildcard(raw, (entry) => {
-    const lower = entry.toLowerCase();
+    const lower = normalizeLowercaseStringOrEmpty(entry);
     if (lower.startsWith("chat_id:")) {
       const id = entry.slice("chat_id:".length).trim();
       if (!/^\d+$/.test(id)) {
@@ -71,10 +68,10 @@ function buildIMessageSetupPatch(input: {
 }
 
 export async function promptIMessageAllowFrom(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
   accountId?: string;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   return promptParsedAllowFromForAccount({
     cfg: params.cfg,
     accountId: params.accountId,
@@ -106,22 +103,53 @@ export async function promptIMessageAllowFrom(params: {
   });
 }
 
-export const imessageDmPolicy: ChannelSetupDmPolicy = {
+export const imessageDmPolicy = {
   label: "iMessage",
   channel,
   policyKey: "channels.imessage.dmPolicy",
   allowFromKey: "channels.imessage.allowFrom",
-  getCurrent: (cfg: GodsEyeConfig) => cfg.channels?.imessage?.dmPolicy ?? "pairing",
-  setPolicy: (cfg: GodsEyeConfig, policy) =>
-    setChannelDmPolicyWithAllowFrom({
+  resolveConfigKeys: (_cfg: OpenClawConfig, accountId?: string) => {
+    const targetAccountId = accountId ?? resolveDefaultIMessageAccountId(_cfg);
+    return targetAccountId !== "default"
+      ? {
+          policyKey: `channels.imessage.accounts.${targetAccountId}.dmPolicy`,
+          allowFromKey: `channels.imessage.accounts.${targetAccountId}.allowFrom`,
+        }
+      : {
+          policyKey: "channels.imessage.dmPolicy",
+          allowFromKey: "channels.imessage.allowFrom",
+        };
+  },
+  getCurrent: (cfg: OpenClawConfig, accountId?: string) => {
+    const targetAccountId = accountId ?? resolveDefaultIMessageAccountId(cfg);
+    return resolveIMessageAccount({ cfg, accountId: targetAccountId }).config.dmPolicy ?? "pairing";
+  },
+  setPolicy: (
+    cfg: OpenClawConfig,
+    policy: "pairing" | "allowlist" | "open" | "disabled",
+    accountId?: string,
+  ) => {
+    const targetAccountId = accountId ?? resolveDefaultIMessageAccountId(cfg);
+    return patchChannelConfigForAccount({
       cfg,
       channel,
-      dmPolicy: policy,
-    }),
+      accountId: targetAccountId,
+      patch:
+        policy === "open"
+          ? {
+              dmPolicy: "open",
+              allowFrom: mergeAllowFromEntries(
+                resolveIMessageAccount({ cfg, accountId: targetAccountId }).config.allowFrom,
+                ["*"],
+              ),
+            }
+          : { dmPolicy: policy },
+    });
+  },
   promptAllowFrom: promptIMessageAllowFrom,
 };
 
-function resolveIMessageCliPath(params: { cfg: GodsEyeConfig; accountId: string }) {
+function resolveIMessageCliPath(params: { cfg: OpenClawConfig; accountId: string }) {
   return resolveIMessageAccount(params).config.cliPath ?? "imsg";
 }
 
@@ -142,7 +170,7 @@ export const imessageCompletionNote = {
   title: "iMessage next steps",
   lines: [
     "This is still a work in progress.",
-    "Ensure GodsEye has Full Disk Access to Messages DB.",
+    "Ensure OpenClaw has Full Disk Access to Messages DB.",
     "Grant Automation permission for Messages when prompted.",
     "List chats with: imsg chats --limit 20",
     `Docs: ${formatDocsLink("/imessage", "imessage")}`,
@@ -161,17 +189,8 @@ export const imessageSetupStatusBase = {
   unconfiguredHint: "imsg missing",
   configuredScore: 1,
   unconfiguredScore: 0,
-  resolveConfigured: ({ cfg }: { cfg: GodsEyeConfig }) =>
-    listIMessageAccountIds(cfg).some((accountId) => {
-      const account = resolveIMessageAccount({ cfg, accountId });
-      return Boolean(
-        account.config.cliPath ||
-        account.config.dbPath ||
-        account.config.allowFrom ||
-        account.config.service ||
-        account.config.region,
-      );
-    }),
+  resolveConfigured: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId?: string }) =>
+    resolveIMessageAccount({ cfg, accountId }).configured,
 };
 
 export function createIMessageSetupWizardProxy(loadWizard: () => Promise<ChannelSetupWizard>) {
@@ -197,6 +216,6 @@ export function createIMessageSetupWizardProxy(loadWizard: () => Promise<Channel
     ],
     completionNote: imessageCompletionNote,
     dmPolicy: imessageDmPolicy,
-    disable: (cfg: GodsEyeConfig) => setSetupChannelEnabled(cfg, channel, false),
+    disable: (cfg: OpenClawConfig) => setSetupChannelEnabled(cfg, channel, false),
   });
 }

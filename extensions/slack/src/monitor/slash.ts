@@ -11,7 +11,7 @@ import {
 } from "godseye/plugin-sdk/config-runtime";
 import type { ReplyPayload } from "godseye/plugin-sdk/reply-runtime";
 import { danger, logVerbose } from "godseye/plugin-sdk/runtime-env";
-import { chunkItems } from "godseye/plugin-sdk/text-runtime";
+import { chunkItems, normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 import type { ResolvedSlackAccount } from "../accounts.js";
 import { truncateSlackText } from "../truncate.js";
 import { resolveSlackAllowListMatch, resolveSlackUserAllowed } from "./allow-list.js";
@@ -32,7 +32,7 @@ import { resolveSlackRoomContextHints } from "./room-context.js";
 
 type SlackBlock = { type: string; [key: string]: unknown };
 
-const SLACK_COMMAND_ARG_ACTION_ID = "godseye_cmdarg";
+const SLACK_COMMAND_ARG_ACTION_ID = "openclaw_cmdarg";
 const SLACK_COMMAND_ARG_VALUE_PREFIX = "cmdarg";
 const SLACK_COMMAND_ARG_BUTTON_ROW_SIZE = 5;
 const SLACK_COMMAND_ARG_OVERFLOW_MIN = 3;
@@ -572,7 +572,7 @@ export async function registerSlackMonitorSlashCommands(params: {
                 : `slack:group:${command.channel_id}`,
           }) ?? (isDirectMessage ? senderName : roomLabel),
         GroupSubject: isRoomish ? roomLabel : undefined,
-        GroupSystemPrompt: isRoomish ? groupSystemPrompt : undefined,
+        GroupSystemPrompt: groupSystemPrompt,
         UntrustedContext: untrustedChannelMetadata ? [untrustedChannelMetadata] : undefined,
         SenderName: senderName,
         SenderId: command.user_id,
@@ -769,9 +769,9 @@ export async function registerSlackMonitorSlashCommands(params: {
         await ack({ options: [] });
         return;
       }
-      const query = typedBody.value?.trim().toLowerCase() ?? "";
+      const query = normalizeLowercaseStringOrEmpty(typedBody.value);
       const options = entry.choices
-        .filter((choice) => !query || choice.label.toLowerCase().includes(query))
+        .filter((choice) => !query || normalizeLowercaseStringOrEmpty(choice.label).includes(query))
         .slice(0, SLACK_COMMAND_ARG_SELECT_OPTIONS_MAX)
         .map((choice) => ({
           text: { type: "plain_text", text: choice.label.slice(0, 75) },

@@ -1,1 +1,1 @@
-export { resolveGatewayPort } from "openclaw/plugin-sdk/browser-config-support";
+export { resolveGatewayPort } from "godseye/plugin-sdk/browser-config-support";

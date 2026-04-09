@@ -1,6 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { consumeRootOptionToken, FLAG_TERMINATOR } from "../infra/cli-root-options.js";
-import { getPrimaryCommand } from "./argv.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
+import { resolveCliArgvInvocation } from "./argv-invocation.js";
+import { forwardConsumedCliRootOption } from "./root-option-forward.js";
 import { takeCliRootOptionValue } from "./root-option-value.js";
 
 type CliContainerParseResult =
@@ -56,14 +58,8 @@ export function parseCliContainerArgs(argv: string[]): CliContainerParseResult {
       continue;
     }
 
-    const consumedRootOption = consumeRootOptionToken(args, i);
+    const consumedRootOption = forwardConsumedCliRootOption(args, i, out);
     if (consumedRootOption > 0) {
-      for (let offset = 0; offset < consumedRootOption; offset += 1) {
-        const token = args[i + offset];
-        if (token !== undefined) {
-          out.push(token);
-        }
-      }
       i += consumedRootOption - 1;
       continue;
     }
@@ -82,7 +78,7 @@ export function resolveCliContainerTarget(
   if (!parsed.ok) {
     throw new Error(parsed.error);
   }
-  return parsed.container ?? env.GODSEYE_CONTAINER?.trim() ?? null;
+  return parsed.container ?? normalizeOptionalString(env.OPENCLAW_CONTAINER) ?? null;
 }
 
 function isContainerRunning(params: {
@@ -162,11 +158,11 @@ function buildContainerExecArgs(params: {
     "exec",
     ...interactiveFlags,
     envFlag,
-    `GODSEYE_CONTAINER_HINT=${params.containerName}`,
+    `OPENCLAW_CONTAINER_HINT=${params.containerName}`,
     envFlag,
-    "GODSEYE_CLI_CONTAINER_BYPASS=1",
+    "OPENCLAW_CLI_CONTAINER_BYPASS=1",
     params.containerName,
-    "godseye",
+    "openclaw",
     ...params.argv,
   ];
 }
@@ -175,20 +171,20 @@ function buildContainerExecEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const next = { ...env };
   // Container-targeted CLI invocations should use the container's own profile
   // and gateway auth/runtime state rather than inheriting host overrides.
-  delete next.GODSEYE_PROFILE;
-  delete next.GODSEYE_GATEWAY_PORT;
-  delete next.GODSEYE_GATEWAY_URL;
-  delete next.GODSEYE_GATEWAY_TOKEN;
-  delete next.GODSEYE_GATEWAY_PASSWORD;
+  delete next.OPENCLAW_PROFILE;
+  delete next.OPENCLAW_GATEWAY_PORT;
+  delete next.OPENCLAW_GATEWAY_URL;
+  delete next.OPENCLAW_GATEWAY_TOKEN;
+  delete next.OPENCLAW_GATEWAY_PASSWORD;
   // The child CLI should render container-aware follow-up commands via
-  // GODSEYE_CONTAINER_HINT, but it should not treat itself as still
+  // OPENCLAW_CONTAINER_HINT, but it should not treat itself as still
   // container-targeted for validation/routing.
-  next.GODSEYE_CONTAINER = "";
+  next.OPENCLAW_CONTAINER = "";
   return next;
 }
 
 function isBlockedContainerCommand(argv: string[]): boolean {
-  if (getPrimaryCommand(["node", "godseye", ...argv]) === "update") {
+  if (resolveCliArgvInvocation(["node", "openclaw", ...argv]).primary === "update") {
     return true;
   }
   for (let i = 0; i < argv.length; i += 1) {
@@ -222,7 +218,7 @@ export function maybeRunCliInContainer(
     stdoutIsTTY: deps?.stdoutIsTTY ?? Boolean(process.stdout.isTTY),
   };
 
-  if (resolvedDeps.env.GODSEYE_CLI_CONTAINER_BYPASS === "1") {
+  if (resolvedDeps.env.OPENCLAW_CLI_CONTAINER_BYPASS === "1") {
     return { handled: false, argv };
   }
 
@@ -236,7 +232,7 @@ export function maybeRunCliInContainer(
   }
   if (isBlockedContainerCommand(parsed.argv.slice(2))) {
     throw new Error(
-      "godseye update is not supported with --container; rebuild or restart the container image instead.",
+      "openclaw update is not supported with --container; rebuild or restart the container image instead.",
     );
   }
 

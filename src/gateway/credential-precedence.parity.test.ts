@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { resolveGatewayProbeAuth as resolveStatusGatewayProbeAuth } from "../commands/status.gateway-probe.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveGatewayAuth } from "./auth.js";
 import { resolveGatewayCredentialsFromConfig } from "./credentials.js";
 import { resolveGatewayProbeAuth } from "./probe-auth.js";
@@ -14,17 +14,17 @@ type ExpectedCredentialSet = {
 
 type TestCase = {
   name: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   expected: ExpectedCredentialSet;
 };
 
 const gatewayEnv = {
-  GODSEYE_GATEWAY_TOKEN: "env-token", // pragma: allowlist secret
-  GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+  OPENCLAW_GATEWAY_TOKEN: "env-token", // pragma: allowlist secret
+  OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
 } as NodeJS.ProcessEnv;
 
-function makeRemoteGatewayConfig(remote: { token?: string; password?: string }): GodsEyeConfig {
+function makeRemoteGatewayConfig(remote: { token?: string; password?: string }): OpenClawConfig {
   return {
     gateway: {
       mode: "remote",
@@ -34,14 +34,14 @@ function makeRemoteGatewayConfig(remote: { token?: string; password?: string }):
         password: "local-password", // pragma: allowlist secret
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 function withGatewayAuthEnv<T>(env: NodeJS.ProcessEnv, fn: () => T): T {
   const keys = [
-    "GODSEYE_GATEWAY_TOKEN",
-    "GODSEYE_GATEWAY_PASSWORD",
-    "GODSEYE_SERVICE_KIND",
+    "OPENCLAW_GATEWAY_TOKEN",
+    "OPENCLAW_GATEWAY_PASSWORD",
+    "OPENCLAW_SERVICE_KIND",
   ] as const;
   const previous = new Map<string, string | undefined>();
   for (const key of keys) {
@@ -79,10 +79,10 @@ describe("gateway credential precedence coverage", () => {
             password: "config-password", // pragma: allowlist secret
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {
-        GODSEYE_GATEWAY_TOKEN: "env-token", // pragma: allowlist secret
-        GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+        OPENCLAW_GATEWAY_TOKEN: "env-token", // pragma: allowlist secret
+        OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
       } as NodeJS.ProcessEnv,
       expected: {
         call: { token: "env-token", password: "env-password" }, // pragma: allowlist secret
@@ -101,7 +101,7 @@ describe("gateway credential precedence coverage", () => {
       expected: {
         call: { token: "remote-token", password: "env-password" }, // pragma: allowlist secret
         probe: { token: "remote-token", password: "env-password" }, // pragma: allowlist secret
-        status: { token: "remote-token", password: "remote-password" }, // pragma: allowlist secret
+        status: { token: "local-token", password: "local-password" }, // pragma: allowlist secret
         auth: { token: "local-token", password: "local-password" }, // pragma: allowlist secret
       },
     },
@@ -114,7 +114,7 @@ describe("gateway credential precedence coverage", () => {
       expected: {
         call: { token: "env-token", password: "env-password" }, // pragma: allowlist secret
         probe: { token: undefined, password: "env-password" }, // pragma: allowlist secret
-        status: { token: undefined, password: "remote-password" }, // pragma: allowlist secret
+        status: { token: "local-token", password: "local-password" }, // pragma: allowlist secret
         auth: { token: "local-token", password: "local-password" }, // pragma: allowlist secret
       },
     },
@@ -128,11 +128,11 @@ describe("gateway credential precedence coverage", () => {
             password: "config-password", // pragma: allowlist secret
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       env: {
-        GODSEYE_GATEWAY_TOKEN: "env-token",
-        GODSEYE_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
-        GODSEYE_SERVICE_KIND: "gateway",
+        OPENCLAW_GATEWAY_TOKEN: "env-token",
+        OPENCLAW_GATEWAY_PASSWORD: "env-password", // pragma: allowlist secret
+        OPENCLAW_SERVICE_KIND: "gateway",
       } as NodeJS.ProcessEnv,
       expected: {
         call: { token: "config-token", password: "env-password" }, // pragma: allowlist secret

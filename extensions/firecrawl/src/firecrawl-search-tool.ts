@@ -1,11 +1,11 @@
 import { Type } from "@sinclair/typebox";
+import type { OpenClawPluginApi } from "godseye/plugin-sdk/plugin-runtime";
 import {
   jsonResult,
   readNumberParam,
   readStringArrayParam,
   readStringParam,
-} from "godseye/plugin-sdk/agent-runtime";
-import type { GodsEyePluginApi } from "godseye/plugin-sdk/plugin-runtime";
+} from "godseye/plugin-sdk/provider-web-search";
 import { runFirecrawlSearch } from "./firecrawl-client.js";
 
 const FirecrawlSearchToolSchema = Type.Object(
@@ -43,7 +43,7 @@ const FirecrawlSearchToolSchema = Type.Object(
   { additionalProperties: false },
 );
 
-export function createFirecrawlSearchTool(api: GodsEyePluginApi) {
+export function createFirecrawlSearchTool(api: OpenClawPluginApi) {
   return {
     name: "firecrawl_search",
     label: "Firecrawl Search",

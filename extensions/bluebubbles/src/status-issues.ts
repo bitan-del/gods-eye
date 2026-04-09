@@ -1,5 +1,5 @@
-import type { ChannelAccountSnapshot } from "openclaw/plugin-sdk/channel-contract";
-import { collectIssuesForEnabledAccounts } from "openclaw/plugin-sdk/status-helpers";
+import type { ChannelAccountSnapshot } from "godseye/plugin-sdk/channel-contract";
+import { collectIssuesForEnabledAccounts } from "godseye/plugin-sdk/status-helpers";
 import { asRecord } from "./monitor-normalize.js";
 
 type BlueBubblesAccountStatus = {

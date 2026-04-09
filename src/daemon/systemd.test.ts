@@ -4,14 +4,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const execFileMock = vi.hoisted(() => vi.fn());
 
-vi.mock("node:child_process", () => ({
-  execFile: execFileMock,
-}));
+vi.mock("node:child_process", async () => {
+  const { mockNodeBuiltinModule } = await import("../../test/helpers/node-builtin-mocks.js");
+  return mockNodeBuiltinModule(
+    () => vi.importActual<typeof import("node:child_process")>("node:child_process"),
+    {
+      execFile: Object.assign(execFileMock, {
+        __promisify__: vi.fn(),
+      }) as typeof import("node:child_process").execFile,
+    },
+  );
+});
 
 import { splitArgsPreservingQuotes } from "./arg-split.js";
 import { parseSystemdExecStart } from "./systemd-unit.js";
 import {
   isNonFatalSystemdInstallProbeError,
+  isSystemdServiceEnabled,
   isSystemdUserServiceAvailable,
   parseSystemdShow,
   readSystemdServiceExecStart,
@@ -26,8 +35,8 @@ type ExecFileError = Error & {
 };
 
 const TEST_SERVICE_HOME = "/home/test";
-const TEST_MANAGED_HOME = "/tmp/godseye-test-home";
-const GATEWAY_SERVICE = "godseye-gateway.service";
+const TEST_MANAGED_HOME = "/tmp/openclaw-test-home";
+const GATEWAY_SERVICE = "openclaw-gateway.service";
 
 const createExecFileError = (
   message: string,
@@ -71,7 +80,6 @@ function assertMachineUserSystemctlArgs(args: string[], user: string, ...command
 }
 
 async function readManagedServiceEnabled(env: NodeJS.ProcessEnv = { HOME: TEST_MANAGED_HOME }) {
-  const { isSystemdServiceEnabled } = await import("./systemd.js");
   vi.spyOn(fs, "access").mockResolvedValue(undefined);
   return isSystemdServiceEnabled({ env });
 }
@@ -97,10 +105,10 @@ function mockReadGatewayServiceFile(
 }
 
 async function expectExecStartWithoutEnvironment(envFileLine: string) {
-  mockReadGatewayServiceFile(["[Service]", "ExecStart=/usr/bin/godseye gateway run", envFileLine]);
+  mockReadGatewayServiceFile(["[Service]", "ExecStart=/usr/bin/openclaw gateway run", envFileLine]);
 
   const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
-  expect(command?.programArguments).toEqual(["/usr/bin/godseye", "gateway", "run"]);
+  expect(command?.programArguments).toEqual(["/usr/bin/openclaw", "gateway", "run"]);
   expect(command?.environment).toBeUndefined();
 }
 
@@ -161,6 +169,40 @@ describe("systemd availability", () => {
 
     await expect(isSystemdUserServiceAvailable({ USER: "debian" })).resolves.toBe(true);
   });
+
+  it("does not fall back to machine scope when --user fails with permission denied", async () => {
+    execFileMock.mockImplementationOnce((_cmd, args, _opts, cb) => {
+      expect(args).toEqual(["--user", "status"]);
+      cb(
+        createExecFileError("Failed to connect to bus: Permission denied", {
+          stderr: "Failed to connect to bus: Permission denied",
+          code: 1,
+        }),
+        "",
+        "",
+      );
+    });
+    // Only one call should be made: no machine-scope fallback for permission denied errors.
+    await expect(isSystemdUserServiceAvailable({ USER: "debian" })).resolves.toBe(false);
+    expect(execFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fall back to direct --user when machine scope fails under sudo", async () => {
+    execFileMock.mockImplementationOnce((_cmd, args, _opts, cb) => {
+      assertMachineUserSystemctlArgs(args, "ai", "status");
+      cb(
+        createExecFileError("Failed to connect to bus: No such file or directory", {
+          stderr: "Failed to connect to bus: No such file or directory",
+          code: 1,
+        }),
+        "",
+        "",
+      );
+    });
+
+    await expect(isSystemdUserServiceAvailable({ SUDO_USER: "ai" })).resolves.toBe(false);
+    expect(execFileMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("isSystemdServiceEnabled", () => {
@@ -180,12 +222,11 @@ describe("isSystemdServiceEnabled", () => {
   });
 
   it("returns false without calling systemctl when the managed unit file is missing", async () => {
-    const { isSystemdServiceEnabled } = await import("./systemd.js");
     const err = new Error("missing unit") as NodeJS.ErrnoException;
     err.code = "ENOENT";
     vi.spyOn(fs, "access").mockRejectedValueOnce(err);
 
-    const result = await isSystemdServiceEnabled({ env: { HOME: "/tmp/godseye-test-home" } });
+    const result = await isSystemdServiceEnabled({ env: { HOME: "/tmp/openclaw-test-home" } });
 
     expect(result).toBe(false);
     expect(execFileMock).not.toHaveBeenCalled();
@@ -286,11 +327,10 @@ describe("isSystemdServiceEnabled", () => {
   });
 
   it("throws when systemctl is-enabled fails for non-state errors", async () => {
-    const { isSystemdServiceEnabled } = await import("./systemd.js");
     vi.spyOn(fs, "access").mockResolvedValue(undefined);
     execFileMock
       .mockImplementationOnce((_cmd, args, _opts, cb) => {
-        expect(args).toEqual(["--user", "is-enabled", "godseye-gateway.service"]);
+        expect(args).toEqual(["--user", "is-enabled", "openclaw-gateway.service"]);
         const err = new Error("Failed to connect to bus") as Error & { code?: number };
         err.code = 1;
         cb(err, "", "Failed to connect to bus");
@@ -298,29 +338,28 @@ describe("isSystemdServiceEnabled", () => {
       .mockImplementationOnce((_cmd, args, _opts, cb) => {
         expect(args[0]).toBe("--machine");
         expect(String(args[1])).toMatch(/^[^@]+@$/);
-        expect(args.slice(2)).toEqual(["--user", "is-enabled", "godseye-gateway.service"]);
+        expect(args.slice(2)).toEqual(["--user", "is-enabled", "openclaw-gateway.service"]);
         const err = new Error("permission denied") as Error & { code?: number };
         err.code = 1;
         cb(err, "", "permission denied");
       });
     await expect(
-      isSystemdServiceEnabled({ env: { HOME: "/tmp/godseye-test-home" } }),
+      isSystemdServiceEnabled({ env: { HOME: "/tmp/openclaw-test-home" } }),
     ).rejects.toThrow("systemctl is-enabled unavailable: permission denied");
   });
 
   it("returns false when systemctl is-enabled exits with code 4 (not-found)", async () => {
-    const { isSystemdServiceEnabled } = await import("./systemd.js");
     vi.spyOn(fs, "access").mockResolvedValue(undefined);
     execFileMock.mockImplementationOnce((_cmd, _args, _opts, cb) => {
       // On Ubuntu 24.04, `systemctl --user is-enabled <unit>` exits with
       // code 4 and prints "not-found" to stdout when the unit doesn't exist.
       const err = new Error(
-        "Command failed: systemctl --user is-enabled godseye-gateway.service",
+        "Command failed: systemctl --user is-enabled openclaw-gateway.service",
       ) as Error & { code?: number };
       err.code = 4;
       cb(err, "not-found\n", "");
     });
-    const result = await isSystemdServiceEnabled({ env: { HOME: "/tmp/godseye-test-home" } });
+    const result = await isSystemdServiceEnabled({ env: { HOME: "/tmp/openclaw-test-home" } });
     expect(result).toBe(false);
   });
 });
@@ -329,7 +368,7 @@ describe("isNonFatalSystemdInstallProbeError", () => {
   it("matches wrapper-only WSL install probe failures", () => {
     expect(
       isNonFatalSystemdInstallProbeError(
-        new Error("Command failed: systemctl --user is-enabled godseye-gateway.service"),
+        new Error("Command failed: systemctl --user is-enabled openclaw-gateway.service"),
       ),
     ).toBe(true);
   });
@@ -387,37 +426,37 @@ describe("systemd runtime parsing", () => {
 describe("resolveSystemdUserUnitPath", () => {
   it.each([
     {
-      name: "uses default service name when GODSEYE_PROFILE is unset",
+      name: "uses default service name when OPENCLAW_PROFILE is unset",
       env: { HOME: "/home/test" },
-      expected: "/home/test/.config/systemd/user/godseye-gateway.service",
+      expected: "/home/test/.config/systemd/user/openclaw-gateway.service",
     },
     {
-      name: "uses profile-specific service name when GODSEYE_PROFILE is set to a custom value",
-      env: { HOME: "/home/test", GODSEYE_PROFILE: "jbphoenix" },
-      expected: "/home/test/.config/systemd/user/godseye-gateway-jbphoenix.service",
+      name: "uses profile-specific service name when OPENCLAW_PROFILE is set to a custom value",
+      env: { HOME: "/home/test", OPENCLAW_PROFILE: "jbphoenix" },
+      expected: "/home/test/.config/systemd/user/openclaw-gateway-jbphoenix.service",
     },
     {
-      name: "prefers GODSEYE_SYSTEMD_UNIT over GODSEYE_PROFILE",
+      name: "prefers OPENCLAW_SYSTEMD_UNIT over OPENCLAW_PROFILE",
       env: {
         HOME: "/home/test",
-        GODSEYE_PROFILE: "jbphoenix",
-        GODSEYE_SYSTEMD_UNIT: "custom-unit",
+        OPENCLAW_PROFILE: "jbphoenix",
+        OPENCLAW_SYSTEMD_UNIT: "custom-unit",
       },
       expected: "/home/test/.config/systemd/user/custom-unit.service",
     },
     {
-      name: "handles GODSEYE_SYSTEMD_UNIT with .service suffix",
+      name: "handles OPENCLAW_SYSTEMD_UNIT with .service suffix",
       env: {
         HOME: "/home/test",
-        GODSEYE_SYSTEMD_UNIT: "custom-unit.service",
+        OPENCLAW_SYSTEMD_UNIT: "custom-unit.service",
       },
       expected: "/home/test/.config/systemd/user/custom-unit.service",
     },
     {
-      name: "trims whitespace from GODSEYE_SYSTEMD_UNIT",
+      name: "trims whitespace from OPENCLAW_SYSTEMD_UNIT",
       env: {
         HOME: "/home/test",
-        GODSEYE_SYSTEMD_UNIT: "  custom-unit  ",
+        OPENCLAW_SYSTEMD_UNIT: "  custom-unit  ",
       },
       expected: "/home/test/.config/systemd/user/custom-unit.service",
     },
@@ -428,8 +467,8 @@ describe("resolveSystemdUserUnitPath", () => {
 
 describe("splitArgsPreservingQuotes", () => {
   it("splits on whitespace outside quotes", () => {
-    expect(splitArgsPreservingQuotes('/usr/bin/godseye gateway start --name "My Bot"')).toEqual([
-      "/usr/bin/godseye",
+    expect(splitArgsPreservingQuotes('/usr/bin/openclaw gateway start --name "My Bot"')).toEqual([
+      "/usr/bin/openclaw",
       "gateway",
       "start",
       "--name",
@@ -439,32 +478,32 @@ describe("splitArgsPreservingQuotes", () => {
 
   it("supports systemd-style backslash escaping", () => {
     expect(
-      splitArgsPreservingQuotes('godseye --name "My \\"Bot\\"" --foo bar', {
+      splitArgsPreservingQuotes('openclaw --name "My \\"Bot\\"" --foo bar', {
         escapeMode: "backslash",
       }),
-    ).toEqual(["godseye", "--name", 'My "Bot"', "--foo", "bar"]);
+    ).toEqual(["openclaw", "--name", 'My "Bot"', "--foo", "bar"]);
   });
 
   it("supports schtasks-style escaped quotes while preserving other backslashes", () => {
     expect(
-      splitArgsPreservingQuotes('godseye --path "C:\\\\Program Files\\\\GodsEye"', {
+      splitArgsPreservingQuotes('openclaw --path "C:\\\\Program Files\\\\OpenClaw"', {
         escapeMode: "backslash-quote-only",
       }),
-    ).toEqual(["godseye", "--path", "C:\\\\Program Files\\\\GodsEye"]);
+    ).toEqual(["openclaw", "--path", "C:\\\\Program Files\\\\OpenClaw"]);
 
     expect(
-      splitArgsPreservingQuotes('godseye --label "My \\"Quoted\\" Name"', {
+      splitArgsPreservingQuotes('openclaw --label "My \\"Quoted\\" Name"', {
         escapeMode: "backslash-quote-only",
       }),
-    ).toEqual(["godseye", "--label", 'My "Quoted" Name']);
+    ).toEqual(["openclaw", "--label", 'My "Quoted" Name']);
   });
 });
 
 describe("parseSystemdExecStart", () => {
   it("preserves quoted arguments", () => {
-    const execStart = '/usr/bin/godseye gateway start --name "My Bot"';
+    const execStart = '/usr/bin/openclaw gateway start --name "My Bot"';
     expect(parseSystemdExecStart(execStart)).toEqual([
-      "/usr/bin/godseye",
+      "/usr/bin/openclaw",
       "gateway",
       "start",
       "--name",
@@ -478,14 +517,14 @@ describe("readSystemdServiceExecStart", () => {
     vi.restoreAllMocks();
   });
 
-  it("loads GODSEYE_GATEWAY_TOKEN from EnvironmentFile", async () => {
+  it("loads OPENCLAW_GATEWAY_TOKEN from EnvironmentFile", async () => {
     const readFileSpy = mockReadGatewayServiceFile(
-      ["[Service]", "ExecStart=/usr/bin/godseye gateway run", "EnvironmentFile=%h/.godseye/.env"],
-      { [`${TEST_SERVICE_HOME}/.godseye/.env`]: "GODSEYE_GATEWAY_TOKEN=env-file-token\n" },
+      ["[Service]", "ExecStart=/usr/bin/openclaw gateway run", "EnvironmentFile=%h/.openclaw/.env"],
+      { [`${TEST_SERVICE_HOME}/.openclaw/.env`]: "OPENCLAW_GATEWAY_TOKEN=env-file-token\n" },
     );
 
     const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
-    expect(command?.environment?.GODSEYE_GATEWAY_TOKEN).toBe("env-file-token");
+    expect(command?.environment?.OPENCLAW_GATEWAY_TOKEN).toBe("env-file-token");
     expect(readFileSpy).toHaveBeenCalledTimes(2);
   });
 
@@ -493,97 +532,97 @@ describe("readSystemdServiceExecStart", () => {
     mockReadGatewayServiceFile(
       [
         "[Service]",
-        "ExecStart=/usr/bin/godseye gateway run",
-        "EnvironmentFile=%h/.godseye/.env",
-        'Environment="GODSEYE_GATEWAY_TOKEN=inline-token"',
+        "ExecStart=/usr/bin/openclaw gateway run",
+        "EnvironmentFile=%h/.openclaw/.env",
+        'Environment="OPENCLAW_GATEWAY_TOKEN=inline-token"',
       ],
-      { [`${TEST_SERVICE_HOME}/.godseye/.env`]: "GODSEYE_GATEWAY_TOKEN=env-file-token\n" },
+      { [`${TEST_SERVICE_HOME}/.openclaw/.env`]: "OPENCLAW_GATEWAY_TOKEN=env-file-token\n" },
     );
 
     const command = await readSystemdServiceExecStart({ HOME: TEST_SERVICE_HOME });
-    expect(command?.environment?.GODSEYE_GATEWAY_TOKEN).toBe("env-file-token");
-    expect(command?.environmentValueSources?.GODSEYE_GATEWAY_TOKEN).toBe("file");
+    expect(command?.environment?.OPENCLAW_GATEWAY_TOKEN).toBe("env-file-token");
+    expect(command?.environmentValueSources?.OPENCLAW_GATEWAY_TOKEN).toBe("file");
   });
 
   it("ignores missing optional EnvironmentFile entries", async () => {
-    await expectExecStartWithoutEnvironment("EnvironmentFile=-%h/.godseye/missing.env");
+    await expectExecStartWithoutEnvironment("EnvironmentFile=-%h/.openclaw/missing.env");
   });
 
   it("keeps parsing when non-optional EnvironmentFile entries are missing", async () => {
-    await expectExecStartWithoutEnvironment("EnvironmentFile=%h/.godseye/missing.env");
+    await expectExecStartWithoutEnvironment("EnvironmentFile=%h/.openclaw/missing.env");
   });
 
   it("supports multiple EnvironmentFile entries and quoted paths", async () => {
     vi.spyOn(fs, "readFile").mockImplementation(async (pathname) => {
       const pathValue = pathLikeToString(pathname);
-      if (pathValue.endsWith("/godseye-gateway.service")) {
+      if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/godseye gateway run",
-          'EnvironmentFile=%h/.godseye/first.env "%h/.godseye/second env.env"',
+          "ExecStart=/usr/bin/openclaw gateway run",
+          'EnvironmentFile=%h/.openclaw/first.env "%h/.openclaw/second env.env"',
         ].join("\n");
       }
-      if (pathValue === "/home/test/.godseye/first.env") {
-        return "GODSEYE_GATEWAY_TOKEN=first-token\n"; // pragma: allowlist secret
+      if (pathValue === "/home/test/.openclaw/first.env") {
+        return "OPENCLAW_GATEWAY_TOKEN=first-token\n"; // pragma: allowlist secret
       }
-      if (pathValue === "/home/test/.godseye/second env.env") {
-        return 'GODSEYE_GATEWAY_PASSWORD="second password"\n'; // pragma: allowlist secret
+      if (pathValue === "/home/test/.openclaw/second env.env") {
+        return 'OPENCLAW_GATEWAY_PASSWORD="second password"\n'; // pragma: allowlist secret
       }
       throw new Error(`unexpected readFile path: ${pathValue}`);
     });
 
     const command = await readSystemdServiceExecStart({ HOME: "/home/test" });
     expect(command?.environment).toEqual({
-      GODSEYE_GATEWAY_TOKEN: "first-token",
-      GODSEYE_GATEWAY_PASSWORD: "second password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_TOKEN: "first-token",
+      OPENCLAW_GATEWAY_PASSWORD: "second password", // pragma: allowlist secret
     });
   });
 
   it("resolves relative EnvironmentFile paths from the unit directory", async () => {
     vi.spyOn(fs, "readFile").mockImplementation(async (pathname) => {
       const pathValue = pathLikeToString(pathname);
-      if (pathValue.endsWith("/godseye-gateway.service")) {
+      if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/godseye gateway run",
+          "ExecStart=/usr/bin/openclaw gateway run",
           "EnvironmentFile=./gateway.env ./override.env",
         ].join("\n");
       }
       if (pathValue.endsWith("/.config/systemd/user/gateway.env")) {
         return [
-          "GODSEYE_GATEWAY_TOKEN=relative-token", // pragma: allowlist secret
-          "GODSEYE_GATEWAY_PASSWORD=relative-password", // pragma: allowlist secret
+          "OPENCLAW_GATEWAY_TOKEN=relative-token", // pragma: allowlist secret
+          "OPENCLAW_GATEWAY_PASSWORD=relative-password", // pragma: allowlist secret
         ].join("\n");
       }
       if (pathValue.endsWith("/.config/systemd/user/override.env")) {
-        return "GODSEYE_GATEWAY_TOKEN=override-token\n"; // pragma: allowlist secret
+        return "OPENCLAW_GATEWAY_TOKEN=override-token\n"; // pragma: allowlist secret
       }
       throw new Error(`unexpected readFile path: ${pathValue}`);
     });
 
     const command = await readSystemdServiceExecStart({ HOME: "/home/test" });
     expect(command?.environment).toEqual({
-      GODSEYE_GATEWAY_TOKEN: "override-token",
-      GODSEYE_GATEWAY_PASSWORD: "relative-password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_TOKEN: "override-token",
+      OPENCLAW_GATEWAY_PASSWORD: "relative-password", // pragma: allowlist secret
     });
   });
 
   it("parses EnvironmentFile content with comments and quoted values", async () => {
     vi.spyOn(fs, "readFile").mockImplementation(async (pathname) => {
       const pathValue = pathLikeToString(pathname);
-      if (pathValue.endsWith("/godseye-gateway.service")) {
+      if (pathValue.endsWith("/openclaw-gateway.service")) {
         return [
           "[Service]",
-          "ExecStart=/usr/bin/godseye gateway run",
-          "EnvironmentFile=%h/.godseye/gateway.env",
+          "ExecStart=/usr/bin/openclaw gateway run",
+          "EnvironmentFile=%h/.openclaw/gateway.env",
         ].join("\n");
       }
-      if (pathValue === "/home/test/.godseye/gateway.env") {
+      if (pathValue === "/home/test/.openclaw/gateway.env") {
         return [
           "# comment",
           "; another comment",
-          'GODSEYE_GATEWAY_TOKEN="quoted token"', // pragma: allowlist secret
-          "GODSEYE_GATEWAY_PASSWORD=quoted-password", // pragma: allowlist secret
+          'OPENCLAW_GATEWAY_TOKEN="quoted token"', // pragma: allowlist secret
+          "OPENCLAW_GATEWAY_PASSWORD=quoted-password", // pragma: allowlist secret
         ].join("\n");
       }
       throw new Error(`unexpected readFile path: ${pathValue}`);
@@ -591,12 +630,12 @@ describe("readSystemdServiceExecStart", () => {
 
     const command = await readSystemdServiceExecStart({ HOME: "/home/test" });
     expect(command?.environment).toEqual({
-      GODSEYE_GATEWAY_TOKEN: "quoted token",
-      GODSEYE_GATEWAY_PASSWORD: "quoted-password", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_TOKEN: "quoted token",
+      OPENCLAW_GATEWAY_PASSWORD: "quoted-password", // pragma: allowlist secret
     });
     expect(command?.environmentValueSources).toEqual({
-      GODSEYE_GATEWAY_TOKEN: "file",
-      GODSEYE_GATEWAY_PASSWORD: "file", // pragma: allowlist secret
+      OPENCLAW_GATEWAY_TOKEN: "file",
+      OPENCLAW_GATEWAY_PASSWORD: "file", // pragma: allowlist secret
     });
   });
 });
@@ -650,10 +689,10 @@ describe("systemd service control", () => {
     execFileMock
       .mockImplementationOnce((_cmd, _args, _opts, cb) => cb(null, "", ""))
       .mockImplementationOnce((_cmd, args, _opts, cb) => {
-        assertUserSystemctlArgs(args, "restart", "godseye-gateway-work.service");
+        assertUserSystemctlArgs(args, "restart", "openclaw-gateway-work.service");
         cb(null, "", "");
       });
-    await assertRestartSuccess({ GODSEYE_PROFILE: "work" });
+    await assertRestartSuccess({ OPENCLAW_PROFILE: "work" });
   });
 
   it("surfaces stop failures with systemctl detail", async () => {

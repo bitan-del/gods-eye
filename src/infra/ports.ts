@@ -56,10 +56,10 @@ export async function handlePortError(
     if (details) {
       runtime.error(info("Port listener details:"));
       runtime.error(details);
-      if (/godseye|src\/index\.ts|dist\/index\.js/.test(details)) {
+      if (/openclaw|src\/index\.ts|dist\/index\.js/.test(details)) {
         runtime.error(
           warn(
-            "It looks like another GodsEye instance is already running. Stop it or pick a different port.",
+            "It looks like another OpenClaw instance is already running. Stop it or pick a different port.",
           ),
         );
       }
@@ -86,5 +86,10 @@ export async function handlePortError(
 
 export { PortInUseError };
 export type { PortListener, PortListenerKind, PortUsage, PortUsageStatus };
-export { buildPortHints, classifyPortListener, formatPortDiagnostics } from "./ports-format.js";
+export {
+  buildPortHints,
+  classifyPortListener,
+  formatPortDiagnostics,
+  isDualStackLoopbackGatewayListeners,
+} from "./ports-format.js";
 export { inspectPortUsage } from "./ports-inspect.js";

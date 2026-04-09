@@ -3,18 +3,15 @@ import path from "node:path";
 import {
   getRuntimeConfigSourceSnapshot,
   projectConfigOntoRuntimeSourceSnapshot,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   loadConfig,
 } from "../config/config.js";
 import { createConfigRuntimeEnv } from "../config/env-vars.js";
-import { resolveGodsEyeAgentDir } from "./agent-paths.js";
-import { planGodsEyeModelsJson } from "./models-config.plan.js";
+import { resolveOpenClawAgentDir } from "./agent-paths.js";
+import { MODELS_JSON_STATE } from "./models-config-state.js";
+import { planOpenClawModelsJson } from "./models-config.plan.js";
 
-const MODELS_JSON_WRITE_LOCKS = new Map<string, Promise<void>>();
-const MODELS_JSON_READY_CACHE = new Map<
-  string,
-  Promise<{ fingerprint: string; result: { agentDir: string; wrote: boolean } }>
->();
+export { resetModelsJsonReadyCacheForTest } from "./models-config-state.js";
 
 async function readFileMtimeMs(pathname: string): Promise<number | null> {
   try {
@@ -41,8 +38,8 @@ function stableStringify(value: unknown): string {
 }
 
 async function buildModelsJsonFingerprint(params: {
-  config: GodsEyeConfig;
-  sourceConfigForSecrets: GodsEyeConfig;
+  config: OpenClawConfig;
+  sourceConfigForSecrets: OpenClawConfig;
   agentDir: string;
 }): Promise<string> {
   const authProfilesMtimeMs = await readFileMtimeMs(
@@ -77,21 +74,24 @@ async function readExistingModelsFile(pathname: string): Promise<{
   }
 }
 
-async function ensureModelsFileMode(pathname: string): Promise<void> {
+export async function ensureModelsFileModeForModelsJson(pathname: string): Promise<void> {
   await fs.chmod(pathname, 0o600).catch(() => {
     // best-effort
   });
 }
 
-async function writeModelsFileAtomic(targetPath: string, contents: string): Promise<void> {
+export async function writeModelsFileAtomicForModelsJson(
+  targetPath: string,
+  contents: string,
+): Promise<void> {
   const tempPath = `${targetPath}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(tempPath, contents, { mode: 0o600 });
   await fs.rename(tempPath, targetPath);
 }
 
-function resolveModelsConfigInput(config?: GodsEyeConfig): {
-  config: GodsEyeConfig;
-  sourceConfigForSecrets: GodsEyeConfig;
+function resolveModelsConfigInput(config?: OpenClawConfig): {
+  config: OpenClawConfig;
+  sourceConfigForSecrets: OpenClawConfig;
 } {
   const runtimeSource = getRuntimeConfigSourceSnapshot();
   if (!config) {
@@ -117,42 +117,42 @@ function resolveModelsConfigInput(config?: GodsEyeConfig): {
 }
 
 async function withModelsJsonWriteLock<T>(targetPath: string, run: () => Promise<T>): Promise<T> {
-  const prior = MODELS_JSON_WRITE_LOCKS.get(targetPath) ?? Promise.resolve();
+  const prior = MODELS_JSON_STATE.writeLocks.get(targetPath) ?? Promise.resolve();
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
   const pending = prior.then(() => gate);
-  MODELS_JSON_WRITE_LOCKS.set(targetPath, pending);
+  MODELS_JSON_STATE.writeLocks.set(targetPath, pending);
   try {
     await prior;
     return await run();
   } finally {
     release();
-    if (MODELS_JSON_WRITE_LOCKS.get(targetPath) === pending) {
-      MODELS_JSON_WRITE_LOCKS.delete(targetPath);
+    if (MODELS_JSON_STATE.writeLocks.get(targetPath) === pending) {
+      MODELS_JSON_STATE.writeLocks.delete(targetPath);
     }
   }
 }
 
-export async function ensureGodsEyeModelsJson(
-  config?: GodsEyeConfig,
+export async function ensureOpenClawModelsJson(
+  config?: OpenClawConfig,
   agentDirOverride?: string,
 ): Promise<{ agentDir: string; wrote: boolean }> {
   const resolved = resolveModelsConfigInput(config);
   const cfg = resolved.config;
-  const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveGodsEyeAgentDir();
+  const agentDir = agentDirOverride?.trim() ? agentDirOverride.trim() : resolveOpenClawAgentDir();
   const targetPath = path.join(agentDir, "models.json");
   const fingerprint = await buildModelsJsonFingerprint({
     config: cfg,
     sourceConfigForSecrets: resolved.sourceConfigForSecrets,
     agentDir,
   });
-  const cached = MODELS_JSON_READY_CACHE.get(targetPath);
+  const cached = MODELS_JSON_STATE.readyCache.get(targetPath);
   if (cached) {
     const settled = await cached;
     if (settled.fingerprint === fingerprint) {
-      await ensureModelsFileMode(targetPath);
+      await ensureModelsFileModeForModelsJson(targetPath);
       return settled.result;
     }
   }
@@ -162,7 +162,7 @@ export async function ensureGodsEyeModelsJson(
     // are available to provider discovery without mutating process.env.
     const env = createConfigRuntimeEnv(cfg);
     const existingModelsFile = await readExistingModelsFile(targetPath);
-    const plan = await planGodsEyeModelsJson({
+    const plan = await planOpenClawModelsJson({
       cfg,
       sourceConfigForSecrets: resolved.sourceConfigForSecrets,
       agentDir,
@@ -176,27 +176,23 @@ export async function ensureGodsEyeModelsJson(
     }
 
     if (plan.action === "noop") {
-      await ensureModelsFileMode(targetPath);
+      await ensureModelsFileModeForModelsJson(targetPath);
       return { fingerprint, result: { agentDir, wrote: false } };
     }
 
     await fs.mkdir(agentDir, { recursive: true, mode: 0o700 });
-    await writeModelsFileAtomic(targetPath, plan.contents);
-    await ensureModelsFileMode(targetPath);
+    await writeModelsFileAtomicForModelsJson(targetPath, plan.contents);
+    await ensureModelsFileModeForModelsJson(targetPath);
     return { fingerprint, result: { agentDir, wrote: true } };
   });
-  MODELS_JSON_READY_CACHE.set(targetPath, pending);
+  MODELS_JSON_STATE.readyCache.set(targetPath, pending);
   try {
     const settled = await pending;
     return settled.result;
   } catch (error) {
-    if (MODELS_JSON_READY_CACHE.get(targetPath) === pending) {
-      MODELS_JSON_READY_CACHE.delete(targetPath);
+    if (MODELS_JSON_STATE.readyCache.get(targetPath) === pending) {
+      MODELS_JSON_STATE.readyCache.delete(targetPath);
     }
     throw error;
   }
-}
-
-export function resetModelsJsonReadyCacheForTest(): void {
-  MODELS_JSON_READY_CACHE.clear();
 }

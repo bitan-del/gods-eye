@@ -1,12 +1,12 @@
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import {
   createStandardChannelSetupStatus,
   hasConfiguredSecretInput,
   setSetupChannelEnabled,
-} from "openclaw/plugin-sdk/setup";
-import type { ChannelSetupWizard } from "openclaw/plugin-sdk/setup";
-import { formatDocsLink } from "openclaw/plugin-sdk/setup-tools";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+} from "godseye/plugin-sdk/setup";
+import type { ChannelSetupWizard } from "godseye/plugin-sdk/setup";
+import { formatDocsLink } from "godseye/plugin-sdk/setup-tools";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import {
   DEFAULT_ACCOUNT_ID,
   listQQBotAccountIds,

@@ -10,12 +10,12 @@ function createPrompter(confirmValue = false) {
 
 function createDeps() {
   const deps: NonNullable<Parameters<typeof setupWizardShellCompletion>[0]["deps"]> = {
-    resolveCliName: () => "godseye",
+    resolveCliName: () => "openclaw",
     checkShellCompletionStatus: vi.fn(async (_binName: string) => ({
       shell: "zsh" as const,
       profileInstalled: false,
       cacheExists: false,
-      cachePath: "/tmp/godseye.zsh",
+      cachePath: "/tmp/openclaw.zsh",
       usesSlowPattern: false,
     })),
     ensureCompletionCacheExists: vi.fn(async (_binName: string) => true),
@@ -32,8 +32,8 @@ describe("setupWizardShellCompletion", () => {
     await setupWizardShellCompletion({ flow: "quickstart", prompter, deps });
 
     expect(prompter.confirm).not.toHaveBeenCalled();
-    expect(deps.ensureCompletionCacheExists).toHaveBeenCalledWith("godseye");
-    expect(deps.installCompletion).toHaveBeenCalledWith("zsh", true, "godseye");
+    expect(deps.ensureCompletionCacheExists).toHaveBeenCalledWith("openclaw");
+    expect(deps.installCompletion).toHaveBeenCalledWith("zsh", true, "openclaw");
     expect(prompter.note).toHaveBeenCalled();
   });
 

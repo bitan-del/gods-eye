@@ -2,17 +2,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { ExecApprovalsResolved } from "../infra/exec-approvals.js";
 import type { SafeBinProfileFixture } from "../infra/exec-safe-bin-policy.js";
 import { captureEnv } from "../test-utils/env.js";
 
-const bundledPluginsDirSnapshot = captureEnv(["GODSEYE_BUNDLED_PLUGINS_DIR"]);
+const bundledPluginsDirSnapshot = captureEnv(["OPENCLAW_BUNDLED_PLUGINS_DIR"]);
 
 beforeAll(() => {
-  process.env.GODSEYE_BUNDLED_PLUGINS_DIR = path.join(
+  process.env.OPENCLAW_BUNDLED_PLUGINS_DIR = path.join(
     os.tmpdir(),
-    "godseye-test-no-bundled-extensions",
+    "openclaw-test-no-bundled-extensions",
   );
 });
 
@@ -20,8 +20,9 @@ afterAll(() => {
   bundledPluginsDirSnapshot.restore();
 });
 
-vi.mock("../infra/shell-env.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../infra/shell-env.js")>();
+vi.mock("../infra/shell-env.js", async () => {
+  const mod =
+    await vi.importActual<typeof import("../infra/shell-env.js")>("../infra/shell-env.js");
   return {
     ...mod,
     getShellPathFromLoginShell: vi.fn(() => null),
@@ -30,12 +31,15 @@ vi.mock("../infra/shell-env.js", async (importOriginal) => {
 });
 
 vi.mock("../plugins/tools.js", () => ({
+  copyPluginToolMeta: vi.fn((_from, to) => to),
   resolvePluginTools: () => [],
   getPluginToolMeta: () => undefined,
 }));
 
-vi.mock("../infra/exec-approvals.js", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("../infra/exec-approvals.js")>();
+vi.mock("../infra/exec-approvals.js", async () => {
+  const mod = await vi.importActual<typeof import("../infra/exec-approvals.js")>(
+    "../infra/exec-approvals.js",
+  );
   const approvals: ExecApprovalsResolved = {
     path: "/tmp/exec-approvals.json",
     socketPath: "/tmp/exec-approvals.sock",
@@ -51,6 +55,11 @@ vi.mock("../infra/exec-approvals.js", async (importOriginal) => {
       ask: "off",
       askFallback: "deny",
       autoAllowSkills: false,
+    },
+    agentSources: {
+      security: "defaults.security",
+      ask: "defaults.ask",
+      askFallback: "defaults.askFallback",
     },
     allowlist: [],
     file: {
@@ -68,7 +77,7 @@ vi.mock("../infra/exec-approvals.js", async (importOriginal) => {
   return { ...mod, resolveExecApprovals: () => approvals };
 });
 
-const { createGodsEyeCodingTools } = await import("./pi-tools.js");
+const { createOpenClawCodingTools } = await import("./pi-tools.js");
 
 type ExecToolResult = {
   content: Array<{ type: string; text?: string }>;
@@ -97,7 +106,7 @@ async function createSafeBinsExecTool(params: {
     fs.writeFileSync(path.join(tmpDir, file.name), file.contents, "utf8");
   }
 
-  const cfg: GodsEyeConfig = {
+  const cfg: OpenClawConfig = {
     tools: {
       exec: {
         host: "gateway",
@@ -109,7 +118,7 @@ async function createSafeBinsExecTool(params: {
     },
   };
 
-  const tools = createGodsEyeCodingTools({
+  const tools = createOpenClawCodingTools({
     config: cfg,
     sessionKey: "agent:main:main",
     workspaceDir: tmpDir,
@@ -137,11 +146,11 @@ async function withSafeBinsExecTool(
   }
 }
 
-describe("createGodsEyeCodingTools safeBins", () => {
+describe("createOpenClawCodingTools safeBins", () => {
   it("threads tools.exec.safeBins into exec allowlist checks", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-",
+        tmpPrefix: "openclaw-safe-bins-",
         safeBins: ["echo"],
         safeBinProfiles: {
           echo: { maxPositional: 1 },
@@ -165,7 +174,7 @@ describe("createGodsEyeCodingTools safeBins", () => {
   it("rejects unprofiled custom safe-bin entries", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-unprofiled-",
+        tmpPrefix: "openclaw-safe-bins-unprofiled-",
         safeBins: ["echo"],
       },
       async ({ tmpDir, execTool }) => {
@@ -182,7 +191,7 @@ describe("createGodsEyeCodingTools safeBins", () => {
   it("does not allow env var expansion to smuggle file args via safeBins", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-expand-",
+        tmpPrefix: "openclaw-safe-bins-expand-",
         safeBins: ["head", "wc"],
         files: [{ name: "secret.txt", contents: "TOP_SECRET\n" }],
       },
@@ -201,7 +210,7 @@ describe("createGodsEyeCodingTools safeBins", () => {
   it("blocks sort output/compress bypass attempts in safeBins mode", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-sort-",
+        tmpPrefix: "openclaw-safe-bins-sort-",
         safeBins: ["sort"],
         files: [{ name: "existing.txt", contents: "x\n" }],
       },
@@ -248,7 +257,7 @@ describe("createGodsEyeCodingTools safeBins", () => {
   it("blocks shell redirection metacharacters in safeBins mode", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-redirect-",
+        tmpPrefix: "openclaw-safe-bins-redirect-",
         safeBins: ["head"],
         files: [{ name: "source.txt", contents: "line1\nline2\n" }],
       },
@@ -267,7 +276,7 @@ describe("createGodsEyeCodingTools safeBins", () => {
   it("blocks grep recursive flags from reading cwd via safeBins", async () => {
     await withSafeBinsExecTool(
       {
-        tmpPrefix: "godseye-safe-bins-grep-",
+        tmpPrefix: "openclaw-safe-bins-grep-",
         safeBins: ["grep"],
         files: [{ name: "secret.txt", contents: "SAFE_BINS_RECURSIVE_SHOULD_NOT_LEAK\n" }],
       },

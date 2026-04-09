@@ -1,7 +1,7 @@
-import { resolveNativeSkillsEnabled } from "openclaw/plugin-sdk/config-runtime";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { readChannelAllowFromStore } from "openclaw/plugin-sdk/conversation-runtime";
-import { normalizeOptionalString } from "openclaw/plugin-sdk/text-runtime";
+import { resolveNativeSkillsEnabled } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { readChannelAllowFromStore } from "godseye/plugin-sdk/conversation-runtime";
+import { normalizeOptionalString } from "godseye/plugin-sdk/text-runtime";
 import type { ResolvedTelegramAccount } from "./accounts.js";
 import { isNumericTelegramUserId, normalizeTelegramAllowFromEntry } from "./allow-from.js";
 

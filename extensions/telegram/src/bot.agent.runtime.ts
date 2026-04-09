@@ -1,1 +1,1 @@
-export { resolveDefaultAgentId } from "openclaw/plugin-sdk/agent-runtime";
+export { resolveDefaultAgentId } from "godseye/plugin-sdk/agent-runtime";

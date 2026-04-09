@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
+import { installGatewayDaemonNonInteractive } from "./daemon-install.js";
 
 const buildGatewayInstallPlan = vi.hoisted(() => vi.fn());
 const gatewayInstallErrorHint = vi.hoisted(() => vi.fn(() => "hint"));
@@ -36,8 +37,6 @@ vi.mock("../../systemd-linger.js", () => ({
   ensureSystemdUserLingerNonInteractive,
 }));
 
-const { installGatewayDaemonNonInteractive } = await import("./daemon-install.js");
-
 describe("installGatewayDaemonNonInteractive", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,7 +47,7 @@ describe("installGatewayDaemonNonInteractive", () => {
       warnings: [],
     });
     buildGatewayInstallPlan.mockResolvedValue({
-      programArguments: ["godseye", "gateway", "run"],
+      programArguments: ["openclaw", "gateway", "run"],
       workingDirectory: "/tmp",
       environment: {},
     });
@@ -65,11 +64,11 @@ describe("installGatewayDaemonNonInteractive", () => {
             token: {
               source: "env",
               provider: "default",
-              id: "GODSEYE_GATEWAY_TOKEN",
+              id: "OPENCLAW_GATEWAY_TOKEN",
             },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       opts: { installDaemon: true },
       runtime,
       port: 18789,
@@ -91,7 +90,7 @@ describe("installGatewayDaemonNonInteractive", () => {
     const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
 
     await installGatewayDaemonNonInteractive({
-      nextConfig: {} as GodsEyeConfig,
+      nextConfig: {} as OpenClawConfig,
       opts: { installDaemon: true },
       runtime,
       port: 18789,
@@ -115,7 +114,7 @@ describe("installGatewayDaemonNonInteractive", () => {
 
     try {
       const result = await installGatewayDaemonNonInteractive({
-        nextConfig: {} as GodsEyeConfig,
+        nextConfig: {} as OpenClawConfig,
         opts: { installDaemon: true },
         runtime,
         port: 18789,

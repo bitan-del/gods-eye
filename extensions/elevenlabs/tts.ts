@@ -7,7 +7,7 @@ import {
   requireInRange,
   trimToUndefined,
   truncateErrorDetail,
-} from "openclaw/plugin-sdk/speech";
+} from "godseye/plugin-sdk/speech";
 import { isValidElevenLabsVoiceId, normalizeElevenLabsBaseUrl } from "./shared.js";
 
 function formatElevenLabsErrorPayload(payload: unknown): string | undefined {

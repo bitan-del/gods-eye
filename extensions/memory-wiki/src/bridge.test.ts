@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import type { MemoryPluginPublicArtifact } from "openclaw/plugin-sdk/memory-host-core";
+import type { MemoryPluginPublicArtifact } from "godseye/plugin-sdk/memory-host-core";
 import {
   appendMemoryHostEvent,
   resolveMemoryHostEventLogPath,
-} from "openclaw/plugin-sdk/memory-host-events";
+} from "godseye/plugin-sdk/memory-host-events";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   clearMemoryPluginState,

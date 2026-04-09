@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { parseStrictInteger, parseStrictPositiveInteger } from "../infra/parse-finite-number.js";
 import { cleanStaleGatewayProcessesSync } from "../infra/restart-stale-pids.js";
+import { normalizeLowercaseStringOrEmpty } from "../shared/string-coerce.js";
 import {
   GATEWAY_LAUNCH_AGENT_LABEL,
   resolveGatewayServiceDescription,
@@ -35,11 +36,11 @@ const LAUNCH_AGENT_DIR_MODE = 0o755;
 const LAUNCH_AGENT_PLIST_MODE = 0o644;
 
 function resolveLaunchAgentLabel(args?: { env?: Record<string, string | undefined> }): string {
-  const envLabel = args?.env?.GODSEYE_LAUNCHD_LABEL?.trim();
+  const envLabel = args?.env?.OPENCLAW_LAUNCHD_LABEL?.trim();
   if (envLabel) {
     return envLabel;
   }
-  return resolveGatewayLaunchAgentLabel(args?.env?.GODSEYE_PROFILE);
+  return resolveGatewayLaunchAgentLabel(args?.env?.OPENCLAW_PROFILE);
 }
 
 function resolveLaunchAgentPlistPathForLabel(
@@ -62,7 +63,7 @@ export function resolveGatewayLogPaths(env: GatewayServiceEnv): {
 } {
   const stateDir = resolveGatewayStateDir(env);
   const logDir = path.join(stateDir, "logs");
-  const prefix = env.GODSEYE_LOG_PREFIX?.trim() || "gateway";
+  const prefix = env.OPENCLAW_LOG_PREFIX?.trim() || "gateway";
   return {
     logDir,
     stdoutPath: path.join(logDir, `${prefix}.log`),
@@ -148,7 +149,7 @@ async function resolveLaunchAgentGatewayPort(env: GatewayServiceEnv): Promise<nu
   if (fromArgs !== null) {
     return fromArgs;
   }
-  const fromEnv = parseStrictPositiveInteger(env.GODSEYE_GATEWAY_PORT ?? "");
+  const fromEnv = parseStrictPositiveInteger(env.OPENCLAW_GATEWAY_PORT ?? "");
   return fromEnv ?? null;
 }
 
@@ -170,7 +171,7 @@ function throwBootstrapGuiSessionError(params: {
       `LaunchAgent ${params.actionHint} requires a logged-in macOS GUI session for this user (${params.domain}).`,
       "This usually means you are running from SSH/headless context or as the wrong user (including sudo).",
       `Fix: sign in to the macOS desktop as the target user and rerun \`${params.actionHint}\`.`,
-      "Headless deployments should use a dedicated logged-in user session or a custom LaunchDaemon (not shipped): https://docs.gods-eye.org/gateway",
+      "Headless deployments should use a dedicated logged-in user session or a custom LaunchDaemon (not shipped): https://docs.openclaw.ai/gateway",
     ].join("\n"),
   );
 }
@@ -301,7 +302,7 @@ export async function readLaunchAgentRuntime(
   }
   const parsed = parseLaunchctlPrint(res.stdout || res.stderr || "");
   const plistExists = await launchAgentPlistExists(env);
-  const state = parsed.state?.toLowerCase();
+  const state = normalizeLowercaseStringOrEmpty(parsed.state);
   const status = state === "running" || parsed.pid ? "running" : state ? "stopped" : "unknown";
   return {
     status,
@@ -313,9 +314,13 @@ export async function readLaunchAgentRuntime(
   };
 }
 
+export type LaunchAgentBootstrapRepairResult =
+  | { ok: true; status: "repaired" | "already-loaded" }
+  | { ok: false; status: "bootstrap-failed" | "kickstart-failed"; detail?: string };
+
 export async function repairLaunchAgentBootstrap(args: {
   env?: Record<string, string | undefined>;
-}): Promise<{ ok: boolean; detail?: string }> {
+}): Promise<LaunchAgentBootstrapRepairResult> {
   const env = args.env ?? (process.env as Record<string, string | undefined>);
   const domain = resolveGuiDomain();
   const label = resolveLaunchAgentLabel({ env });
@@ -324,14 +329,25 @@ export async function repairLaunchAgentBootstrap(args: {
   // (matches the same guard in installLaunchAgent and restartLaunchAgent).
   await execLaunchctl(["enable", `${domain}/${label}`]);
   const boot = await execLaunchctl(["bootstrap", domain, plistPath]);
+  let repairStatus: LaunchAgentBootstrapRepairResult["status"] = "repaired";
   if (boot.code !== 0) {
-    return { ok: false, detail: (boot.stderr || boot.stdout).trim() || undefined };
+    const detail = (boot.stderr || boot.stdout).trim();
+    const normalized = normalizeLowercaseStringOrEmpty(detail);
+    const alreadyLoaded = boot.code === 130 || normalized.includes("already exists in domain");
+    if (!alreadyLoaded) {
+      return { ok: false, status: "bootstrap-failed", detail: detail || undefined };
+    }
+    repairStatus = "already-loaded";
   }
   const kick = await execLaunchctl(["kickstart", "-k", `${domain}/${label}`]);
   if (kick.code !== 0) {
-    return { ok: false, detail: (kick.stderr || kick.stdout).trim() || undefined };
+    return {
+      ok: false,
+      status: "kickstart-failed",
+      detail: (kick.stderr || kick.stdout).trim() || undefined,
+    };
   }
-  return { ok: true };
+  return { ok: true, status: repairStatus };
 }
 
 export type LegacyLaunchAgent = {
@@ -344,7 +360,7 @@ export type LegacyLaunchAgent = {
 export async function findLegacyLaunchAgents(env: GatewayServiceEnv): Promise<LegacyLaunchAgent[]> {
   const domain = resolveGuiDomain();
   const results: LegacyLaunchAgent[] = [];
-  for (const label of resolveLegacyGatewayLaunchAgentLabels(env.GODSEYE_PROFILE)) {
+  for (const label of resolveLegacyGatewayLaunchAgentLabels(env.OPENCLAW_PROFILE)) {
     const plistPath = resolveLaunchAgentPlistPathForLabel(env, label);
     const res = await execLaunchctl(["print", `${domain}/${label}`]);
     const loaded = res.code === 0;
@@ -432,7 +448,7 @@ export async function uninstallLaunchAgent({
 }
 
 function isLaunchctlNotLoaded(res: { stdout: string; stderr: string; code: number }): boolean {
-  const detail = (res.stderr || res.stdout).toLowerCase();
+  const detail = normalizeLowercaseStringOrEmpty(res.stderr || res.stdout);
   return (
     detail.includes("no such process") ||
     detail.includes("could not find service") ||
@@ -441,7 +457,7 @@ function isLaunchctlNotLoaded(res: { stdout: string; stderr: string; code: numbe
 }
 
 function isUnsupportedGuiDomain(detail: string): boolean {
-  const normalized = detail.toLowerCase();
+  const normalized = normalizeLowercaseStringOrEmpty(detail);
   return (
     normalized.includes("domain does not support specified action") ||
     normalized.includes("bootstrap failed: 125")
@@ -470,7 +486,7 @@ async function writeLaunchAgentPlist({
 
   const domain = resolveGuiDomain();
   const label = resolveLaunchAgentLabel({ env });
-  for (const legacyLabel of resolveLegacyGatewayLaunchAgentLabels(env.GODSEYE_PROFILE)) {
+  for (const legacyLabel of resolveLegacyGatewayLaunchAgentLabels(env.OPENCLAW_PROFILE)) {
     const legacyPlistPath = resolveLaunchAgentPlistPathForLabel(env, legacyLabel);
     await execLaunchctl(["bootout", domain, legacyPlistPath]);
     await execLaunchctl(["unload", legacyPlistPath]);
@@ -530,7 +546,7 @@ async function activateLaunchAgent(params: { env: GatewayServiceEnv; plistPath: 
     domain,
     serviceTarget: `${domain}/${label}`,
     plistPath: params.plistPath,
-    actionHint: "godseye gateway install --force",
+    actionHint: "openclaw gateway install --force",
   });
 }
 
@@ -551,6 +567,27 @@ export async function installLaunchAgent(
     { leadingBlankLine: true },
   );
   return { plistPath };
+}
+
+async function ensureLaunchAgentLoadedAfterFailure(params: {
+  domain: string;
+  serviceTarget: string;
+  plistPath: string;
+}): Promise<void> {
+  const probe = await execLaunchctl(["print", params.serviceTarget]);
+  if (probe.code === 0) {
+    return;
+  }
+  try {
+    await bootstrapLaunchAgentOrThrow({
+      domain: params.domain,
+      serviceTarget: params.serviceTarget,
+      plistPath: params.plistPath,
+      actionHint: "openclaw gateway start",
+    });
+  } catch {
+    // Best-effort only. Preserve the original kickstart failure below.
+  }
 }
 
 export async function restartLaunchAgent({
@@ -591,6 +628,7 @@ export async function restartLaunchAgent({
   }
 
   if (!isLaunchctlNotLoaded(start)) {
+    await ensureLaunchAgentLoadedAfterFailure({ domain, serviceTarget, plistPath });
     throw new Error(`launchctl kickstart failed: ${start.stderr || start.stdout}`.trim());
   }
 
@@ -599,11 +637,12 @@ export async function restartLaunchAgent({
     domain,
     serviceTarget,
     plistPath,
-    actionHint: "godseye gateway restart",
+    actionHint: "openclaw gateway restart",
   });
 
   const retry = await execLaunchctl(["kickstart", "-k", serviceTarget]);
   if (retry.code !== 0) {
+    await ensureLaunchAgentLoadedAfterFailure({ domain, serviceTarget, plistPath });
     throw new Error(`launchctl kickstart failed: ${retry.stderr || retry.stdout}`.trim());
   }
   writeLaunchAgentActionLine(stdout, "Restarted LaunchAgent", serviceTarget);

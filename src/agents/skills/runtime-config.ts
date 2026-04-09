@@ -1,5 +1,5 @@
-import { getRuntimeConfigSnapshot, type GodsEyeConfig } from "../../config/config.js";
+import { getRuntimeConfigSnapshot, type OpenClawConfig } from "../../config/config.js";
 
-export function resolveSkillRuntimeConfig(config?: GodsEyeConfig): GodsEyeConfig | undefined {
+export function resolveSkillRuntimeConfig(config?: OpenClawConfig): OpenClawConfig | undefined {
   return getRuntimeConfigSnapshot() ?? config;
 }

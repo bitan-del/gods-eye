@@ -3,10 +3,10 @@ import {
   resolveChannelGroupToolsPolicy,
   type GroupToolPolicyConfig,
 } from "godseye/plugin-sdk/channel-policy";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/core";
+import type { OpenClawConfig } from "godseye/plugin-sdk/core";
 
 type IMessageGroupContext = {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   groupId?: string | null;
   senderId?: string | null;

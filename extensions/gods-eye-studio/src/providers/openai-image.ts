@@ -1,6 +1,5 @@
 // OpenAI image provider — DALL-E 3 and GPT Image generation.
 
-import { type AuthProfileStore, resolveApiKeyForProvider } from "godseye/plugin-sdk/provider-auth";
 
 const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_IMAGE_MODEL = "gpt-image-1";
@@ -44,18 +43,14 @@ export async function resolveOpenAIApiKey(params?: {
   const envKey = process.env.OPENAI_API_KEY?.trim();
   if (envKey) return envKey;
 
-  const auth = await resolveApiKeyForProvider({
-    provider: "openai",
-    cfg: params?.cfg,
-    agentDir: params?.agentDir,
-    store: params?.authStore as AuthProfileStore | undefined,
-  });
-  if (!auth.apiKey) {
+  // Fall back to config
+  const key = (params?.cfg as any)?.models?.providers?.openai?.apiKey?.trim();
+  if (!key) {
     throw new Error(
       "OpenAI API key not found. Set OPENAI_API_KEY env var or run godseye onboard to configure.",
     );
   }
-  return auth.apiKey;
+  return key;
 }
 
 function resolveOpenAIBaseUrl(cfg?: Record<string, unknown>): string {

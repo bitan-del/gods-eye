@@ -1,8 +1,8 @@
 import type {
   ProviderReplayPolicy,
   ProviderReplayPolicyContext,
-} from "openclaw/plugin-sdk/plugin-entry";
-import { buildNativeAnthropicReplayPolicyForModel } from "openclaw/plugin-sdk/provider-model-shared";
+} from "godseye/plugin-sdk/plugin-entry";
+import { buildNativeAnthropicReplayPolicyForModel } from "godseye/plugin-sdk/provider-model-shared";
 
 /**
  * Returns the provider-owned replay policy for Anthropic transports.

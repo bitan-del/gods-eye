@@ -1,6 +1,6 @@
-import type { ChannelDoctorLegacyConfigRule } from "openclaw/plugin-sdk/channel-contract";
-import type { OpenClawConfig } from "openclaw/plugin-sdk/config-runtime";
-import { isRecord } from "openclaw/plugin-sdk/text-runtime";
+import type { ChannelDoctorLegacyConfigRule } from "godseye/plugin-sdk/channel-contract";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
+import { isRecord } from "godseye/plugin-sdk/text-runtime";
 import { ELEVENLABS_TALK_PROVIDER_ID, migrateElevenLabsLegacyTalkConfig } from "./config-compat.js";
 
 export function hasLegacyTalkFields(value: unknown): boolean {

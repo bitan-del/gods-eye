@@ -11,6 +11,7 @@ import {
 } from "../../commands/agents.js";
 import { setVerbose } from "../../globals.js";
 import { defaultRuntime } from "../../runtime.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
 import { runCommandWithRuntime } from "../cli-utils.js";
@@ -53,27 +54,28 @@ export function registerAgentCommands(program: Command, args: { agentChannelOpti
         `
 ${theme.heading("Examples:")}
 ${formatHelpExamples([
-  ['godseye agent --to +15555550123 --message "status update"', "Start a new session."],
-  ['godseye agent --agent ops --message "Summarize logs"', "Use a specific agent."],
+  ['openclaw agent --to +15555550123 --message "status update"', "Start a new session."],
+  ['openclaw agent --agent ops --message "Summarize logs"', "Use a specific agent."],
   [
-    'godseye agent --session-id 1234 --message "Summarize inbox" --thinking medium',
+    'openclaw agent --session-id 1234 --message "Summarize inbox" --thinking medium',
     "Target a session with explicit thinking level.",
   ],
   [
-    'godseye agent --to +15555550123 --message "Trace logs" --verbose on --json',
+    'openclaw agent --to +15555550123 --message "Trace logs" --verbose on --json',
     "Enable verbose logging and JSON output.",
   ],
-  ['godseye agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
+  ['openclaw agent --to +15555550123 --message "Summon reply" --deliver', "Deliver reply."],
   [
-    'godseye agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
+    'openclaw agent --agent ops --message "Generate report" --deliver --reply-channel slack --reply-to "#reports"',
     "Send reply to a different channel/target.",
   ],
 ])}
 
-${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.gods-eye.org/cli/agent")}`,
+${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.openclaw.ai/cli/agent")}`,
     )
     .action(async (opts) => {
-      const verboseLevel = typeof opts.verbose === "string" ? opts.verbose.toLowerCase() : "";
+      const verboseLevel =
+        typeof opts.verbose === "string" ? normalizeLowercaseStringOrEmpty(opts.verbose) : "";
       setVerbose(verboseLevel === "on");
       // Build default deps (keeps parity with other commands; future-proofing).
       const deps = createDefaultDeps();
@@ -88,7 +90,7 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.gods-eye.org/cli/ag
     .addHelpText(
       "after",
       () =>
-        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/agents", "docs.gods-eye.org/cli/agents")}\n`,
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/agents", "docs.openclaw.ai/cli/agents")}\n`,
     );
 
   agents
@@ -219,14 +221,14 @@ ${theme.muted("Docs:")} ${formatDocsLink("/cli/agent", "docs.gods-eye.org/cli/ag
         `
 ${theme.heading("Examples:")}
 ${formatHelpExamples([
-  ['godseye agents set-identity --agent main --name "Gods Eye" --emoji "🦞"', "Set name + emoji."],
-  ["godseye agents set-identity --agent main --avatar avatars/godseye.png", "Set avatar path."],
+  ['openclaw agents set-identity --agent main --name "OpenClaw" --emoji "🦞"', "Set name + emoji."],
+  ["openclaw agents set-identity --agent main --avatar avatars/openclaw.png", "Set avatar path."],
   [
-    "godseye agents set-identity --workspace ~/.godseye/workspace --from-identity",
+    "openclaw agents set-identity --workspace ~/.openclaw/workspace --from-identity",
     "Load from IDENTITY.md.",
   ],
   [
-    "godseye agents set-identity --identity-file ~/.godseye/workspace/IDENTITY.md --agent main",
+    "openclaw agents set-identity --identity-file ~/.openclaw/workspace/IDENTITY.md --agent main",
     "Use a specific IDENTITY.md.",
   ],
 ])}

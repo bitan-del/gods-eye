@@ -1,34 +1,88 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   copyBundledPluginMetadata,
   rewritePackageExtensions,
 } from "../../scripts/copy-bundled-plugin-metadata.mjs";
+import { cleanupTempDirs, makeTempRepoRoot, writeJsonFile } from "../../test/helpers/temp-repo.js";
 
 const tempDirs: string[] = [];
-const excludeOptionalEnv = { GODSEYE_INCLUDE_OPTIONAL_BUNDLED: "0" } as const;
+const excludeOptionalEnv = { OPENCLAW_INCLUDE_OPTIONAL_BUNDLED: "0" } as const;
 const copyBundledPluginMetadataWithEnv = copyBundledPluginMetadata as (params?: {
   repoRoot?: string;
   env?: NodeJS.ProcessEnv;
 }) => void;
 
 function makeRepoRoot(prefix: string): string {
-  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tempDirs.push(repoRoot);
-  return repoRoot;
+  return makeTempRepoRoot(tempDirs, prefix);
 }
 
 function writeJson(filePath: string, value: unknown): void {
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  writeJsonFile(filePath, value);
+}
+
+function createPlugin(
+  repoRoot: string,
+  params: {
+    id: string;
+    packageName: string;
+    manifest?: Record<string, unknown>;
+    packageOpenClaw?: Record<string, unknown>;
+  },
+) {
+  const pluginDir = path.join(repoRoot, "extensions", params.id);
+  fs.mkdirSync(pluginDir, { recursive: true });
+  writeJson(path.join(pluginDir, "openclaw.plugin.json"), {
+    id: params.id,
+    configSchema: { type: "object" },
+    ...params.manifest,
+  });
+  writeJson(path.join(pluginDir, "package.json"), {
+    name: params.packageName,
+    ...(params.packageOpenClaw ? { openclaw: params.packageOpenClaw } : {}),
+  });
+  return pluginDir;
+}
+
+function readBundledManifest(repoRoot: string, pluginId: string) {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(repoRoot, "dist", "extensions", pluginId, "openclaw.plugin.json"),
+      "utf8",
+    ),
+  ) as { skills?: string[] };
+}
+
+function readBundledPackageJson(repoRoot: string, pluginId: string) {
+  return JSON.parse(
+    fs.readFileSync(path.join(repoRoot, "dist", "extensions", pluginId, "package.json"), "utf8"),
+  ) as { openclaw?: { extensions?: string[] } };
+}
+
+function bundledPluginDir(repoRoot: string, pluginId: string) {
+  return path.join(repoRoot, "dist", "extensions", pluginId);
+}
+
+function bundledSkillPath(repoRoot: string, pluginId: string, ...relativePath: string[]) {
+  return path.join(bundledPluginDir(repoRoot, pluginId), ...relativePath);
+}
+
+function expectBundledSkills(repoRoot: string, pluginId: string, skills: string[]) {
+  expect(readBundledManifest(repoRoot, pluginId).skills).toEqual(skills);
+}
+
+function createTlonSkillPlugin(repoRoot: string, skillPath = "node_modules/@tloncorp/tlon-skill") {
+  return createPlugin(repoRoot, {
+    id: "tlon",
+    packageName: "@openclaw/tlon",
+    manifest: { skills: [skillPath] },
+    packageOpenClaw: { extensions: ["./index.ts"] },
+  });
 }
 
 afterEach(() => {
-  for (const dir of tempDirs.splice(0, tempDirs.length)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+  cleanupTempDirs(tempDirs);
 });
 
 describe("rewritePackageExtensions", () => {
@@ -42,28 +96,24 @@ describe("rewritePackageExtensions", () => {
 
 describe("copyBundledPluginMetadata", () => {
   it("copies plugin manifests, package metadata, and local skill directories", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-meta-");
-    const pluginDir = path.join(repoRoot, "extensions", "acpx");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-meta-");
+    const pluginDir = createPlugin(repoRoot, {
+      id: "acpx",
+      packageName: "@openclaw/acpx",
+      manifest: { skills: ["./skills"] },
+      packageOpenClaw: { extensions: ["./index.ts"] },
+    });
     fs.mkdirSync(path.join(pluginDir, "skills", "acp-router"), { recursive: true });
     fs.writeFileSync(
       path.join(pluginDir, "skills", "acp-router", "SKILL.md"),
       "# ACP Router\n",
       "utf8",
     );
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "acpx",
-      configSchema: { type: "object" },
-      skills: ["./skills"],
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/acpx",
-      godseye: { extensions: ["./index.ts"] },
-    });
 
     copyBundledPluginMetadata({ repoRoot });
 
     expect(
-      fs.existsSync(path.join(repoRoot, "dist", "extensions", "acpx", "godseye.plugin.json")),
+      fs.existsSync(path.join(repoRoot, "dist", "extensions", "acpx", "openclaw.plugin.json")),
     ).toBe(true);
     expect(
       fs.readFileSync(
@@ -71,22 +121,14 @@ describe("copyBundledPluginMetadata", () => {
         "utf8",
       ),
     ).toContain("ACP Router");
-    const bundledManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "acpx", "godseye.plugin.json"),
-        "utf8",
-      ),
-    ) as { skills?: string[] };
-    expect(bundledManifest.skills).toEqual(["./skills"]);
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(repoRoot, "dist", "extensions", "acpx", "package.json"), "utf8"),
-    ) as { godseye?: { extensions?: string[] } };
-    expect(packageJson.godseye?.extensions).toEqual(["./index.js"]);
+    expectBundledSkills(repoRoot, "acpx", ["./skills"]);
+    const packageJson = readBundledPackageJson(repoRoot, "acpx");
+    expect(packageJson.openclaw?.extensions).toEqual(["./index.js"]);
   });
 
   it("relocates node_modules-backed skill paths into bundled-skills and rewrites the manifest", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-node-modules-");
-    const pluginDir = path.join(repoRoot, "extensions", "tlon");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-node-modules-");
+    const pluginDir = createTlonSkillPlugin(repoRoot);
     const storeSkillDir = path.join(
       repoRoot,
       "node_modules",
@@ -110,20 +152,8 @@ describe("copyBundledPluginMetadata", () => {
       path.join(pluginDir, "node_modules", "@tloncorp", "tlon-skill"),
       process.platform === "win32" ? "junction" : "dir",
     );
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "tlon",
-      configSchema: { type: "object" },
-      skills: ["node_modules/@tloncorp/tlon-skill"],
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/tlon",
-      godseye: { extensions: ["./index.ts"] },
-    });
     const staleNodeModulesSkillDir = path.join(
-      repoRoot,
-      "dist",
-      "extensions",
-      "tlon",
+      bundledPluginDir(repoRoot, "tlon"),
       "node_modules",
       "@tloncorp",
       "tlon-skill",
@@ -134,10 +164,7 @@ describe("copyBundledPluginMetadata", () => {
     copyBundledPluginMetadata({ repoRoot });
 
     const copiedSkillDir = path.join(
-      repoRoot,
-      "dist",
-      "extensions",
-      "tlon",
+      bundledPluginDir(repoRoot, "tlon"),
       "bundled-skills",
       "@tloncorp",
       "tlon-skill",
@@ -145,97 +172,48 @@ describe("copyBundledPluginMetadata", () => {
     expect(fs.existsSync(path.join(copiedSkillDir, "SKILL.md"))).toBe(true);
     expect(fs.lstatSync(copiedSkillDir).isSymbolicLink()).toBe(false);
     expect(fs.existsSync(path.join(copiedSkillDir, "node_modules"))).toBe(false);
-    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "tlon", "node_modules"))).toBe(
+    expect(fs.existsSync(path.join(bundledPluginDir(repoRoot, "tlon"), "node_modules"))).toBe(
       false,
     );
-    const bundledManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "tlon", "godseye.plugin.json"),
-        "utf8",
-      ),
-    ) as { skills?: string[] };
-    expect(bundledManifest.skills).toEqual(["./bundled-skills/@tloncorp/tlon-skill"]);
+    expectBundledSkills(repoRoot, "tlon", ["./bundled-skills/@tloncorp/tlon-skill"]);
   });
 
   it("falls back to repo-root hoisted node_modules skill paths", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-hoisted-skill-");
-    const pluginDir = path.join(repoRoot, "extensions", "tlon");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-hoisted-skill-");
+    const pluginDir = createTlonSkillPlugin(repoRoot);
     const hoistedSkillDir = path.join(repoRoot, "node_modules", "@tloncorp", "tlon-skill");
     fs.mkdirSync(hoistedSkillDir, { recursive: true });
     fs.writeFileSync(path.join(hoistedSkillDir, "SKILL.md"), "# Hoisted Tlon Skill\n", "utf8");
     fs.mkdirSync(pluginDir, { recursive: true });
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "tlon",
-      configSchema: { type: "object" },
-      skills: ["node_modules/@tloncorp/tlon-skill"],
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/tlon",
-      godseye: { extensions: ["./index.ts"] },
-    });
 
     copyBundledPluginMetadata({ repoRoot });
 
     expect(
       fs.readFileSync(
-        path.join(
-          repoRoot,
-          "dist",
-          "extensions",
-          "tlon",
-          "bundled-skills",
-          "@tloncorp",
-          "tlon-skill",
-          "SKILL.md",
-        ),
+        bundledSkillPath(repoRoot, "tlon", "bundled-skills", "@tloncorp", "tlon-skill", "SKILL.md"),
         "utf8",
       ),
     ).toContain("Hoisted Tlon Skill");
-    const bundledManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "tlon", "godseye.plugin.json"),
-        "utf8",
-      ),
-    ) as { skills?: string[] };
-    expect(bundledManifest.skills).toEqual(["./bundled-skills/@tloncorp/tlon-skill"]);
+    expectBundledSkills(repoRoot, "tlon", ["./bundled-skills/@tloncorp/tlon-skill"]);
   });
 
   it("omits missing declared skill paths and removes stale generated outputs", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-missing-skill-");
-    const pluginDir = path.join(repoRoot, "extensions", "tlon");
-    fs.mkdirSync(pluginDir, { recursive: true });
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "tlon",
-      configSchema: { type: "object" },
-      skills: ["node_modules/@tloncorp/tlon-skill"],
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/tlon",
-      godseye: { extensions: ["./index.ts"] },
-    });
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-missing-skill-");
+    createTlonSkillPlugin(repoRoot);
     const staleBundledSkillDir = path.join(
-      repoRoot,
-      "dist",
-      "extensions",
-      "tlon",
+      bundledPluginDir(repoRoot, "tlon"),
       "bundled-skills",
       "@tloncorp",
       "tlon-skill",
     );
     fs.mkdirSync(staleBundledSkillDir, { recursive: true });
     fs.writeFileSync(path.join(staleBundledSkillDir, "SKILL.md"), "# stale\n", "utf8");
-    const staleNodeModulesDir = path.join(repoRoot, "dist", "extensions", "tlon", "node_modules");
+    const staleNodeModulesDir = path.join(bundledPluginDir(repoRoot, "tlon"), "node_modules");
     fs.mkdirSync(staleNodeModulesDir, { recursive: true });
 
     copyBundledPluginMetadata({ repoRoot });
 
-    const bundledManifest = JSON.parse(
-      fs.readFileSync(
-        path.join(repoRoot, "dist", "extensions", "tlon", "godseye.plugin.json"),
-        "utf8",
-      ),
-    ) as { skills?: string[] };
-    expect(bundledManifest.skills).toEqual([]);
+    expectBundledSkills(repoRoot, "tlon", []);
     expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "tlon", "bundled-skills"))).toBe(
       false,
     );
@@ -243,19 +221,15 @@ describe("copyBundledPluginMetadata", () => {
   });
 
   it("retries transient skill copy races from concurrent runtime postbuilds", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-retry-");
-    const pluginDir = path.join(repoRoot, "extensions", "diffs");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-retry-");
+    const pluginDir = createPlugin(repoRoot, {
+      id: "diffs",
+      packageName: "@openclaw/diffs",
+      manifest: { skills: ["./skills"] },
+      packageOpenClaw: { extensions: ["./index.ts"] },
+    });
     fs.mkdirSync(path.join(pluginDir, "skills", "diffs"), { recursive: true });
     fs.writeFileSync(path.join(pluginDir, "skills", "diffs", "SKILL.md"), "# Diffs\n", "utf8");
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "diffs",
-      configSchema: { type: "object" },
-      skills: ["./skills"],
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/diffs",
-      godseye: { extensions: ["./index.ts"] },
-    });
 
     const realCpSync = fs.cpSync.bind(fs);
     let attempts = 0;
@@ -284,7 +258,7 @@ describe("copyBundledPluginMetadata", () => {
   });
 
   it("removes generated outputs for plugins no longer present in source", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-removed-");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-removed-");
     const staleBundledSkillDir = path.join(
       repoRoot,
       "dist",
@@ -309,13 +283,13 @@ describe("copyBundledPluginMetadata", () => {
       "export default {}\n",
       "utf8",
     );
-    writeJson(path.join(repoRoot, "dist", "extensions", "removed-plugin", "godseye.plugin.json"), {
+    writeJson(path.join(repoRoot, "dist", "extensions", "removed-plugin", "openclaw.plugin.json"), {
       id: "removed-plugin",
       configSchema: { type: "object" },
       skills: ["./bundled-skills/@scope/skill"],
     });
     writeJson(path.join(repoRoot, "dist", "extensions", "removed-plugin", "package.json"), {
-      name: "@godseye/removed-plugin",
+      name: "@openclaw/removed-plugin",
     });
     fs.mkdirSync(path.join(repoRoot, "extensions"), { recursive: true });
 
@@ -325,18 +299,18 @@ describe("copyBundledPluginMetadata", () => {
   });
 
   it("removes stale dist outputs when a source extension directory no longer has a manifest", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-manifestless-source-");
+    const repoRoot = makeRepoRoot("openclaw-bundled-plugin-manifestless-source-");
     const sourcePluginDir = path.join(repoRoot, "extensions", "google-gemini-cli-auth");
     fs.mkdirSync(path.join(sourcePluginDir, "node_modules"), { recursive: true });
     const staleDistDir = path.join(repoRoot, "dist", "extensions", "google-gemini-cli-auth");
     fs.mkdirSync(staleDistDir, { recursive: true });
     fs.writeFileSync(path.join(staleDistDir, "index.js"), "export default {}\n", "utf8");
-    writeJson(path.join(staleDistDir, "godseye.plugin.json"), {
+    writeJson(path.join(staleDistDir, "openclaw.plugin.json"), {
       id: "google-gemini-cli-auth",
       configSchema: { type: "object" },
     });
     writeJson(path.join(staleDistDir, "package.json"), {
-      name: "@godseye/google-gemini-cli-auth",
+      name: "@openclaw/google-gemini-cli-auth",
     });
 
     copyBundledPluginMetadata({ repoRoot });
@@ -344,42 +318,84 @@ describe("copyBundledPluginMetadata", () => {
     expect(fs.existsSync(staleDistDir)).toBe(false);
   });
 
-  it("skips metadata for optional bundled clusters only when explicitly disabled", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-optional-skip-");
-    const pluginDir = path.join(repoRoot, "extensions", "acpx");
-    fs.mkdirSync(pluginDir, { recursive: true });
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "acpx",
-      configSchema: { type: "object" },
-    });
-    writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/acpx-plugin",
-      godseye: { extensions: ["./index.ts"] },
+  it.each([
+    {
+      name: "skips metadata for optional bundled clusters only when explicitly disabled",
+      pluginId: "acpx",
+      packageName: "@openclaw/acpx-plugin",
+      packageOpenClaw: { extensions: ["./index.ts"] },
+      env: excludeOptionalEnv,
+      expectedExists: false,
+    },
+    {
+      name: "still bundles previously released optional plugins without the opt-in env",
+      pluginId: "whatsapp",
+      packageName: "@openclaw/whatsapp",
+      packageOpenClaw: {
+        extensions: ["./index.ts"],
+        install: { npmSpec: "@openclaw/whatsapp" },
+      },
+      env: {},
+      expectedExists: true,
+    },
+  ] as const)("$name", ({ pluginId, packageName, packageOpenClaw, env, expectedExists }) => {
+    const repoRoot = makeRepoRoot(`openclaw-bundled-plugin-${pluginId}-`);
+    createPlugin(repoRoot, {
+      id: pluginId,
+      packageName,
+      packageOpenClaw,
     });
 
-    copyBundledPluginMetadataWithEnv({ repoRoot, env: excludeOptionalEnv });
+    copyBundledPluginMetadataWithEnv({ repoRoot, env });
 
-    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "acpx"))).toBe(false);
+    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", pluginId))).toBe(expectedExists);
   });
 
-  it("still bundles previously released optional plugins without the opt-in env", () => {
-    const repoRoot = makeRepoRoot("godseye-bundled-plugin-released-optional-");
-    const pluginDir = path.join(repoRoot, "extensions", "whatsapp");
+  it("preserves manifest-less runtime support package outputs and copies package metadata", () => {
+    const repoRoot = makeRepoRoot("openclaw-bundled-runtime-support-");
+    const pluginDir = path.join(repoRoot, "extensions", "image-generation-core");
     fs.mkdirSync(pluginDir, { recursive: true });
-    writeJson(path.join(pluginDir, "godseye.plugin.json"), {
-      id: "whatsapp",
-      configSchema: { type: "object" },
-    });
     writeJson(path.join(pluginDir, "package.json"), {
-      name: "@godseye/whatsapp",
-      godseye: {
-        extensions: ["./index.ts"],
-        install: { npmSpec: "@godseye/whatsapp" },
-      },
+      name: "@openclaw/image-generation-core",
+      version: "0.0.1",
+      private: true,
+      type: "module",
     });
+    fs.writeFileSync(path.join(pluginDir, "runtime-api.ts"), "export {};\n", "utf8");
+    fs.mkdirSync(path.join(repoRoot, "dist", "extensions", "image-generation-core"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(repoRoot, "dist", "extensions", "image-generation-core", "runtime-api.js"),
+      "export {};\n",
+      "utf8",
+    );
 
-    copyBundledPluginMetadataWithEnv({ repoRoot, env: {} });
+    copyBundledPluginMetadata({ repoRoot });
 
-    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "whatsapp"))).toBe(true);
+    expect(fs.existsSync(path.join(repoRoot, "dist", "extensions", "image-generation-core"))).toBe(
+      true,
+    );
+    expect(
+      fs.existsSync(
+        path.join(repoRoot, "dist", "extensions", "image-generation-core", "runtime-api.js"),
+      ),
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(repoRoot, "dist", "extensions", "image-generation-core", "openclaw.plugin.json"),
+      ),
+    ).toBe(false);
+    expect(
+      JSON.parse(
+        fs.readFileSync(
+          path.join(repoRoot, "dist", "extensions", "image-generation-core", "package.json"),
+          "utf8",
+        ),
+      ),
+    ).toMatchObject({
+      name: "@openclaw/image-generation-core",
+      type: "module",
+    });
   });
 });

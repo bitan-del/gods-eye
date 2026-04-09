@@ -3,6 +3,7 @@ import { loadConfig } from "../config/config.js";
 import { defaultRuntime } from "../runtime.js";
 import { runSecurityAudit } from "../security/audit.js";
 import { fixSecurityFootguns } from "../security/fix.js";
+import { normalizeOptionalString } from "../shared/string-coerce.js";
 import { formatDocsLink } from "../terminal/links.js";
 import { isRich, theme } from "../terminal/theme.js";
 import { shortenHomeInString, shortenHomePath } from "../utils.js";
@@ -39,16 +40,16 @@ export function registerSecurityCli(program: Command) {
       "after",
       () =>
         `\n${theme.heading("Examples:")}\n${formatHelpExamples([
-          ["godseye security audit", "Run a local security audit."],
-          ["godseye security audit --deep", "Include best-effort live Gateway probe checks."],
-          ["godseye security audit --deep --token <token>", "Use explicit token for deep probe."],
+          ["openclaw security audit", "Run a local security audit."],
+          ["openclaw security audit --deep", "Include best-effort live Gateway probe checks."],
+          ["openclaw security audit --deep --token <token>", "Use explicit token for deep probe."],
           [
-            "godseye security audit --deep --password <password>",
+            "openclaw security audit --deep --password <password>",
             "Use explicit password for deep probe.",
           ],
-          ["godseye security audit --fix", "Apply safe remediations and file-permission fixes."],
-          ["godseye security audit --json", "Output machine-readable JSON."],
-        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/security", "docs.gods-eye.org/cli/security")}\n`,
+          ["openclaw security audit --fix", "Apply safe remediations and file-permission fixes."],
+          ["openclaw security audit --json", "Output machine-readable JSON."],
+        ])}\n\n${theme.muted("Docs:")} ${formatDocsLink("/cli/security", "docs.openclaw.ai/cli/security")}\n`,
     );
 
   security
@@ -60,6 +61,8 @@ export function registerSecurityCli(program: Command) {
     .option("--fix", "Apply safe fixes (tighten defaults + chmod state/config)", false)
     .option("--json", "Print JSON", false)
     .action(async (opts: SecurityAuditOptions) => {
+      const token = normalizeOptionalString(opts.token);
+      const password = normalizeOptionalString(opts.password);
       const fixResult = opts.fix ? await fixSecurityFootguns().catch((_err) => null) : null;
 
       const sourceConfig = loadConfig();
@@ -77,11 +80,8 @@ export function registerSecurityCli(program: Command) {
         includeFilesystem: true,
         includeChannelSecurity: true,
         deepProbeAuth:
-          opts.token?.trim() || opts.password?.trim()
-            ? {
-                ...(opts.token?.trim() ? { token: opts.token } : {}),
-                ...(opts.password?.trim() ? { password: opts.password } : {}),
-              }
+          token || password
+            ? { ...(token ? { token } : {}), ...(password ? { password } : {}) }
             : undefined,
       });
 
@@ -99,15 +99,15 @@ export function registerSecurityCli(program: Command) {
       const muted = (text: string) => (rich ? theme.muted(text) : text);
 
       const lines: string[] = [];
-      lines.push(heading("GodsEye security audit"));
+      lines.push(heading("OpenClaw security audit"));
       lines.push(muted(`Summary: ${formatSummary(report.summary)}`));
-      lines.push(muted(`Run deeper: ${formatCliCommand("godseye security audit --deep")}`));
+      lines.push(muted(`Run deeper: ${formatCliCommand("openclaw security audit --deep")}`));
       for (const diagnostic of secretDiagnostics) {
         lines.push(muted(`[secrets] ${diagnostic}`));
       }
 
       if (opts.fix) {
-        lines.push(muted(`Fix: ${formatCliCommand("godseye security audit --fix")}`));
+        lines.push(muted(`Fix: ${formatCliCommand("openclaw security audit --fix")}`));
         if (!fixResult) {
           lines.push(muted("Fixes: failed to apply (unexpected error)"));
         } else if (

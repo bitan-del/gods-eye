@@ -1,5 +1,5 @@
-import type { MemoryPluginRuntime } from "openclaw/plugin-sdk/memory-core-host-runtime-core";
-import { resolveMemoryBackendConfig } from "openclaw/plugin-sdk/memory-core-host-runtime-files";
+import type { MemoryPluginRuntime } from "godseye/plugin-sdk/memory-core-host-runtime-core";
+import { resolveMemoryBackendConfig } from "godseye/plugin-sdk/memory-core-host-runtime-files";
 import { closeAllMemorySearchManagers, getMemorySearchManager } from "./memory/index.js";
 
 export const memoryRuntime: MemoryPluginRuntime = {

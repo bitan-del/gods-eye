@@ -1,4 +1,4 @@
-import { formatErrorMessage } from "openclaw/plugin-sdk/error-runtime";
+import { formatErrorMessage } from "godseye/plugin-sdk/error-runtime";
 import type { QaBusState } from "./bus-state.js";
 
 export type QaScenarioStepContext = {

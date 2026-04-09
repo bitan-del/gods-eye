@@ -1,7 +1,7 @@
 export {
   applyOpencodeZenModelDefault,
   OPENCODE_ZEN_DEFAULT_MODEL,
-} from "openclaw/plugin-sdk/provider-onboard";
+} from "godseye/plugin-sdk/provider-onboard";
 export {
   applyOpencodeZenConfig,
   applyOpencodeZenProviderConfig,

@@ -1,5 +1,5 @@
 import net from "node:net";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 function normalizeHost(host: string): string {
   const normalized = normalizeLowercaseStringOrEmpty(host).replace(/\.+$/, "");

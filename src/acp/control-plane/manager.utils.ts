@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import {
   canonicalizeMainSessionAlias,
   resolveMainSessionKey,
@@ -9,6 +9,7 @@ import {
   normalizeMainKey,
   parseAgentSessionKey,
 } from "../../routing/session-key.js";
+import { normalizeLowercaseStringOrEmpty } from "../../shared/string-coerce.js";
 import { ACP_ERROR_CODES, AcpRuntimeError } from "../runtime/errors.js";
 import type { AcpSessionResolution } from "./manager.types.js";
 
@@ -51,14 +52,14 @@ export function normalizeSessionKey(sessionKey: string): string {
 }
 
 export function canonicalizeAcpSessionKey(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   sessionKey: string;
 }): string {
   const normalized = normalizeSessionKey(params.sessionKey);
   if (!normalized) {
     return "";
   }
-  const lowered = normalized.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(normalized);
   if (lowered === "global" || lowered === "unknown") {
     return lowered;
   }
@@ -78,7 +79,7 @@ export function canonicalizeAcpSessionKey(params: {
 }
 
 export function normalizeActorKey(sessionKey: string): string {
-  return sessionKey.trim().toLowerCase();
+  return normalizeLowercaseStringOrEmpty(sessionKey);
 }
 
 export function normalizeAcpErrorCode(code: string | undefined): AcpRuntimeError["code"] {
@@ -104,7 +105,7 @@ export function createUnsupportedControlError(params: {
   );
 }
 
-export function resolveRuntimeIdleTtlMs(cfg: GodsEyeConfig): number {
+export function resolveRuntimeIdleTtlMs(cfg: OpenClawConfig): number {
   const ttlMinutes = cfg.acp?.runtime?.ttlMinutes;
   if (typeof ttlMinutes !== "number" || !Number.isFinite(ttlMinutes) || ttlMinutes <= 0) {
     return 0;

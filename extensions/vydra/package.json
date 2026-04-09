@@ -1,13 +1,13 @@
 {
-  "name": "@openclaw/vydra-provider",
+  "name": "@godseye/vydra-provider",
   "version": "2026.4.10",
   "private": true,
   "description": "OpenClaw Vydra media provider plugin",
   "type": "module",
   "devDependencies": {
-    "@openclaw/plugin-sdk": "workspace:*"
+    "@godseye/plugin-sdk": "workspace:*"
   },
-  "openclaw": {
+  "godseye": {
     "extensions": [
       "./index.ts"
     ]

@@ -1,8 +1,8 @@
-import type { ChannelOutboundAdapter } from "openclaw/plugin-sdk/channel-contract";
-import type { ChannelPlugin } from "openclaw/plugin-sdk/core";
-import { resolveOutboundSendDep } from "openclaw/plugin-sdk/outbound-runtime";
-import { collectStatusIssuesFromLastError } from "openclaw/plugin-sdk/status-helpers";
-import { normalizeLowercaseStringOrEmpty } from "openclaw/plugin-sdk/text-runtime";
+import type { ChannelOutboundAdapter } from "godseye/plugin-sdk/channel-contract";
+import type { ChannelPlugin } from "godseye/plugin-sdk/core";
+import { resolveOutboundSendDep } from "godseye/plugin-sdk/outbound-runtime";
+import { collectStatusIssuesFromLastError } from "godseye/plugin-sdk/status-helpers";
+import { normalizeLowercaseStringOrEmpty } from "godseye/plugin-sdk/text-runtime";
 
 function normalizeIMessageTestHandle(raw: string): string {
   let trimmed = raw.trim();

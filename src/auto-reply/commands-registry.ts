@@ -1,8 +1,14 @@
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "../agents/defaults.js";
 import { resolveConfiguredModelRef } from "../agents/model-selection.js";
 import type { SkillCommandSpec } from "../agents/skills.js";
+import { getChannelPlugin } from "../channels/plugins/index.js";
 import { isCommandFlagEnabled } from "../config/commands.js";
-import type { GodsEyeConfig } from "../config/types.js";
+import type { OpenClawConfig } from "../config/types.js";
+import {
+  normalizeLowercaseStringOrEmpty,
+  normalizeOptionalLowercaseString,
+  normalizeOptionalString,
+} from "../shared/string-coerce.js";
 import { escapeRegExp } from "../utils.js";
 import { getChatCommands, getNativeCommandSurfaces } from "./commands-registry.data.js";
 import type {
@@ -53,10 +59,10 @@ function getTextAliasMap(): Map<string, TextAliasSpec> {
     // Canonicalize to the *primary* text alias, not `/${key}`. Some command keys are
     // internal identifiers (e.g. `dock:telegram`) while the public text command is
     // the alias (e.g. `/dock-telegram`).
-    const canonical = command.textAliases[0]?.trim() || `/${command.key}`;
+    const canonical = normalizeOptionalString(command.textAliases[0]) || `/${command.key}`;
     const acceptsArgs = Boolean(command.acceptsArgs);
     for (const alias of command.textAliases) {
-      const normalized = alias.trim().toLowerCase();
+      const normalized = normalizeOptionalLowercaseString(alias);
       if (!normalized) {
         continue;
       }
@@ -95,7 +101,7 @@ export function listChatCommands(params?: {
   return [...commands, ...buildSkillCommandDefinitions(params.skillCommands)];
 }
 
-export function isCommandEnabled(cfg: GodsEyeConfig, commandKey: string): boolean {
+export function isCommandEnabled(cfg: OpenClawConfig, commandKey: string): boolean {
   if (commandKey === "config") {
     return isCommandFlagEnabled(cfg, "config");
   }
@@ -115,7 +121,7 @@ export function isCommandEnabled(cfg: GodsEyeConfig, commandKey: string): boolea
 }
 
 export function listChatCommandsForConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { skillCommands?: SkillCommandSpec[] },
 ): ChatCommandDefinition[] {
   const base = getChatCommands().filter((command) => isCommandEnabled(cfg, command.key));
@@ -125,28 +131,19 @@ export function listChatCommandsForConfig(
   return [...base, ...buildSkillCommandDefinitions(params.skillCommands)];
 }
 
-const NATIVE_NAME_OVERRIDES: Record<string, Record<string, string>> = {
-  discord: {
-    tts: "voice",
-  },
-  slack: {
-    // Slack reserves /status — registering it returns "invalid name"
-    // and invalidates the entire slash_commands manifest array.
-    status: "agentstatus",
-  },
-};
-
 function resolveNativeName(command: ChatCommandDefinition, provider?: string): string | undefined {
   if (!command.nativeName) {
     return undefined;
   }
-  if (provider) {
-    const override = NATIVE_NAME_OVERRIDES[provider]?.[command.key];
-    if (override) {
-      return override;
-    }
+  if (!provider) {
+    return command.nativeName;
   }
-  return command.nativeName;
+  return (
+    getChannelPlugin(provider)?.commands?.resolveNativeCommandName?.({
+      commandKey: command.key,
+      defaultName: command.nativeName,
+    }) ?? command.nativeName
+  );
 }
 
 function toNativeCommandSpec(command: ChatCommandDefinition, provider?: string): NativeCommandSpec {
@@ -178,7 +175,7 @@ export function listNativeCommandSpecs(params?: {
 }
 
 export function listNativeCommandSpecsForConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params?: { skillCommands?: SkillCommandSpec[]; provider?: string },
 ): NativeCommandSpec[] {
   return listNativeSpecsFromCommands(listChatCommandsForConfig(cfg, params), params?.provider);
@@ -188,11 +185,14 @@ export function findCommandByNativeName(
   name: string,
   provider?: string,
 ): ChatCommandDefinition | undefined {
-  const normalized = name.trim().toLowerCase();
+  const normalized = normalizeOptionalLowercaseString(name);
+  if (!normalized) {
+    return undefined;
+  }
   return getChatCommands().find(
     (command) =>
       command.scope !== "text" &&
-      resolveNativeName(command, provider)?.toLowerCase() === normalized,
+      normalizeOptionalLowercaseString(resolveNativeName(command, provider)) === normalized,
   );
 }
 
@@ -296,12 +296,12 @@ export function buildCommandTextFromArgs(
   return buildCommandText(commandName, serializeCommandArgs(command, args));
 }
 
-function resolveDefaultCommandContext(cfg?: GodsEyeConfig): {
+function resolveDefaultCommandContext(cfg?: OpenClawConfig): {
   provider: string;
   model: string;
 } {
   const resolved = resolveConfiguredModelRef({
-    cfg: cfg ?? ({} as GodsEyeConfig),
+    cfg: cfg ?? ({} as OpenClawConfig),
     defaultProvider: DEFAULT_PROVIDER,
     defaultModel: DEFAULT_MODEL,
   });
@@ -316,7 +316,7 @@ export type ResolvedCommandArgChoice = { value: string; label: string };
 export function resolveCommandArgChoices(params: {
   command: ChatCommandDefinition;
   arg: CommandArgDefinition;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   provider?: string;
   model?: string;
 }): ResolvedCommandArgChoice[] {
@@ -346,7 +346,7 @@ export function resolveCommandArgChoices(params: {
 export function resolveCommandArgMenu(params: {
   command: ChatCommandDefinition;
   args?: CommandArgs;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 }): { arg: CommandArgDefinition; choices: ResolvedCommandArgChoice[]; title?: string } | null {
   const { command, args, cfg } = params;
   if (!command.args || !command.argsMenu) {
@@ -399,16 +399,16 @@ export function normalizeCommandBody(raw: string, options?: CommandNormalizeOpti
       })()
     : singleLine;
 
-  const normalizedBotUsername = options?.botUsername?.trim().toLowerCase();
+  const normalizedBotUsername = normalizeOptionalLowercaseString(options?.botUsername);
   const mentionMatch = normalizedBotUsername
     ? normalized.match(/^\/([^\s@]+)@([^\s]+)(.*)$/)
     : null;
   const commandBody =
-    mentionMatch && mentionMatch[2].toLowerCase() === normalizedBotUsername
+    mentionMatch && normalizeLowercaseStringOrEmpty(mentionMatch[2]) === normalizedBotUsername
       ? `/${mentionMatch[1]}${mentionMatch[3] ?? ""}`
       : normalized;
 
-  const lowered = commandBody.toLowerCase();
+  const lowered = normalizeLowercaseStringOrEmpty(commandBody);
   const textAliasMap = getTextAliasMap();
   const exact = textAliasMap.get(lowered);
   if (exact) {
@@ -420,7 +420,7 @@ export function normalizeCommandBody(raw: string, options?: CommandNormalizeOpti
     return commandBody;
   }
   const [, token, rest] = tokenMatch;
-  const tokenKey = `/${token.toLowerCase()}`;
+  const tokenKey = `/${normalizeLowercaseStringOrEmpty(token)}`;
   const tokenSpec = textAliasMap.get(tokenKey);
   if (!tokenSpec) {
     return commandBody;
@@ -437,7 +437,7 @@ export function isCommandMessage(raw: string): boolean {
   return trimmed.startsWith("/");
 }
 
-export function getCommandDetection(_cfg?: GodsEyeConfig): CommandDetection {
+export function getCommandDetection(_cfg?: OpenClawConfig): CommandDetection {
   const commands = getChatCommands();
   if (cachedDetection && cachedDetectionCommands === commands) {
     return cachedDetection;
@@ -446,7 +446,7 @@ export function getCommandDetection(_cfg?: GodsEyeConfig): CommandDetection {
   const patterns: string[] = [];
   for (const cmd of commands) {
     for (const alias of cmd.textAliases) {
-      const normalized = alias.trim().toLowerCase();
+      const normalized = normalizeOptionalLowercaseString(alias);
       if (!normalized) {
         continue;
       }
@@ -470,13 +470,13 @@ export function getCommandDetection(_cfg?: GodsEyeConfig): CommandDetection {
   return cachedDetection;
 }
 
-export function maybeResolveTextAlias(raw: string, cfg?: GodsEyeConfig) {
+export function maybeResolveTextAlias(raw: string, cfg?: OpenClawConfig) {
   const trimmed = normalizeCommandBody(raw).trim();
   if (!trimmed.startsWith("/")) {
     return null;
   }
   const detection = getCommandDetection(cfg);
-  const normalized = trimmed.toLowerCase();
+  const normalized = normalizeLowercaseStringOrEmpty(trimmed);
   if (detection.exact.has(normalized)) {
     return normalized;
   }
@@ -493,7 +493,7 @@ export function maybeResolveTextAlias(raw: string, cfg?: GodsEyeConfig) {
 
 export function resolveTextCommand(
   raw: string,
-  cfg?: GodsEyeConfig,
+  cfg?: OpenClawConfig,
 ): {
   command: ChatCommandDefinition;
   args?: string;
@@ -522,7 +522,7 @@ export function isNativeCommandSurface(surface?: string): boolean {
   if (!surface) {
     return false;
   }
-  return getNativeCommandSurfaces().has(surface.toLowerCase());
+  return getNativeCommandSurfaces().has(normalizeLowercaseStringOrEmpty(surface));
 }
 
 export function shouldHandleTextCommands(params: ShouldHandleTextCommandsParams): boolean {

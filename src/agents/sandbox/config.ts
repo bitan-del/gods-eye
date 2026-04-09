@@ -1,6 +1,7 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { SandboxSshSettings } from "../../config/types.sandbox.js";
 import { normalizeSecretInputString } from "../../config/types.secrets.js";
+import { normalizeOptionalString } from "../../shared/string-coerce.js";
 import { resolveAgentConfig } from "../agent-scope.js";
 import {
   DEFAULT_SANDBOX_BROWSER_AUTOSTART_TIMEOUT_MS,
@@ -34,7 +35,7 @@ export const DANGEROUS_SANDBOX_DOCKER_BOOLEAN_KEYS = [
 ] as const;
 
 const DEFAULT_SANDBOX_SSH_COMMAND = "ssh";
-const DEFAULT_SANDBOX_SSH_WORKSPACE_ROOT = "/tmp/godseye-sandboxes";
+const DEFAULT_SANDBOX_SSH_WORKSPACE_ROOT = "/tmp/openclaw-sandboxes";
 
 type DangerousSandboxDockerBooleanKey = (typeof DANGEROUS_SANDBOX_DOCKER_BOOLEAN_KEYS)[number];
 type DangerousSandboxDockerBooleans = Pick<SandboxDockerConfig, DangerousSandboxDockerBooleanKey>;
@@ -173,11 +174,6 @@ export function resolveSandboxPruneConfig(params: {
   };
 }
 
-function normalizeOptionalString(value: string | undefined): string | undefined {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
 function normalizeRemoteRoot(value: string | undefined, fallback: string): string {
   const normalized = normalizeOptionalString(value) ?? fallback;
   const posix = normalized.replaceAll("\\", "/");
@@ -221,7 +217,10 @@ export function resolveSandboxSshConfig(params: {
   };
 }
 
-export function resolveSandboxConfigForAgent(cfg?: GodsEyeConfig, agentId?: string): SandboxConfig {
+export function resolveSandboxConfigForAgent(
+  cfg?: OpenClawConfig,
+  agentId?: string,
+): SandboxConfig {
   const agent = cfg?.agents?.defaults?.sandbox;
 
   // Agent-specific sandbox config overrides global
@@ -230,10 +229,14 @@ export function resolveSandboxConfigForAgent(cfg?: GodsEyeConfig, agentId?: stri
   if (agentConfig?.sandbox) {
     agentSandbox = agentConfig.sandbox;
   }
+  const legacyAgentSandbox = agentSandbox as
+    | (typeof agentSandbox & { perSession?: boolean })
+    | undefined;
+  const legacyDefaultSandbox = agent as (typeof agent & { perSession?: boolean }) | undefined;
 
   const scope = resolveSandboxScope({
     scope: agentSandbox?.scope ?? agent?.scope,
-    perSession: agentSandbox?.perSession ?? agent?.perSession,
+    perSession: legacyAgentSandbox?.perSession ?? legacyDefaultSandbox?.perSession,
   });
 
   const toolPolicy = resolveSandboxToolPolicyForAgent(cfg, agentId);

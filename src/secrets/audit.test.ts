@@ -22,6 +22,65 @@ async function writeJsonFile(filePath: string, value: unknown): Promise<void> {
   await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
+async function writeExecResolverShellScript(params: {
+  scriptPath: string;
+  logPath: string;
+  values: Record<string, string>;
+}) {
+  await fs.writeFile(
+    params.scriptPath,
+    [
+      "#!/bin/sh",
+      `printf 'x\\n' >> ${JSON.stringify(params.logPath)}`,
+      "cat >/dev/null",
+      `printf '${JSON.stringify({ protocolVersion: 1, values: params.values }).replaceAll("'", "'\\''")}'`, // pragma: allowlist secret
+    ].join("\n"),
+    { encoding: "utf8", mode: 0o700 },
+  );
+}
+
+async function writeExecSecretsAuditConfig(params: {
+  fixture: AuditFixture;
+  execScriptPath: string;
+  providers: Array<{
+    id: string;
+    baseUrl: string;
+    modelId: string;
+    modelName: string;
+  }>;
+}) {
+  await writeJsonFile(params.fixture.configPath, {
+    secrets: {
+      providers: {
+        execmain: {
+          source: "exec",
+          command: params.execScriptPath,
+          jsonOnly: true,
+          timeoutMs: 20_000,
+          noOutputTimeoutMs: 10_000,
+        },
+      },
+    },
+    models: {
+      providers: Object.fromEntries(
+        params.providers.map((provider) => [
+          provider.id,
+          {
+            baseUrl: provider.baseUrl,
+            api: "openai-completions",
+            apiKey: {
+              source: "exec",
+              provider: "execmain",
+              id: `providers/${provider.id}/apiKey`,
+            },
+            models: [{ id: provider.modelId, name: provider.modelName }],
+          },
+        ]),
+      ),
+    },
+  });
+}
+
 function resolveRuntimePathEnv(): string {
   if (typeof process.env.PATH === "string" && process.env.PATH.trim().length > 0) {
     return process.env.PATH;
@@ -39,9 +98,9 @@ function hasFinding(
 }
 
 async function createAuditFixture(): Promise<AuditFixture> {
-  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "godseye-secrets-audit-"));
-  const stateDir = path.join(rootDir, ".godseye");
-  const configPath = path.join(stateDir, "godseye.json");
+  const rootDir = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-secrets-audit-"));
+  const stateDir = path.join(rootDir, ".openclaw");
+  const configPath = path.join(stateDir, "openclaw.json");
   const authStorePath = path.join(stateDir, "agents", "main", "agent", "auth-profiles.json");
   const authJsonPath = path.join(stateDir, "agents", "main", "agent", "auth.json");
   const modelsPath = path.join(stateDir, "agents", "main", "agent", "models.json");
@@ -59,8 +118,8 @@ async function createAuditFixture(): Promise<AuditFixture> {
     modelsPath,
     envPath,
     env: {
-      GODSEYE_STATE_DIR: stateDir,
-      GODSEYE_CONFIG_PATH: configPath,
+      OPENCLAW_STATE_DIR: stateDir,
+      OPENCLAW_CONFIG_PATH: configPath,
       OPENAI_API_KEY: "env-openai-key", // pragma: allowlist secret
       PATH: resolveRuntimePathEnv(),
     },
@@ -196,39 +255,24 @@ describe("secrets audit", () => {
     }
     const execLogPath = path.join(fixture.rootDir, "exec-calls-skipped.log");
     const execScriptPath = path.join(fixture.rootDir, "resolver-skipped.sh");
-    await fs.writeFile(
+    await writeExecResolverShellScript({
+      scriptPath: execScriptPath,
+      logPath: execLogPath,
+      values: {
+        "providers/openai/apiKey": "value:providers/openai/apiKey",
+      },
+    });
+    await writeExecSecretsAuditConfig({
+      fixture,
       execScriptPath,
-      [
-        "#!/bin/sh",
-        `printf 'x\\n' >> ${JSON.stringify(execLogPath)}`,
-        "cat >/dev/null",
-        'printf \'{"protocolVersion":1,"values":{"providers/openai/apiKey":"value:providers/openai/apiKey"}}\'', // pragma: allowlist secret
-      ].join("\n"),
-      { encoding: "utf8", mode: 0o700 },
-    );
-
-    await writeJsonFile(fixture.configPath, {
-      secrets: {
-        providers: {
-          execmain: {
-            source: "exec",
-            command: execScriptPath,
-            jsonOnly: true,
-            timeoutMs: 20_000,
-            noOutputTimeoutMs: 10_000,
-          },
+      providers: [
+        {
+          id: "openai",
+          baseUrl: "https://api.openai.com/v1",
+          modelId: "gpt-5",
+          modelName: "gpt-5",
         },
-      },
-      models: {
-        providers: {
-          openai: {
-            baseUrl: "https://api.openai.com/v1",
-            api: "openai-completions",
-            apiKey: { source: "exec", provider: "execmain", id: "providers/openai/apiKey" },
-            models: [{ id: "gpt-5", name: "gpt-5" }],
-          },
-        },
-      },
+      ],
     });
     await fs.rm(fixture.authStorePath, { force: true });
     await fs.writeFile(fixture.envPath, "", "utf8");
@@ -246,45 +290,31 @@ describe("secrets audit", () => {
     }
     const execLogPath = path.join(fixture.rootDir, "exec-calls.log");
     const execScriptPath = path.join(fixture.rootDir, "resolver.sh");
-    await fs.writeFile(
+    await writeExecResolverShellScript({
+      scriptPath: execScriptPath,
+      logPath: execLogPath,
+      values: {
+        "providers/openai/apiKey": "value:providers/openai/apiKey",
+        "providers/moonshot/apiKey": "value:providers/moonshot/apiKey",
+      },
+    });
+    await writeExecSecretsAuditConfig({
+      fixture,
       execScriptPath,
-      [
-        "#!/bin/sh",
-        `printf 'x\\n' >> ${JSON.stringify(execLogPath)}`,
-        "cat >/dev/null",
-        'printf \'{"protocolVersion":1,"values":{"providers/openai/apiKey":"value:providers/openai/apiKey","providers/moonshot/apiKey":"value:providers/moonshot/apiKey"}}\'', // pragma: allowlist secret
-      ].join("\n"),
-      { encoding: "utf8", mode: 0o700 },
-    );
-
-    await writeJsonFile(fixture.configPath, {
-      secrets: {
-        providers: {
-          execmain: {
-            source: "exec",
-            command: execScriptPath,
-            jsonOnly: true,
-            timeoutMs: 20_000,
-            noOutputTimeoutMs: 10_000,
-          },
+      providers: [
+        {
+          id: "openai",
+          baseUrl: "https://api.openai.com/v1",
+          modelId: "gpt-5",
+          modelName: "gpt-5",
         },
-      },
-      models: {
-        providers: {
-          openai: {
-            baseUrl: "https://api.openai.com/v1",
-            api: "openai-completions",
-            apiKey: { source: "exec", provider: "execmain", id: "providers/openai/apiKey" },
-            models: [{ id: "gpt-5", name: "gpt-5" }],
-          },
-          moonshot: {
-            baseUrl: "https://api.moonshot.cn/v1",
-            api: "openai-completions",
-            apiKey: { source: "exec", provider: "execmain", id: "providers/moonshot/apiKey" },
-            models: [{ id: "moonshot-v1-8k", name: "moonshot-v1-8k" }],
-          },
+        {
+          id: "moonshot",
+          baseUrl: "https://api.moonshot.cn/v1",
+          modelId: "moonshot-v1-8k",
+          modelName: "moonshot-v1-8k",
         },
-      },
+      ],
     });
     await fs.rm(fixture.authStorePath, { force: true });
     await fs.writeFile(fixture.envPath, "", "utf8");
@@ -509,7 +539,7 @@ describe("secrets audit", () => {
     const report = await runSecretsAudit({
       env: {
         ...fixture.env,
-        GODSEYE_AGENT_DIR: externalAgentDir,
+        OPENCLAW_AGENT_DIR: externalAgentDir,
       },
     });
     expect(
@@ -524,7 +554,7 @@ describe("secrets audit", () => {
     expect(report.filesScanned).toContain(externalModelsPath);
   });
 
-  it("does not flag non-sensitive routing headers in godseye config", async () => {
+  it("does not flag non-sensitive routing headers in openclaw config", async () => {
     await writeJsonFile(fixture.configPath, {
       models: {
         providers: {

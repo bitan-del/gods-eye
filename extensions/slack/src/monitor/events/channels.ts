@@ -1,5 +1,5 @@
 import type { SlackEventMiddlewareArgs } from "@slack/bolt";
-import { resolveChannelConfigWrites } from "godseye/plugin-sdk/channel-config-helpers";
+import { resolveChannelConfigWrites } from "godseye/plugin-sdk/channel-config-writes";
 import { loadConfig, writeConfigFile } from "godseye/plugin-sdk/config-runtime";
 import { enqueueSystemEvent } from "godseye/plugin-sdk/infra-runtime";
 import { danger, warn } from "godseye/plugin-sdk/runtime-env";

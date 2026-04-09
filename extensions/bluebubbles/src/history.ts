@@ -1,5 +1,5 @@
 import { resolveBlueBubblesServerAccount } from "./account-resolve.js";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 import { blueBubblesFetchWithTimeout, buildBlueBubblesApiUrl } from "./types.js";
 
 export type BlueBubblesHistoryEntry = {
@@ -37,7 +37,7 @@ export type BlueBubblesChatOpts = {
   password?: string;
   accountId?: string;
   timeoutMs?: number;
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
 };
 
 function resolveAccount(params: BlueBubblesChatOpts) {
@@ -169,7 +169,7 @@ export async function fetchBlueBubblesHistory(
         entries: historyEntries.slice(0, effectiveLimit), // Ensure we don't exceed the requested limit
         resolved: true,
       };
-    } catch (error) {
+    } catch {
       // Continue to next path
       continue;
     }

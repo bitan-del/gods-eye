@@ -1,6 +1,6 @@
 import { listChannelPlugins } from "../../channels/plugins/index.js";
 import type { ChannelPlugin } from "../../channels/plugins/types.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { defaultRuntime } from "../../runtime.js";
 import {
   listDeliverableMessageChannels,
@@ -8,6 +8,7 @@ import {
   isDeliverableMessageChannel,
   normalizeMessageChannel,
 } from "../../utils/message-channel.js";
+import { formatErrorMessage } from "../errors.js";
 import { resolveOutboundChannelPlugin } from "./channel-resolution.js";
 
 export type MessageChannelId = DeliverableMessageChannel;
@@ -37,7 +38,7 @@ function resolveKnownChannel(value?: string | null): MessageChannelId | undefine
 }
 
 function resolveAvailableKnownChannel(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   value?: string | null;
 }): MessageChannelId | undefined {
   const normalized = resolveKnownChannel(params.value);
@@ -68,7 +69,7 @@ function logChannelSelectionError(params: {
   operation: "resolveAccount" | "isConfigured";
   error: unknown;
 }) {
-  const message = params.error instanceof Error ? params.error.message : String(params.error);
+  const message = formatErrorMessage(params.error);
   const key = `${params.pluginId}:${params.accountId}:${params.operation}:${message}`;
   if (loggedChannelSelectionErrors.has(key)) {
     return;
@@ -79,7 +80,7 @@ function logChannelSelectionError(params: {
   );
 }
 
-async function isPluginConfigured(plugin: ChannelPlugin, cfg: GodsEyeConfig): Promise<boolean> {
+async function isPluginConfigured(plugin: ChannelPlugin, cfg: OpenClawConfig): Promise<boolean> {
   const accountIds = plugin.config.listAccountIds(cfg);
   if (accountIds.length === 0) {
     return false;
@@ -128,7 +129,7 @@ async function isPluginConfigured(plugin: ChannelPlugin, cfg: GodsEyeConfig): Pr
 }
 
 export async function listConfiguredMessageChannels(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
 ): Promise<MessageChannelId[]> {
   const channels: MessageChannelId[] = [];
   for (const plugin of listChannelPlugins()) {
@@ -143,7 +144,7 @@ export async function listConfiguredMessageChannels(
 }
 
 export async function resolveMessageChannelSelection(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   channel?: string | null;
   fallbackChannel?: string | null;
 }): Promise<{
