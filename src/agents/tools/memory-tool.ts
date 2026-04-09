@@ -1,5 +1,5 @@
 import { Type } from "@sinclair/typebox";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { MemoryCitationsMode } from "../../config/types.memory.js";
 import type { MemorySearchResult } from "../../memory/types.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
@@ -32,7 +32,7 @@ const MemoryGetSchema = Type.Object({
   lines: Type.Optional(Type.Number()),
 });
 
-function resolveMemoryToolContext(options: { config?: GodsEyeConfig; agentSessionKey?: string }) {
+function resolveMemoryToolContext(options: { config?: OpenClawConfig; agentSessionKey?: string }) {
   const cfg = options.config;
   if (!cfg) {
     return null;
@@ -47,7 +47,7 @@ function resolveMemoryToolContext(options: { config?: GodsEyeConfig; agentSessio
   return { cfg, agentId };
 }
 
-async function getMemoryManagerContext(params: { cfg: GodsEyeConfig; agentId: string }): Promise<
+async function getMemoryManagerContext(params: { cfg: OpenClawConfig; agentId: string }): Promise<
   | {
       manager: NonNullable<MemorySearchManagerResult["manager"]>;
     }
@@ -59,7 +59,7 @@ async function getMemoryManagerContext(params: { cfg: GodsEyeConfig; agentId: st
 }
 
 async function getMemoryManagerContextWithPurpose(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId: string;
   purpose?: "default" | "status";
 }): Promise<
@@ -81,14 +81,14 @@ async function getMemoryManagerContextWithPurpose(params: {
 
 function createMemoryTool(params: {
   options: {
-    config?: GodsEyeConfig;
+    config?: OpenClawConfig;
     agentSessionKey?: string;
   };
   label: string;
   name: string;
   description: string;
   parameters: typeof MemorySearchSchema | typeof MemoryGetSchema;
-  execute: (ctx: { cfg: GodsEyeConfig; agentId: string }) => AnyAgentTool["execute"];
+  execute: (ctx: { cfg: OpenClawConfig; agentId: string }) => AnyAgentTool["execute"];
 }): AnyAgentTool | null {
   const ctx = resolveMemoryToolContext(params.options);
   if (!ctx) {
@@ -104,7 +104,7 @@ function createMemoryTool(params: {
 }
 
 export function createMemorySearchTool(options: {
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentSessionKey?: string;
 }): AnyAgentTool | null {
   return createMemoryTool({
@@ -161,7 +161,7 @@ export function createMemorySearchTool(options: {
 }
 
 export function createMemoryGetTool(options: {
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentSessionKey?: string;
 }): AnyAgentTool | null {
   return createMemoryTool({
@@ -217,7 +217,7 @@ export function createMemoryGetTool(options: {
   });
 }
 
-function resolveMemoryCitationsMode(cfg: GodsEyeConfig): MemoryCitationsMode {
+function resolveMemoryCitationsMode(cfg: OpenClawConfig): MemoryCitationsMode {
   const mode = cfg.memory?.citations;
   if (mode === "on" || mode === "off" || mode === "auto") {
     return mode;

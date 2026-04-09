@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
+import type { OpenClawConfig } from "../../../src/config/config.js";
 import { TelegramExecApprovalHandler } from "./exec-approvals-handler.js";
 
 const baseRequest = {
@@ -17,7 +17,7 @@ const baseRequest = {
   expiresAtMs: 61_000,
 };
 
-function createHandler(cfg: GodsEyeConfig) {
+function createHandler(cfg: OpenClawConfig) {
   const sendTyping = vi.fn().mockResolvedValue({ ok: true });
   const sendMessage = vi
     .fn()
@@ -52,7 +52,7 @@ describe("TelegramExecApprovalHandler", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const { handler, sendTyping, sendMessage } = createHandler(cfg);
 
     await handler.handleRequested(baseRequest);
@@ -103,7 +103,7 @@ describe("TelegramExecApprovalHandler", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const { handler, sendMessage } = createHandler(cfg);
 
     await handler.handleRequested({
@@ -132,7 +132,7 @@ describe("TelegramExecApprovalHandler", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const { handler, editReplyMarkup } = createHandler(cfg);
 
     await handler.handleRequested(baseRequest);

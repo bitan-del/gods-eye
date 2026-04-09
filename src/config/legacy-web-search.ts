@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "./config.js";
+import type { OpenClawConfig } from "./config.js";
 import { mergeMissing } from "./legacy.shared.js";
 
 type JsonRecord = Record<string, unknown>;
@@ -232,7 +232,7 @@ function normalizeLegacyWebSearchConfigRecord<T extends JsonRecord>(
 }
 
 export function resolvePluginWebSearchConfig(
-  config: GodsEyeConfig | undefined,
+  config: OpenClawConfig | undefined,
   pluginId: string,
 ): Record<string, unknown> | undefined {
   const pluginConfig = config?.plugins?.entries?.[pluginId]?.config;

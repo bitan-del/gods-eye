@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { BrowserProfileConfig, GodsEyeConfig } from "../config/config.js";
+import type { BrowserProfileConfig, OpenClawConfig } from "../config/config.js";
 import { loadConfig, writeConfigFile } from "../config/config.js";
 import { deriveDefaultBrowserCdpPortRange } from "../config/port-defaults.js";
 import { resolveUserPath } from "../utils.js";
@@ -161,7 +161,7 @@ export function createBrowserProfilesService(ctx: BrowserRouteContext) {
       }
     }
 
-    const nextConfig: GodsEyeConfig = {
+    const nextConfig: OpenClawConfig = {
       ...cfg,
       browser: {
         ...cfg.browser,
@@ -234,7 +234,7 @@ export function createBrowserProfilesService(ctx: BrowserRouteContext) {
     }
 
     const { [name]: _removed, ...remainingProfiles } = profiles;
-    const nextConfig: GodsEyeConfig = {
+    const nextConfig: OpenClawConfig = {
       ...cfg,
       browser: {
         ...cfg.browser,

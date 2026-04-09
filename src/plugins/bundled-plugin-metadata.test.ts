@@ -271,7 +271,7 @@ describe("bundled plugin metadata", () => {
         extensions: ["./index.ts"],
       },
     });
-    writeJson(path.join(pluginRoot, "openclaw.plugin.json"), {
+    writeJson(path.join(pluginRoot, "godseye.plugin.json"), {
       id: "alpha",
       configSchema: { type: "object" },
     });
@@ -314,7 +314,7 @@ describe("bundled plugin metadata", () => {
         },
       },
     });
-    writeJson(path.join(tempRoot, "extensions", "alpha", "openclaw.plugin.json"), {
+    writeJson(path.join(tempRoot, "extensions", "alpha", "godseye.plugin.json"), {
       id: "alpha",
       channels: ["alpha"],
       configSchema: { type: "object" },
@@ -386,7 +386,7 @@ describe("bundled plugin metadata", () => {
         setupEntry: "./setup-entry.ts",
       },
     });
-    writeJson(path.join(tempRoot, "extensions", "alpha", "openclaw.plugin.json"), {
+    writeJson(path.join(tempRoot, "extensions", "alpha", "godseye.plugin.json"), {
       id: "alpha",
       configSchema: { type: "object" },
     });
@@ -435,7 +435,7 @@ describe("bundled plugin metadata", () => {
         },
       },
     });
-    writeJson(path.join(distRoot, "extensions", "alpha", "openclaw.plugin.json"), {
+    writeJson(path.join(distRoot, "extensions", "alpha", "godseye.plugin.json"), {
       id: "alpha",
       configSchema: {
         type: "object",

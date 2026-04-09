@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bundledWebSearchPluginRegistrations } from "../bundled-web-search-registry.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { BUNDLED_WEB_SEARCH_PLUGIN_IDS } from "./bundled-web-search-ids.js";
 import { resolveBundledWebSearchPluginId } from "./bundled-web-search-provider-ids.js";
 import {
@@ -142,8 +142,8 @@ describe("bundled web search metadata", () => {
         contractProvider.getCredentialValue(contractSearchConfig),
       );
 
-      const fastConfig = {} as GodsEyeConfig;
-      const contractConfig = {} as GodsEyeConfig;
+      const fastConfig = {} as OpenClawConfig;
+      const contractConfig = {} as OpenClawConfig;
       fastPathProvider.setConfiguredCredentialValue?.(fastConfig, "test-key");
       contractProvider.setConfiguredCredentialValue?.(contractConfig, "test-key");
       expect(fastConfig).toEqual(contractConfig);
@@ -152,8 +152,8 @@ describe("bundled web search metadata", () => {
       );
 
       if (fastPathProvider.applySelectionConfig || contractProvider.applySelectionConfig) {
-        expect(fastPathProvider.applySelectionConfig?.({} as GodsEyeConfig)).toEqual(
-          contractProvider.applySelectionConfig?.({} as GodsEyeConfig),
+        expect(fastPathProvider.applySelectionConfig?.({} as OpenClawConfig)).toEqual(
+          contractProvider.applySelectionConfig?.({} as OpenClawConfig),
         );
       }
 

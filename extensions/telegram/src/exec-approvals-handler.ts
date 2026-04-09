@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { GatewayClient } from "godseye/plugin-sdk/gateway-runtime";
 import { createOperatorApprovalsGatewayClient } from "godseye/plugin-sdk/gateway-runtime";
 import type { EventFrame } from "godseye/plugin-sdk/gateway-runtime";
@@ -41,7 +41,7 @@ type TelegramApprovalTarget = {
 export type TelegramExecApprovalHandlerOpts = {
   token: string;
   accountId: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   gatewayUrl?: string;
   runtime?: RuntimeEnv;
 };
@@ -54,7 +54,7 @@ export type TelegramExecApprovalHandlerDeps = {
 };
 
 function matchesFilters(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   request: ExecApprovalRequest;
 }): boolean {
@@ -99,7 +99,7 @@ function matchesFilters(params: {
   return true;
 }
 
-function isHandlerConfigured(params: { cfg: GodsEyeConfig; accountId: string }): boolean {
+function isHandlerConfigured(params: { cfg: OpenClawConfig; accountId: string }): boolean {
   const config = resolveTelegramExecApprovalConfig({
     cfg: params.cfg,
     accountId: params.accountId,
@@ -116,7 +116,7 @@ function isHandlerConfigured(params: { cfg: GodsEyeConfig; accountId: string }):
 }
 
 function resolveRequestSessionTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   request: ExecApprovalRequest;
 }): { to: string; accountId?: string; threadId?: number; channel?: string } | null {
   return resolveExecApprovalSessionTarget({
@@ -130,7 +130,7 @@ function resolveRequestSessionTarget(params: {
 }
 
 function resolveTelegramSourceTarget(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId: string;
   request: ExecApprovalRequest;
 }): TelegramApprovalTarget | null {

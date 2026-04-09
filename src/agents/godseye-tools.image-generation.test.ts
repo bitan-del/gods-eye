@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import * as imageGenerationRuntime from "../image-generation/runtime.js";
 import { createGodsEyeTools } from "./godseye-tools.js";
 
@@ -7,8 +7,8 @@ vi.mock("../plugins/tools.js", () => ({
   resolvePluginTools: () => [],
 }));
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
 function stubImageGenerationProviders() {

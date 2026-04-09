@@ -90,7 +90,7 @@ describe("plugin loader CLI metadata", () => {
 };`,
     });
     fs.writeFileSync(
-      path.join(plugin.dir, "openclaw.plugin.json"),
+      path.join(plugin.dir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "config-cli",
@@ -149,7 +149,7 @@ describe("plugin loader CLI metadata", () => {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "openclaw.plugin.json"),
+      path.join(pluginDir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "cli-metadata-channel",
@@ -256,7 +256,7 @@ module.exports = {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "openclaw.plugin.json"),
+      path.join(pluginDir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "bundled-skip-channel",
@@ -324,7 +324,7 @@ module.exports = {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "openclaw.plugin.json"),
+      path.join(pluginDir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "bundled-cli-channel",
@@ -408,7 +408,7 @@ module.exports = {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "openclaw.plugin.json"),
+      path.join(pluginDir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "bundled-skip-provider",
@@ -472,7 +472,7 @@ module.exports = {
       "utf-8",
     );
     fs.writeFileSync(
-      path.join(pluginDir, "openclaw.plugin.json"),
+      path.join(pluginDir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "full-cli-metadata-channel",
@@ -608,7 +608,7 @@ module.exports = {
 };`,
     });
     fs.writeFileSync(
-      path.join(plugin.dir, "openclaw.plugin.json"),
+      path.join(plugin.dir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "memory-external",

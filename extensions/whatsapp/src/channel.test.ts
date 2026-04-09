@@ -19,7 +19,7 @@ import {
   resolveWhatsAppGroupRequireMention,
   resolveWhatsAppGroupToolPolicy,
 } from "./group-policy.js";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 
 const hoisted = vi.hoisted(() => ({
   sendPollWhatsApp: vi.fn(async () => ({ messageId: "wa-poll-1", toJid: "1555@s.whatsapp.net" })),
@@ -200,7 +200,7 @@ describe("whatsapp directory", () => {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     const directory = expectDirectorySurface(whatsappPlugin.directory);
 

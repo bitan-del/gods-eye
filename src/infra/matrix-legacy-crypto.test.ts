@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { resolveMatrixAccountStorageRoot } from "../../extensions/matrix/runtime-api.js";
 import { withTempHome } from "../../test/helpers/temp-home.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { autoPrepareLegacyMatrixCrypto, detectLegacyMatrixCrypto } from "./matrix-legacy-crypto.js";
 import { MATRIX_LEGACY_CRYPTO_INSPECTOR_UNAVAILABLE_MESSAGE } from "./matrix-plugin-helper.js";
 
@@ -56,7 +56,7 @@ describe("matrix legacy encrypted-state migration", () => {
       async (home) => {
         writeMatrixPluginFixture(path.join(home, "bundled", "matrix"));
         const stateDir = path.join(home, ".godseye");
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           channels: {
             matrix: {
               homeserver: "https://matrix.example.org",
@@ -117,7 +117,7 @@ describe("matrix legacy encrypted-state migration", () => {
   it("warns when legacy local-only room keys cannot be recovered automatically", async () => {
     await withTempHome(async (home) => {
       const stateDir = path.join(home, ".godseye");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             homeserver: "https://matrix.example.org",
@@ -166,7 +166,7 @@ describe("matrix legacy encrypted-state migration", () => {
   it("warns instead of throwing when recovery-key persistence fails", async () => {
     await withTempHome(async (home) => {
       const stateDir = path.join(home, ".godseye");
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             homeserver: "https://matrix.example.org",
@@ -234,7 +234,7 @@ describe("matrix legacy encrypted-state migration", () => {
           ),
         );
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           channels: {
             matrix: {
               accounts: {
@@ -301,7 +301,7 @@ describe("matrix legacy encrypted-state migration", () => {
           JSON.stringify({ deviceId: "DEVICEOPS" }),
         );
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           channels: {
             matrix: {
               accounts: {
@@ -364,7 +364,7 @@ describe("matrix legacy encrypted-state migration", () => {
         JSON.stringify({ deviceId: "DEVICEOPS" }),
       );
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             accounts: {
@@ -398,7 +398,7 @@ describe("matrix legacy encrypted-state migration", () => {
       const stateDir = path.join(home, ".godseye");
       writeFile(path.join(stateDir, "matrix", "crypto"), "not-a-directory");
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             homeserver: "https://matrix.example.org",
@@ -425,7 +425,7 @@ describe("matrix legacy encrypted-state migration", () => {
           '{"deviceId":"DEVICE123"}',
         );
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           channels: {
             matrix: {
               homeserver: "https://matrix.example.org",

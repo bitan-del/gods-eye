@@ -6,7 +6,7 @@ import { ensureAuthProfileStore, type AuthProfileStore } from "../agents/auth-pr
 import {
   clearConfigCache,
   loadConfig,
-  type GodsEyeConfig,
+  type OpenClawConfig,
   writeConfigFile,
 } from "../config/config.js";
 import { withTempHome } from "../config/home-env.test-harness.js";
@@ -24,8 +24,8 @@ vi.unmock("../version.js");
 const OPENAI_ENV_KEY_REF = { source: "env", provider: "default", id: "OPENAI_API_KEY" } as const;
 const allowInsecureTempSecretFile = process.platform === "win32";
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
 function loadAuthStoreWithProfiles(profiles: AuthProfileStore["profiles"]): AuthProfileStore {
@@ -359,7 +359,7 @@ describe("secrets runtime snapshot integration", () => {
 
       const persistedConfig = JSON.parse(
         await fs.readFile(path.join(home, ".godseye", "godseye.json"), "utf8"),
-      ) as GodsEyeConfig;
+      ) as OpenClawConfig;
       const persistedGoogleWebSearchConfig = persistedConfig.plugins?.entries?.google?.config as
         | { webSearch?: { apiKey?: unknown } }
         | undefined;

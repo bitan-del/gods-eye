@@ -104,7 +104,7 @@ function setupDualFormatInstallFixture(params: { bundleFormat: "codex" | "claude
     "utf-8",
   );
   fs.writeFileSync(
-    path.join(pluginDir, "openclaw.plugin.json"),
+    path.join(pluginDir, "godseye.plugin.json"),
     JSON.stringify({
       id: "native-dual",
       configSchema: { type: "object", properties: {} },

@@ -267,7 +267,7 @@ describe("stageBundledPluginRuntime", () => {
         null,
         2,
       ),
-      [bundledDistPluginFile("diffs", "openclaw.plugin.json")]: "{}\n",
+      [bundledDistPluginFile("diffs", "godseye.plugin.json")]: "{}\n",
       [bundledDistPluginFile("diffs", "assets/info.txt")]: "ok\n",
     });
 
@@ -276,7 +276,7 @@ describe("stageBundledPluginRuntime", () => {
     expectRuntimeArtifactText({
       repoRoot,
       pluginId: "diffs",
-      relativePath: "openclaw.plugin.json",
+      relativePath: "godseye.plugin.json",
       expectedText: "{}\n",
       symbolicLink: false,
     });
@@ -317,7 +317,7 @@ describe("stageBundledPluginRuntime", () => {
         null,
         2,
       ),
-      [bundledDistPluginFile("demo", "openclaw.plugin.json")]: JSON.stringify(
+      [bundledDistPluginFile("demo", "godseye.plugin.json")]: JSON.stringify(
         {
           id: "demo",
           channels: ["demo"],

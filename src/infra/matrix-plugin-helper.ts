@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createJiti } from "jiti";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   loadPluginManifestRegistry,
   type PluginManifestRecord,
@@ -42,7 +42,7 @@ export type MatrixLegacyCryptoInspector = (
 ) => Promise<MatrixLegacyCryptoInspectorResult>;
 
 function resolveMatrixPluginRecord(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): PluginManifestRecord | null {
@@ -60,7 +60,7 @@ type MatrixLegacyCryptoInspectorPathResolution =
   | { status: "unsafe"; candidatePath: string };
 
 function resolveMatrixLegacyCryptoInspectorPath(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): MatrixLegacyCryptoInspectorPathResolution {
@@ -89,7 +89,7 @@ function resolveMatrixLegacyCryptoInspectorPath(params: {
 }
 
 export function isMatrixLegacyCryptoInspectorAvailable(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): boolean {
@@ -146,7 +146,7 @@ function resolveInspectorExport(loaded: unknown): MatrixLegacyCryptoInspector | 
 }
 
 export async function loadMatrixLegacyCryptoInspector(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
   workspaceDir?: string;
 }): Promise<MatrixLegacyCryptoInspector> {

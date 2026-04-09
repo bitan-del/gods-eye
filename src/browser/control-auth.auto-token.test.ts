@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { expectGeneratedTokenPersistedToGatewayAuth } from "../test-utils/auth-token-assertions.js";
 
 const mocks = vi.hoisted(() => ({
-  loadConfig: vi.fn<() => GodsEyeConfig>(),
-  writeConfigFile: vi.fn(async (_cfg: GodsEyeConfig) => {}),
+  loadConfig: vi.fn<() => OpenClawConfig>(),
+  writeConfigFile: vi.fn(async (_cfg: OpenClawConfig) => {}),
 }));
 
 vi.mock("../config/config.js", async (importOriginal) => {
@@ -20,7 +20,7 @@ let ensureBrowserControlAuth: typeof import("./control-auth.js").ensureBrowserCo
 
 describe("ensureBrowserControlAuth", () => {
   const expectExplicitModeSkipsAutoAuth = async (mode: "password" | "none") => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       gateway: {
         auth: { mode },
       },
@@ -56,7 +56,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("returns existing auth and skips writes", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       gateway: {
         auth: {
           token: "already-set",
@@ -72,7 +72,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("auto-generates and persists a token when auth is missing", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       browser: {
         enabled: true,
       },
@@ -88,7 +88,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("skips auto-generation in test env", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       browser: {
         enabled: true,
       },
@@ -113,7 +113,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("reuses auth from latest config snapshot", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       browser: {
         enabled: true,
       },
@@ -136,7 +136,7 @@ describe("ensureBrowserControlAuth", () => {
   });
 
   it("fails when gateway.auth.token SecretRef is unresolved", async () => {
-    const cfg: GodsEyeConfig = {
+    const cfg: OpenClawConfig = {
       gateway: {
         auth: {
           mode: "token",

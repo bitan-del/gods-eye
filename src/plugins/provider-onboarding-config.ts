@@ -1,5 +1,5 @@
 import { findNormalizedProviderKey } from "../agents/provider-id.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { AgentModelEntryConfig } from "../config/types.agent-defaults.js";
 import type {
   ModelApi,
@@ -51,12 +51,12 @@ export function withAgentModelAliases(
 }
 
 export function applyOnboardAuthAgentModelsAndProviders(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentModels: Record<string, AgentModelEntryConfig>;
     providers: Record<string, ModelProviderConfig>;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   return {
     ...cfg,
     agents: {
@@ -73,7 +73,7 @@ export function applyOnboardAuthAgentModelsAndProviders(
   };
 }
 
-export function applyAgentDefaultModelPrimary(cfg: GodsEyeConfig, primary: string): GodsEyeConfig {
+export function applyAgentDefaultModelPrimary(cfg: OpenClawConfig, primary: string): OpenClawConfig {
   const existingFallbacks = extractAgentDefaultModelFallbacks(cfg.agents?.defaults?.model);
   return {
     ...cfg,
@@ -91,7 +91,7 @@ export function applyAgentDefaultModelPrimary(cfg: GodsEyeConfig, primary: strin
 }
 
 export function applyProviderConfigWithDefaultModels(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentModels: Record<string, AgentModelEntryConfig>;
     providerId: string;
@@ -100,7 +100,7 @@ export function applyProviderConfigWithDefaultModels(
     defaultModels: ModelDefinitionConfig[];
     defaultModelId?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const providerState = resolveProviderModelMergeState(cfg, params.providerId);
 
   const defaultModels = params.defaultModels;
@@ -126,7 +126,7 @@ export function applyProviderConfigWithDefaultModels(
 }
 
 export function applyProviderConfigWithDefaultModel(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentModels: Record<string, AgentModelEntryConfig>;
     providerId: string;
@@ -135,7 +135,7 @@ export function applyProviderConfigWithDefaultModel(
     defaultModel: ModelDefinitionConfig;
     defaultModelId?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   return applyProviderConfigWithDefaultModels(cfg, {
     agentModels: params.agentModels,
     providerId: params.providerId,
@@ -147,7 +147,7 @@ export function applyProviderConfigWithDefaultModel(
 }
 
 export function applyProviderConfigWithDefaultModelPreset(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     providerId: string;
     api: ModelApi;
@@ -157,7 +157,7 @@ export function applyProviderConfigWithDefaultModelPreset(
     aliases?: readonly AgentModelAliasEntry[];
     primaryModelRef?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const next = applyProviderConfigWithDefaultModel(cfg, {
     agentModels: withAgentModelAliases(cfg.agents?.defaults?.models, params.aliases ?? []),
     providerId: params.providerId,
@@ -172,8 +172,8 @@ export function applyProviderConfigWithDefaultModelPreset(
 }
 
 export type ProviderOnboardPresetAppliers<TArgs extends unknown[]> = {
-  applyProviderConfig: (cfg: GodsEyeConfig, ...args: TArgs) => GodsEyeConfig;
-  applyConfig: (cfg: GodsEyeConfig, ...args: TArgs) => GodsEyeConfig;
+  applyProviderConfig: (cfg: OpenClawConfig, ...args: TArgs) => OpenClawConfig;
+  applyConfig: (cfg: OpenClawConfig, ...args: TArgs) => OpenClawConfig;
 };
 
 function createProviderPresetAppliers<
@@ -183,10 +183,10 @@ function createProviderPresetAppliers<
   },
 >(params: {
   resolveParams: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     ...args: TArgs
   ) => Omit<TParams, "primaryModelRef"> | null | undefined;
-  applyPreset: (cfg: GodsEyeConfig, preset: TParams) => GodsEyeConfig;
+  applyPreset: (cfg: OpenClawConfig, preset: TParams) => OpenClawConfig;
   primaryModelRef: string;
 }): ProviderOnboardPresetAppliers<TArgs> {
   return {
@@ -209,7 +209,7 @@ function createProviderPresetAppliers<
 
 export function createDefaultModelPresetAppliers<TArgs extends unknown[]>(params: {
   resolveParams: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     ...args: TArgs
   ) =>
     | Omit<Parameters<typeof applyProviderConfigWithDefaultModelPreset>[1], "primaryModelRef">
@@ -225,7 +225,7 @@ export function createDefaultModelPresetAppliers<TArgs extends unknown[]>(params
 }
 
 export function applyProviderConfigWithDefaultModelsPreset(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     providerId: string;
     api: ModelApi;
@@ -235,7 +235,7 @@ export function applyProviderConfigWithDefaultModelsPreset(
     aliases?: readonly AgentModelAliasEntry[];
     primaryModelRef?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const next = applyProviderConfigWithDefaultModels(cfg, {
     agentModels: withAgentModelAliases(cfg.agents?.defaults?.models, params.aliases ?? []),
     providerId: params.providerId,
@@ -251,7 +251,7 @@ export function applyProviderConfigWithDefaultModelsPreset(
 
 export function createDefaultModelsPresetAppliers<TArgs extends unknown[]>(params: {
   resolveParams: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     ...args: TArgs
   ) =>
     | Omit<Parameters<typeof applyProviderConfigWithDefaultModelsPreset>[1], "primaryModelRef">
@@ -267,7 +267,7 @@ export function createDefaultModelsPresetAppliers<TArgs extends unknown[]>(param
 }
 
 export function applyProviderConfigWithModelCatalog(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentModels: Record<string, AgentModelEntryConfig>;
     providerId: string;
@@ -275,7 +275,7 @@ export function applyProviderConfigWithModelCatalog(
     baseUrl: string;
     catalogModels: ModelDefinitionConfig[];
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const providerState = resolveProviderModelMergeState(cfg, params.providerId);
   const catalogModels = params.catalogModels;
   const mergedModels =
@@ -299,7 +299,7 @@ export function applyProviderConfigWithModelCatalog(
 }
 
 export function applyProviderConfigWithModelCatalogPreset(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     providerId: string;
     api: ModelApi;
@@ -308,7 +308,7 @@ export function applyProviderConfigWithModelCatalogPreset(
     aliases?: readonly AgentModelAliasEntry[];
     primaryModelRef?: string;
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   const next = applyProviderConfigWithModelCatalog(cfg, {
     agentModels: withAgentModelAliases(cfg.agents?.defaults?.models, params.aliases ?? []),
     providerId: params.providerId,
@@ -323,7 +323,7 @@ export function applyProviderConfigWithModelCatalogPreset(
 
 export function createModelCatalogPresetAppliers<TArgs extends unknown[]>(params: {
   resolveParams: (
-    cfg: GodsEyeConfig,
+    cfg: OpenClawConfig,
     ...args: TArgs
   ) =>
     | Omit<Parameters<typeof applyProviderConfigWithModelCatalogPreset>[1], "primaryModelRef">
@@ -345,7 +345,7 @@ type ProviderModelMergeState = {
 };
 
 function resolveProviderModelMergeState(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   providerId: string,
 ): ProviderModelMergeState {
   const providers = { ...cfg.models?.providers } as Record<string, ModelProviderConfig>;
@@ -364,7 +364,7 @@ function resolveProviderModelMergeState(
 }
 
 function applyProviderConfigWithMergedModels(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   params: {
     agentModels: Record<string, AgentModelEntryConfig>;
     providerId: string;
@@ -374,7 +374,7 @@ function applyProviderConfigWithMergedModels(
     mergedModels: ModelDefinitionConfig[];
     fallbackModels: ModelDefinitionConfig[];
   },
-): GodsEyeConfig {
+): OpenClawConfig {
   params.providerState.providers[params.providerId] = buildProviderConfig({
     existingProvider: params.providerState.existingProvider,
     api: params.api,

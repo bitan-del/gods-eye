@@ -1,5 +1,5 @@
 import { formatCliCommand } from "../../../cli/command-format.js";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import {
   autoPrepareLegacyMatrixCrypto,
   detectLegacyMatrixCrypto,
@@ -53,7 +53,7 @@ export function formatMatrixLegacyCryptoPreview(
   return notes;
 }
 
-export async function collectMatrixInstallPathWarnings(cfg: GodsEyeConfig): Promise<string[]> {
+export async function collectMatrixInstallPathWarnings(cfg: OpenClawConfig): Promise<string[]> {
   const issue = await detectPluginInstallPathIssue({
     pluginId: "matrix",
     install: cfg.plugins?.installs?.matrix,
@@ -77,7 +77,7 @@ export async function collectMatrixInstallPathWarnings(cfg: GodsEyeConfig): Prom
  * validation, so removing it lets reinstall proceed cleanly.
  */
 export async function cleanStaleMatrixPluginConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
 ): Promise<DoctorConfigMutationResult> {
   const issue = await detectPluginInstallPathIssue({
     pluginId: "matrix",
@@ -113,7 +113,7 @@ export async function cleanStaleMatrixPluginConfig(
 }
 
 export async function applyMatrixDoctorRepair(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
 }): Promise<{ changes: string[]; warnings: string[] }> {
   const changes: string[] = [];
@@ -191,7 +191,7 @@ export async function applyMatrixDoctorRepair(params: {
 }
 
 export async function runMatrixDoctorSequence(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
   shouldRepair: boolean;
 }): Promise<{ changeNotes: string[]; warningNotes: string[] }> {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { withTempHome } from "../../test/helpers/temp-home.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import {
   isMatrixLegacyCryptoInspectorAvailable,
   loadMatrixLegacyCryptoInspector,
@@ -115,7 +115,7 @@ describe("matrix plugin helper resolution", () => {
           ].join("\n"),
         );
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           plugins: {
             load: {
               paths: [customRoot],
@@ -167,7 +167,7 @@ describe("matrix plugin helper resolution", () => {
           "utf8",
         );
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           plugins: {
             load: {
               paths: [customRoot],
@@ -238,7 +238,7 @@ describe("matrix plugin helper resolution", () => {
           return;
         }
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           plugins: {
             load: {
               paths: [customRoot],

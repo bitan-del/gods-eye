@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { callGateway } from "../gateway/call.js";
 import { resolvePluginTools } from "../plugins/tools.js";
 import { getActiveRuntimeWebToolsMetadata } from "../secrets/runtime.js";
@@ -31,7 +31,7 @@ import { resolveWorkspaceRoot } from "./workspace-dir.js";
 
 type GodsEyeToolsDeps = {
   callGateway: typeof callGateway;
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
 };
 
 const defaultGodsEyeToolsDeps: GodsEyeToolsDeps = {
@@ -56,7 +56,7 @@ export function createGodsEyeTools(
     sandboxFsBridge?: SandboxFsBridge;
     fsPolicy?: ToolFsPolicy;
     sandboxed?: boolean;
-    config?: GodsEyeConfig;
+    config?: OpenClawConfig;
     pluginToolAllowlist?: string[];
     /** Current channel ID for auto-threading (Slack). */
     currentChannelId?: string;

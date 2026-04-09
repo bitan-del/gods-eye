@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../src/config/config.js";
+import type { OpenClawConfig } from "../../../src/config/config.js";
 import type { TelegramAccountConfig } from "../../../src/config/types.js";
 
 let createNativeCommandsHarness: typeof import("./bot-native-commands.test-helpers.js").createNativeCommandsHarness;
@@ -52,7 +52,7 @@ describe("registerTelegramNativeCommands (plugin auth)", () => {
     getPluginCommandSpecsMock.mockReturnValue(specs);
 
     const { handlers, setMyCommands, log } = createNativeCommandsHarness({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       telegramCfg: {} as TelegramAccountConfig,
       nativeEnabled: false,
     });
@@ -78,7 +78,7 @@ describe("registerTelegramNativeCommands (plugin auth)", () => {
     executePluginCommandMock.mockResolvedValue({ text: "ok" });
 
     const { handlers, bot } = createNativeCommandsHarness({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       telegramCfg: {} as TelegramAccountConfig,
       allowFrom: ["999"],
       nativeEnabled: false,

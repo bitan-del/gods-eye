@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { MemoryIndexManager } from "./index.js";
 
 vi.mock("./embeddings.js", () => {
@@ -84,7 +84,7 @@ describe("memory vector dedupe", () => {
         },
         list: [{ id: "main", default: true }],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     manager = await createMemoryManagerOrThrow(cfg);
     await ensureProviderInitialized(manager);

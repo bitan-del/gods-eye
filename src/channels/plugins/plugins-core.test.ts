@@ -25,7 +25,7 @@ import {
   listWhatsAppDirectoryGroupsFromConfig,
   listWhatsAppDirectoryPeersFromConfig,
 } from "../../../extensions/whatsapp/src/directory-config.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { LineProbeResult } from "../../plugin-sdk/line.js";
 import { clearPluginDiscoveryCache } from "../../plugins/discovery.js";
 import { clearPluginManifestRegistryCache } from "../../plugins/manifest-registry.js";
@@ -587,13 +587,13 @@ function makeSlackConfigWritesCfg(accountIdKey: string) {
 }
 
 type DirectoryListFn = (params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string | null;
   query?: string | null;
   limit?: number | null;
 }) => Promise<ChannelDirectoryEntry[]>;
 
-async function listDirectoryEntriesWithDefaults(listFn: DirectoryListFn, cfg: GodsEyeConfig) {
+async function listDirectoryEntriesWithDefaults(listFn: DirectoryListFn, cfg: OpenClawConfig) {
   return await listFn({
     cfg,
     accountId: "default",
@@ -604,7 +604,7 @@ async function listDirectoryEntriesWithDefaults(listFn: DirectoryListFn, cfg: Go
 
 async function expectDirectoryIds(
   listFn: DirectoryListFn,
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   expected: string[],
   options?: { sorted?: boolean },
 ) {

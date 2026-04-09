@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../runtime-api.js";
+import type { OpenClawConfig } from "../runtime-api.js";
 import {
   getMessageMSTeams,
   listPinsMSTeams,
@@ -60,7 +60,7 @@ describe("getMessageMSTeams", () => {
     });
 
     await getMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: "user:aad-object-id-123",
       messageId: "msg-1",
     });
@@ -85,7 +85,7 @@ describe("getMessageMSTeams", () => {
     });
 
     await getMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: "user:aad-id",
       messageId: "msg-1",
     });
@@ -101,7 +101,7 @@ describe("getMessageMSTeams", () => {
 
     await expect(
       getMessageMSTeams({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         to: "user:unknown-user",
         messageId: "msg-1",
       }),
@@ -116,7 +116,7 @@ describe("getMessageMSTeams", () => {
 
     await expect(
       getMessageMSTeams({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         to: "user:some-user",
         messageId: "msg-1",
       }),
@@ -132,7 +132,7 @@ describe("getMessageMSTeams", () => {
     });
 
     await getMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: `conversation:${CHAT_ID}`,
       messageId: "msg-1",
     });
@@ -152,7 +152,7 @@ describe("getMessageMSTeams", () => {
     });
 
     const result = await getMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
     });
@@ -178,7 +178,7 @@ describe("getMessageMSTeams", () => {
     });
 
     const result = await getMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       messageId: "msg-2",
     });
@@ -206,7 +206,7 @@ describe("pinMessageMSTeams", () => {
     mockState.postGraphJson.mockResolvedValue({ id: "pinned-1" });
 
     const result = await pinMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
     });
@@ -223,7 +223,7 @@ describe("pinMessageMSTeams", () => {
     mockState.postGraphJson.mockResolvedValue({});
 
     const result = await pinMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       messageId: "msg-2",
     });
@@ -247,7 +247,7 @@ describe("unpinMessageMSTeams", () => {
     mockState.deleteGraphRequest.mockResolvedValue(undefined);
 
     const result = await unpinMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       pinnedMessageId: "pinned-1",
     });
@@ -263,7 +263,7 @@ describe("unpinMessageMSTeams", () => {
     mockState.deleteGraphRequest.mockResolvedValue(undefined);
 
     const result = await unpinMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       pinnedMessageId: "pinned-2",
     });
@@ -297,7 +297,7 @@ describe("listPinsMSTeams", () => {
     });
 
     const result = await listPinsMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
     });
 
@@ -315,7 +315,7 @@ describe("listPinsMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     const result = await listPinsMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
     });
 
@@ -333,7 +333,7 @@ describe("reactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     const result = await reactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
       reactionType: "like",
@@ -351,7 +351,7 @@ describe("reactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     const result = await reactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       messageId: "msg-2",
       reactionType: "heart",
@@ -369,7 +369,7 @@ describe("reactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     await reactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
       reactionType: "LAUGH",
@@ -385,7 +385,7 @@ describe("reactMessageMSTeams", () => {
   it("rejects invalid reaction type", async () => {
     await expect(
       reactMessageMSTeams({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         to: CHAT_ID,
         messageId: "msg-1",
         reactionType: "thumbsup",
@@ -401,7 +401,7 @@ describe("reactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     await reactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: "user:aad-user-1",
       messageId: "msg-1",
       reactionType: "like",
@@ -426,7 +426,7 @@ describe("unreactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     const result = await unreactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
       reactionType: "sad",
@@ -444,7 +444,7 @@ describe("unreactMessageMSTeams", () => {
     mockState.postGraphBetaJson.mockResolvedValue(undefined);
 
     const result = await unreactMessageMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       messageId: "msg-2",
       reactionType: "angry",
@@ -461,7 +461,7 @@ describe("unreactMessageMSTeams", () => {
   it("rejects invalid reaction type", async () => {
     await expect(
       unreactMessageMSTeams({
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         to: CHAT_ID,
         messageId: "msg-1",
         reactionType: "clap",
@@ -488,7 +488,7 @@ describe("listReactionsMSTeams", () => {
     });
 
     const result = await listReactionsMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
     });
@@ -517,7 +517,7 @@ describe("listReactionsMSTeams", () => {
     });
 
     const result = await listReactionsMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       messageId: "msg-1",
     });
@@ -533,7 +533,7 @@ describe("listReactionsMSTeams", () => {
     });
 
     const result = await listReactionsMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       messageId: "msg-2",
     });
@@ -567,7 +567,7 @@ describe("searchMessagesMSTeams", () => {
     });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "meeting notes",
     });
@@ -601,7 +601,7 @@ describe("searchMessagesMSTeams", () => {
     });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHANNEL_TO,
       query: "sprint",
     });
@@ -615,7 +615,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "test",
       limit: 10,
@@ -629,7 +629,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "test",
       limit: 100,
@@ -643,7 +643,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "test",
       limit: 0,
@@ -657,7 +657,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "budget",
       from: "Alice",
@@ -673,7 +673,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "test",
       from: "O'Brien",
@@ -688,7 +688,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: 'say "hello" world',
     });
@@ -704,7 +704,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "test",
     });
@@ -720,7 +720,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     const result = await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: CHAT_ID,
       query: "nonexistent",
     });
@@ -736,7 +736,7 @@ describe("searchMessagesMSTeams", () => {
     mockState.fetchGraphJson.mockResolvedValue({ value: [] });
 
     await searchMessagesMSTeams({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       to: "user:aad-user-1",
       query: "hello",
     });

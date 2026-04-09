@@ -9,7 +9,7 @@ import {
   KILOCODE_DEFAULT_MODEL_REF,
 } from "../../extensions/kilocode/onboard.js";
 import { resolveApiKeyForProvider, resolveEnvApiKey } from "../agents/model-auth.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolveAgentModelPrimaryValue } from "../config/model-input.js";
 import {
   buildKilocodeModelDefinition,
@@ -20,7 +20,7 @@ import {
 } from "../plugin-sdk/provider-models.js";
 import { captureEnv } from "../test-utils/env.js";
 
-const emptyCfg: GodsEyeConfig = {};
+const emptyCfg: OpenClawConfig = {};
 const KILOCODE_MODEL_IDS = ["kilo/auto"];
 
 describe("Kilo Gateway provider config", () => {
@@ -104,7 +104,7 @@ describe("Kilo Gateway provider config", () => {
     });
 
     it("preserves existing alias if already set", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             models: {
@@ -119,7 +119,7 @@ describe("Kilo Gateway provider config", () => {
     });
 
     it("does not change the default model selection", () => {
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         agents: {
           defaults: {
             model: { primary: "openai/gpt-5" },

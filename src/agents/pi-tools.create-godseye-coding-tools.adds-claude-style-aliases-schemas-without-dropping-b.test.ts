@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import "./test-helpers/fast-coding-tools.js";
 import { createGodsEyeCodingTools } from "./pi-tools.js";
 
@@ -56,7 +56,7 @@ describe("createGodsEyeCodingTools", () => {
     expect(defaultTools.some((tool) => tool.name === "process")).toBe(true);
     expect(defaultTools.some((tool) => tool.name === "apply_patch")).toBe(false);
 
-    const enabledConfig: GodsEyeConfig = {
+    const enabledConfig: OpenClawConfig = {
       tools: {
         exec: {
           applyPatch: { enabled: true },
@@ -77,7 +77,7 @@ describe("createGodsEyeCodingTools", () => {
     });
     expect(anthropicTools.some((tool) => tool.name === "apply_patch")).toBe(false);
 
-    const allowModelsConfig: GodsEyeConfig = {
+    const allowModelsConfig: OpenClawConfig = {
       tools: {
         exec: {
           applyPatch: { enabled: true, allowModels: ["gpt-5.2"] },

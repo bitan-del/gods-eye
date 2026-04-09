@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { resolveStorePath } from "../../config/sessions/paths.js";
 import { loadSessionStoreSummary } from "../../config/sessions/store-summary.js";
 import { readChannelAllowFromStoreSync } from "../../pairing/pairing-store.js";
@@ -9,7 +9,7 @@ import { normalizeChatChannelId } from "../registry.js";
 type HeartbeatRecipientsResult = { recipients: string[]; source: string };
 type HeartbeatRecipientsOpts = { to?: string; all?: boolean };
 
-function getSessionRecipients(cfg: GodsEyeConfig) {
+function getSessionRecipients(cfg: OpenClawConfig) {
   const sessionCfg = cfg.session;
   const scope = sessionCfg?.scope ?? "per-sender";
   if (scope === "global") {
@@ -46,7 +46,7 @@ function getSessionRecipients(cfg: GodsEyeConfig) {
 }
 
 export function resolveWhatsAppHeartbeatRecipients(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   opts: HeartbeatRecipientsOpts = {},
 ): HeartbeatRecipientsResult {
   if (opts.to) {

@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { enablePluginInConfig } from "../plugins/enable.js";
 import type { RuntimeEnv } from "../runtime.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
@@ -80,13 +80,13 @@ function persistApiKeyToAuthStore(providerId: string, apiKey: string): void {
 }
 
 export async function setupCreativeTools(
-  config: GodsEyeConfig,
+  config: OpenClawConfig,
   runtime: RuntimeEnv,
   prompter: WizardPrompter,
   _options?: {
     quickstartDefaults?: boolean;
   },
-): Promise<GodsEyeConfig> {
+): Promise<OpenClawConfig> {
   let nextConfig = { ...config };
   const env = process.env;
 

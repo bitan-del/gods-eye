@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import type { ProviderPlugin, WebSearchProviderPlugin } from "../types.js";
 
 export function installProviderPluginContractSuite(params: { provider: ProviderPlugin }) {
@@ -113,7 +113,7 @@ export function installWebSearchProviderContractSuite(params: {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const tool = provider.createTool({ config, searchConfig: searchConfigTarget });
 
     expect(tool).not.toBeNull();

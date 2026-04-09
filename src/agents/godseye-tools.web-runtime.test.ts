@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { withFetchPreconnect } from "../test-utils/fetch-mock.js";
 
 vi.mock("../plugins/tools.js", () => ({
@@ -78,14 +78,14 @@ vi.mock("./tools/tts-tool.js", () => ({
   createTtsTool: mockToolFactory("tts_stub"),
 }));
 
-function asConfig(value: unknown): GodsEyeConfig {
-  return value as GodsEyeConfig;
+function asConfig(value: unknown): OpenClawConfig {
+  return value as OpenClawConfig;
 }
 
 let secretsRuntime: typeof import("../secrets/runtime.js");
 let createGodsEyeTools: typeof import("./godseye-tools.js").createGodsEyeTools;
 
-function findTool(name: string, config: GodsEyeConfig) {
+function findTool(name: string, config: OpenClawConfig) {
   const allTools = createGodsEyeTools({ config, sandboxed: true });
   const tool = allTools.find((candidate) => candidate.name === name);
   expect(tool).toBeDefined();
@@ -101,7 +101,7 @@ function makeHeaders(map: Record<string, string>): { get: (key: string) => strin
   };
 }
 
-async function prepareAndActivate(params: { config: GodsEyeConfig; env?: NodeJS.ProcessEnv }) {
+async function prepareAndActivate(params: { config: OpenClawConfig; env?: NodeJS.ProcessEnv }) {
   const snapshot = await secretsRuntime.prepareSecretsRuntimeSnapshot({
     config: params.config,
     env: params.env,

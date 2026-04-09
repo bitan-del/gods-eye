@@ -1,6 +1,6 @@
 import {
   createModelCatalogPresetAppliers,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "godseye/plugin-sdk/provider-onboard";
 import {
   MODELSTUDIO_CN_BASE_URL,
@@ -21,7 +21,7 @@ export {
 
 const modelStudioPresetAppliers = createModelCatalogPresetAppliers<[string]>({
   primaryModelRef: MODELSTUDIO_DEFAULT_MODEL_REF,
-  resolveParams: (_cfg: GodsEyeConfig, baseUrl: string) => {
+  resolveParams: (_cfg: OpenClawConfig, baseUrl: string) => {
     const provider = buildModelStudioProvider();
     return {
       providerId: "modelstudio",
@@ -36,34 +36,34 @@ const modelStudioPresetAppliers = createModelCatalogPresetAppliers<[string]>({
   },
 });
 
-export function applyModelStudioProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyProviderConfig(cfg, MODELSTUDIO_GLOBAL_BASE_URL);
 }
 
-export function applyModelStudioProviderConfigCn(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioProviderConfigCn(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyProviderConfig(cfg, MODELSTUDIO_CN_BASE_URL);
 }
 
-export function applyModelStudioConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioConfig(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyConfig(cfg, MODELSTUDIO_GLOBAL_BASE_URL);
 }
 
-export function applyModelStudioConfigCn(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioConfigCn(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyConfig(cfg, MODELSTUDIO_CN_BASE_URL);
 }
 
-export function applyModelStudioStandardProviderConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioStandardProviderConfig(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyProviderConfig(cfg, MODELSTUDIO_STANDARD_GLOBAL_BASE_URL);
 }
 
-export function applyModelStudioStandardProviderConfigCn(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioStandardProviderConfigCn(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyProviderConfig(cfg, MODELSTUDIO_STANDARD_CN_BASE_URL);
 }
 
-export function applyModelStudioStandardConfig(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioStandardConfig(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyConfig(cfg, MODELSTUDIO_STANDARD_GLOBAL_BASE_URL);
 }
 
-export function applyModelStudioStandardConfigCn(cfg: GodsEyeConfig): GodsEyeConfig {
+export function applyModelStudioStandardConfigCn(cfg: OpenClawConfig): OpenClawConfig {
   return modelStudioPresetAppliers.applyConfig(cfg, MODELSTUDIO_STANDARD_CN_BASE_URL);
 }

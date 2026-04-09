@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseTelegramTarget } from "../../extensions/telegram/src/targets.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 const mockStore: Record<string, Record<string, unknown>> = {};
 
@@ -51,7 +51,7 @@ afterAll(() => {
 });
 
 describe("resolveDeliveryTarget thread session lookup", () => {
-  const cfg: GodsEyeConfig = {};
+  const cfg: OpenClawConfig = {};
 
   it("uses thread session entry when sessionKey is provided and entry exists", async () => {
     mockStore["/mock/store.json"] = {

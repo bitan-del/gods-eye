@@ -88,7 +88,7 @@ export {
 } from "../../../extensions/matrix/runtime-api.js";
 export { createTypingCallbacks } from "../../channels/typing.js";
 export { createChannelReplyPipeline } from "../../plugin-sdk/channel-reply-pipeline.js";
-export type { GodsEyeConfig } from "../../config/config.js";
+export type { OpenClawConfig } from "../../config/config.js";
 export {
   GROUP_POLICY_BLOCKED_LABEL,
   resolveAllowlistProviderRuntimeGroupPolicy,
@@ -127,7 +127,7 @@ export { isPrivateOrLoopbackHost } from "../../gateway/net.js";
 export { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
 export { emptyPluginConfigSchema } from "../config-schema.js";
 export type { PluginRuntime, RuntimeLogger } from "./types.js";
-export type { GodsEyePluginApi } from "../types.js";
+export type { OpenClawPluginApi } from "../types.js";
 export type { PollInput } from "../../polls.js";
 export { normalizePollInput } from "../../polls.js";
 export {

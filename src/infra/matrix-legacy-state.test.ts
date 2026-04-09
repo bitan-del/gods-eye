@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { withTempHome } from "../../test/helpers/temp-home.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { autoMigrateLegacyMatrixState, detectLegacyMatrixState } from "./matrix-legacy-state.js";
 
 function writeFile(filePath: string, value: string) {
@@ -17,7 +17,7 @@ describe("matrix legacy state migration", () => {
       writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"next_batch":"s1"}');
       writeFile(path.join(stateDir, "matrix", "crypto", "store.db"), "crypto");
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             homeserver: "https://matrix.example.org",
@@ -60,7 +60,7 @@ describe("matrix legacy state migration", () => {
         ),
       );
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             homeserver: "https://matrix.example.org",
@@ -89,7 +89,7 @@ describe("matrix legacy state migration", () => {
       const stateDir = path.join(home, ".godseye");
       writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"next_batch":"s1"}');
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             defaultAccount: "work",
@@ -125,7 +125,7 @@ describe("matrix legacy state migration", () => {
       const stateDir = path.join(home, ".godseye");
       writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"next_batch":"s1"}');
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             accounts: {
@@ -160,7 +160,7 @@ describe("matrix legacy state migration", () => {
         writeFile(path.join(stateDir, "matrix", "bot-storage.json"), '{"next_batch":"s1"}');
         writeFile(path.join(stateDir, "matrix", "crypto", "store.db"), "crypto");
 
-        const cfg: GodsEyeConfig = {
+        const cfg: OpenClawConfig = {
           channels: {
             matrix: {
               accounts: {
@@ -213,7 +213,7 @@ describe("matrix legacy state migration", () => {
         ),
       );
 
-      const cfg: GodsEyeConfig = {
+      const cfg: OpenClawConfig = {
         channels: {
           matrix: {
             accounts: {

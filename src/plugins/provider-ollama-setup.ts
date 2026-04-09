@@ -7,7 +7,7 @@ import {
   resolveOllamaApiBase,
   type OllamaModelWithContext,
 } from "../agents/ollama-models.js";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { WizardCancelledError, type WizardPrompter } from "../wizard/prompts.js";
 import { applyAgentDefaultModelPrimary } from "./provider-onboarding-config.js";
@@ -255,11 +255,11 @@ function buildOllamaModelsConfig(
 }
 
 function applyOllamaProviderConfig(
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   baseUrl: string,
   modelNames: string[],
   discoveredModelsByName?: Map<string, OllamaModelWithContext>,
-): GodsEyeConfig {
+): OpenClawConfig {
   return {
     ...cfg,
     models: {
@@ -291,9 +291,9 @@ async function storeOllamaCredential(agentDir?: string): Promise<void> {
  * Model selection is handled by the standard model picker downstream.
  */
 export async function promptAndConfigureOllama(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   prompter: WizardPrompter;
-}): Promise<{ config: GodsEyeConfig }> {
+}): Promise<{ config: OpenClawConfig }> {
   const { prompter } = params;
 
   // 1. Prompt base URL
@@ -409,10 +409,10 @@ export async function promptAndConfigureOllama(params: {
 
 /** Non-interactive: auto-discover models and configure provider. */
 export async function configureOllamaNonInteractive(params: {
-  nextConfig: GodsEyeConfig;
+  nextConfig: OpenClawConfig;
   opts: OllamaSetupOptions;
   runtime: RuntimeEnv;
-}): Promise<GodsEyeConfig> {
+}): Promise<OpenClawConfig> {
   const { opts, runtime } = params;
   const configuredBaseUrl = (opts.customBaseUrl?.trim() || OLLAMA_DEFAULT_BASE_URL).replace(
     /\/+$/,
@@ -510,7 +510,7 @@ export async function configureOllamaNonInteractive(params: {
 
 /** Pull the configured default Ollama model if it isn't already available locally. */
 export async function ensureOllamaModelPulled(params: {
-  config: GodsEyeConfig;
+  config: OpenClawConfig;
   model: string;
   prompter: WizardPrompter;
 }): Promise<void> {

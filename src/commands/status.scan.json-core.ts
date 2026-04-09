@@ -1,4 +1,4 @@
-import type { GodsEyeConfig } from "../config/types.js";
+import type { OpenClawConfig } from "../config/types.js";
 import { loggingState } from "../logging/state.js";
 import { runExec } from "../process/exec.js";
 import type { RuntimeEnv } from "../runtime.js";
@@ -38,14 +38,14 @@ export function buildColdStartUpdateResult(): Awaited<ReturnType<typeof getUpdat
 
 export async function scanStatusJsonCore(params: {
   coldStart: boolean;
-  cfg: GodsEyeConfig;
-  sourceConfig: GodsEyeConfig;
+  cfg: OpenClawConfig;
+  sourceConfig: OpenClawConfig;
   secretDiagnostics: string[];
   hasConfiguredChannels: boolean;
   opts: { timeoutMs?: number; all?: boolean };
   resolveOsSummary: () => StatusScanResult["osSummary"];
   resolveMemory: (args: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     agentStatus: Awaited<ReturnType<typeof getAgentLocalStatuses>>;
     memoryPlugin: StatusScanResult["memoryPlugin"];
     runtime: RuntimeEnv;

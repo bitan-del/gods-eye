@@ -4,7 +4,7 @@ import {
   resolveInboundDebounceMs,
   shouldDebounceTextInbound,
 } from "godseye/plugin-sdk/channel-inbound";
-import type { GodsEyeConfig } from "godseye/plugin-sdk/config-runtime";
+import type { OpenClawConfig } from "godseye/plugin-sdk/config-runtime";
 import { danger, logVerbose, warn } from "godseye/plugin-sdk/runtime-env";
 import {
   hasInboundMedia,
@@ -49,7 +49,7 @@ type TelegramBotApi = {
 export function createTelegramInboundBufferRuntime(params: {
   accountId?: string | null;
   bot: { api: TelegramBotApi };
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   logger: { warn: (...args: unknown[]) => void };
   mediaMaxBytes: number;
   opts: {

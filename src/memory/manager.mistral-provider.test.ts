@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { DEFAULT_OLLAMA_EMBEDDING_MODEL } from "./embeddings-ollama.js";
 import type {
   EmbeddingProvider,
@@ -52,7 +52,7 @@ function buildConfig(params: {
   indexPath: string;
   provider: "openai" | "mistral";
   fallback?: "none" | "mistral" | "ollama";
-}): GodsEyeConfig {
+}): OpenClawConfig {
   return {
     agents: {
       defaults: {
@@ -68,7 +68,7 @@ function buildConfig(params: {
       },
       list: [{ id: "main", default: true }],
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 describe("memory manager mistral provider wiring", () => {

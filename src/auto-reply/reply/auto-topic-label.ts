@@ -10,7 +10,7 @@ import { getApiKeyForModel, requireApiKey } from "../../agents/model-auth.js";
 import { resolveDefaultModelForAgent } from "../../agents/model-selection.js";
 import { resolveModelAsync } from "../../agents/pi-embedded-runner/model.js";
 import { prepareModelForSimpleCompletion } from "../../agents/simple-completion-transport.js";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { logVerbose } from "../../globals.js";
 
 export { resolveAutoTopicLabelConfig } from "./auto-topic-label-config.js";
@@ -25,7 +25,7 @@ export type AutoTopicLabelParams = {
   /** System prompt for the LLM. */
   prompt: string;
   /** The full config object. */
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   /** Agent ID for model resolution. */
   agentId?: string;
   /** Routed agent directory for model/auth resolution. */
@@ -43,7 +43,7 @@ function isTextContentBlock(block: { type: string }): block is TextContent {
 export async function generateTopicLabel(params: {
   userMessage: string;
   prompt: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   agentDir?: string;
 }): Promise<string | null> {

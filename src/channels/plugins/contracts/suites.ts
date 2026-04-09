@@ -2,7 +2,7 @@ import { expect, it, vi, type Mock } from "vitest";
 import { slackOutbound } from "../../../../test/channel-outbounds.js";
 import type { MsgContext } from "../../../auto-reply/templating.js";
 import type { ReplyPayload } from "../../../auto-reply/types.js";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import type {
   ResolveProviderRuntimeGroupPolicyParams,
   RuntimeGroupPolicyResolution,
@@ -36,7 +36,7 @@ function sortStrings(values: readonly string[]) {
 
 function resolveContractMessageDiscovery(params: {
   plugin: Pick<ChannelPlugin, "actions">;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 }) {
   const actions = params.plugin.actions;
   if (!actions) {
@@ -165,7 +165,7 @@ export function installChannelPluginContractSuite(params: {
 
 type ChannelActionsContractCase = {
   name: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   expectedActions: readonly ChannelMessageActionName[];
   expectedCapabilities?: readonly ChannelMessageCapability[];
   beforeTest?: () => void;
@@ -365,7 +365,7 @@ export function installChannelThreadingContractSuite(params: {
       expect(
         ["off", "first", "all"].includes(
           threading.resolveReplyToMode({
-            cfg: {} as GodsEyeConfig,
+            cfg: {} as OpenClawConfig,
             accountId: "default",
             chatType: "group",
           }),
@@ -375,7 +375,7 @@ export function installChannelThreadingContractSuite(params: {
 
     const repliedRef = { value: false };
     const toolContext = threading?.buildToolContext?.({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       accountId: "default",
       context: {
         Channel: "group:test",
@@ -399,7 +399,7 @@ export function installChannelThreadingContractSuite(params: {
     }
 
     const autoThreadId = threading?.resolveAutoThreadId?.({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       accountId: "default",
       to: "group:test",
       toolContext,
@@ -411,7 +411,7 @@ export function installChannelThreadingContractSuite(params: {
     }
 
     const replyTransport = threading?.resolveReplyTransport?.({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       accountId: "default",
       threadId: "thread-0",
       replyToId: "msg-0",
@@ -421,7 +421,7 @@ export function installChannelThreadingContractSuite(params: {
     }
 
     const focusedBinding = threading?.resolveFocusedBinding?.({
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       accountId: "default",
       context: {
         Channel: "group:test",
@@ -444,7 +444,7 @@ export function installChannelThreadingContractSuite(params: {
 export function installChannelDirectoryContractSuite(params: {
   plugin: Pick<ChannelPlugin, "id" | "directory">;
   coverage?: "lookups" | "presence";
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   accountId?: string;
 }) {
   it("exposes the base directory contract", async () => {
@@ -455,7 +455,7 @@ export function installChannelDirectoryContractSuite(params: {
       return;
     }
     const self = await directory?.self?.({
-      cfg: params.cfg ?? ({} as GodsEyeConfig),
+      cfg: params.cfg ?? ({} as OpenClawConfig),
       accountId: params.accountId ?? "default",
       runtime: contractRuntime,
     });
@@ -465,7 +465,7 @@ export function installChannelDirectoryContractSuite(params: {
 
     const peers =
       (await directory?.listPeers?.({
-        cfg: params.cfg ?? ({} as GodsEyeConfig),
+        cfg: params.cfg ?? ({} as OpenClawConfig),
         accountId: params.accountId ?? "default",
         query: "",
         limit: 5,
@@ -478,7 +478,7 @@ export function installChannelDirectoryContractSuite(params: {
 
     const groups =
       (await directory?.listGroups?.({
-        cfg: params.cfg ?? ({} as GodsEyeConfig),
+        cfg: params.cfg ?? ({} as OpenClawConfig),
         accountId: params.accountId ?? "default",
         query: "",
         limit: 5,
@@ -491,7 +491,7 @@ export function installChannelDirectoryContractSuite(params: {
 
     if (directory?.listGroupMembers && groups[0]?.id) {
       const members = await directory.listGroupMembers({
-        cfg: params.cfg ?? ({} as GodsEyeConfig),
+        cfg: params.cfg ?? ({} as OpenClawConfig),
         accountId: params.accountId ?? "default",
         groupId: groups[0].id,
         limit: 5,
@@ -542,14 +542,14 @@ export function installSessionBindingContractSuite(params: {
 
 type ChannelSetupContractCase<ResolvedAccount> = {
   name: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string;
   input: ChannelSetupInput;
   expectedAccountId?: string;
   expectedValidation?: string | null;
   beforeTest?: () => void;
-  assertPatchedConfig?: (cfg: GodsEyeConfig) => void;
-  assertResolvedAccount?: (account: ResolvedAccount, cfg: GodsEyeConfig) => void;
+  assertPatchedConfig?: (cfg: OpenClawConfig) => void;
+  assertResolvedAccount?: (account: ResolvedAccount, cfg: OpenClawConfig) => void;
 };
 
 export function installChannelSetupContractSuite<ResolvedAccount>(params: {
@@ -600,7 +600,7 @@ export function installChannelSetupContractSuite<ResolvedAccount>(params: {
 
 type ChannelStatusContractCase<Probe> = {
   name: string;
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   accountId?: string;
   runtime?: ChannelAccountSnapshot;
   probe?: Probe;

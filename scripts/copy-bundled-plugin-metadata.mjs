@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { shouldBuildBundledCluster } from "./lib/optional-bundled-clusters.mjs";
+import { collectBundledPluginBuildEntries } from "./lib/bundled-plugin-build-entries.mjs";
 import {
   removeFileIfExists,
   removePathIfExists,
@@ -180,6 +181,14 @@ export function copyBundledPluginMetadata(params = {}) {
     return;
   }
 
+  // Collect the set of manifestless runtime support packages so their built
+  // dist artifacts are preserved even though they have no godseye.plugin.json.
+  const manifestlessRuntimeSupportIds = new Set(
+    collectBundledPluginBuildEntries({ cwd: repoRoot, env })
+      .filter((entry) => !entry.hasManifest)
+      .map((entry) => entry.id),
+  );
+
   const sourcePluginDirs = new Set();
   for (const dirent of fs.readdirSync(extensionsRoot, { withFileTypes: true })) {
     if (!dirent.isDirectory()) {
@@ -203,7 +212,13 @@ export function copyBundledPluginMetadata(params = {}) {
     const distManifestPath = path.join(distPluginDir, "godseye.plugin.json");
     const distPackageJsonPath = path.join(distPluginDir, "package.json");
     if (!fs.existsSync(manifestPath)) {
-      removePathIfExists(distPluginDir);
+      // Manifestless bundled runtime support packages (e.g. speech-core,
+      // image-generation-core) have no godseye.plugin.json but their built
+      // dist artifacts must be preserved so the facade loader can resolve them
+      // at runtime. Only remove the dist dir for truly unknown entries.
+      if (!manifestlessRuntimeSupportIds.has(dirent.name)) {
+        removePathIfExists(distPluginDir);
+      }
       continue;
     }
 

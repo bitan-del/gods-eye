@@ -3,12 +3,12 @@ import { createEmptyPluginRegistry } from "../../../src/plugins/registry.js";
 import { setActivePluginRegistry } from "../../../src/plugins/runtime.js";
 import type { WebhookTarget } from "./monitor-shared.js";
 import { registerBlueBubblesWebhookTarget } from "./monitor.js";
-import type { GodsEyeConfig } from "./runtime-api.js";
+import type { OpenClawConfig } from "./runtime-api.js";
 
 function createTarget(): WebhookTarget {
   return {
     account: { accountId: "default" } as WebhookTarget["account"],
-    config: {} as GodsEyeConfig,
+    config: {} as OpenClawConfig,
     runtime: {},
     core: {} as WebhookTarget["core"],
     path: "/bluebubbles-webhook",

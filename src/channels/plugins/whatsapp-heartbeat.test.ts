@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 
 const loadSessionStoreMock = vi.hoisted(() => vi.fn());
 const readChannelAllowFromStoreSyncMock = vi.hoisted(() => vi.fn<() => string[]>(() => []));
@@ -8,12 +8,12 @@ type WhatsAppHeartbeatModule = typeof import("./whatsapp-heartbeat.js");
 
 let resolveWhatsAppHeartbeatRecipients: WhatsAppHeartbeatModule["resolveWhatsAppHeartbeatRecipients"];
 
-function makeCfg(overrides?: Partial<GodsEyeConfig>): GodsEyeConfig {
+function makeCfg(overrides?: Partial<OpenClawConfig>): OpenClawConfig {
   return {
     bindings: [],
     channels: {},
     ...overrides,
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 describe("resolveWhatsAppHeartbeatRecipients", () => {
@@ -26,7 +26,7 @@ describe("resolveWhatsAppHeartbeatRecipients", () => {
   }
 
   function resolveWith(
-    cfgOverrides: Partial<GodsEyeConfig> = {},
+    cfgOverrides: Partial<OpenClawConfig> = {},
     opts?: Parameters<typeof resolveWhatsAppHeartbeatRecipients>[1],
   ) {
     return resolveWhatsAppHeartbeatRecipients(makeCfg(cfgOverrides), opts);
@@ -134,7 +134,7 @@ describe("resolveWhatsAppHeartbeatRecipients", () => {
       a: { lastChannel: "whatsapp", lastTo: "+15550000001", updatedAt: 2, sessionId: "a" },
     });
     const result = resolveWith({
-      session: { scope: "global" } as GodsEyeConfig["session"],
+      session: { scope: "global" } as OpenClawConfig["session"],
       channels: { whatsapp: { allowFrom: ["*", "+15550000009"] } as never },
     });
     expect(result).toEqual({ recipients: ["+15550000009"], source: "allowFrom" });

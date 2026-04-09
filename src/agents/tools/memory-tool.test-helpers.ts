@@ -1,17 +1,17 @@
 import { expect } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { createMemoryGetTool, createMemorySearchTool } from "./memory-tool.js";
 
-export function asGodsEyeConfig(config: Partial<GodsEyeConfig>): GodsEyeConfig {
-  return config as GodsEyeConfig;
+export function asOpenClawConfig(config: Partial<OpenClawConfig>): OpenClawConfig {
+  return config as OpenClawConfig;
 }
 
-export function createDefaultMemoryToolConfig(): GodsEyeConfig {
-  return asGodsEyeConfig({ agents: { list: [{ id: "main", default: true }] } });
+export function createDefaultMemoryToolConfig(): OpenClawConfig {
+  return asOpenClawConfig({ agents: { list: [{ id: "main", default: true }] } });
 }
 
 export function createMemorySearchToolOrThrow(params?: {
-  config?: GodsEyeConfig;
+  config?: OpenClawConfig;
   agentSessionKey?: string;
 }) {
   const tool = createMemorySearchTool({
@@ -25,7 +25,7 @@ export function createMemorySearchToolOrThrow(params?: {
 }
 
 export function createMemoryGetToolOrThrow(
-  config: GodsEyeConfig = createDefaultMemoryToolConfig(),
+  config: OpenClawConfig = createDefaultMemoryToolConfig(),
 ) {
   const tool = createMemoryGetTool({ config });
   if (!tool) {
@@ -36,7 +36,7 @@ export function createMemoryGetToolOrThrow(
 
 export function createAutoCitationsMemorySearchTool(agentSessionKey: string) {
   return createMemorySearchToolOrThrow({
-    config: asGodsEyeConfig({
+    config: asOpenClawConfig({
       memory: { citations: "auto" },
       agents: { list: [{ id: "main", default: true }] },
     }),

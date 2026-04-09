@@ -454,7 +454,7 @@ function createEscapingEntryFixture(params: { id: string; sourceBody: string }) 
   const linkedEntry = path.join(pluginDir, "entry.cjs");
   fs.writeFileSync(outsideEntry, params.sourceBody, "utf-8");
   fs.writeFileSync(
-    path.join(pluginDir, "openclaw.plugin.json"),
+    path.join(pluginDir, "godseye.plugin.json"),
     JSON.stringify(
       {
         id: params.id,
@@ -547,7 +547,7 @@ function createSetupEntryChannelPluginFixture(params: {
     "utf-8",
   );
   fs.writeFileSync(
-    path.join(pluginDir, "openclaw.plugin.json"),
+    path.join(pluginDir, "godseye.plugin.json"),
     JSON.stringify(
       {
         id: params.id,
@@ -1103,7 +1103,7 @@ module.exports = { id: "manifest-only-plugin", register() { throw new Error("man
 };`,
         });
         fs.writeFileSync(
-          path.join(memoryPlugin.dir, "openclaw.plugin.json"),
+          path.join(memoryPlugin.dir, "godseye.plugin.json"),
           JSON.stringify(
             {
               id: "memory-demo",
@@ -2636,7 +2636,7 @@ module.exports = { id: "throws-after-import", register() {} };`,
       body: `module.exports = { id: "unrelated-plugin", register() { throw new Error("unrelated plugin should not load"); } };`,
     });
     fs.writeFileSync(
-      path.join(unrelated.dir, "openclaw.plugin.json"),
+      path.join(unrelated.dir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "unrelated-plugin",
@@ -2699,7 +2699,7 @@ module.exports = {
 };`,
     });
     fs.writeFileSync(
-      path.join(plugin.dir, "openclaw.plugin.json"),
+      path.join(plugin.dir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "lazy-channel-plugin",
@@ -3044,7 +3044,7 @@ module.exports = {
             body: memoryPluginBody("memory-b"),
           });
           fs.writeFileSync(
-            path.join(memoryADir, "openclaw.plugin.json"),
+            path.join(memoryADir, "godseye.plugin.json"),
             JSON.stringify(
               {
                 id: "memory-a",
@@ -3057,7 +3057,7 @@ module.exports = {
             "utf-8",
           );
           fs.writeFileSync(
-            path.join(memoryBDir, "openclaw.plugin.json"),
+            path.join(memoryBDir, "godseye.plugin.json"),
             JSON.stringify(
               {
                 id: "memory-b",
@@ -3416,7 +3416,7 @@ module.exports = {
       body: simplePluginBody("profile-aware"),
     });
     fs.writeFileSync(
-      path.join(plugin.dir, "openclaw.plugin.json"),
+      path.join(plugin.dir, "godseye.plugin.json"),
       JSON.stringify(
         {
           id: "profile-aware",

@@ -1,8 +1,8 @@
 import { expect, type MockInstance } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 
 export function createWhatsAppPollFixture() {
-  const cfg = { marker: "resolved-cfg" } as GodsEyeConfig;
+  const cfg = { marker: "resolved-cfg" } as OpenClawConfig;
   const poll = {
     question: "Lunch?",
     options: ["Pizza", "Sushi"],
@@ -19,7 +19,7 @@ export function createWhatsAppPollFixture() {
 export function expectWhatsAppPollSent(
   sendPollWhatsApp: MockInstance,
   params: {
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     poll: { question: string; options: string[]; maxSelections: number };
     to?: string;
     accountId?: string;

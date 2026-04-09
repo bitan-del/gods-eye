@@ -1,6 +1,6 @@
 import type { AgentToolResult } from "@mariozechner/pi-agent-core";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import type { ChannelMessageActionAdapter } from "../types.js";
 
 const actionResult = (): AgentToolResult<unknown> => ({
@@ -25,13 +25,13 @@ let signalReactionModule: typeof import("../../../../extensions/signal/src/send-
 
 function getDescribedActions(params: {
   describeMessageTool?: ChannelMessageActionAdapter["describeMessageTool"];
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
 }) {
   return [...(params.describeMessageTool?.({ cfg: params.cfg })?.actions ?? [])];
 }
 
-function telegramCfg(): GodsEyeConfig {
-  return { channels: { telegram: { botToken: "tok" } } } as GodsEyeConfig;
+function telegramCfg(): OpenClawConfig {
+  return { channels: { telegram: { botToken: "tok" } } } as OpenClawConfig;
 }
 
 type TelegramActionInput = Parameters<NonNullable<typeof telegramMessageActions.handleAction>>[0];
@@ -39,7 +39,7 @@ type TelegramActionInput = Parameters<NonNullable<typeof telegramMessageActions.
 async function runTelegramAction(
   action: TelegramActionInput["action"],
   params: TelegramActionInput["params"],
-  options?: { cfg?: GodsEyeConfig; accountId?: string },
+  options?: { cfg?: OpenClawConfig; accountId?: string },
 ) {
   const cfg = options?.cfg ?? telegramCfg();
   const handleAction = telegramMessageActions.handleAction;
@@ -62,13 +62,13 @@ async function runSignalAction(
   action: SignalActionInput["action"],
   params: SignalActionInput["params"],
   options?: {
-    cfg?: GodsEyeConfig;
+    cfg?: OpenClawConfig;
     accountId?: string;
     toolContext?: SignalActionInput["toolContext"];
   },
 ) {
   const cfg =
-    options?.cfg ?? ({ channels: { signal: { account: "+15550001111" } } } as GodsEyeConfig);
+    options?.cfg ?? ({ channels: { signal: { account: "+15550001111" } } } as OpenClawConfig);
   const handleAction = signalMessageActions.handleAction;
   if (!handleAction) {
     throw new Error("signal handleAction unavailable");
@@ -85,7 +85,7 @@ async function runSignalAction(
 }
 
 function slackHarness() {
-  const cfg = { channels: { slack: { botToken: "tok" } } } as GodsEyeConfig;
+  const cfg = { channels: { slack: { botToken: "tok" } } } as OpenClawConfig;
   const actions = createSlackActions("slack", {
     invoke: async (action, invokeCfg, toolContext) =>
       await handleSlackAction(action, invokeCfg, toolContext),
@@ -130,7 +130,7 @@ function expectChannelCreateAction(actions: string[], expected: boolean) {
   expect(actions).not.toContain("channel-create");
 }
 
-function createSignalAccountOverrideCfg(): GodsEyeConfig {
+function createSignalAccountOverrideCfg(): OpenClawConfig {
   return {
     channels: {
       signal: {
@@ -140,10 +140,10 @@ function createSignalAccountOverrideCfg(): GodsEyeConfig {
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
-function createDiscordModerationOverrideCfg(params?: { channelsEnabled?: boolean }): GodsEyeConfig {
+function createDiscordModerationOverrideCfg(params?: { channelsEnabled?: boolean }): OpenClawConfig {
   const accountActions = params?.channelsEnabled
     ? { moderation: true, channels: true }
     : { moderation: true };
@@ -156,13 +156,13 @@ function createDiscordModerationOverrideCfg(params?: { channelsEnabled?: boolean
         },
       },
     },
-  } as GodsEyeConfig;
+  } as OpenClawConfig;
 }
 
 async function expectSignalActionRejected(
   params: Record<string, unknown>,
   error: RegExp,
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
 ) {
   const handleAction = signalMessageActions.handleAction;
   if (!handleAction) {
@@ -227,7 +227,7 @@ describe("discord message actions", () => {
     const cases = [
       {
         name: "defaults",
-        cfg: { channels: { discord: { token: "d0" } } } as GodsEyeConfig,
+        cfg: { channels: { discord: { token: "d0" } } } as OpenClawConfig,
         expectUploads: true,
         expectChannelCreate: true,
         expectModeration: false,
@@ -236,7 +236,7 @@ describe("discord message actions", () => {
         name: "disabled channel actions",
         cfg: {
           channels: { discord: { token: "d0", actions: { channels: false } } },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectUploads: true,
         expectChannelCreate: false,
         expectModeration: false,
@@ -251,7 +251,7 @@ describe("discord message actions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectUploads: true,
         expectChannelCreate: true,
         expectModeration: true,
@@ -267,7 +267,7 @@ describe("discord message actions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectUploads: true,
         expectChannelCreate: true,
         expectModeration: true,
@@ -283,7 +283,7 @@ describe("discord message actions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectUploads: true,
         expectChannelCreate: true,
         expectModeration: false,
@@ -486,7 +486,7 @@ describe("handleDiscordMessageAction", () => {
     it(testCase.name, async () => {
       await handleDiscordMessageAction({
         ...testCase.input,
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
       });
 
       const call = handleDiscordAction.mock.calls.at(-1);
@@ -504,7 +504,7 @@ describe("handleDiscordMessageAction", () => {
         durationMin: 5,
         senderUserId: "spoofed-admin-id",
       },
-      cfg: {} as GodsEyeConfig,
+      cfg: {} as OpenClawConfig,
       requesterSenderId: "trusted-sender-id",
       toolContext: { currentChannelProvider: "discord" },
     });
@@ -533,7 +533,7 @@ describe("handleDiscordMessageAction", () => {
               channelId: "123",
               emoji: "ok",
             },
-            cfg: {} as GodsEyeConfig,
+            cfg: {} as OpenClawConfig,
             toolContext: { currentMessageId: "9001" },
           });
         },
@@ -559,7 +559,7 @@ describe("handleDiscordMessageAction", () => {
                 channelId: "123",
                 emoji: "ok",
               },
-              cfg: {} as GodsEyeConfig,
+              cfg: {} as OpenClawConfig,
             }),
           ).rejects.toThrow(/messageId required/i);
         },
@@ -595,7 +595,7 @@ describe("telegramMessageActions", () => {
               actions: { editForumTopic: true },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectPoll: true,
         expectTopicEdit: true,
       },
@@ -608,7 +608,7 @@ describe("telegramMessageActions", () => {
               actions: { sendMessage: false },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectPoll: false,
         expectTopicEdit: true,
       },
@@ -621,7 +621,7 @@ describe("telegramMessageActions", () => {
               actions: { poll: false },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectPoll: false,
         expectTopicEdit: true,
       },
@@ -648,7 +648,7 @@ describe("telegramMessageActions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectPoll: false,
         expectTopicEdit: true,
       },
@@ -687,7 +687,7 @@ describe("telegramMessageActions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectSticker: true,
       },
       {
@@ -701,7 +701,7 @@ describe("telegramMessageActions", () => {
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectSticker: false,
       },
     ] as const;
@@ -925,7 +925,7 @@ describe("telegramMessageActions", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const actions = getDescribedActions({
       describeMessageTool: telegramMessageActions.describeMessageTool,
       cfg,
@@ -1025,7 +1025,7 @@ it("forwards trusted mediaLocalRoots for send actions", async () => {
         await handleDiscordMessageAction({
           action: "send",
           params: { to: "channel:123", message: "hi", media: "/tmp/file.png" },
-          cfg: {} as GodsEyeConfig,
+          cfg: {} as OpenClawConfig,
           mediaLocalRoots: ["/tmp/agent-root"],
         });
       },
@@ -1082,14 +1082,14 @@ describe("signalMessageActions", () => {
     const cases = [
       {
         name: "no configured accounts",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         expected: [],
       },
       {
         name: "reactions disabled",
         cfg: {
           channels: { signal: { account: "+15550001111", actions: { reactions: false } } },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expected: ["send"],
       },
       {
@@ -1115,7 +1115,7 @@ describe("signalMessageActions", () => {
   it("blocks reactions when action gate is disabled", async () => {
     const cfg = {
       channels: { signal: { account: "+15550001111", actions: { reactions: false } } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     await expectSignalActionRejected(
       { to: "+15550001111", messageId: "123", emoji: "✅" },
       /actions\.reactions/,
@@ -1137,7 +1137,7 @@ describe("signalMessageActions", () => {
       },
       {
         name: "normalizes uuid recipients",
-        cfg: { channels: { signal: { account: "+15550001111" } } } as GodsEyeConfig,
+        cfg: { channels: { signal: { account: "+15550001111" } } } as OpenClawConfig,
         accountId: undefined,
         params: {
           recipient: "uuid:123e4567-e89b-12d3-a456-426614174000",
@@ -1151,7 +1151,7 @@ describe("signalMessageActions", () => {
       },
       {
         name: "passes groupId and targetAuthor for group reactions",
-        cfg: { channels: { signal: { account: "+15550001111" } } } as GodsEyeConfig,
+        cfg: { channels: { signal: { account: "+15550001111" } } } as OpenClawConfig,
         accountId: undefined,
         params: {
           to: "signal:group:group-id",
@@ -1170,7 +1170,7 @@ describe("signalMessageActions", () => {
       },
       {
         name: "falls back to toolContext.currentMessageId when messageId is omitted",
-        cfg: { channels: { signal: { account: "+15550001111" } } } as GodsEyeConfig,
+        cfg: { channels: { signal: { account: "+15550001111" } } } as OpenClawConfig,
         accountId: undefined,
         params: { to: "+15559999999", emoji: "🔥" },
         expectedRecipient: "+15559999999",
@@ -1203,7 +1203,7 @@ describe("signalMessageActions", () => {
   it("rejects invalid signal reaction inputs before dispatch", async () => {
     const cfg = {
       channels: { signal: { account: "+15550001111" } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     for (const testCase of [
       {
         params: { to: "+15559999999", emoji: "✅" },

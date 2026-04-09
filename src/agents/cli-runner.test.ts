@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resolvePreferredGodsEyeTmpDir } from "../infra/tmp-godseye-dir.js";
 import { resolveCliNoOutputTimeoutMs } from "./cli-runner/helpers.js";
 import type { EmbeddedContextFile } from "./pi-embedded-helpers.js";
@@ -202,7 +202,7 @@ describe("runCliAgent with process supervisor", () => {
             },
           },
         },
-      } satisfies GodsEyeConfig,
+      } satisfies OpenClawConfig,
       prompt: "hi",
       provider: "codex-cli",
       model: "gpt-5.2-codex",
@@ -256,7 +256,7 @@ describe("runCliAgent with process supervisor", () => {
             },
           },
         },
-      } satisfies GodsEyeConfig,
+      } satisfies OpenClawConfig,
       prompt: "hi",
       provider: "codex-cli",
       model: "gpt-5.2-codex",
@@ -308,7 +308,7 @@ describe("runCliAgent with process supervisor", () => {
             bootstrapTotalMaxChars: 50,
           },
         },
-      } satisfies GodsEyeConfig,
+      } satisfies OpenClawConfig,
       prompt: "hi",
       provider: "codex-cli",
       model: "gpt-5.2-codex",
@@ -609,7 +609,7 @@ describe("runCliAgent with process supervisor", () => {
           workspace: fallbackWorkspace,
         },
       },
-    } satisfies GodsEyeConfig;
+    } satisfies OpenClawConfig;
 
     supervisorSpawnMock.mockResolvedValueOnce(
       createManagedRun({

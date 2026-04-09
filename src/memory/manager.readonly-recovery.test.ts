@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { resetEmbeddingMocks } from "./embedding.test-mocks.js";
 import { MemoryIndexManager } from "./manager.js";
 import { getRequiredMemoryIndexManager } from "./test-manager-helpers.js";
@@ -38,7 +38,7 @@ describe("memory manager readonly recovery", () => {
   let indexPath = "";
   let manager: MemoryIndexManager | null = null;
 
-  function createMemoryConfig(): GodsEyeConfig {
+  function createMemoryConfig(): OpenClawConfig {
     return {
       agents: {
         defaults: {
@@ -54,7 +54,7 @@ describe("memory manager readonly recovery", () => {
         },
         list: [{ id: "main", default: true }],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   async function createRealManager() {

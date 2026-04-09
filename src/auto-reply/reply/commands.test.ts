@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import type { GodsEyeConfig } from "../../config/config.js";
+import type { OpenClawConfig } from "../../config/config.js";
 import { updateSessionStore, type SessionEntry } from "../../config/sessions.js";
 import { typedCases } from "../../test-utils/typed-cases.js";
 import { INTERNAL_MESSAGE_CHANNEL } from "../../utils/message-channel.js";
@@ -205,7 +205,7 @@ async function readJsonFile<T>(filePath: string): Promise<T> {
   return JSON.parse(await fs.readFile(filePath, "utf-8")) as T;
 }
 
-function buildParams(commandBody: string, cfg: GodsEyeConfig, ctxOverrides?: Partial<MsgContext>) {
+function buildParams(commandBody: string, cfg: OpenClawConfig, ctxOverrides?: Partial<MsgContext>) {
   return buildCommandTestParams(commandBody, cfg, ctxOverrides, { workspaceDir: testWorkspaceDir });
 }
 
@@ -214,7 +214,7 @@ describe("handleCommands gating", () => {
     const cases = typedCases<{
       name: string;
       commandBody: string;
-      makeCfg: () => GodsEyeConfig;
+      makeCfg: () => OpenClawConfig;
       applyParams?: (params: ReturnType<typeof buildParams>) => void;
       expectedText: string;
     }>([
@@ -225,7 +225,7 @@ describe("handleCommands gating", () => {
           ({
             commands: { bash: false, text: true },
             whatsapp: { allowFrom: ["*"] },
-          }) as GodsEyeConfig,
+          }) as OpenClawConfig,
         expectedText: "bash is disabled",
       },
       {
@@ -235,7 +235,7 @@ describe("handleCommands gating", () => {
           ({
             commands: { bash: true, text: true },
             whatsapp: { allowFrom: ["*"] },
-          }) as GodsEyeConfig,
+          }) as OpenClawConfig,
         applyParams: (params: ReturnType<typeof buildParams>) => {
           params.elevated = {
             enabled: true,
@@ -252,7 +252,7 @@ describe("handleCommands gating", () => {
           ({
             commands: { config: false, debug: false, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          }) as GodsEyeConfig,
+          }) as OpenClawConfig,
         applyParams: (params: ReturnType<typeof buildParams>) => {
           params.command.senderIsOwner = true;
         },
@@ -265,7 +265,7 @@ describe("handleCommands gating", () => {
           ({
             commands: { config: false, debug: false, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          }) as GodsEyeConfig,
+          }) as OpenClawConfig,
         applyParams: (params: ReturnType<typeof buildParams>) => {
           params.command.senderIsOwner = true;
         },
@@ -283,7 +283,7 @@ describe("handleCommands gating", () => {
           return {
             commands: inheritedCommands as never,
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig;
+          } as OpenClawConfig;
         },
         expectedText: "bash is disabled",
       },
@@ -299,7 +299,7 @@ describe("handleCommands gating", () => {
           return {
             commands: inheritedCommands as never,
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig;
+          } as OpenClawConfig;
         },
         applyParams: (params: ReturnType<typeof buildParams>) => {
           params.command.senderIsOwner = true;
@@ -318,7 +318,7 @@ describe("handleCommands gating", () => {
           return {
             commands: inheritedCommands as never,
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig;
+          } as OpenClawConfig;
         },
         applyParams: (params: ReturnType<typeof buildParams>) => {
           params.command.senderIsOwner = true;
@@ -349,7 +349,7 @@ describe("/approve command", () => {
       approvers: string[];
       target: "dm";
     } | null = { enabled: true, approvers: ["123"], target: "dm" },
-  ): GodsEyeConfig {
+  ): OpenClawConfig {
     return {
       commands: { text: true },
       channels: {
@@ -358,14 +358,14 @@ describe("/approve command", () => {
           ...(execApprovals ? { execApprovals } : {}),
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
   }
 
   it("rejects invalid usage", async () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/approve", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -376,7 +376,7 @@ describe("/approve command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/approve abc allow-once", cfg, { SenderId: "123" });
 
     callGatewayMock.mockResolvedValue({ ok: true });
@@ -484,7 +484,7 @@ describe("/approve command", () => {
   it("enforces gateway approval scopes", async () => {
     const cfg = {
       commands: { text: true },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const cases = [
       {
         scopes: ["operator.write"],
@@ -538,7 +538,7 @@ describe("/compact command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/status", cfg);
 
     const result = await handleCompactCommand(
@@ -556,7 +556,7 @@ describe("/compact command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/compact", cfg);
 
     const result = await handleCompactCommand(
@@ -580,7 +580,7 @@ describe("/compact command", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: "/tmp/godseye-session-store.json" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/compact: focus on decisions", cfg, {
       From: "+15550001",
       To: "+15550002",
@@ -631,7 +631,7 @@ describe("/compact command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/compact", cfg);
     vi.mocked(compactEmbeddedPiSession).mockResolvedValueOnce({
       ok: false,
@@ -668,7 +668,7 @@ describe("/compact command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/compact", cfg);
     vi.mocked(compactEmbeddedPiSession).mockResolvedValueOnce({
       ok: false,
@@ -701,7 +701,7 @@ describe("/compact command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/compact", cfg);
     vi.mocked(compactEmbeddedPiSession).mockResolvedValueOnce({
       ok: false,
@@ -740,7 +740,7 @@ describe("abort trigger command", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("stop", cfg);
     const sessionEntry: SessionEntry = {
       sessionId: "session-1",
@@ -862,7 +862,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
           const params = buildParams("/config show", {
             commands: { config: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig);
+          } as OpenClawConfig);
           params.command.senderIsOwner = false;
           return params;
         },
@@ -881,7 +881,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
           const params = buildParams("/config show messages.ackReaction", {
             commands: { config: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig);
+          } as OpenClawConfig);
           params.command.senderIsOwner = true;
           return params;
         },
@@ -896,7 +896,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
           const params = buildParams("/debug show", {
             commands: { debug: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig);
+          } as OpenClawConfig);
           params.command.senderIsOwner = false;
           return params;
         },
@@ -911,7 +911,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
           const params = buildParams("/debug show", {
             commands: { debug: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"] } },
-          } as GodsEyeConfig);
+          } as OpenClawConfig);
           params.command.senderIsOwner = true;
           return params;
         },
@@ -934,7 +934,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
       {
         commands: { config: true, text: true },
         channels: { discord: { dm: { enabled: true, policy: "open" } } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -954,7 +954,7 @@ describe("handleCommands owner gating for privileged show commands", () => {
       {
         commands: { plugins: true, text: true },
         channels: { discord: { dm: { enabled: true, policy: "open" } } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -976,7 +976,7 @@ describe("handleCommands /send owner gating", () => {
     const params = buildParams("/send off", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
     params.command.senderIsOwner = false;
 
     const sessionEntry: SessionEntry = {
@@ -1003,7 +1003,7 @@ describe("handleCommands /send owner gating", () => {
     const params = buildParams("/send off", {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig);
+    } as OpenClawConfig);
     params.command.senderIsOwner = true;
 
     const sessionEntry: SessionEntry = {
@@ -1033,7 +1033,7 @@ describe("handleCommands /send owner gating", () => {
       {
         commands: { text: true },
         channels: { discord: { dm: { enabled: true, policy: "open" } } },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
       {
         Provider: "discord",
         Surface: "discord",
@@ -1075,7 +1075,7 @@ describe("handleCommands /config configWrites gating", () => {
           const params = buildParams('/config set messages.ackReaction=":)"', {
             commands: { config: true, text: true },
             channels: { whatsapp: { allowFrom: ["*"], configWrites: false } },
-          } as GodsEyeConfig);
+          } as OpenClawConfig);
           params.command.senderIsOwner = true;
           return params;
         })(),
@@ -1096,7 +1096,7 @@ describe("handleCommands /config configWrites gating", () => {
                   },
                 },
               },
-            } as GodsEyeConfig,
+            } as OpenClawConfig,
             {
               AccountId: "default",
               Provider: "telegram",
@@ -1116,7 +1116,7 @@ describe("handleCommands /config configWrites gating", () => {
             {
               commands: { config: true, text: true },
               channels: { telegram: { configWrites: true } },
-            } as GodsEyeConfig,
+            } as OpenClawConfig,
             {
               Provider: "telegram",
               Surface: "telegram",
@@ -1141,7 +1141,7 @@ describe("handleCommands /config configWrites gating", () => {
   it("enforces gateway client permissions for /config commands", async () => {
     const baseCfg = {
       commands: { config: true, text: true },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const cases = [
       {
         name: "blocks /config set from gateway clients without operator.admin",
@@ -1199,7 +1199,7 @@ describe("handleCommands /config configWrites gating", () => {
             const result = await handleCommands(params);
             expect(result.shouldContinue).toBe(false);
             expect(result.reply?.text).toContain("Config updated");
-            const written = await readJsonFile<GodsEyeConfig>(configPath);
+            const written = await readJsonFile<OpenClawConfig>(configPath);
             expect(written.messages?.ackReaction).toBe(":D");
           });
         },
@@ -1236,7 +1236,7 @@ describe("handleCommands /config configWrites gating", () => {
                     },
                   },
                 },
-              } as GodsEyeConfig,
+              } as OpenClawConfig,
               {
                 Provider: INTERNAL_MESSAGE_CHANNEL,
                 Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1248,7 +1248,7 @@ describe("handleCommands /config configWrites gating", () => {
             const result = await handleCommands(params);
             expect(result.shouldContinue).toBe(false);
             expect(result.reply?.text).toContain("Config updated");
-            const written = await readJsonFile<GodsEyeConfig>(configPath);
+            const written = await readJsonFile<OpenClawConfig>(configPath);
             expect(written.channels?.telegram?.accounts?.work?.enabled).toBe(false);
           });
         },
@@ -1266,7 +1266,7 @@ describe("handleCommands bash alias", () => {
     const cfg = {
       commands: { bash: true, text: true },
       whatsapp: { allowFrom: ["*"] },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     for (const aliasCommand of ["!poll", "!stop"]) {
       resetBashChatCommandForTests();
       const params = buildParams(aliasCommand, cfg);
@@ -1279,7 +1279,7 @@ describe("handleCommands bash alias", () => {
 
 function buildPolicyParams(
   commandBody: string,
-  cfg: GodsEyeConfig,
+  cfg: OpenClawConfig,
   ctxOverrides?: Partial<MsgContext>,
 ): HandleCommandsParams {
   const ctx = {
@@ -1332,7 +1332,7 @@ describe("handleCommands /allowlist", () => {
     const cfg = {
       commands: { text: true },
       channels: { telegram: { allowFrom: ["123", "@Alice"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildPolicyParams("/allowlist list dm", cfg);
     const result = await handleCommands(params);
 
@@ -1370,11 +1370,11 @@ describe("handleCommands /allowlist", () => {
               const params = buildPolicyParams("/allowlist add dm 789", {
                 commands: { text: true, config: true },
                 channels: { telegram: { allowFrom: ["123"] } },
-              } as GodsEyeConfig);
+              } as OpenClawConfig);
               const result = await handleCommands(params);
 
               expect(result.shouldContinue).toBe(false);
-              const written = await readJsonFile<GodsEyeConfig>(configPath);
+              const written = await readJsonFile<OpenClawConfig>(configPath);
               expect(written.channels?.telegram?.allowFrom, "default account").toEqual([
                 "123",
                 "789",
@@ -1408,7 +1408,7 @@ describe("handleCommands /allowlist", () => {
             {
               commands: { text: true, config: true },
               channels: { telegram: { accounts: { work: { allowFrom: ["123"] } } } },
-            } as GodsEyeConfig,
+            } as OpenClawConfig,
             {
               AccountId: "work",
             },
@@ -1442,7 +1442,7 @@ describe("handleCommands /allowlist", () => {
           },
         },
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     readConfigFileSnapshotMock.mockResolvedValueOnce({
       valid: true,
       parsed: structuredClone(cfg),
@@ -1473,7 +1473,7 @@ describe("handleCommands /allowlist", () => {
     const cfg = {
       commands: { text: true, config: true },
       channels: { telegram: { allowFrom: ["123"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildPolicyParams("/allowlist remove dm --store 789", cfg);
     const result = await handleCommands(params);
 
@@ -1495,7 +1495,7 @@ describe("handleCommands /allowlist", () => {
     const cfg = {
       commands: { text: true, config: true },
       channels: { telegram: { allowFrom: ["123"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildPolicyParams("/allowlist add dm --account __proto__ 789", cfg);
     const result = await handleCommands(params);
 
@@ -1550,7 +1550,7 @@ describe("handleCommands /allowlist", () => {
               configWrites: true,
             },
           },
-        } as GodsEyeConfig;
+        } as OpenClawConfig;
 
         const params = buildPolicyParams(`/allowlist remove dm ${testCase.removeId}`, cfg, {
           Provider: testCase.provider,
@@ -1559,7 +1559,7 @@ describe("handleCommands /allowlist", () => {
         const result = await handleCommands(params);
 
         expect(result.shouldContinue).toBe(false);
-        const written = await readJsonFile<GodsEyeConfig>(configPath);
+        const written = await readJsonFile<OpenClawConfig>(configPath);
         const channelConfig = written.channels?.[testCase.provider];
         expect(channelConfig?.allowFrom).toEqual(testCase.expectedAllowFrom);
         expect(channelConfig?.dm?.allowFrom).toBeUndefined();
@@ -1573,7 +1573,7 @@ describe("handleCommands /allowlist", () => {
       const cfg = {
         commands: { text: true, config: true },
         channels: { telegram: { allowFrom: ["123"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const params = buildPolicyParams("/allowlist add dm channel=telegram 789", cfg, {
         Provider: INTERNAL_MESSAGE_CHANNEL,
         Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1608,7 +1608,7 @@ describe("handleCommands /allowlist", () => {
       const cfg = {
         commands: { text: true, config: true },
         channels: { telegram: { allowFrom: ["123"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const params = buildPolicyParams("/allowlist add dm channel=telegram 789", cfg, {
         Provider: INTERNAL_MESSAGE_CHANNEL,
         Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1626,7 +1626,7 @@ describe("handleCommands /allowlist", () => {
       const cfg = {
         commands: { text: true, config: true },
         channels: { telegram: { allowFrom: ["123", "789"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const params = buildPolicyParams("/allowlist remove dm channel=telegram 789", cfg, {
         Provider: INTERNAL_MESSAGE_CHANNEL,
         Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1661,7 +1661,7 @@ describe("handleCommands /allowlist", () => {
       const cfg = {
         commands: { text: true, config: true },
         channels: { telegram: { allowFrom: ["123", "789"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const params = buildPolicyParams("/allowlist remove dm channel=telegram 789", cfg, {
         Provider: INTERNAL_MESSAGE_CHANNEL,
         Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1681,7 +1681,7 @@ describe("handleCommands /allowlist", () => {
       const cfg = {
         commands: { text: true },
         channels: { telegram: { allowFrom: ["123"] } },
-      } as GodsEyeConfig;
+      } as OpenClawConfig;
       const params = buildPolicyParams("/allowlist list dm channel=telegram", cfg, {
         Provider: INTERNAL_MESSAGE_CHANNEL,
         Surface: INTERNAL_MESSAGE_CHANNEL,
@@ -1701,7 +1701,7 @@ describe("/models command", () => {
   const cfg = {
     commands: { text: true },
     agents: { defaults: { model: { primary: "anthropic/claude-opus-4-5" } } },
-  } as unknown as GodsEyeConfig;
+  } as unknown as OpenClawConfig;
 
   it.each(["discord", "whatsapp"])("lists providers on %s (text)", async (surface) => {
     const params = buildPolicyParams("/models", cfg, { Provider: surface, Surface: surface });
@@ -1800,7 +1800,7 @@ describe("/models command", () => {
           imageModel: "visionpro/studio-v1",
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     // Use discord surface for text-based output tests
     const providerList = await handleCommands(
@@ -1825,7 +1825,7 @@ describe("/models command", () => {
         defaults: { model: { primary: "anthropic/claude-opus-4-5" } },
         list: [{ id: "support", model: "localai/ultra-chat" }],
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
     const params = buildPolicyParams("/models", scopedCfg, {
       Provider: "discord",
       Surface: "discord",
@@ -1854,7 +1854,7 @@ describe("handleCommands plugin commands", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/card", cfg);
     const commandResult = await handleCommands(params);
 
@@ -1869,7 +1869,7 @@ describe("handleCommands identity", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/whoami", cfg, {
       SenderId: "12345",
       SenderUsername: "TestUser",
@@ -1892,7 +1892,7 @@ describe("handleCommands hooks", () => {
         params: buildParams("/new take notes", {
           commands: { text: true },
           channels: { whatsapp: { allowFrom: ["*"] } },
-        } as GodsEyeConfig),
+        } as OpenClawConfig),
         expectedCall: expect.objectContaining({ type: "command", action: "new" }),
       },
       {
@@ -1903,7 +1903,7 @@ describe("handleCommands hooks", () => {
             {
               commands: { text: true },
               channels: { telegram: { allowFrom: ["*"] } },
-            } as GodsEyeConfig,
+            } as OpenClawConfig,
             {
               Provider: "telegram",
               Surface: "telegram",
@@ -1943,7 +1943,7 @@ describe("handleCommands context", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const cases = [
       {
         commandBody: "/context",
@@ -1982,7 +1982,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents list", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2007,7 +2007,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents list", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2042,7 +2042,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents list", cfg, {
       CommandSource: "native",
       CommandTargetSessionKey: "agent:main:main",
@@ -2083,7 +2083,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents list", cfg);
     const result = await handleCommands(params);
 
@@ -2120,7 +2120,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents list", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2191,7 +2191,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { mainKey: "main", scope: "per-sender" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/status", cfg);
     if (verboseLevel === "on") {
       params.resolvedVerboseLevel = "on";
@@ -2210,7 +2210,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const cases = [
       { commandBody: "/subagents foo", expectedText: "/subagents" },
       { commandBody: "/subagents info", expectedText: "/subagents info" },
@@ -2241,7 +2241,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { mainKey: "main", scope: "per-sender" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents info 1", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2302,7 +2302,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { mainKey: "main", scope: "per-sender" },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents info 1", cfg);
     params.sessionKey = oldParentKey;
     params.ctx.SessionKey = oldParentKey;
@@ -2326,7 +2326,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/kill 1", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2360,7 +2360,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/kill 1", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2398,7 +2398,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/kill 1", cfg);
     const result = await handleCommands(params);
 
@@ -2437,7 +2437,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents send 1 continue with follow-up details", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2500,7 +2500,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/subagents send 1 continue with follow-up details", cfg);
     params.sessionKey = leafKey;
 
@@ -2540,7 +2540,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/steer 1 check timer.ts instead", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2622,7 +2622,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/steer 1 regroup around the remaining child work", cfg);
     const result = await handleCommands(params);
 
@@ -2672,7 +2672,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/agents", cfg);
     const result = await handleCommands(params);
 
@@ -2716,7 +2716,7 @@ describe("handleCommands subagents", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       session: { store: storePath },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/agents", cfg);
     const result = await handleCommands(params);
 
@@ -2749,7 +2749,7 @@ describe("handleCommands subagents", () => {
     const cfg = {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/steer 1 check timer.ts instead", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);
@@ -2768,7 +2768,7 @@ describe("handleCommands /tts", () => {
       commands: { text: true },
       channels: { whatsapp: { allowFrom: ["*"] } },
       messages: { tts: { prefsPath: path.join(testWorkspaceDir, "tts.json") } },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
     const params = buildParams("/tts", cfg);
     const result = await handleCommands(params);
     expect(result.shouldContinue).toBe(false);

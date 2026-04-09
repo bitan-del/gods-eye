@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, expect, vi, type Mock } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import type { MemoryIndexManager, MemorySearchManager } from "./index.js";
 
 type EmbeddingTestMocksModule = typeof import("./embedding.test-mocks.js");
@@ -12,7 +12,7 @@ export function installEmbeddingManagerFixture(opts: {
   fixturePrefix: string;
   largeTokens: number;
   smallTokens: number;
-  createCfg: (params: { workspaceDir: string; indexPath: string; tokens: number }) => GodsEyeConfig;
+  createCfg: (params: { workspaceDir: string; indexPath: string; tokens: number }) => OpenClawConfig;
   resetIndexEachTest?: boolean;
 }) {
   const resetIndexEachTest = opts.resetIndexEachTest ?? true;

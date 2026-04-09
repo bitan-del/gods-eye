@@ -31,7 +31,7 @@ function readManifestRecords(): PluginManifest[] {
     .map(
       (pluginDir) =>
         JSON.parse(
-          fs.readFileSync(path.join(pluginDir, "openclaw.plugin.json"), "utf-8"),
+          fs.readFileSync(path.join(pluginDir, "godseye.plugin.json"), "utf-8"),
         ) as PluginManifest,
     )
     .toSorted((left, right) => left.id.localeCompare(right.id));

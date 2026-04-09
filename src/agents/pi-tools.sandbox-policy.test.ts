@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../config/config.js";
+import type { OpenClawConfig } from "../config/config.js";
 import { createGodsEyeCodingTools } from "./pi-tools.js";
 import { resolveSandboxConfigForAgent } from "./sandbox/config.js";
 import { createHostSandboxFsBridge } from "./test-helpers/host-sandbox-fs-bridge.js";
 import { createPiToolsSandboxContext } from "./test-helpers/pi-tools-sandbox-context.js";
 
 function listToolNames(params: {
-  cfg: GodsEyeConfig;
+  cfg: OpenClawConfig;
   agentId?: string;
   sessionKey?: string;
   sandboxAgentId?: string;
@@ -52,7 +52,7 @@ describe("pi-tools sandbox policy", () => {
             },
           ],
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(names).toContain("message");
@@ -75,7 +75,7 @@ describe("pi-tools sandbox policy", () => {
             },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(names).toContain("browser");
@@ -102,7 +102,7 @@ describe("pi-tools sandbox policy", () => {
           },
         ],
       },
-    } as GodsEyeConfig;
+    } as OpenClawConfig;
 
     const names = listToolNames({
       cfg,
@@ -131,7 +131,7 @@ describe("pi-tools sandbox policy", () => {
             },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(names).toContain("browser");
@@ -155,7 +155,7 @@ describe("pi-tools sandbox policy", () => {
             },
           },
         },
-      } as GodsEyeConfig,
+      } as OpenClawConfig,
     });
 
     expect(names).not.toContain("browser");

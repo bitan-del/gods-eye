@@ -11,7 +11,7 @@ import {
   clearConfigCache,
   loadConfig,
   writeConfigFile,
-  type GodsEyeConfig,
+  type OpenClawConfig,
 } from "../config/config.js";
 import { loadCronStore, saveCronStore } from "../cron/store.js";
 import type { CronStoreFile } from "../cron/types.js";
@@ -164,7 +164,7 @@ async function withTelegramGatewayWritebackFixture(
       cron: {
         store: cronStorePath,
       },
-    } satisfies GodsEyeConfig);
+    } satisfies OpenClawConfig);
     clearConfigCache();
 
     await run({

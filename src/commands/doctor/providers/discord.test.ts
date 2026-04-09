@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import {
   collectDiscordNumericIdWarnings,
   maybeRepairDiscordNumericIds,
@@ -28,7 +28,7 @@ describe("doctor discord provider repairs", () => {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     const hits = scanDiscordNumericIdEntries(cfg);
 
@@ -55,7 +55,7 @@ describe("doctor discord provider repairs", () => {
           },
         },
       },
-    } as unknown as GodsEyeConfig;
+    } as unknown as OpenClawConfig;
 
     const result = maybeRepairDiscordNumericIds(cfg);
 

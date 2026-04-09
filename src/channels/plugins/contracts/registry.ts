@@ -18,7 +18,7 @@ import {
 } from "../../../../extensions/matrix/api.js";
 import { setMatrixRuntime } from "../../../../extensions/matrix/index.js";
 import { createTelegramThreadBindingManager } from "../../../../extensions/telegram/runtime-api.js";
-import type { GodsEyeConfig } from "../../../config/config.js";
+import type { OpenClawConfig } from "../../../config/config.js";
 import {
   getSessionBindingService,
   type SessionBindingCapabilities,
@@ -48,7 +48,7 @@ type ActionsContractEntry = {
   unsupportedAction?: string;
   cases: Array<{
     name: string;
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     expectedActions: string[];
     expectedCapabilities?: string[];
     beforeTest?: () => void;
@@ -60,14 +60,14 @@ type SetupContractEntry = {
   plugin: Pick<ChannelPlugin, "id" | "config" | "setup">;
   cases: Array<{
     name: string;
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string;
     input: Record<string, unknown>;
     expectedAccountId?: string;
     expectedValidation?: string | null;
     beforeTest?: () => void;
-    assertPatchedConfig?: (cfg: GodsEyeConfig) => void;
-    assertResolvedAccount?: (account: unknown, cfg: GodsEyeConfig) => void;
+    assertPatchedConfig?: (cfg: OpenClawConfig) => void;
+    assertResolvedAccount?: (account: unknown, cfg: OpenClawConfig) => void;
   }>;
 };
 
@@ -76,7 +76,7 @@ type StatusContractEntry = {
   plugin: Pick<ChannelPlugin, "id" | "config" | "status">;
   cases: Array<{
     name: string;
-    cfg: GodsEyeConfig;
+    cfg: OpenClawConfig;
     accountId?: string;
     runtime?: Record<string, unknown>;
     probe?: unknown;
@@ -112,7 +112,7 @@ type DirectoryContractEntry = {
   id: string;
   plugin: Pick<ChannelPlugin, "id" | "directory">;
   coverage: "lookups" | "presence";
-  cfg?: GodsEyeConfig;
+  cfg?: OpenClawConfig;
   accountId?: string;
 };
 
@@ -202,7 +202,7 @@ bundledChannelRuntimeSetters.setLineRuntime({
     line: {
       listLineAccountIds,
       resolveDefaultLineAccountId,
-      resolveLineAccount: ({ cfg, accountId }: { cfg: GodsEyeConfig; accountId?: string }) =>
+      resolveLineAccount: ({ cfg, accountId }: { cfg: OpenClawConfig; accountId?: string }) =>
         resolveLineAccount({ cfg, accountId }),
     },
   },
@@ -272,7 +272,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               appToken: "xapp-test",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: [
           "send",
           "react",
@@ -302,7 +302,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: [
           "send",
           "react",
@@ -328,7 +328,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               enabled: true,
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: [],
         expectedCapabilities: [],
       },
@@ -349,7 +349,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               baseUrl: "https://chat.example.com",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: ["send", "react"],
         expectedCapabilities: ["buttons"],
       },
@@ -364,7 +364,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               actions: { reactions: false },
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: ["send"],
         expectedCapabilities: ["buttons"],
       },
@@ -376,7 +376,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
               enabled: true,
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         expectedActions: [],
         expectedCapabilities: [],
       },
@@ -388,7 +388,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
     cases: [
       {
         name: "forwards runtime-backed Telegram actions and capabilities",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         expectedActions: ["send", "poll", "react"],
         expectedCapabilities: ["interactive", "buttons"],
         beforeTest: () => {
@@ -407,7 +407,7 @@ export const actionContractRegistry: ActionsContractEntry[] = [
     cases: [
       {
         name: "forwards runtime-backed Discord actions and capabilities",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         expectedActions: ["send", "react", "poll"],
         expectedCapabilities: ["interactive", "components"],
         beforeTest: () => {
@@ -429,7 +429,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
     cases: [
       {
         name: "default account stores tokens and enables the channel",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         input: {
           botToken: "xoxb-test",
           appToken: "xapp-test",
@@ -443,7 +443,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
       },
       {
         name: "non-default env setup is rejected",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         accountId: "ops",
         input: {
           useEnv: true,
@@ -459,7 +459,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
     cases: [
       {
         name: "default account stores token and normalized base URL",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         input: {
           botToken: "test-token",
           httpUrl: "https://chat.example.com/",
@@ -473,7 +473,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
       },
       {
         name: "missing credentials are rejected",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         input: {
           httpUrl: "",
         },
@@ -488,7 +488,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
     cases: [
       {
         name: "default account stores token and secret",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         input: {
           channelAccessToken: "line-token",
           channelSecret: "line-secret",
@@ -502,7 +502,7 @@ export const setupContractRegistry: SetupContractEntry[] = [
       },
       {
         name: "non-default env setup is rejected",
-        cfg: {} as GodsEyeConfig,
+        cfg: {} as OpenClawConfig,
         accountId: "ops",
         input: {
           useEnv: true,
@@ -528,7 +528,7 @@ export const statusContractRegistry: StatusContractEntry[] = [
               appToken: "xapp-test",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         runtime: {
           accountId: "default",
           connected: true,
@@ -557,7 +557,7 @@ export const statusContractRegistry: StatusContractEntry[] = [
               baseUrl: "https://chat.example.com",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         runtime: {
           accountId: "default",
           connected: true,
@@ -588,7 +588,7 @@ export const statusContractRegistry: StatusContractEntry[] = [
               channelSecret: "line-secret",
             },
           },
-        } as GodsEyeConfig,
+        } as OpenClawConfig,
         runtime: {
           accountId: "default",
           running: true,
@@ -632,7 +632,7 @@ export const directoryContractRegistry: DirectoryContractEntry[] = surfaceContra
 
 const baseSessionBindingCfg = {
   session: { mainKey: "main", scope: "per-sender" },
-} satisfies GodsEyeConfig;
+} satisfies OpenClawConfig;
 
 const sessionBindingContractEntries: Record<
   SessionBindingContractChannelId,

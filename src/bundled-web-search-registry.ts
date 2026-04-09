@@ -7,11 +7,11 @@ import moonshotPlugin from "../extensions/moonshot/index.js";
 import perplexityPlugin from "../extensions/perplexity/index.js";
 import tavilyPlugin from "../extensions/tavily/index.js";
 import xaiPlugin from "../extensions/xai/index.js";
-import type { GodsEyePluginApi } from "./plugins/types.js";
+import type { OpenClawPluginApi } from "./plugins/types.js";
 
 type RegistrablePlugin = {
   id: string;
-  register: (api: GodsEyePluginApi) => void;
+  register: (api: OpenClawPluginApi) => void;
 };
 
 export const bundledWebSearchPluginRegistrations: ReadonlyArray<{
