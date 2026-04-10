@@ -220,7 +220,10 @@ function rejectWebchatSessionMutation(params: {
   if (!params.client?.connect || !params.isWebchatConnect(params.client.connect)) {
     return false;
   }
-  if (params.client.connect.client.id === GATEWAY_CLIENT_IDS.CONTROL_UI) {
+  if (
+    params.client.connect.client.id === GATEWAY_CLIENT_IDS.CONTROL_UI ||
+    params.client.connect.client.id === GATEWAY_CLIENT_IDS.GODSEYE_CONTROL_UI
+  ) {
     return false;
   }
   params.respond(
