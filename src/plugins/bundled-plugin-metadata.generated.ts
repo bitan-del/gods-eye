@@ -6272,4 +6272,36 @@ export const GENERATED_BUNDLED_PLUGIN_METADATA = [
       channels: ["zalouser"],
     },
   },
+  {
+    dirName: "zero-api",
+    idHint: "zero-api",
+    source: {
+      source: "./index.ts",
+      built: "index.js",
+    },
+    packageName: "@godseye/zero-api-provider",
+    packageVersion: "2026.4.10",
+    packageDescription: "Gods Eye zero-api (browser-session) providers",
+    packageManifest: {
+      extensions: ["./index.ts"],
+    },
+    manifest: {
+      id: "zero-api",
+      configSchema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      enabledByDefault: true,
+      providers: [
+        "deepseek-web",
+        "qwen-web",
+        "qwen-cn-web",
+        "kimi-web",
+        "glm-cn-web",
+        "doubao-web",
+        "mimo-web",
+      ],
+    },
+  },
 ] as const;

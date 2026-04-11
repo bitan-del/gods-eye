@@ -288,6 +288,7 @@ export type AppViewState = {
       score?: number;
     }>;
     skillsStoreLoading: boolean;
+    skillsStoreLoaded?: boolean;
     skillsStoreError: string | null;
     skillsStoreQuery: string;
     skillsStoreDetailSlug: string | null;

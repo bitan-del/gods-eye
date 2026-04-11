@@ -142,11 +142,13 @@ export const skillsHandlers: GatewayRequestHandlers = {
       return;
     }
     try {
-      const results = await searchSkillsFromClawHub({
+      const page = await searchSkillsFromClawHub({
         query: (params as { query?: string }).query,
         limit: (params as { limit?: number }).limit,
+        englishOnly: (params as { englishOnly?: boolean }).englishOnly,
+        cursor: (params as { cursor?: string }).cursor,
       });
-      respond(true, { results }, undefined);
+      respond(true, { results: page.results, nextCursor: page.nextCursor }, undefined);
     } catch (err) {
       respond(false, undefined, errorShape(ErrorCodes.UNAVAILABLE, formatErrorMessage(err)));
     }

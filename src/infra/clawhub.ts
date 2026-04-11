@@ -511,6 +511,89 @@ export async function fetchClawHubPackageVersion(params: {
   });
 }
 
+/**
+ * List packages from the ClawHub registry (no search query). Used by the
+ * Skill Store UI to populate the initial, unfiltered list of community
+ * skills. ClawHub's `/api/v1/search` and `/api/v1/skills` endpoints both
+ * return empty results today, but `/api/v1/packages?family=skill` returns
+ * the actual published skill packages.
+ */
+export async function listClawHubPackages(params: {
+  family?: ClawHubPackageFamily;
+  baseUrl?: string;
+  token?: string;
+  timeoutMs?: number;
+  fetchImpl?: FetchLike;
+  limit?: number;
+  cursor?: string;
+}): Promise<{ items: ClawHubPackageListItem[]; nextCursor: string | null }> {
+  const result = await fetchJson<{
+    items: ClawHubPackageListItem[];
+    nextCursor?: string | null;
+  }>({
+    baseUrl: params.baseUrl,
+    path: "/api/v1/packages",
+    token: params.token,
+    timeoutMs: params.timeoutMs,
+    fetchImpl: params.fetchImpl,
+    search: {
+      family: params.family,
+      limit: params.limit ? String(params.limit) : undefined,
+      cursor: params.cursor,
+    },
+  });
+  return {
+    items: result.items ?? [],
+    nextCursor: result.nextCursor ?? null,
+  };
+}
+
+/**
+ * Paginate through `/api/v1/packages` until either the requested `maxItems`
+ * is reached or the registry runs out of pages. ClawHub caps a single page
+ * at 100, so fetching the full community catalog (tens of thousands of
+ * skills) requires walking the `nextCursor` chain.
+ */
+export async function listAllClawHubPackages(params: {
+  family?: ClawHubPackageFamily;
+  baseUrl?: string;
+  token?: string;
+  timeoutMs?: number;
+  fetchImpl?: FetchLike;
+  maxItems: number;
+  pageSize?: number;
+}): Promise<ClawHubPackageListItem[]> {
+  const pageSize = Math.min(params.pageSize ?? 100, 100);
+  const collected: ClawHubPackageListItem[] = [];
+  let cursor: string | undefined;
+  // Hard cap total pages as a belt-and-suspenders guard against an
+  // unbounded cursor loop if the registry ever misbehaves.
+  const maxPages = Math.max(1, Math.ceil(params.maxItems / pageSize)) + 4;
+  for (let page = 0; page < maxPages; page += 1) {
+    const { items, nextCursor } = await listClawHubPackages({
+      family: params.family,
+      baseUrl: params.baseUrl,
+      token: params.token,
+      timeoutMs: params.timeoutMs,
+      fetchImpl: params.fetchImpl,
+      limit: pageSize,
+      cursor,
+    });
+    if (items.length === 0) {
+      break;
+    }
+    collected.push(...items);
+    if (collected.length >= params.maxItems) {
+      return collected.slice(0, params.maxItems);
+    }
+    if (!nextCursor) {
+      break;
+    }
+    cursor = nextCursor;
+  }
+  return collected;
+}
+
 export async function searchClawHubPackages(params: {
   query: string;
   family?: ClawHubPackageFamily;

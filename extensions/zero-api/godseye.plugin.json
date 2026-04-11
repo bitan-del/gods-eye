@@ -1,0 +1,14 @@
+{
+  "id": "zero-api",
+  "enabledByDefault": true,
+  "providers": [
+    "deepseek-web",
+    "qwen-web",
+    "qwen-cn-web",
+    "kimi-web",
+    "glm-cn-web",
+    "doubao-web",
+    "mimo-web"
+  ],
+  "configSchema": { "type": "object", "additionalProperties": false, "properties": {} }
+}

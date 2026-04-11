@@ -5,8 +5,10 @@ import { fileExists } from "../infra/archive.js";
 import {
   downloadClawHubSkillArchive,
   fetchClawHubSkillDetail,
+  listClawHubPackages,
   resolveClawHubBaseUrl,
-  searchClawHubSkills,
+  searchClawHubPackages,
+  type ClawHubPackageListItem,
   type ClawHubSkillDetail,
   type ClawHubSkillSearchResult,
 } from "../infra/clawhub.js";
@@ -208,16 +210,124 @@ export async function writeClawHubSkillOrigin(
   await fs.writeFile(targetPath, `${JSON.stringify(origin, null, 2)}\n`, "utf8");
 }
 
+function packageItemToSkillResult(
+  item: ClawHubPackageListItem,
+  score = 0,
+): ClawHubSkillSearchResult {
+  return {
+    score,
+    slug: item.name,
+    displayName: item.displayName,
+    summary: item.summary ?? undefined,
+    version: item.latestVersion ?? undefined,
+    updatedAt: item.updatedAt,
+  };
+}
+
+// Threshold used when `englishOnly` is set: if more than 25% of the
+// meaningful characters in the displayName+summary are outside the basic
+// Latin / Latin-1 range we treat the skill as non-English and drop it.
+// ClawHub's community catalog contains a large number of Chinese-language
+// skills whose summaries are 100% CJK characters, so a conservative ratio
+// is enough to filter them out without touching mixed-language entries
+// (for example English skills with a few emoji or accented characters).
+const CJK_SCRIPT_PATTERN =
+  // eslint-disable-next-line no-misleading-character-class -- CJK + hiragana + katakana + hangul ranges
+  /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/;
+
+function isLikelyEnglishText(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+  // Short-circuit: any CJK/Japanese/Korean character at all usually means
+  // the whole summary is in that script for this corpus.
+  if (CJK_SCRIPT_PATTERN.test(trimmed)) {
+    // Allow mixed strings where CJK is a small minority (<= 10%).
+    let cjk = 0;
+    let total = 0;
+    for (const ch of trimmed) {
+      const code = ch.codePointAt(0) ?? 0;
+      if (code <= 32) {
+        continue;
+      }
+      total += 1;
+      if (CJK_SCRIPT_PATTERN.test(ch)) {
+        cjk += 1;
+      }
+    }
+    if (total === 0) {
+      return true;
+    }
+    return cjk / total <= 0.1;
+  }
+  return true;
+}
+
+function isLikelyEnglishSkill(item: { displayName: string; summary?: string | null }): boolean {
+  if (!isLikelyEnglishText(item.displayName)) {
+    return false;
+  }
+  if (item.summary && !isLikelyEnglishText(item.summary)) {
+    return false;
+  }
+  return true;
+}
+
+export type SearchSkillsResponse = {
+  results: ClawHubSkillSearchResult[];
+  nextCursor: string | null;
+};
+
 export async function searchSkillsFromClawHub(params: {
   query?: string;
   limit?: number;
   baseUrl?: string;
-}): Promise<ClawHubSkillSearchResult[]> {
-  return await searchClawHubSkills({
-    query: params.query?.trim() || "*",
-    limit: params.limit,
+  englishOnly?: boolean;
+  cursor?: string;
+}): Promise<SearchSkillsResponse> {
+  const trimmed = params.query?.trim();
+  const requestedLimit = params.limit ?? 100;
+  const englishOnly = params.englishOnly ?? false;
+
+  // Query path: ClawHub's `/api/v1/packages/search` does not expose a
+  // cursor, so queries always return a single page. Client-side search
+  // through the background-loaded cache is handled in the UI; this
+  // server path is used when the user presses Enter on a query to hit
+  // the full-text endpoint.
+  if (trimmed) {
+    const results = await searchClawHubPackages({
+      query: trimmed,
+      family: "skill",
+      limit: requestedLimit,
+      baseUrl: params.baseUrl,
+    });
+    const filtered = englishOnly
+      ? results.filter((entry) => isLikelyEnglishSkill(entry.package))
+      : results;
+    return {
+      results: filtered.map((entry) => packageItemToSkillResult(entry.package, entry.score)),
+      nextCursor: null,
+    };
+  }
+
+  // Browse path: fetch a single cursor-addressed page from ClawHub and
+  // return its items plus the next cursor. The UI loads the first page
+  // for instant results, then background-paginates through the rest in
+  // 100-item batches (~1 page per minute) so the Skill Store never feels
+  // stuck on a long blocking fetch.
+  const pageLimit = Math.min(Math.max(requestedLimit, 1), 100);
+  const { items, nextCursor } = await listClawHubPackages({
+    family: "skill",
+    limit: pageLimit,
     baseUrl: params.baseUrl,
+    cursor: params.cursor,
   });
+  const filtered = englishOnly ? items.filter(isLikelyEnglishSkill) : items;
+  return {
+    results: filtered.map((item) => packageItemToSkillResult(item)),
+    nextCursor: nextCursor ?? null,
+  };
 }
 
 async function resolveInstallVersion(params: {

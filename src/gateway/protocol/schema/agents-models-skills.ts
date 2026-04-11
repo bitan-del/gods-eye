@@ -245,7 +245,19 @@ export const SkillsUpdateParamsSchema = Type.Union([
 export const SkillsSearchParamsSchema = Type.Object(
   {
     query: Type.Optional(NonEmptyString),
-    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+    // ClawHub has tens of thousands of skills; raise the ceiling so the
+    // Skill Store can ask the gateway to paginate-through and return the
+    // full English-filtered catalog rather than just the first 100.
+    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 10000 })),
+    // When true, filter out skills whose displayName/summary are dominated
+    // by non-Latin scripts (Chinese, Japanese, Korean, etc.). Defaults to
+    // false server-side so CLI callers keep historical behavior; the Skill
+    // Store UI opts in explicitly.
+    englishOnly: Type.Optional(Type.Boolean()),
+    // Opaque cursor string returned by a previous `skills.search` call.
+    // Used by the Skill Store UI to background-paginate ClawHub in
+    // 100-item batches without blocking the initial render.
+    cursor: Type.Optional(NonEmptyString),
   },
   { additionalProperties: false },
 );
@@ -265,6 +277,9 @@ export const SkillsSearchResultSchema = Type.Object(
         { additionalProperties: false },
       ),
     ),
+    // Opaque pagination cursor for the next page. `null` or missing when
+    // the registry has no more pages left.
+    nextCursor: Type.Optional(Type.Union([Type.String(), Type.Null()])),
   },
   { additionalProperties: false },
 );

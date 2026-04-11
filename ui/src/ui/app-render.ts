@@ -102,11 +102,14 @@ import {
 import { deleteSessionsAndRefresh, loadSessions, patchSession } from "./controllers/sessions.ts";
 import {
   installSkill,
+  handleStoreQueryChange,
   installStoreSkill,
   loadSkills,
   loadStoreSkillDetail,
   loadStoreSkills,
   saveSkillApiKey,
+  stopStoreBackgroundLoader,
+  submitStoreSearch,
   updateSkillEdit,
   updateSkillEnabled,
 } from "./controllers/skills.ts";
@@ -1383,7 +1386,7 @@ export function renderApp(state: AppViewState) {
             ? (() => {
                 if (
                   state.skillsViewTab === "store" &&
-                  state.skillsStoreItems.length === 0 &&
+                  !state.skillsStoreLoaded &&
                   !state.skillsStoreLoading
                 ) {
                   void loadStoreSkills(state);
@@ -1414,16 +1417,21 @@ export function renderApp(state: AppViewState) {
                     viewTab: state.skillsViewTab,
                     onViewTabChange: (tab) => {
                       state.skillsViewTab = tab;
-                      if (tab === "store" && state.skillsStoreItems.length === 0) {
+                      if (tab === "store" && !state.skillsStoreLoaded) {
                         void loadStoreSkills(state);
+                      } else if (tab !== "store") {
+                        // Leaving the Skill Store — pause background
+                        // pagination so we're not firing ClawHub requests
+                        // while the user is in My Skills.
+                        stopStoreBackgroundLoader(state);
                       }
                     },
                     storeItems: state.skillsStoreItems,
                     storeLoading: state.skillsStoreLoading,
                     storeError: state.skillsStoreError,
                     storeQuery: state.skillsStoreQuery,
-                    onStoreQueryChange: (q) => (state.skillsStoreQuery = q),
-                    onStoreSearch: () => void loadStoreSkills(state, state.skillsStoreQuery),
+                    onStoreQueryChange: (q) => handleStoreQueryChange(state, q),
+                    onStoreSearch: () => submitStoreSearch(state),
                     onStoreInstall: (slug) => void installStoreSkill(state, slug),
                     storeDetailSlug: state.skillsStoreDetailSlug,
                     storeDetail: state.skillsStoreDetail,

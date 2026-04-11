@@ -19,16 +19,20 @@ function safeExternalHref(raw?: string): string | null {
 export type SkillsStatusFilter = "all" | "ready" | "needs-setup" | "disabled";
 export type StoreSort = "newest" | "downloads" | "name";
 
+// Mirrors the category list shown on https://clawhub.ai/skills. The
+// ClawHub registry API does not expose a per-skill category field, so
+// the Skill Store classifies entries client-side using name/summary/tag
+// keyword matching (see `categoryKeywords` in `renderStore`).
 const STORE_CATEGORIES = [
   "All",
-  "General",
-  "Creative",
-  "Academic",
-  "Development",
-  "Legal",
-  "Lifestyle",
-  "Marketing",
-  "Finance",
+  "MCP Tools",
+  "Prompts",
+  "Workflows",
+  "Dev Tools",
+  "Data & APIs",
+  "Security",
+  "Automation",
+  "Other",
 ] as const;
 
 export type SkillsProps = {
@@ -252,146 +256,174 @@ function renderStore(props: SkillsProps) {
     return html`<div class="sk-empty sk-empty--error">${props.storeError}</div>`;
   }
   if (props.storeItems.length === 0) {
-    // Fall back to showing installed skills as store items when ClawHub is empty
-    const installed = props.report?.skills ?? [];
-    if (installed.length > 0) {
-      return html`
-        <div class="sk-store-info">Showing locally available skills. Community store coming soon.</div>
-        <div class="sk-grid">
-          ${installed.map(
-            (skill) => html`
-            <div class="sk-card" @click=${() => props.onDetailOpen(skill.skillKey)}>
-              <div class="sk-card-top">
-                <div class="sk-card-icon">
-                  ${
-                    skill.emoji
-                      ? html`<span>${skill.emoji}</span>`
-                      : html`
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
-                          </svg>
-                        `
-                  }
-                </div>
-                <span class="sk-card-badge">Added</span>
-              </div>
-              <div class="sk-card-name">${skill.name}</div>
-              <div class="sk-card-desc">${clampText(skill.description, 80)}</div>
-              <div class="sk-card-footer">
-                <button class="sk-card-use-btn" @click=${(e: Event) => {
-                  e.stopPropagation();
-                  props.onDetailOpen(skill.skillKey);
-                }}>Use Now</button>
-              </div>
-            </div>
-          `,
-          )}
-        </div>
-        ${props.detailKey ? renderSkillDetail(installed.find((s) => s.skillKey === props.detailKey) ?? null, props) : nothing}
-      `;
-    }
+    // The Skill Store tab must only ever show live results from the remote
+    // ClawHub registry. Do NOT fall back to listing locally installed skills
+    // here — installed skills belong under the "My Skills" tab. When the
+    // remote store returns zero results we show a dedicated empty state.
     return html`
-      <div class="sk-empty">No skills found in store. The community skill store is coming soon.</div>
+      <div class="sk-empty">
+        <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px">
+          No skills in the store yet
+        </div>
+        <div style="font-size: 12px; opacity: 0.7">
+          The community skill store is empty right now. Check back soon — or switch to
+          <strong>My Skills</strong> to see what you already have installed.
+        </div>
+      </div>
     `;
   }
 
-  // Category filter: match against slug + displayName + summary with expanded keywords
+  // Client-side classifier that mirrors ClawHub's category pills. The
+  // registry API does not expose a category field per package, so each
+  // skill is bucketed by matching its slug/displayName/summary against a
+  // keyword list per category. "Other" is the negative bucket: anything
+  // that does not match any of the eight primary categories.
   const categoryKeywords: Record<string, string[]> = {
-    general: [
-      "general",
-      "utility",
-      "tool",
-      "helper",
-      "assistant",
-      "agent",
-      "monitor",
-      "checker",
-      "scanner",
+    "mcp tools": ["mcp", "model context protocol", "mcp server", "mcp tool", "mcp client"],
+    prompts: [
+      "prompt",
+      "prompts",
+      "prompt library",
+      "system prompt",
+      "prompt engineering",
+      "prompt template",
+      "instruction",
+      "persona",
     ],
-    creative: [
-      "creative",
-      "image",
-      "art",
-      "design",
-      "video",
-      "photo",
-      "music",
-      "draw",
-      "generation",
-      "edit",
-      "media",
+    workflows: [
+      "workflow",
+      "workflows",
+      "pipeline",
+      "orchestration",
+      "automation flow",
+      "chain",
+      "runbook",
+      "playbook",
+      "process",
     ],
-    academic: [
-      "academic",
-      "research",
-      "study",
-      "paper",
-      "science",
-      "education",
-      "learn",
-      "university",
-      "math",
-    ],
-    development: [
+    "dev tools": [
+      "dev",
+      "developer",
+      "devtool",
       "development",
       "code",
       "coding",
       "programming",
-      "api",
       "debug",
+      "debugger",
       "git",
+      "github",
+      "gitlab",
       "deploy",
       "devops",
       "cli",
       "sdk",
       "compiler",
+      "lint",
+      "formatter",
       "docker",
       "kubernetes",
+      "terraform",
+      "ide",
+      "refactor",
+      "test",
+      "testing",
+      "build",
     ],
-    legal: ["legal", "law", "compliance", "regulation", "contract", "privacy", "policy", "gdpr"],
-    lifestyle: [
-      "lifestyle",
-      "health",
-      "fitness",
-      "recipe",
-      "travel",
-      "weather",
-      "personal",
-      "productivity",
-    ],
-    marketing: [
-      "marketing",
-      "seo",
-      "ads",
-      "campaign",
-      "social",
-      "content",
+    "data & apis": [
+      "data",
+      "api",
+      "apis",
+      "rest",
+      "graphql",
+      "sql",
+      "database",
+      "db",
       "analytics",
-      "brand",
-      "email",
+      "etl",
+      "csv",
+      "json",
+      "xml",
+      "webhook",
+      "dataset",
+      "query",
+      "scraper",
+      "scraping",
+      "crawler",
+      "parser",
     ],
-    finance: [
-      "finance",
-      "trading",
-      "stock",
+    security: [
+      "security",
+      "auth",
+      "vuln",
+      "vulnerability",
+      "pentest",
+      "cve",
+      "secret",
+      "secrets",
+      "compliance",
+      "audit",
+      "encrypt",
+      "decrypt",
       "crypto",
-      "investment",
-      "budget",
-      "accounting",
-      "payment",
-      "financial",
+      "firewall",
+      "scanner",
+      "privacy",
+      "gdpr",
+      "iam",
+    ],
+    automation: [
+      "automation",
+      "automate",
+      "schedule",
+      "cron",
+      "trigger",
+      "bot",
+      "agent",
+      "assistant",
+      "monitor",
+      "watcher",
+      "notify",
+      "alert",
+      "reminder",
+      "task",
+      "zapier",
+      "n8n",
     ],
   };
 
+  function matchesCategory(item: StoreSkillItem, catLower: string): boolean {
+    const text = `${item.slug} ${item.displayName} ${item.summary}`.toLowerCase();
+    const keywords = categoryKeywords[catLower] ?? [];
+    return keywords.some((kw) => text.includes(kw));
+  }
+
+  function matchesAnyPrimaryCategory(item: StoreSkillItem): boolean {
+    return Object.keys(categoryKeywords).some((cat) => matchesCategory(item, cat));
+  }
+
   const catLower = props.storeCategory.toLowerCase();
-  const keywords = categoryKeywords[catLower] ?? [];
-  let filtered =
-    catLower === "all"
-      ? [...props.storeItems]
-      : props.storeItems.filter((item) => {
-          const text = `${item.slug} ${item.displayName} ${item.summary}`.toLowerCase();
-          return keywords.some((kw) => text.includes(kw));
-        });
+  let filtered: StoreSkillItem[];
+  if (catLower === "all") {
+    filtered = [...props.storeItems];
+  } else if (catLower === "other") {
+    // Negative bucket: skills that don't match any of the eight primary
+    // categories end up in "Other", matching the ClawHub website.
+    filtered = props.storeItems.filter((item) => !matchesAnyPrimaryCategory(item));
+  } else {
+    filtered = props.storeItems.filter((item) => matchesCategory(item, catLower));
+  }
+
+  // Instant client-side text filter on top of whatever is already
+  // loaded. The search box still hits the server on Enter for a fresh
+  // ClawHub-wide full-text search, but while the user is typing we
+  // narrow the visible grid immediately so it never feels laggy.
+  const query = props.storeQuery.trim().toLowerCase();
+  if (query) {
+    filtered = filtered.filter((item) =>
+      `${item.slug} ${item.displayName} ${item.summary}`.toLowerCase().includes(query),
+    );
+  }
 
   // Sort
   if (props.storeSort === "name") {

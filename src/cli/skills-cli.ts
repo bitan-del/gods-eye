@@ -67,7 +67,7 @@ export function registerSkillsCli(program: Command) {
     .option("--json", "Output as JSON", false)
     .action(async (queryParts: string[], opts: { limit?: number; json?: boolean }) => {
       try {
-        const results = await searchSkillsFromClawHub({
+        const { results } = await searchSkillsFromClawHub({
           query: normalizeOptionalString(queryParts.join(" ")),
           limit: opts.limit,
         });
