@@ -39,19 +39,18 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.23.0 --activate
 
-      - name: Install dependencies
-        working-directory: apps/desktop
+      - name: Install root dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Build Electron app
         working-directory: apps/desktop
-        run: npx electron-vite build
+        run: pnpm exec electron-vite build
 
       - name: Package Windows installer
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win nsis zip --${{ inputs.arch || 'x64' }}
+        run: pnpm exec electron-builder --win nsis zip --${{ inputs.arch || 'x64' }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
