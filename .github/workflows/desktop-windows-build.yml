@@ -45,10 +45,24 @@ jobs:
       - name: Install desktop app dependencies
         working-directory: apps/desktop
         run: npm install --legacy-peer-deps
+        env:
+          npm_config_userconfig: ""
+
+      - name: Verify desktop node_modules
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          Write-Host "electron-vite bin:"
+          Test-Path node_modules/.bin/electron-vite
+          Write-Host "electron:"
+          Test-Path node_modules/electron/package.json
+          Write-Host "package.json scripts:"
+          node -e "console.log(Object.keys(require('./package.json').scripts).join(', '))"
 
       - name: Build with electron-vite
         working-directory: apps/desktop
-        run: npm run make
+        shell: cmd
+        run: call node_modules\.bin\electron-vite.cmd build
 
       - name: Bundle MCP servers
         working-directory: apps/desktop
@@ -60,13 +74,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
-        run: npx --no-install electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
+        shell: cmd
+        run: call node_modules\.bin\electron-builder.cmd --win --${{ inputs.arch || 'x64' }} --publish=never
 
       - name: List build output
         working-directory: apps/desktop
         shell: pwsh
         run: |
-          Write-Host "=== out/ ==="
+          Write-Host "=== Searching for .exe and .zip files in out/ ==="
           Get-ChildItem -Path out -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '\.(exe|zip|msi)$' } | ForEach-Object { Write-Host $_.FullName }
 
       - name: Upload artifacts
