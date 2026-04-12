@@ -1,0 +1,63 @@
+name: Desktop Windows Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target architecture"
+        required: false
+        default: "x64"
+        type: choice
+        options:
+          - x64
+          - arm64
+
+concurrency:
+  group: desktop-windows-build
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "24.x"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.23.0 --activate
+
+      - name: Install dependencies
+        working-directory: apps/desktop
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build Electron app
+        working-directory: apps/desktop
+        run: npx electron-vite build
+
+      - name: Package Windows installer
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis zip --${{ inputs.arch || 'x64' }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gods-eye-windows-${{ inputs.arch || 'x64' }}
+          path: |
+            apps/desktop/out/*.exe
+            apps/desktop/out/*.zip
+          retention-days: 30
