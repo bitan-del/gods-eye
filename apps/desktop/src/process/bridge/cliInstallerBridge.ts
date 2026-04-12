@@ -16,6 +16,7 @@ import {
   writeSetupKeypress,
   openSetupInTerminal,
   dismissSetup,
+  restartGateway,
 } from '@process/services/cliInstaller';
 
 export function initCliInstallerBridge(): void {
@@ -91,5 +92,23 @@ export function initCliInstallerBridge(): void {
   // Dismiss the wizard
   ipcBridge.cliInstaller.dismiss.provider(async () => {
     await dismissSetup();
+  });
+
+  // Restart gateway with fresh config
+  ipcBridge.cliInstaller.restartGateway.provider(async () => {
+    try {
+      const result = await restartGateway();
+      return {
+        code: result.success ? 200 : 500,
+        msg: result.message || 'ok',
+        data: { success: result.success, message: result.message },
+      };
+    } catch (error) {
+      return {
+        code: 500,
+        msg: (error as Error).message,
+        data: { success: false, message: (error as Error).message },
+      };
+    }
   });
 }

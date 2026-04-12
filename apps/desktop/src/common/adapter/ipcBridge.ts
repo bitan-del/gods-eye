@@ -1366,4 +1366,9 @@ export const cliInstaller = {
   setupComplete: bridge.buildEmitter<{ success: boolean; error?: string }>('cli-installer.setup-complete'),
   /** Dismiss the wizard (user chose to skip) */
   dismiss: bridge.buildProvider<void, void>('cli-installer.dismiss'),
+  /** Restart the gateway (kill stale process, start fresh with current config) */
+  restartGateway: bridge.buildProvider<
+    IBridgeResponse<{ success: boolean; message?: string }>,
+    void
+  >('cli-installer.restart-gateway'),
 };

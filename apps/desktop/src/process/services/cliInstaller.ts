@@ -293,3 +293,40 @@ export async function dismissSetup(): Promise<void> {
     pendingPrompts.clear();
   }
 }
+
+/**
+ * Restart the gateway — kills any stale gateway process and starts a fresh one
+ * with the current config. Useful when the gateway has a stale auth token.
+ */
+export async function restartGateway(): Promise<{ success: boolean; message?: string }> {
+  try {
+    // Kill any existing gateway processes
+    await execAsync('pkill -9 -f godseye-gateway').catch(() => {});
+    // Wait for port to free up
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // Start a fresh gateway in the background
+    const child = spawn('godseye', ['gateway', 'run', '--bind', 'loopback', '--port', '18789', '--force'], {
+      detached: true,
+      stdio: 'ignore',
+      env: { ...process.env, PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin' },
+    });
+    child.unref();
+
+    // Wait for gateway to become ready
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Verify it's reachable
+    try {
+      const { stdout } = await execAsync('godseye channels status --probe 2>&1 | head -3');
+      if (stdout.includes('reachable')) {
+        return { success: true, message: 'Gateway restarted successfully' };
+      }
+      return { success: true, message: 'Gateway started (status check inconclusive)' };
+    } catch {
+      return { success: true, message: 'Gateway process started' };
+    }
+  } catch (error) {
+    return { success: false, message: (error as Error).message };
+  }
+}

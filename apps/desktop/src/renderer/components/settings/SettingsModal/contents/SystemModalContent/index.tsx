@@ -13,7 +13,7 @@ import { COMMAND_QUEUE_ENABLED_SWR_KEY } from '@/renderer/hooks/system/useComman
 import { iconColors } from '@/renderer/styles/colors';
 import { isElectronDesktop } from '@/renderer/utils/platform';
 import { Alert, Button, Collapse, Form, InputNumber, Message, Modal, Switch, Tooltip } from '@arco-design/web-react';
-import { FolderSearch, Terminal } from '@icon-park/react';
+import { FolderSearch, Lightning, Terminal } from '@icon-park/react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR, { mutate as mutateSWR } from 'swr';
@@ -436,7 +436,7 @@ const SystemModalContent: React.FC = () => {
             </Form>
           </div>
 
-          {/* CLI Setup section */}
+          {/* CLI Setup & Gateway section */}
           <div className='px-[12px] md:px-[32px] py-16px bg-2 rd-16px space-y-12px'>
             <PreferenceRow
               label='CLI Setup'
@@ -456,6 +456,12 @@ const SystemModalContent: React.FC = () => {
                 </span>
               </Button>
             </PreferenceRow>
+            <PreferenceRow
+              label='Gateway Connection'
+              description='Restart the gateway to fix connection or token mismatch errors'
+            >
+              <GatewayConnectButton />
+            </PreferenceRow>
           </div>
 
           {/* Developer settings: DevTools + CDP (only visible in dev mode) */}
@@ -463,6 +469,49 @@ const SystemModalContent: React.FC = () => {
         </div>
       </AionScrollArea>
     </div>
+  );
+};
+
+/** Gateway reconnect button with loading/success/error feedback */
+const GatewayConnectButton: React.FC = () => {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleRestart = useCallback(async () => {
+    setStatus('loading');
+    try {
+      const result = await ipcBridge.cliInstaller.restartGateway.invoke();
+      if (result.data?.success) {
+        setStatus('success');
+        Message.success(result.data.message || 'Gateway connected');
+      } else {
+        setStatus('error');
+        Message.error(result.msg || 'Failed to restart gateway');
+      }
+    } catch (err) {
+      setStatus('error');
+      Message.error((err as Error).message || 'Failed to restart gateway');
+    }
+    // Reset status after a few seconds
+    setTimeout(() => setStatus('idle'), 4000);
+  }, []);
+
+  const label = status === 'loading' ? 'Restarting...' : status === 'success' ? 'Connected' : status === 'error' ? 'Failed' : 'Reconnect Gateway';
+  const btnType = status === 'success' ? 'primary' : 'outline';
+
+  return (
+    <Button
+      type={btnType}
+      size='small'
+      loading={status === 'loading'}
+      disabled={status === 'loading'}
+      onClick={handleRestart}
+      status={status === 'error' ? 'danger' : status === 'success' ? 'success' : undefined}
+    >
+      <span className='flex items-center gap-4px'>
+        <Lightning theme='outline' size='14' />
+        {label}
+      </span>
+    </Button>
   );
 };
 

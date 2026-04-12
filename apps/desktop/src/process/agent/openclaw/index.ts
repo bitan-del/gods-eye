@@ -109,6 +109,10 @@ export class OpenClawAgent {
    * - Resolve session
    */
   async start(): Promise<void> {
+    await this.startWithRetry(false);
+  }
+
+  private async startWithRetry(isRetry: boolean): Promise<void> {
     try {
       this.emitStatusMessage('connecting');
 
@@ -166,9 +170,34 @@ export class OpenClawAgent {
       await this.resolveSession();
       this.emitStatusMessage('session_active');
     } catch (error) {
+      // If token mismatch, the gateway may have a stale config. Kill it and restart once.
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!isRetry && /token.mismatch/i.test(msg)) {
+        console.log('[OpenClawAgent] Token mismatch detected — restarting gateway with fresh config');
+        await this.killStaleGateway();
+        return this.startWithRetry(true);
+      }
       this.emitStatusMessage('error');
       throw error;
     }
+  }
+
+  /** Kill any stale gateway process on the target port and spawn a fresh one */
+  private async killStaleGateway(): Promise<void> {
+    const { execFile } = await import('node:child_process');
+    const { promisify } = await import('node:util');
+    const execFileAsync = promisify(execFile);
+    try {
+      // Kill any godseye-gateway processes
+      await execFileAsync('pkill', ['-9', '-f', 'godseye-gateway']).catch(() => {});
+      // Wait for port to free up
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch {
+      // best-effort
+    }
+    // Clear any existing manager/connection so startWithRetry creates fresh ones
+    this.gatewayManager = null;
+    this.connection = null;
   }
 
   /**
