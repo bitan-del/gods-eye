@@ -1,0 +1,142 @@
+/* Default Color Scheme - Gods Eye Blue Theme */
+
+/* Light Mode */
+:root,
+[data-color-scheme='default'] {
+  /* Gods Eye Brand Colors - Light Mode */
+  --aou-1: #ebf5ff;
+  --aou-2: #d6e8ff;
+  --aou-3: #b8d4ff;
+  --aou-4: #94bcff;
+  --aou-5: #70a4ff;
+  --aou-6: #4f8cff;
+  --aou-7: #3b76e8;
+  --aou-8: #2a5cc0;
+  --aou-9: #1a4098;
+  --aou-10: #0e2870;
+
+  /* Background Colors - Light Mode */
+  --bg-base: #ffffff; /* bg-0 - main background */
+  --bg-1: #f8faff; /* secondary background (slight blue tint) */
+  --bg-2: #f1f5fb; /* tertiary background */
+  --bg-3: #e2e8f0; /* borders/dividers */
+  --bg-4: #c9d5e4;
+  --bg-5: #a8b8cc;
+  --bg-6: #8494a7; /* disabled/secondary text */
+  --bg-8: #4e5969;
+  --bg-9: #1d2129;
+  --bg-10: #0c0e12;
+
+  /* Interactive State Colors - Light Mode */
+  --bg-hover: #f0f4ff; /* hover background */
+  --bg-active: #e2e8f5; /* active/pressed background */
+
+  /* Text Colors - Light Mode */
+  --text-primary: #1d2129; /* primary text */
+  --text-secondary: #8494a7; /* secondary text */
+  --text-disabled: #c9d5e4; /* disabled text */
+
+  /* Semantic Colors - Light Mode */
+  --primary: #4f8cff;
+  --success: #00b42a;
+  --warning: #ff7d00;
+  --danger: #f53f3f;
+  --info: #4f8cff;
+
+  /* Border Colors - Light Mode */
+  --border-base: #e2e8f0; /* base border */
+  --border-light: #f1f5fb; /* light border */
+
+  /* Brand Colors - Light Mode */
+  --brand: #4f8cff; /* brand color */
+  --brand-light: #ebf5ff; /* brand light background */
+  --brand-hover: #94bcff; /* brand hover */
+
+  /* Message & UI Component Colors - Light Mode */
+  --message-user-bg: #e8f0ff; /* user message bg (light blue) */
+  --message-tips-bg: #f0f5ff; /* tips bg (light blue) */
+  --workspace-btn-bg: #eff2f7; /* workspace button bg */
+
+  /* Special Colors - Light Mode */
+  --fill: #f7f9fc; /* fill color */
+  --inverse: #ffffff; /* inverse color */
+
+  /* Custom Colors - Light Mode */
+  --dialog-fill-0: #ffffff; /* dialog fill */
+  --text-0: #000000; /* pure black text */
+  --text-white: #ffffff; /* pure white text */
+  --fill-0: #ffffff; /* fill 0 */
+  --fill-white-to-black: #ffffff; /* white to black fill */
+  --border-special: var(--bg-3); /* special border */
+  --color-guid-agent-bar: #e8f0ff; /* agent bar background - light */
+}
+
+/* Dark Mode — neutral charcoal/black palette with white text */
+[data-color-scheme='default'][data-theme='dark'] {
+  /* Gods Eye Brand Colors - Dark Mode (neutral grays, blue accent only) */
+  --aou-1: #1e1e1e;
+  --aou-2: #262626;
+  --color-guid-agent-bar: var(--aou-2); /* agent bar background - dark */
+  --aou-3: #333333;
+  --aou-4: #444444;
+  --aou-5: #5a7eb5;
+  --aou-6: #6b9adf;
+  --aou-7: #8bb4f0;
+  --aou-8: #b0cff5;
+  --aou-9: #d6e8ff;
+  --aou-10: #ebf5ff;
+
+  /* Background Colors - Dark Mode (pure dark grays, no blue tint) */
+  --bg-base: #121212; /* main background (near-black) */
+  --bg-1: #1a1a1a; /* sidebar / secondary background */
+  --bg-2: #232323; /* content area / tertiary background */
+  --bg-3: #2d2d2d; /* borders / dividers */
+  --bg-4: #383838;
+  --bg-5: #4a4a4a;
+  --bg-6: #6b6b6b; /* disabled/secondary text */
+  --bg-8: #999999;
+  --bg-9: #bbbbbb;
+  --bg-10: #e0e0e0;
+
+  /* Interactive State Colors - Dark Mode */
+  --bg-hover: #2a2a2a; /* hover background */
+  --bg-active: #333333; /* active/pressed background */
+
+  /* Text Colors - Dark Mode (white text) */
+  --text-primary: #ffffff; /* primary text — pure white */
+  --text-secondary: #999999; /* secondary text */
+  --text-disabled: #555555; /* disabled text */
+
+  /* Semantic Colors - Dark Mode */
+  --primary: #6b9adf;
+  --success: #23c343;
+  --warning: #ff9a2e;
+  --danger: #f76560;
+  --info: #6b9adf;
+
+  /* Border Colors - Dark Mode */
+  --border-base: #2d2d2d; /* base border */
+  --border-light: #1f1f1f; /* light border */
+
+  /* Brand Colors - Dark Mode */
+  --brand: #6b9adf; /* brand color (blue accent) */
+  --brand-light: #1e1e1e; /* brand dark background */
+  --brand-hover: #4a7cc0; /* brand hover */
+
+  /* Message & UI Component Colors - Dark Mode */
+  --message-user-bg: #1e1e1e; /* user message bg */
+  --message-tips-bg: #1a1a1a; /* tips bg */
+  --workspace-btn-bg: #2a2a2a; /* workspace button bg */
+
+  /* Special Colors - Dark Mode */
+  --fill: #1a1a1a; /* fill color */
+  --inverse: #ffffff; /* inverse color */
+
+  /* Custom Colors - Dark Mode */
+  --dialog-fill-0: #2d2d2d; /* dialog fill */
+  --text-0: #ffffff; /* pure white text in dark mode */
+  --text-white: #ffffff; /* pure white text */
+  --fill-0: rgba(255, 255, 255, 0.08); /* fill 0 - semi-transparent white in dark mode */
+  --fill-white-to-black: #000000; /* white to black fill (black in dark mode) */
+  --border-special: #444444; /* special border */
+}

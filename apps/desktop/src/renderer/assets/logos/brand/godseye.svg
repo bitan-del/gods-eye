@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 80 80" fill="none">
+<title>Gods Eye</title>
+<defs>
+  <linearGradient id="ge-bg" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+    <stop offset="0%" stop-color="#4F8CFF"/>
+    <stop offset="100%" stop-color="#3B6EE8"/>
+  </linearGradient>
+</defs>
+<circle cx="40" cy="40" r="40" fill="url(#ge-bg)"/>
+<!-- Viewfinder corners -->
+<path d="M18 14 L14 14 L14 18" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+<path d="M62 14 L66 14 L66 18" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+<path d="M18 66 L14 66 L14 62" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+<path d="M62 66 L66 66 L66 62" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.7"/>
+<!-- Crosshair ticks -->
+<line x1="40" y1="14" x2="40" y2="18" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+<line x1="40" y1="62" x2="40" y2="66" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+<line x1="14" y1="40" x2="18" y2="40" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+<line x1="62" y1="40" x2="66" y2="40" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+<!-- Eye shape (almond) -->
+<path d="M12 40 Q26 24 40 24 Q54 24 68 40 Q54 56 40 56 Q26 56 12 40 Z" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="2.5"/>
+<!-- Iris circle -->
+<circle cx="40" cy="40" r="11" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="1.5"/>
+<!-- Pupil -->
+<circle cx="40" cy="40" r="6" fill="white"/>
+<!-- Highlight -->
+<circle cx="43" cy="37" r="2" fill="rgba(79,140,255,0.8)"/>
+</svg>

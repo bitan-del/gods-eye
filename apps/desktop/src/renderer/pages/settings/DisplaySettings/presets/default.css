@@ -1,0 +1,179 @@
+/* Default Theme - Gods Eye Blue Theme */
+/* This theme shows the system default color variables, you can customize based on this */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #4f8cff;
+  --primary: #4f8cff;
+  --color-primary-light-1: #6b9ffc;
+  --color-primary-light-2: #8bb4f8;
+  --color-primary-light-3: #aacbff;
+  --color-primary-dark-1: #3b6ee8;
+  --primary-rgb: 79, 140, 255;
+
+  /* Brand Colors */
+  --brand: #4f8cff;
+  --brand-light: #ebf5ff;
+  --brand-hover: #94bcff;
+  --color-brand-fill: #4f8cff;
+  --color-brand-bg: #ebf5ff;
+
+  /* Gods Eye Brand Colors */
+  --aou-1: #ebf5ff;
+  --aou-2: #d6e8ff;
+  --aou-3: #b8d4ff;
+  --aou-4: #94bcff;
+  --aou-5: #70a4ff;
+  --aou-6: #4f8cff;
+  --aou-7: #3b76e8;
+  --aou-8: #2a5cc0;
+  --aou-9: #1a4098;
+  --aou-10: #0e2870;
+
+  /* Background Colors */
+  --color-bg-1: #f8faff;
+  --bg-1: #f8faff;
+  --color-bg-2: #f1f5fb;
+  --bg-2: #f1f5fb;
+  --color-bg-3: #e2e8f0;
+  --bg-3: #e2e8f0;
+  --color-bg-4: #c9d5e4;
+  --bg-4: #c9d5e4;
+  --bg-base: #ffffff;
+  --bg-5: #a8b8cc;
+  --bg-6: #8494a7;
+  --bg-8: #4e5969;
+  --bg-9: #1d2129;
+  --bg-10: #0c0e12;
+
+  /* Interactive State Colors */
+  --bg-hover: #f0f4ff;
+  --bg-active: #e2e8f5;
+
+  /* Fill Colors */
+  --fill: #f7f9fc;
+  --color-fill: #f7f9fc;
+  --fill-0: #ffffff;
+  --fill-white-to-black: #ffffff;
+  --dialog-fill-0: #ffffff;
+  --inverse: #ffffff;
+
+  /* Text Colors */
+  --color-text-1: #1d2129;
+  --text-primary: #1d2129;
+  --color-text-2: #4e5969;
+  --text-secondary: #8494a7;
+  --color-text-3: #8494a7;
+  --text-disabled: #c9d5e4;
+  --text-0: #000000;
+  --text-white: #ffffff;
+
+  /* Border Colors */
+  --color-border: #e2e8f0;
+  --color-border-1: #e2e8f0;
+  --color-border-2: #f1f5fb;
+  --border-base: #e2e8f0;
+  --border-light: #f1f5fb;
+  --border-special: var(--bg-3);
+
+  /* Semantic Colors */
+  --success: #00b42a;
+  --warning: #ff7d00;
+  --danger: #f53f3f;
+  --info: #4f8cff;
+
+  /* Message & UI Component Colors */
+  --message-user-bg: #e8f0ff;
+  --message-tips-bg: #f0f5ff;
+  --workspace-btn-bg: #eff2f7;
+  --color-guid-agent-bar: #e8f0ff;
+}
+
+/* Dark Mode Overrides — neutral charcoal/black with white text */
+[data-theme='dark'] {
+  /* Primary Colors - Dark Mode */
+  --color-primary: #6b9adf;
+  --primary: #6b9adf;
+  --color-primary-light-1: #7eaaee;
+  --color-primary-light-2: #94baf5;
+  --color-primary-light-3: #aacbff;
+  --color-primary-dark-1: #4a7cc0;
+  --primary-rgb: 107, 154, 223;
+
+  /* Brand Colors - Dark Mode */
+  --brand: #6b9adf;
+  --brand-light: #1e1e1e;
+  --brand-hover: #4a7cc0;
+  --color-brand-fill: #6b9adf;
+  --color-brand-bg: #1e1e1e;
+
+  /* Gods Eye Brand Colors - Dark Mode (neutral grays) */
+  --aou-1: #1e1e1e;
+  --aou-2: #262626;
+  --aou-3: #333333;
+  --aou-4: #444444;
+  --aou-5: #5a7eb5;
+  --aou-6: #6b9adf;
+  --aou-7: #8bb4f0;
+  --aou-8: #b0cff5;
+  --aou-9: #d6e8ff;
+  --aou-10: #ebf5ff;
+
+  /* Background Colors - Dark Mode (pure dark grays, no blue tint) */
+  --color-bg-1: #1a1a1a;
+  --bg-1: #1a1a1a;
+  --color-bg-2: #232323;
+  --bg-2: #232323;
+  --color-bg-3: #2d2d2d;
+  --bg-3: #2d2d2d;
+  --color-bg-4: #383838;
+  --bg-4: #383838;
+  --bg-base: #121212;
+  --bg-5: #4a4a4a;
+  --bg-6: #6b6b6b;
+  --bg-8: #999999;
+  --bg-9: #bbbbbb;
+  --bg-10: #e0e0e0;
+
+  /* Interactive State Colors - Dark Mode */
+  --bg-hover: #2a2a2a;
+  --bg-active: #333333;
+
+  /* Fill Colors - Dark Mode */
+  --fill: #1a1a1a;
+  --color-fill: #1a1a1a;
+  --fill-0: rgba(255, 255, 255, 0.08);
+  --fill-white-to-black: #000000;
+  --dialog-fill-0: #2d2d2d;
+  --inverse: #ffffff;
+
+  /* Text Colors - Dark Mode (white text) */
+  --color-text-1: #ffffff;
+  --text-primary: #ffffff;
+  --color-text-2: #bbbbbb;
+  --text-secondary: #999999;
+  --color-text-3: #6b6b6b;
+  --text-disabled: #555555;
+  --text-0: #ffffff;
+  --text-white: #ffffff;
+
+  /* Border Colors - Dark Mode */
+  --color-border: #2d2d2d;
+  --color-border-1: #2d2d2d;
+  --color-border-2: #1f1f1f;
+  --border-base: #2d2d2d;
+  --border-light: #1f1f1f;
+  --border-special: #444444;
+
+  /* Semantic Colors - Dark Mode */
+  --success: #23c343;
+  --warning: #ff9a2e;
+  --danger: #f76560;
+  --info: #6b9adf;
+
+  /* Message & UI Component Colors - Dark Mode */
+  --message-user-bg: #1e1e1e;
+  --message-tips-bg: #1a1a1a;
+  --workspace-btn-bg: #2a2a2a;
+  --color-guid-agent-bar: #262626;
+}
