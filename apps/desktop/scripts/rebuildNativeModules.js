@@ -30,7 +30,13 @@ function isVxAvailable() {
  * already provides the vx entry point, so we must not nest another 'vx' call.
  */
 function getBunxCommand() {
-  return process.platform === 'win32' ? 'bun x' : 'bun x';
+  // Use npx if bun is not available (e.g. CI without bun)
+  try {
+    require('child_process').execSync('bun --version', { stdio: 'ignore' });
+    return 'bun x';
+  } catch {
+    return 'npx --yes';
+  }
 }
 
 /**
