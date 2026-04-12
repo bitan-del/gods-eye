@@ -25,6 +25,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: apps/desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,26 +38,44 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup pnpm
+        working-directory: .
         run: |
           corepack enable
           corepack prepare pnpm@10.23.0 --activate
 
       - name: Install root dependencies
+        working-directory: .
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build Electron app
-        run: pnpm --filter gods-eye-desktop run make
+      - name: Install desktop dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build with electron-vite
+        run: npx electron-vite build
+
+      - name: Bundle MCP servers
+        run: node scripts/build-mcp-servers.js
 
       - name: Package Windows installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm --filter gods-eye-desktop run build-win
+          CI: "true"
+        run: npx electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
+        continue-on-error: false
+
+      - name: List build output
+        run: |
+          echo "=== out/ ==="
+          Get-ChildItem -Path out -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '\.(exe|zip|msi)$' } | ForEach-Object { $_.FullName }
+          echo "No matching files in out/" -ErrorAction SilentlyContinue
+        shell: pwsh
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: gods-eye-windows-${{ inputs.arch || 'x64' }}
           path: |
-            apps/desktop/out/*.exe
-            apps/desktop/out/*.zip
+            apps/desktop/out/**/*.exe
+            apps/desktop/out/**/*.zip
           retention-days: 30
+          if-no-files-found: warn
