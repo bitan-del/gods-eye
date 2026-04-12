@@ -25,6 +25,9 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    defaults:
+      run:
+        working-directory: apps/desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,43 +37,19 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.23.0 --activate
-
-      - name: Install root workspace
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Install desktop app dependencies
-        working-directory: apps/desktop
-        run: npm install --legacy-peer-deps
-        env:
-          npm_config_userconfig: ""
-
-      - name: Verify desktop node_modules
-        working-directory: apps/desktop
-        shell: pwsh
-        run: |
-          Write-Host "electron-vite bin:"
-          Test-Path node_modules/.bin/electron-vite
-          Write-Host "electron:"
-          Test-Path node_modules/electron/package.json
-          Write-Host "package.json scripts:"
-          node -e "console.log(Object.keys(require('./package.json').scripts).join(', '))"
+      - name: Install desktop dependencies
+        shell: cmd
+        run: npm install --legacy-peer-deps --prefix .
 
       - name: Build with electron-vite
-        working-directory: apps/desktop
         shell: cmd
         run: call node_modules\.bin\electron-vite.cmd build
 
       - name: Bundle MCP servers
-        working-directory: apps/desktop
         run: node scripts/build-mcp-servers.js
         continue-on-error: true
 
       - name: Package Windows installer
-        working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
@@ -78,10 +57,9 @@ jobs:
         run: call node_modules\.bin\electron-builder.cmd --win --${{ inputs.arch || 'x64' }} --publish=never
 
       - name: List build output
-        working-directory: apps/desktop
         shell: pwsh
         run: |
-          Write-Host "=== Searching for .exe and .zip files in out/ ==="
+          Write-Host "=== Searching for .exe and .zip files ==="
           Get-ChildItem -Path out -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '\.(exe|zip|msi)$' } | ForEach-Object { Write-Host $_.FullName }
 
       - name: Upload artifacts
