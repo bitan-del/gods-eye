@@ -51,7 +51,8 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Build with electron-vite
-        run: pnpm exec electron-vite build
+        shell: cmd
+        run: node_modules\.bin\electron-vite build
 
       - name: Bundle MCP servers
         run: node scripts/build-mcp-servers.js
@@ -60,7 +61,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
-        run: pnpm exec electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
+        shell: cmd
+        run: node_modules\.bin\electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
         continue-on-error: false
 
       - name: List build output
