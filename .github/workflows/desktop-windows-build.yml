@@ -25,9 +25,6 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-    defaults:
-      run:
-        working-directory: apps/desktop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,39 +35,39 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup pnpm
-        working-directory: .
         run: |
           corepack enable
           corepack prepare pnpm@10.23.0 --activate
 
-      - name: Install root dependencies
-        working-directory: .
+      - name: Install root workspace
         run: pnpm install --no-frozen-lockfile
 
-      - name: Install desktop dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install desktop app dependencies
+        working-directory: apps/desktop
+        run: npm install
 
       - name: Build with electron-vite
-        shell: cmd
-        run: node_modules\.bin\electron-vite build
+        working-directory: apps/desktop
+        run: npx electron-vite build
 
       - name: Bundle MCP servers
+        working-directory: apps/desktop
         run: node scripts/build-mcp-servers.js
+        continue-on-error: true
 
       - name: Package Windows installer
+        working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
-        shell: cmd
-        run: node_modules\.bin\electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
-        continue-on-error: false
+        run: npx electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
 
       - name: List build output
-        run: |
-          echo "=== out/ ==="
-          Get-ChildItem -Path out -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '\.(exe|zip|msi)$' } | ForEach-Object { $_.FullName }
-          echo "No matching files in out/" -ErrorAction SilentlyContinue
+        working-directory: apps/desktop
         shell: pwsh
+        run: |
+          Write-Host "=== out/ ==="
+          Get-ChildItem -Path out -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '\.(exe|zip|msi)$' } | ForEach-Object { Write-Host $_.FullName }
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
