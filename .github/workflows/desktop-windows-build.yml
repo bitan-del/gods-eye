@@ -48,7 +48,7 @@ jobs:
 
       - name: Build with electron-vite
         working-directory: apps/desktop
-        run: npx electron-vite build
+        run: npm run make
 
       - name: Bundle MCP servers
         working-directory: apps/desktop
@@ -60,7 +60,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CI: "true"
-        run: npx electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
+        run: npx --no-install electron-builder --win --${{ inputs.arch || 'x64' }} --publish=never
 
       - name: List build output
         working-directory: apps/desktop
