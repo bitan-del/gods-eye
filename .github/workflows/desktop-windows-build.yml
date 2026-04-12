@@ -44,7 +44,7 @@ jobs:
 
       - name: Install desktop app dependencies
         working-directory: apps/desktop
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build with electron-vite
         working-directory: apps/desktop
