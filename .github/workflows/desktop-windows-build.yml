@@ -44,13 +44,13 @@ jobs:
 
       - name: Build Electron app
         working-directory: apps/desktop
-        run: pnpm exec electron-vite build
+        run: pnpm run package
 
       - name: Package Windows installer
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm exec electron-builder --win nsis zip --${{ inputs.arch || 'x64' }}
+        run: pnpm run dist:win
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
