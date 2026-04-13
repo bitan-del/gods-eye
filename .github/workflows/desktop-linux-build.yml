@@ -1,0 +1,70 @@
+name: Desktop Linux Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      arch:
+        description: "Target architecture"
+        required: false
+        default: "x64"
+        type: choice
+        options:
+          - x64
+          - arm64
+
+concurrency:
+  group: desktop-linux-build
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  NODE_VERSION: "24.x"
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install desktop dependencies
+        run: npm install --legacy-peer-deps --prefix .
+
+      - name: Build with electron-vite
+        run: ./node_modules/.bin/electron-vite build
+
+      - name: Bundle MCP servers
+        run: node scripts/build-mcp-servers.js
+        continue-on-error: true
+
+      - name: Package Linux installer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: "true"
+        run: ./node_modules/.bin/electron-builder --linux deb --${{ inputs.arch || 'x64' }} --publish=never
+
+      - name: List build output
+        run: |
+          echo "=== .deb and .zip files ==="
+          find out -type f \( -name "*.deb" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.snap" \) 2>/dev/null || echo "none found"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gods-eye-linux-${{ inputs.arch || 'x64' }}
+          path: |
+            apps/desktop/out/**/*.deb
+            apps/desktop/out/**/*.zip
+            apps/desktop/out/**/*.AppImage
+          retention-days: 30
+          if-no-files-found: warn
